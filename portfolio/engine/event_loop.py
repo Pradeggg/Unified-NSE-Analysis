@@ -20,11 +20,25 @@ from portfolio.engine.strategy_compiler import CompiledStrategy, compile_strateg
 
 
 @dataclass(frozen=True)
+class ReplayRiskPolicy:
+    max_gross_exposure_pct: float = 95.0
+    max_single_stock_pct: float = 12.0
+    max_sector_pct: float = 25.0
+    max_positions: int = 15
+    drawdown_pause_pct: float = -15.0
+    max_turnover_pct: float = 2500.0
+    trim_when_position_pct_above: float = 12.0
+    trim_to_position_pct: float = 10.0
+    block_stage1_adds: bool = True
+
+
+@dataclass(frozen=True)
 class ReplayConfig:
     initial_capital: float = 1_000_000.0
     max_position_pct: float | None = None
     slippage_bps: float = 0.0
     brokerage_bps: float = 0.0
+    risk_policy: ReplayRiskPolicy | None = None
 
 
 @dataclass
@@ -35,6 +49,7 @@ class ReplayResult:
     fills: list[Fill] = field(default_factory=list)
     equity_snapshots: list[dict[str, Any]] = field(default_factory=list)
     strategy_positions: dict[tuple[str, str], int] = field(default_factory=dict)
+    risk_events: list[dict[str, Any]] = field(default_factory=list)
 
     @property
     def trade_ledger(self) -> list[dict[str, Any]]:
@@ -84,6 +99,7 @@ def run_replay(df: pd.DataFrame, strategy_specs: list[dict[str, Any]], config: R
     pending_reservations: dict[str, float] = {}
     strategy_positions: dict[tuple[str, str], int] = {}
     last_marks: dict[str, float] = {}
+    sector_by_symbol: dict[str, str] = {}
     order_seq = 0
     event_seq = 0
 
@@ -99,6 +115,7 @@ def run_replay(df: pd.DataFrame, strategy_specs: list[dict[str, Any]], config: R
         for _, row in day.sort_values("symbol", kind="mergesort").iterrows():
             symbol = str(row["symbol"]).upper()
             last_marks[symbol] = float(row["close"])
+            sector_by_symbol[symbol] = str(row.get("sector") or "Unknown")
             prices = dict(last_marks)
             emit(
                 MarketDataEvent,
@@ -137,6 +154,8 @@ def run_replay(df: pd.DataFrame, strategy_specs: list[dict[str, Any]], config: R
                     pending_orders=pending_orders,
                     pending_reservations=pending_reservations,
                     strategy_positions=strategy_positions,
+                    prices=prices,
+                    sector_by_symbol=sector_by_symbol,
                     result=result,
                     emit=emit,
                     order_seq=order_seq,
@@ -161,6 +180,8 @@ def _evaluate_strategy_row(
     pending_orders: list[Order],
     pending_reservations: dict[str, float],
     strategy_positions: dict[tuple[str, str], int],
+    prices: dict[str, float],
+    sector_by_symbol: dict[str, str],
     result: ReplayResult,
     emit: Any,
     order_seq: int,
@@ -171,11 +192,72 @@ def _evaluate_strategy_row(
     owned_quantity = strategy_positions.get((strategy_id, symbol), 0)
     has_pending = any(order.symbol == symbol and order.strategy_id == strategy_id for order in pending_orders)
 
+    trim_quantity = _trim_quantity(
+        account=account,
+        symbol=symbol,
+        prices=prices,
+        policy=config.risk_policy,
+    )
+    if owned_quantity > 0 and trim_quantity > 0 and not has_pending:
+        reason = "risk trim"
+        order_seq += 1
+        order = _order(
+            order_seq=order_seq,
+            strategy_id=strategy_id,
+            symbol=symbol,
+            side=OrderSide.SELL,
+            quantity=trim_quantity,
+            date_str=date_str,
+            reason=reason,
+        )
+        account.submit_order(order)
+        pending_orders.append(order)
+        pending_reservations[order.order_id] = 0.0
+        result.orders.append(order)
+        result.risk_events.append(
+            {
+                "date": date_str,
+                "symbol": symbol,
+                "strategy_id": strategy_id,
+                "action": "TRIM",
+                "reason_codes": ["POSITION_TRIM"],
+                "quantity": trim_quantity,
+            }
+        )
+        emit(OrderEvent, date_str, strategy_id=strategy_id, symbol=symbol, reason=reason, payload=order.as_dict())
+        return order_seq
+
     if owned_quantity <= 0 and not has_pending and strategy.should_enter(row):
         reason = "entry rule matched"
         emit(SignalEvent, date_str, strategy_id=strategy_id, symbol=symbol, reason=reason)
         quantity = _entry_quantity(account, strategy, row, config, pending_reservations)
         if quantity <= 0:
+            return order_seq
+        block_reasons = _risk_block_reasons(
+            account=account,
+            strategy_id=strategy_id,
+            symbol=symbol,
+            quantity=quantity,
+            row=row,
+            config=config,
+            pending_orders=pending_orders,
+            pending_reservations=pending_reservations,
+            prices=prices,
+            sector_by_symbol=sector_by_symbol,
+            is_add=False,
+            filled_notional=_filled_notional(result.fills),
+        )
+        if block_reasons:
+            result.risk_events.append(
+                {
+                    "date": date_str,
+                    "symbol": symbol,
+                    "strategy_id": strategy_id,
+                    "action": "BLOCK_BUY",
+                    "reason_codes": block_reasons,
+                    "quantity": quantity,
+                }
+            )
             return order_seq
         order_seq += 1
         order = _order(
@@ -219,6 +301,32 @@ def _evaluate_strategy_row(
         emit(SignalEvent, date_str, strategy_id=strategy_id, symbol=symbol, reason=reason)
         quantity = _entry_quantity(account, strategy, row, config, pending_reservations)
         if quantity <= 0:
+            return order_seq
+        block_reasons = _risk_block_reasons(
+            account=account,
+            strategy_id=strategy_id,
+            symbol=symbol,
+            quantity=quantity,
+            row=row,
+            config=config,
+            pending_orders=pending_orders,
+            pending_reservations=pending_reservations,
+            prices=prices,
+            sector_by_symbol=sector_by_symbol,
+            is_add=True,
+            filled_notional=_filled_notional(result.fills),
+        )
+        if block_reasons:
+            result.risk_events.append(
+                {
+                    "date": date_str,
+                    "symbol": symbol,
+                    "strategy_id": strategy_id,
+                    "action": "BLOCK_BUY",
+                    "reason_codes": block_reasons,
+                    "quantity": quantity,
+                }
+            )
             return order_seq
         order_seq += 1
         order = _order(
@@ -295,6 +403,176 @@ def _entry_quantity(
     available_cash = max(0.0, account.cash - sum(pending_reservations.values()))
     budget = min(available_cash, account.equity({}) * (position_pct / 100.0))
     return int(budget // price)
+
+
+def _risk_block_reasons(
+    *,
+    account: PortfolioAccount,
+    strategy_id: str,
+    symbol: str,
+    quantity: int,
+    row: pd.Series,
+    config: ReplayConfig,
+    pending_orders: list[Order],
+    pending_reservations: dict[str, float],
+    prices: dict[str, float],
+    sector_by_symbol: dict[str, str],
+    is_add: bool,
+    filled_notional: float,
+) -> list[str]:
+    policy = config.risk_policy
+    if policy is None:
+        return []
+    price = _positive_float(row.get("close"))
+    if price is None or quantity <= 0:
+        return ["INVALID_PRICE_OR_QUANTITY"]
+
+    nav = max(account.equity(prices), 1.0)
+    order_value = _estimated_notional(quantity, price, config)
+    market_value = _market_value(account, prices)
+    reasons: list[str] = []
+
+    if is_add and policy.block_stage1_adds and str(row.get("stage") or "").upper() == "STAGE_1":
+        reasons.append("STAGE_DRIFT")
+
+    if _drawdown_pct(account, prices) <= policy.drawdown_pause_pct:
+        reasons.append("DRAWDOWN_PAUSE")
+
+    if _turnover_pct(filled_notional, account.initial_capital) >= policy.max_turnover_pct:
+        reasons.append("TURNOVER_CAP")
+
+    projected_gross = market_value + _pending_buy_value(pending_orders, pending_reservations) + order_value
+    if projected_gross > nav * policy.max_gross_exposure_pct / 100.0:
+        reasons.append("GROSS_EXPOSURE_CAP")
+
+    projected_symbol = (
+        _symbol_value(account, symbol, prices)
+        + _pending_buy_value(pending_orders, pending_reservations, symbol=symbol)
+        + order_value
+    )
+    if projected_symbol > nav * policy.max_single_stock_pct / 100.0:
+        reasons.append("STOCK_CAP")
+
+    sector = str(row.get("sector") or sector_by_symbol.get(symbol) or "Unknown")
+    projected_sector = (
+        _sector_value(account, sector, prices, sector_by_symbol)
+        + _pending_buy_value(pending_orders, pending_reservations, sector=sector, sector_by_symbol=sector_by_symbol)
+        + order_value
+    )
+    if projected_sector > nav * policy.max_sector_pct / 100.0:
+        reasons.append("SECTOR_CAP")
+
+    pending_new_symbols = {
+        order.symbol
+        for order in pending_orders
+        if order.side == OrderSide.BUY and order.symbol not in account.positions
+    }
+    projected_symbols = set(account.positions) | pending_new_symbols
+    if symbol not in account.positions:
+        projected_symbols.add(symbol)
+    if len(projected_symbols) > policy.max_positions:
+        reasons.append("MAX_POSITIONS")
+
+    return reasons
+
+
+def _trim_quantity(
+    *,
+    account: PortfolioAccount,
+    symbol: str,
+    prices: dict[str, float],
+    policy: ReplayRiskPolicy | None,
+) -> int:
+    if policy is None:
+        return 0
+    position = account.positions.get(symbol)
+    if position is None:
+        return 0
+    price = _positive_float(prices.get(symbol))
+    if price is None:
+        return 0
+    nav = account.equity(prices)
+    if nav <= 0:
+        return 0
+    current_value = position.quantity * price
+    current_weight_pct = current_value / nav * 100.0
+    if current_weight_pct <= policy.trim_when_position_pct_above:
+        return 0
+    target_value = nav * policy.trim_to_position_pct / 100.0
+    excess_value = max(0.0, current_value - target_value)
+    quantity = int(excess_value // price)
+    return min(quantity, position.quantity)
+
+
+def _market_value(account: PortfolioAccount, prices: dict[str, float]) -> float:
+    return sum(_symbol_value(account, symbol, prices) for symbol in account.positions)
+
+
+def _symbol_value(account: PortfolioAccount, symbol: str, prices: dict[str, float]) -> float:
+    position = account.positions.get(symbol)
+    if position is None:
+        return 0.0
+    price = _positive_float(prices.get(symbol)) or position.avg_price
+    return position.quantity * price
+
+
+def _sector_value(
+    account: PortfolioAccount,
+    sector: str,
+    prices: dict[str, float],
+    sector_by_symbol: dict[str, str],
+) -> float:
+    return sum(
+        _symbol_value(account, symbol, prices)
+        for symbol in account.positions
+        if sector_by_symbol.get(symbol, "Unknown") == sector
+    )
+
+
+def _pending_buy_value(
+    pending_orders: list[Order],
+    pending_reservations: dict[str, float],
+    *,
+    symbol: str | None = None,
+    sector: str | None = None,
+    sector_by_symbol: dict[str, str] | None = None,
+) -> float:
+    total = 0.0
+    for order in pending_orders:
+        if order.side != OrderSide.BUY:
+            continue
+        if symbol is not None and order.symbol != symbol:
+            continue
+        if sector is not None and (sector_by_symbol or {}).get(order.symbol, "Unknown") != sector:
+            continue
+        total += pending_reservations.get(order.order_id, 0.0)
+    return total
+
+
+def _drawdown_pct(account: PortfolioAccount, prices: dict[str, float]) -> float:
+    nav = account.equity(prices)
+    prior_navs = [_positive_float(row.get("nav")) for row in account.nav_history]
+    high_water = max([nav] + [value for value in prior_navs if value is not None])
+    if high_water <= 0:
+        return 0.0
+    return (nav / high_water - 1.0) * 100.0
+
+
+def _filled_notional(fills: list[Fill]) -> float:
+    return sum(abs(fill.quantity * fill.price) for fill in fills)
+
+
+def _turnover_pct(filled_notional: float, initial_capital: float) -> float:
+    if initial_capital <= 0:
+        return 0.0
+    return filled_notional / initial_capital * 100.0
+
+
+def _estimated_notional(quantity: int, price: float, config: ReplayConfig) -> float:
+    slipped = price * (1.0 + config.slippage_bps / 10_000.0)
+    notional = slipped * quantity
+    fees = notional * config.brokerage_bps / 10_000.0
+    return round(notional + fees, 6)
 
 
 def _estimated_buy_cost(order: Order, row: pd.Series, config: ReplayConfig) -> float:

@@ -51,6 +51,17 @@ class TerminalAgentMarketPromptTests(unittest.TestCase):
         self.assertEqual(routed["plan"][0][0], "get_live_market_overview")
         self.assertNotIn("OVERVIEW", str(routed))
 
+    def test_latest_market_pulse_routes_to_market_tools_not_market_symbol(self):
+        for mode in ("historical", "intraday"):
+            with self.subTest(mode=mode):
+                routed = _keyword_intent("latest pulse on the market", data_mode=mode)
+                tools = [tool for tool, _ in routed["plan"]]
+
+                self.assertIn(routed["intent"], ("market_overview", "market_situation_assessment"))
+                self.assertIn("get_live_market_overview", tools)
+                self.assertIn("get_market_breadth", tools)
+                self.assertNotIn("THE MARKET", str(routed).upper())
+
     def test_placeholder_symbol_request_does_not_run_stock_tools(self):
         routed = _keyword_intent("/assess SYMBOL")
 

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pandas as pd
 
-from portfolio.engine.event_loop import ReplayConfig, run_replay
+from portfolio.engine.event_loop import ReplayConfig, ReplayRiskPolicy, run_replay
 from tests.portfolio.fixtures import sample_ohlcv, valid_strategy_spec
 
 
@@ -58,6 +58,26 @@ def _multi_symbol_rows(symbols: list[str]) -> pd.DataFrame:
         rows["sma_50"] = rows["sma_50"] + index
         frames.append(rows)
     return pd.concat(frames, ignore_index=True)
+
+
+def _risk_rows(records: list[dict]) -> pd.DataFrame:
+    defaults = {
+        "open": 100.0,
+        "high": 105.0,
+        "low": 99.0,
+        "close": 102.0,
+        "volume": 100000,
+        "stage": "STAGE_2",
+        "rsi_14": 55.0,
+        "sma_50": 90.0,
+        "atr_14": 5.0,
+        "volume_ratio_20d": 1.2,
+        "sector": "Industrials",
+    }
+    rows = [{**defaults, **record} for record in records]
+    out = pd.DataFrame(rows)
+    out["date"] = pd.to_datetime(out["date"])
+    return out
 
 
 def test_replay_emits_deterministic_events_and_equity_snapshots():
@@ -153,6 +173,198 @@ def test_pending_buys_reserve_cash_so_many_signals_do_not_overcommit_or_crash():
     assert result.fills
     assert result.account.cash >= 0.0
     assert all(order.symbol not in {"KKK", "LLL"} for order in result.orders)
+
+
+def test_risk_policy_blocks_entry_that_would_exceed_gross_exposure_cap():
+    spec = valid_strategy_spec()
+    spec["risk"]["max_position_pct"] = 50.0
+
+    result = run_replay(
+        _risk_rows(
+            [
+                {"date": "2025-01-02", "symbol": "AAA"},
+                {"date": "2025-01-03", "symbol": "AAA"},
+            ]
+        ),
+        [spec],
+        ReplayConfig(
+            initial_capital=100_000.0,
+            risk_policy=ReplayRiskPolicy(max_gross_exposure_pct=10.0, max_single_stock_pct=100.0),
+        ),
+    )
+
+    assert result.orders == []
+    assert result.risk_events[-1]["reason_codes"] == ["GROSS_EXPOSURE_CAP"]
+
+
+def test_risk_policy_blocks_entry_that_would_exceed_single_stock_cap():
+    result = run_replay(
+        _risk_rows(
+            [
+                {"date": "2025-01-02", "symbol": "AAA"},
+                {"date": "2025-01-03", "symbol": "AAA"},
+            ]
+        ),
+        [valid_strategy_spec()],
+        ReplayConfig(
+            initial_capital=100_000.0,
+            risk_policy=ReplayRiskPolicy(max_single_stock_pct=5.0),
+        ),
+    )
+
+    assert result.orders == []
+    assert result.risk_events[-1]["reason_codes"] == ["STOCK_CAP"]
+
+
+def test_risk_policy_counts_pending_orders_when_enforcing_sector_cap():
+    spec = valid_strategy_spec()
+    spec["risk"]["max_position_pct"] = 10.0
+
+    result = run_replay(
+        _risk_rows(
+            [
+                {"date": "2025-01-02", "symbol": "AAA", "sector": "Banks"},
+                {"date": "2025-01-02", "symbol": "BBB", "sector": "Banks"},
+                {"date": "2025-01-03", "symbol": "AAA", "sector": "Banks"},
+                {"date": "2025-01-03", "symbol": "BBB", "sector": "Banks"},
+            ]
+        ),
+        [spec],
+        ReplayConfig(
+            initial_capital=100_000.0,
+            risk_policy=ReplayRiskPolicy(max_sector_pct=15.0),
+        ),
+    )
+
+    assert [order.symbol for order in result.orders] == ["AAA"]
+    assert result.risk_events[-1]["symbol"] == "BBB"
+    assert result.risk_events[-1]["reason_codes"] == ["SECTOR_CAP"]
+
+
+def test_risk_policy_pauses_new_buys_after_drawdown_threshold_is_breached():
+    spec = _strategy("stage2_fixture_v1", stage_exit=False)
+    spec["exit"] = {"any": [{"indicator": "close", "operator": "below", "value": 0.0}]}
+    spec["risk"]["max_position_pct"] = 50.0
+
+    result = run_replay(
+        _risk_rows(
+            [
+                {"date": "2025-01-02", "symbol": "AAA", "close": 100.0},
+                {"date": "2025-01-03", "symbol": "AAA", "open": 100.0, "low": 35.0, "close": 40.0},
+                {"date": "2025-01-06", "symbol": "AAA", "low": 35.0, "close": 40.0},
+                {"date": "2025-01-06", "symbol": "BBB", "close": 100.0},
+                {"date": "2025-01-07", "symbol": "BBB", "close": 100.0},
+            ]
+        ),
+        [spec],
+        ReplayConfig(
+            initial_capital=100_000.0,
+            risk_policy=ReplayRiskPolicy(
+                drawdown_pause_pct=-5.0,
+                max_single_stock_pct=100.0,
+                max_gross_exposure_pct=100.0,
+                max_sector_pct=100.0,
+                trim_when_position_pct_above=100.0,
+            ),
+        ),
+    )
+
+    assert [order.symbol for order in result.orders] == ["AAA"]
+    assert any(event["symbol"] == "BBB" and event["reason_codes"] == ["DRAWDOWN_PAUSE"] for event in result.risk_events)
+
+
+def test_risk_policy_blocks_new_buys_after_turnover_cap_is_reached():
+    spec = valid_strategy_spec()
+    spec["risk"]["max_position_pct"] = 20.0
+
+    result = run_replay(
+        _risk_rows(
+            [
+                {"date": "2025-01-02", "symbol": "AAA"},
+                {"date": "2025-01-03", "symbol": "AAA"},
+                {"date": "2025-01-06", "symbol": "BBB"},
+                {"date": "2025-01-07", "symbol": "BBB"},
+            ]
+        ),
+        [spec],
+        ReplayConfig(
+            initial_capital=100_000.0,
+            risk_policy=ReplayRiskPolicy(
+                max_turnover_pct=10.0,
+                max_single_stock_pct=100.0,
+                max_sector_pct=100.0,
+                trim_when_position_pct_above=100.0,
+            ),
+        ),
+    )
+
+    assert [order.symbol for order in result.orders] == ["AAA"]
+    assert any(event["symbol"] == "BBB" and event["reason_codes"] == ["TURNOVER_CAP"] for event in result.risk_events)
+
+
+def test_risk_policy_blocks_add_when_stage2_position_drifts_to_stage1():
+    spec = _strategy("stage2_fixture_v1", stage_exit=False)
+    spec["exit"] = {"any": [{"indicator": "close", "operator": "below", "value": 0.0}]}
+    spec["add_rules"] = [
+        {
+            "kind": "pullback_add",
+            "indicator": "close",
+            "operator": "above",
+            "value": "sma_50",
+            "size_pct": 5.0,
+            "timeframe": "daily",
+        }
+    ]
+
+    result = run_replay(
+        _risk_rows(
+            [
+                {"date": "2025-01-02", "symbol": "AAA", "stage": "STAGE_2"},
+                {"date": "2025-01-03", "symbol": "AAA", "stage": "STAGE_2", "low": 75.0, "close": 80.0},
+                {"date": "2025-01-06", "symbol": "AAA", "stage": "STAGE_1"},
+                {"date": "2025-01-07", "symbol": "AAA", "stage": "STAGE_1"},
+            ]
+        ),
+        [spec],
+        ReplayConfig(
+            initial_capital=100_000.0,
+            risk_policy=ReplayRiskPolicy(block_stage1_adds=True, max_single_stock_pct=100.0),
+        ),
+    )
+
+    assert len([order for order in result.orders if order.side.value == "BUY"]) == 1
+    assert any(event["symbol"] == "AAA" and event["reason_codes"] == ["STAGE_DRIFT"] for event in result.risk_events)
+
+
+def test_risk_policy_generates_trim_order_for_overweight_position():
+    spec = _strategy("stage2_fixture_v1", stage_exit=False)
+    spec["exit"] = {"any": [{"indicator": "close", "operator": "below", "value": 0.0}]}
+    spec["risk"]["max_position_pct"] = 50.0
+
+    result = run_replay(
+        _risk_rows(
+            [
+                {"date": "2025-01-02", "symbol": "AAA", "close": 100.0},
+                {"date": "2025-01-03", "symbol": "AAA", "open": 100.0, "high": 205.0, "close": 200.0},
+                {"date": "2025-01-06", "symbol": "AAA", "open": 200.0, "high": 205.0, "close": 200.0},
+                {"date": "2025-01-07", "symbol": "AAA", "open": 200.0, "high": 205.0, "close": 200.0},
+            ]
+        ),
+        [spec],
+        ReplayConfig(
+            initial_capital=100_000.0,
+            risk_policy=ReplayRiskPolicy(
+                trim_when_position_pct_above=20.0,
+                trim_to_position_pct=10.0,
+                max_single_stock_pct=100.0,
+                max_gross_exposure_pct=100.0,
+            ),
+        ),
+    )
+
+    trim_orders = [order for order in result.orders if order.side.value == "SELL" and order.reason == "risk trim"]
+    assert len(trim_orders) == 1
+    assert trim_orders[0].quantity > 0
 
 
 def test_sparse_multi_symbol_nav_uses_last_known_close_for_missing_held_symbols():

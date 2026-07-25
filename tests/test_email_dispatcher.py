@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from pathlib import Path
 
 from terminal import email_dispatcher
@@ -71,3 +73,78 @@ def test_outlook_script_uses_html_mode_with_plain_text_fallback(tmp_path):
     assert "set plain text content of newMsg to plainBody" in script
     assert "make new to recipient" in script
     assert "open newMsg" in script
+
+
+def test_applemail_script_builds_message_with_sender_recipients_and_attachments(tmp_path):
+    html_path = tmp_path / "body.html"
+    plain_path = tmp_path / "body.txt"
+    attachment = tmp_path / "report.html"
+    html_path.write_text("<html><body><b>Hello</b></body></html>", encoding="utf-8")
+    plain_path.write_text("Hello", encoding="utf-8")
+    attachment.write_text("<html>report</html>", encoding="utf-8")
+
+    script = email_dispatcher._build_applemail_applescript(
+        subject="Apple Mail check",
+        html_body_path=html_path,
+        plain_body_path=plain_path,
+        to_addrs=["pgorai@example.com"],
+        bcc_addrs=["team@example.com"],
+        attachments=[attachment],
+        send_immediately=False,
+        sender="pgorai@icloud.com",
+    )
+
+    assert 'tell application "Mail"' in script
+    assert 'set sender of newMsg to "pgorai@icloud.com"' in script
+    assert "make new to recipient" in script
+    assert "make new bcc recipient" in script
+    assert "make new attachment" in script
+    assert "set visible of newMsg to true" in script
+
+
+def test_icloud_provider_defaults_to_icloud_smtp(monkeypatch):
+    monkeypatch.setenv("AGENT_ADDA_EMAIL_PROVIDER", "icloud")
+    monkeypatch.delenv("SMTP_HOST", raising=False)
+    monkeypatch.setenv("SMTP_USER", "pgorai@icloud.com")
+    monkeypatch.setenv("SMTP_PASSWORD", "app-specific-password")
+    monkeypatch.setenv("SMTP_FROM", "pgorai@icloud.com")
+
+    cfg = email_dispatcher._smtp_config()
+
+    assert cfg["provider"] == "icloud"
+    assert cfg["host"] == "smtp.mail.me.com"
+    assert cfg["port"] == 587
+    assert cfg["user"] == "pgorai@icloud.com"
+    assert cfg["from_addr"] == "pgorai@icloud.com"
+
+
+def test_applemail_provider_dispatches_via_applemail_script(tmp_path, monkeypatch):
+    monkeypatch.setenv("AGENT_ADDA_EMAIL_PROVIDER", "applemail")
+    monkeypatch.setenv("SMTP_FROM", "pgorai@icloud.com")
+    monkeypatch.setattr(email_dispatcher, "LOG_DIR", tmp_path)
+
+    captured = {}
+
+    def fake_run(cmd, capture_output, text):
+        captured["cmd"] = cmd
+
+        class Result:
+            returncode = 0
+            stderr = ""
+
+        return Result()
+
+    monkeypatch.setattr(email_dispatcher.subprocess, "run", fake_run)
+
+    status = email_dispatcher.send_via_outlook(
+        subject="Apple Mail dispatch",
+        html_body="<b>Hello</b>",
+        to_addrs=["pgorai@example.com"],
+        bcc_addrs=[],
+        attachments=[],
+        send_immediately=False,
+    )
+
+    assert status == "draft opened in Apple Mail"
+    assert captured["cmd"][0] == "osascript"
+    assert 'tell application "Mail"' in captured["cmd"][2]

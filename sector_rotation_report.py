@@ -26,6 +26,7 @@ import pandas as pd
 ROOT = Path(__file__).resolve().parent
 REPORTS_DIR = ROOT / "reports"
 INDEX_DATA_CSV = ROOT / "data" / "nse_index_data.csv"
+RESEARCH_SHORTLIST_MD = REPORTS_DIR / "latest" / "swing_shortlist_deep_research.md"
 INDEX_HISTORY_FALLBACK_CSVS = [
     INDEX_DATA_CSV,
     ROOT / "data" / "nse-raw" / "nse_index_data.csv",
@@ -121,6 +122,8 @@ ROTATING_INDEXES = {
     "Nifty PSE":          "PSU / CPSE",
     "Nifty Infra":        "Infrastructure",
     "Nifty Capital Mkt":  "Capital Markets",
+    "NIFTY INDIA MFG":    "Capital Goods & Industrials",
+    "Nifty Multi Mfg":    "Capital Goods & Industrials",
     "Nifty Chemicals":    "Chemicals & Specialty",
     "NIFTY CONSR DURBL":  "Consumer Durables",
     "Nifty Trans Logis":  "Logistics & Transport",
@@ -250,7 +253,7 @@ SECTOR_KEYWORDS = {
         "LUMAX", "PRICOLLTD", "GNA", "CRAFTSMAN", "ENDURANCE", "FIEMIND",
         "TATAMOTORS", "M&M", "MARUTI", "BAJAJ-AUTO", "HEROMOTOCO", "TVSMOTORS",
         "ESCORTS", "ASHOKLEY", "EICHERMOT", "FORCEMOT", "ATHERENERG",
-        "OLECTRA", "KHAICHEM", "SUPRAJIT", "GABRIEL",
+        "OLECTRA", "JBMA", "JBM", "SCHAEFFLER", "KHAICHEM", "SUPRAJIT", "GABRIEL",
     ],
     "FMCG & Consumer Goods": [
         "HINDUNILVR", "ITC", "NESTLEIND", "BRITANNIA", "DABUR", "MARICO",
@@ -267,6 +270,7 @@ SECTOR_KEYWORDS = {
         "GLAND", "GRANULES", "SOLARA", "YATHARTH", "ALIVUS", "MEDANTA",
         "FORTIS", "MAXHEALTH", "NARAYANAHRUDAY", "THYROCARE", "METROPOLIS",
         "LALPATHLAB", "VIJAYADIAG", "NEULANDLAB", "SHILPAMED", "EMCURE",
+        "CUPID",
     ],
     # ── New sectors ───────────────────────────────────────────────────────────
     "IT & Technology": [
@@ -317,13 +321,14 @@ SECTOR_KEYWORDS = {
         "SWANENERGY", "VOLTAS", "BLUESTAR", "POLYCAB", "KEI", "FINOLEX",
         "HAVELLS", "VGUARD", "ORIENTELEC", "KAJARIACER", "CERA", "SOMANY",
         "APARINDS", "MANINDS", "RPSG", "INDUCTOTILER", "JAYNECOIND",
-        "HAPPYFORGE", "DEEDEV", "UNIPARTS", "PRECWIRE",
+        "HAPPYFORGE", "DEEDEV", "UNIPARTS", "PRECWIRE", "GVT&D", "GEVERNOVA", "GE T&D",
+        "WALCHANNAG", "WALCHANDNAGAR",
     ],
     "Chemicals & Specialty": [
         "PIDILITIND", "SRF", "AARTIIND", "NAVINFLUOR", "ALKYLAMINE",
         "DEEPAKNI", "TATACHEM", "GHCL", "VINATI", "CLEAN", "LXCHEM",
         "ATUL", "GALAXY", "FINEORG", "NEOGEN", "NACLIND", "SUDARSCHEM",
-        "PCBL", "RAIN", "INDIABULLS", "ROSSARI",
+        "PCBL", "RAIN", "INDIABULLS", "ROSSARI", "PANAMAPET", "PANAMA PETRO",
     ],
     "Consumer Durables": [
         "TITAN", "RAJESHEXPO", "KALYAN", "SKYGOLD", "PN GADGIL", "SENCO",
@@ -331,6 +336,7 @@ SECTOR_KEYWORDS = {
         "VOLTAS", "BLUESTAR", "WHIRLPOOL", "HAVELLS", "VGUARD",
         "ORIENTELEC", "CROMPTON", "BAJAJELECTR", "KENSTAR",
         "KAJARIACER", "CERA", "SOMANY", "HINDWAREPAP",
+        "AMBER",
     ],
     "Logistics & Transport": [
         "DELHIVERY", "BLUEDART", "GESHIP", "SCI", "CONCOR", "GATEWAY",
@@ -363,6 +369,18 @@ SECTOR_KEYWORDS = {
         "PFIZER", "SANOFI", "ABBOTINDIA", "GLAXO", "NOVARTIND",
     ],
 }
+
+DEFAULT_RESEARCH_SHORTLIST_SYMBOLS = (
+    "POLYCAB",
+    "SCHAEFFLER",
+    "TIMKEN",
+    "OLECTRA",
+    "JBMA",
+    "AMBER",
+    "CRAFTSMAN",
+    "GVT&D",
+    "TEJASNET",
+)
 
 
 @dataclass(frozen=True)
@@ -975,6 +993,8 @@ def assign_action_buckets(df: pd.DataFrame) -> pd.DataFrame:
     signal = _column_or_default(out, "TRADING_SIGNAL", "").astype(str)
     st = _column_or_default(out, "SUPERTREND_STATE", "").astype(str)
     pattern = _column_or_default(out, "PATTERN", "").astype(str)
+    price = pd.to_numeric(_column_or_default(out, "CURRENT_PRICE", math.nan), errors="coerce")
+    resistance = pd.to_numeric(_column_or_default(out, "RESISTANCE", math.nan), errors="coerce")
     rsi = pd.to_numeric(_column_or_default(out, "RSI", 50), errors="coerce").fillna(50)
     tech = pd.to_numeric(_column_or_default(out, "TECHNICAL_SCORE", 50), errors="coerce").fillna(50)
     dd = pd.to_numeric(_column_or_default(out, "DRAWDOWN_FROM_52W_HIGH_PCT", -100), errors="coerce").fillna(-100)
@@ -995,6 +1015,11 @@ def assign_action_buckets(df: pd.DataFrame) -> pd.DataFrame:
 
     bucket = bucket.where(~breakout_watch, "BREAKOUT_WATCH")
     reason = reason.where(~breakout_watch, "Near high/base setup; wait for price and volume breakout confirmation.")
+    already_above_resistance = breakout_watch & price.notna() & resistance.notna() & resistance.gt(0) & price.gt(resistance)
+    reason = reason.where(
+        ~already_above_resistance,
+        "Price is already above the marked resistance; wait for a retest-hold, fresh base, or continuation volume before upgrading.",
+    )
     bucket = bucket.where(~hold_trail, "HOLD_TRAIL")
     reason = reason.where(~hold_trail, "Constructive trend; use defined stop and trail winners.")
     bucket = bucket.where(~buy_watch, "BUY_WATCH")
@@ -1202,6 +1227,8 @@ def load_comprehensive_analysis_from_postgres() -> pd.DataFrame | None:
                         enhanced_fund_score AS "ENHANCED_FUND_SCORE",
                         trend_signal AS "TREND_SIGNAL",
                         trading_signal AS "TRADING_SIGNAL",
+                        supertrend_state AS "SUPERTREND_STATE",
+                        supertrend_value AS "SUPERTREND_VALUE",
                         sector AS "SECTOR",
                         stage AS "STAGE",
                         stage_score AS "STAGE_SCORE",
@@ -1543,6 +1570,149 @@ def build_sector_stock_table(analysis: pd.DataFrame, rotating_sectors: list[str]
     return pd.concat(ranked_parts, ignore_index=True)
 
 
+def _normalize_symbol(value: object) -> str:
+    text = str(value or "").strip().upper()
+    return text[:-3] if text.endswith(".NS") else text
+
+
+def _ordered_unique_symbols(symbols: list[str] | tuple[str, ...]) -> list[str]:
+    seen: set[str] = set()
+    out: list[str] = []
+    for symbol in symbols:
+        sym = _normalize_symbol(symbol)
+        if not sym or sym in seen:
+            continue
+        seen.add(sym)
+        out.append(sym)
+    return out
+
+
+def _first_defined(*values: object, default: object = "") -> object:
+    for value in values:
+        if value is None:
+            continue
+        try:
+            if pd.isna(value):
+                continue
+        except (TypeError, ValueError):
+            pass
+        if isinstance(value, str) and value.strip().lower() in {"", "none", "nan"}:
+            continue
+        return value
+    return default
+
+
+def load_research_shortlist_symbols(path: Path = RESEARCH_SHORTLIST_MD) -> list[str]:
+    """Read the latest swing research shortlist, with a deterministic fallback."""
+    if path.exists():
+        text = path.read_text(encoding="utf-8", errors="ignore")
+        ranked: list[str] = []
+        for line in text.splitlines():
+            match = re.match(r"^\|\s*\d+\s*\|\s*([A-Z0-9&.\-]+)\s*\|", line.strip(), flags=re.IGNORECASE)
+            if match:
+                ranked.append(match.group(1))
+        if ranked:
+            return _ordered_unique_symbols(ranked)
+
+        universe = re.search(r"Universe reviewed:\s*(.+?)(?:\.|\n)", text, flags=re.IGNORECASE | re.DOTALL)
+        if universe:
+            return _ordered_unique_symbols([part.strip() for part in universe.group(1).split(",")])
+
+    return list(DEFAULT_RESEARCH_SHORTLIST_SYMBOLS)
+
+
+def build_research_shortlist_overlay(
+    analysis: pd.DataFrame,
+    sector_rank: pd.DataFrame,
+    candidates: pd.DataFrame,
+    source_symbols: list[str] | tuple[str, ...] | None = None,
+) -> pd.DataFrame:
+    """Build a Stage 2 swing overlay independent of the top-sector rotation cut."""
+    symbols = _ordered_unique_symbols(list(source_symbols) if source_symbols is not None else load_research_shortlist_symbols())
+    if analysis is None or analysis.empty or "SYMBOL" not in analysis.columns or not symbols:
+        return pd.DataFrame()
+
+    df = analysis.copy()
+    df["_SYMBOL_KEY"] = df["SYMBOL"].map(_normalize_symbol)
+    df = df.drop_duplicates("_SYMBOL_KEY", keep="first").set_index("_SYMBOL_KEY")
+    selected_sectors = set(sector_rank.get("SECTOR_NAME", pd.Series(dtype=str)).dropna().astype(str))
+    candidate_symbols = set(candidates.get("SYMBOL", pd.Series(dtype=str)).map(_normalize_symbol)) if candidates is not None and not candidates.empty else set()
+    candidate_lookup = {}
+    if candidates is not None and not candidates.empty and "SYMBOL" in candidates.columns:
+        for _, row in candidates.iterrows():
+            candidate_lookup[_normalize_symbol(row.get("SYMBOL"))] = row
+
+    rows: list[dict] = []
+    for rank, sym in enumerate(symbols, start=1):
+        if sym not in df.index:
+            continue
+        row = df.loc[sym]
+        company = str(row.get("COMPANY_NAME") or sym).strip()
+        research_sector = assign_sector(sym, company) or str(row.get("SECTOR") or "Other")
+        stage = str(row.get("STAGE") or "UNKNOWN").upper()
+        if sym in candidate_symbols:
+            visibility = "Shown in sector candidate table"
+        elif not research_sector or research_sector == "Other":
+            visibility = "Sector mapping unavailable"
+        elif research_sector not in selected_sectors:
+            visibility = "Sector outside current top rotation cut"
+        else:
+            visibility = "Outside top candidate rank for selected sector"
+
+        candidate_row = candidate_lookup.get(sym)
+        if candidate_row is not None:
+            action_bucket = candidate_row.get("ACTION_BUCKET", "WATCHLIST")
+            setup_class = candidate_row.get("SETUP_CLASS", "NEUTRAL")
+            action_reason = candidate_row.get("ACTION_REASON", "")
+            pattern = candidate_row.get("PATTERN", "")
+            volume_ratio = candidate_row.get("VOLUME_RATIO", math.nan)
+            supertrend_state = _first_defined(
+                candidate_row.get("SUPERTREND_STATE"),
+                row.get("SUPERTREND_STATE"),
+                default="UNKNOWN",
+            )
+            supertrend_value = _first_defined(
+                candidate_row.get("SUPERTREND_VALUE"),
+                row.get("SUPERTREND_VALUE"),
+                default=math.nan,
+            )
+        else:
+            action_bucket = "WATCHLIST" if stage == "STAGE_2" else "MONITOR"
+            setup_class = "STAGE2_RESEARCH" if stage == "STAGE_2" else "RESEARCH"
+            action_reason = visibility
+            pattern = row.get("PATTERN", "")
+            volume_ratio = row.get("VOLUME_RATIO", math.nan)
+            supertrend_state = _first_defined(row.get("SUPERTREND_STATE"), default="UNKNOWN")
+            supertrend_value = _first_defined(row.get("SUPERTREND_VALUE"), default=math.nan)
+
+        rows.append(
+            {
+                "RESEARCH_RANK": rank,
+                "SYMBOL": sym,
+                "COMPANY_NAME": company,
+                "RESEARCH_SECTOR": research_sector or "Other",
+                "STAGE": stage,
+                "TRADING_SIGNAL": row.get("TRADING_SIGNAL", ""),
+                "ACTION_BUCKET": action_bucket,
+                "SETUP_CLASS": setup_class,
+                "INVESTMENT_SCORE": row.get("INVESTMENT_SCORE"),
+                "TECHNICAL_SCORE": row.get("TECHNICAL_SCORE"),
+                "RELATIVE_STRENGTH": row.get("RELATIVE_STRENGTH"),
+                "ENHANCED_FUND_SCORE": row.get("ENHANCED_FUND_SCORE"),
+                "RSI": row.get("RSI"),
+                "SUPERTREND_STATE": supertrend_state,
+                "SUPERTREND_VALUE": supertrend_value,
+                "CURRENT_PRICE": row.get("CURRENT_PRICE"),
+                "PATTERN": pattern,
+                "VOLUME_RATIO": volume_ratio,
+                "REPORT_VISIBILITY": visibility,
+                "ACTION_REASON": action_reason,
+            }
+        )
+
+    return pd.DataFrame(rows)
+
+
 def _fmt(value: object, suffix: str = "", digits: int = 1) -> str:
     try:
         if pd.isna(value):
@@ -1586,6 +1756,7 @@ def render_markdown(
     source_file: Path,
     generated_at: datetime,
     narratives: dict | None = None,
+    research_shortlist: pd.DataFrame | None = None,
 ) -> str:
     analysis_date = _first_non_empty_value(candidates, ["ANALYSIS_DATE", "SNAPSHOT_DATE", "PRICE_DATE", "DATE"])
     lines = [
@@ -1676,7 +1847,30 @@ def render_markdown(
         lines.append("")
 
     lines += [
-        "## 3. Deep Technical Notes",
+        "## 3. Research Shortlist / Stage 2 Swing Overlay",
+        "",
+        "This overlay keeps the latest swing research shortlist visible even when a stock's sector lens is outside the current top rotation cut or the stock is below the top candidate rank inside its sector.",
+        "",
+    ]
+    if research_shortlist is None or research_shortlist.empty:
+        lines += ["No external swing research shortlist was available for this run.", ""]
+    else:
+        lines += [
+            "| Rank | Symbol | Company | Sector Lens | Stage | Signal | Action | Score | Tech | RS | Fund | RSI | Supertrend | Report Visibility |",
+            "|---:|---|---|---|---|---|---|---:|---:|---:|---:|---:|---|---|",
+        ]
+        for rank, (_, row) in enumerate(research_shortlist.iterrows(), start=1):
+            lines.append(
+                f"| {int(row.get('RESEARCH_RANK') or rank)} | {row.get('SYMBOL', '')} | {row.get('COMPANY_NAME', '')} | "
+                f"{row.get('RESEARCH_SECTOR', '')} | {row.get('STAGE', '')} | {row.get('TRADING_SIGNAL', '')} | "
+                f"{row.get('ACTION_BUCKET', '')} | {_fmt(row.get('INVESTMENT_SCORE'))} | {_fmt(row.get('TECHNICAL_SCORE'))} | "
+                f"{_fmt(row.get('RELATIVE_STRENGTH'), '%')} | {_fmt(row.get('ENHANCED_FUND_SCORE'))} | {_fmt(row.get('RSI'))} | "
+                f"{row.get('SUPERTREND_STATE', '')} | {row.get('REPORT_VISIBILITY', '')} |"
+            )
+        lines.append("")
+
+    lines += [
+        "## 4. Deep Technical Notes",
         "",
     ]
     top_candidates = candidates.head(18)
@@ -1695,7 +1889,7 @@ def render_markdown(
         ]
 
     lines += [
-        "## 4. Peak Resilience & Fast Recovery",
+        "## 5. Peak Resilience & Fast Recovery",
         "",
         "This screen adds stocks in rotating sectors that remain within 20% of their 52-week high, are within 5% of the 52-week high or above it, and rank well on recovery velocity from the 52-week low.",
         "",
@@ -1718,7 +1912,7 @@ def render_markdown(
         lines.append("")
 
     lines += [
-        "## 5. Methodology",
+        "## 6. Methodology",
         "",
         "- **Sector rotation base score:** 0.35 x RS 1M + 0.25 x 1M return + 0.20 x RS 5D + 0.10 x RS 3M + 0.10 x RS 6M.",
         "- **Cycle-adjusted score:** base sector rotation score plus the economic-cycle adjustment shown in the sector table, when cycle detection is available.",
@@ -1727,7 +1921,7 @@ def render_markdown(
         "- **Consolidation breakout:** latest close above prior 20-session resistance after a base width of 12% or less, with volume ratio threshold of 1.4x where volume is available.",
         "- **Peak resilience:** filters for stocks no worse than 20% below 52-week high and within 5% of the 52-week high, then ranks by technical strength, RS, recovery speed from 52-week low, high proximity, and fundamentals.",
         "",
-        "## 6. Full Disclaimer",
+        "## 7. Full Disclaimer",
         "",
         FULL_LEGAL_DISCLAIMER,
         "",
@@ -4239,6 +4433,7 @@ def render_html_interactive(
     technical_view: dict | None = None,
     darvas_df: "pd.DataFrame | None" = None,
     global_us_context_html: str = "",
+    research_shortlist: pd.DataFrame | None = None,
 ) -> str:
     sector_rank = dedupe_sector_rank_by_display_name(sector_rank)
     gen_date = generated_at.strftime("%Y-%m-%d")
@@ -4909,6 +5104,52 @@ def render_html_interactive(
         + f'<div class="sblock-area">{sector_blocks_html}</div>'
     )
 
+    # ---- BUILD RESEARCH OVERLAY TAB ----
+    if research_shortlist is None or research_shortlist.empty:
+        research_overlay_html = (
+            '<div class="sec-title">Research Shortlist / Stage 2 Swing Overlay</div>'
+            '<div class="card"><p>No external swing research shortlist was available for this run.</p></div>'
+        )
+    else:
+        overlay_rows = ""
+        for _, r in research_shortlist.iterrows():
+            sym = _h(r.get("SYMBOL", ""))
+            company = _h(r.get("COMPANY_NAME", sym))
+            sector = _h(r.get("RESEARCH_SECTOR", "Other"))
+            stage = _h(r.get("STAGE", ""))
+            visibility = _h(r.get("REPORT_VISIBILITY", ""))
+            action = _h(r.get("ACTION_BUCKET", "WATCHLIST"))
+            setup = _h(r.get("SETUP_CLASS", "STAGE2_RESEARCH"))
+            signal_html = _signal_badge(str(r.get("TRADING_SIGNAL", "")))
+            overlay_rows += (
+                "<tr>"
+                f'<td class="num" data-val="{_fmth(r.get("RESEARCH_RANK"), digits=0)}">'
+                f'<span class="rank-num">{_fmth(r.get("RESEARCH_RANK"), digits=0)}</span></td>'
+                f"<td><strong>{sym}</strong></td>"
+                f"<td>{company}</td>"
+                f"<td>{sector}</td>"
+                f"<td>{stage}<br><span class=\"setup-chip\">{setup}</span><br><span class=\"action-chip\">{action}</span></td>"
+                f"<td>{signal_html}</td>"
+                f'<td class="num" data-val="{_fmth(r.get("CURRENT_PRICE"))}">₹{_fmth(r.get("CURRENT_PRICE"), digits=2)}</td>'
+                f'<td data-val="{_fmth(r.get("INVESTMENT_SCORE"))}">{_score_bar(r.get("INVESTMENT_SCORE"), "invest")}</td>'
+                f'<td data-val="{_fmth(r.get("TECHNICAL_SCORE"))}">{_score_bar(r.get("TECHNICAL_SCORE"), "tech")}</td>'
+                f'<td class="num" data-val="{_fmth(r.get("RELATIVE_STRENGTH"))}">{_ret_cell(r.get("RELATIVE_STRENGTH"))}</td>'
+                f'<td data-val="{_fmth(r.get("ENHANCED_FUND_SCORE"))}">{_score_bar(r.get("ENHANCED_FUND_SCORE"), "fund")}</td>'
+                f'<td class="num" data-val="{_fmth(r.get("RSI"))}">{_fmth(r.get("RSI"))}</td>'
+                f"<td>{_h(r.get('SUPERTREND_STATE', ''))}</td>"
+                f"<td>{visibility}</td>"
+                "</tr>"
+            )
+        research_overlay_html = (
+            '<div class="sec-title">Research Shortlist / Stage 2 Swing Overlay</div>'
+            '<div class="sec-sub">Keeps the latest swing research shortlist visible even when a stock sits outside the current top sector cut or below the sector candidate rank threshold.</div>'
+            '<div class="tbl-wrap"><table><thead><tr>'
+            '<th>#</th><th>Symbol</th><th>Company</th><th>Sector Lens</th><th>Stage / Setup</th>'
+            '<th>Signal</th><th class="num">Price</th><th>Score</th><th>Tech</th><th class="num">RS%</th>'
+            '<th>Fund</th><th class="num">RSI</th><th>Supertrend</th><th>Report Visibility</th>'
+            f'</tr></thead><tbody>{overlay_rows}</tbody></table></div>'
+        )
+
     # ---- BUILD RESILIENCE TAB ----
     if peak_resilience.empty:
         resilience_html = '<div class="card"><p>No stocks passed the peak-resilience filter in the current universe.</p></div>'
@@ -5351,6 +5592,7 @@ def render_html_interactive(
         '<button class="nav-btn" data-tab="overview">Overview</button>',
         '<button class="nav-btn" data-tab="rotation">Sector Rotation</button>',
         '<button class="nav-btn" data-tab="candidates">Investment Candidates</button>',
+        '<button class="nav-btn" data-tab="research-overlay">Research Overlay</button>',
         '<button class="nav-btn" data-tab="screeners">Screeners</button>',
         '<button class="nav-btn" data-tab="technical-view">Technical View</button>',
         '<button class="nav-btn" data-tab="global-us">Global / US</button>',
@@ -5364,6 +5606,7 @@ def render_html_interactive(
         f'<section id="tab-overview" class="tab-pane">{overview_html}</section>',
         f'<section id="tab-rotation" class="tab-pane">{rotation_html}</section>',
         f'<section id="tab-candidates" class="tab-pane">{candidates_html}</section>',
+        f'<section id="tab-research-overlay" class="tab-pane">{research_overlay_html}</section>',
         f'<section id="tab-screeners" class="tab-pane">{_build_screener_tab(candidates)}</section>',
         f'<section id="tab-technical-view" class="tab-pane">{build_technical_view_tab_html(technical_view)}</section>',
         f'<section id="tab-global-us" class="tab-pane">{_global_us_context_html}</section>',
@@ -5824,6 +6067,7 @@ def generate_report(top_n_sectors: int = 6, top_n_per_sector: int = 8) -> Report
         # PG-funnel: hard Stage 2 gate (env-controlled, default ON).
         # Set STAGE2_GATE=0 to disable and revert to the prior soft +4 bonus behavior.
         _stage2_gate = str(os.environ.get("STAGE2_GATE", "1")).strip().lower() not in ("0", "false", "off", "no")
+        candidates = enrich_with_peak_resilience(candidates, history)
         candidates = rank_stock_candidates(candidates, enforce_stage2=_stage2_gate)
         if _stage2_gate:
             print(f"  Stage 2 gate ENFORCED: {len(candidates)} candidates remain after hard filter.")
@@ -5879,6 +6123,10 @@ def generate_report(top_n_sectors: int = 6, top_n_per_sector: int = 8) -> Report
         except Exception as exc:
             print(f"  Stock cycle positioning skipped ({exc}).")
 
+    research_shortlist = build_research_shortlist_overlay(analysis, sector_rank, candidates)
+    if not research_shortlist.empty:
+        print(f"  Research shortlist overlay: {len(research_shortlist)} symbols retained.")
+
     generated_at = datetime.now()
     paths = report_output_paths(generated_at)
 
@@ -5919,7 +6167,15 @@ def generate_report(top_n_sectors: int = 6, top_n_per_sector: int = 8) -> Report
         breadth_history=_brief_breadth,
     )
 
-    md = render_markdown(sector_rank, candidates, peak_resilience, source_file, generated_at, narratives=narratives)
+    md = render_markdown(
+        sector_rank,
+        candidates,
+        peak_resilience,
+        source_file,
+        generated_at,
+        narratives=narratives,
+        research_shortlist=research_shortlist,
+    )
     try:
         _idx_cols = ["SYMBOL", "OPEN", "HIGH", "LOW", "CLOSE", "TIMESTAMP", "TOTTRDQTY"]
         _idx_history = load_index_history_for_technical_view(_idx_cols)
@@ -5937,7 +6193,24 @@ def generate_report(top_n_sectors: int = 6, top_n_per_sector: int = 8) -> Report
             _global_corr_table_html = render_correlation_table_html(_gcorr)
     except Exception:
         pass
-    html_text = render_html_interactive(sector_rank, candidates, peak_resilience, source_file, generated_at, narratives, regime_info=regime_info, flow_info=flow_info, cycle_info=cycle_info, macro_context=_macro_ctx, seasonal_calendar_html=_seasonal_calendar_html, global_corr_table_html=_global_corr_table_html, all_index_metrics=all_index_metrics, technical_view=technical_view, darvas_df=darvas_df if not darvas_df.empty else None)
+    html_text = render_html_interactive(
+        sector_rank,
+        candidates,
+        peak_resilience,
+        source_file,
+        generated_at,
+        narratives,
+        regime_info=regime_info,
+        flow_info=flow_info,
+        cycle_info=cycle_info,
+        macro_context=_macro_ctx,
+        seasonal_calendar_html=_seasonal_calendar_html,
+        global_corr_table_html=_global_corr_table_html,
+        all_index_metrics=all_index_metrics,
+        technical_view=technical_view,
+        darvas_df=darvas_df if not darvas_df.empty else None,
+        research_shortlist=research_shortlist,
+    )
     for path, text in [
         (paths.markdown, md),
         (paths.html, html_text),

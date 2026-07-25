@@ -294,7 +294,7 @@ _REPORT_TYPES = {
     "ric",
     "sector",
 }
-_REPORT_PRESET_TYPES = {"sector-rotation", "stage2"}
+_REPORT_PRESET_TYPES = {"sector", "sector-rotation", "stage2"}
 _DOCUMENT_EXTENSIONS = (".pdf", ".docx", ".doc", ".txt", ".csv", ".md", ".xlsx")
 
 

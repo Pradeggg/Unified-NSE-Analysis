@@ -25,6 +25,26 @@ class NSEIntradaySnapshotTests(unittest.TestCase):
         self.assertEqual(result["source_priority"][0], "NSE website live quote")
         self.assertEqual(result["last_price"], 1430.5)
 
+    def test_stock_snapshot_labels_bse_live_quote_when_bse_source_mode_is_enabled(self):
+        quote = {
+            "symbol": "INFY",
+            "last_price": 1063.65,
+            "source": "BSE live API",
+            "exchange": "BSE",
+            "bse_scrip_code": "500209",
+        }
+
+        with (
+            patch.dict("os.environ", {"AGENT_ADDA_QUOTE_SOURCE": "bse"}),
+            patch.object(tools, "get_live_quote", return_value=quote),
+            patch.object(tools, "persist_intraday_snapshot", return_value={"ok": True, "rows_inserted": 1}),
+        ):
+            result = tools.get_nse_intraday_snapshot("INFY")
+
+        self.assertEqual(result["source"], "BSE live API")
+        self.assertEqual(result["source_priority"][0], "BSE live API")
+        self.assertIn("BSE public website snapshot", result["note"])
+
     def test_stock_snapshot_persists_to_intraday_schema(self):
         quote = {
             "symbol": "RELIANCE",
@@ -133,6 +153,35 @@ class NSEIntradaySnapshotTests(unittest.TestCase):
         self.assertEqual(result["source"], "NSE browser quote page")
         self.assertEqual(result["last_price"], 7360.5)
         self.assertNotIn("error", result)
+
+    def test_stock_snapshot_does_not_use_yfinance_when_quote_fallback_is_disabled(self):
+        with (
+            patch.object(
+                tools,
+                "get_live_quote",
+                return_value={
+                    "symbol": "INFY",
+                    "source": "NSE quote-equity live API",
+                    "error": "NSE quote-equity unavailable: NSE returned HTTP 403",
+                    "fallback_disabled": True,
+                },
+            ),
+            patch.object(
+                tools,
+                "_playwright_nse_quote_snapshot",
+                return_value={"symbol": "INFY", "error": "NSE browser quote page unavailable"},
+            ) as browser_fetch,
+            patch.object(tools, "get_intraday_candles", side_effect=AssertionError("yfinance should not run")),
+            patch.object(tools, "persist_intraday_snapshot", side_effect=AssertionError("error snapshot should not persist")),
+        ):
+            result = tools.get_nse_intraday_snapshot("INFY")
+
+        browser_fetch.assert_called_once_with("INFY")
+        self.assertEqual(result["symbol"], "INFY")
+        self.assertEqual(result["source"], "NSE quote-equity live API")
+        self.assertTrue(result["fallback_disabled"])
+        self.assertIn("NSE quote-equity unavailable", result["error"])
+        self.assertIn("NSE browser quote page unavailable", result["error"])
 
 
 if __name__ == "__main__":

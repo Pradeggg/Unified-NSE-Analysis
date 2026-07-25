@@ -45,14 +45,14 @@ TO_RECIPIENTS = [
 ]
 # Changed 2026-05-19: BCC distribution re-enabled per user — full team list.
 BCC_RECIPIENTS: list[tuple[str, str]] = [
-    ("Khan, Hina Tabassum",    "hikhan@deloitte.com"),
+    ("Khan, Hina Tabassum",    "hinamanit@gmail.com"),
     ("Binjola, Maheshanand",   "mbinjola@deloitte.com"),
-    ("Bhatia, Hitesh",         "hibhatia@deloitte.com"),
+    ("Bhatia, Hitesh",         "hitesh86@gmail.com"),
     ("Chouhan, Kapil",         "kchouhan@deloitte.com"),
     ("Tangirala, Viswa Phani", "vitangirala@deloitte.com"),
     ("Sen, Avirup",            "avsen@deloitte.com"),
     ("Mahale, Ashish",         "amahale@deloitte.com"),
-    ("Gorai, Sandeep",         "sgorai@deloitte.com"),
+    ("Gorai, Sandeep",         "gorai.sandeep@gmail.com"),
 ]
 
 REPORTS_DIR        = ROOT / "reports"

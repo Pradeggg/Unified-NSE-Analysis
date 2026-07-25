@@ -431,6 +431,7 @@ SECTIONS: dict[str, dict] = {
         "aliases": ["report", "reports", "markdown", "html", "research-report"],
         "entries": [
             ("/report",                    "Generate a formatted report: HTML, Markdown, or PDF"),
+            ("/report sector NIFTY DEFENCE", "Focused sector-specific report with candidates, technical notes, and editor view"),
             ("/report sector-rotation",    "Instant sector rotation dashboard from DB"),
             ("/report stage2",             "Stage 2 universe tracker: leaders and new entrants"),
             ("/report strategy-lab",       "Portfolio paper strategy leaderboard and risk diagnostics"),
@@ -443,7 +444,7 @@ SECTIONS: dict[str, dict] = {
             ("/report intraday SBIN",      "Intraday analysis report"),
             ("/report canslim TATAMOTORS", "CANSLIM quality report"),
             ("/report ric ADANIENT pdf",   "RIC investigation report in PDF"),
-            ("/report sector IT",          "Sector analysis report"),
+            ("/report sector IT",          "Focused sector-specific sector report"),
             ("/swing-playbook",            "Generate the swing trading playbook report"),
         ],
     },

@@ -880,6 +880,7 @@ def _handle_recommendation_report_command(parts: list[str], report_console=None)
 
 # All slash commands with a brief hint shown in the completion menu
 _REPORT_PRESET_TYPES_FOR_TEST = {
+    "sector",
     "sector-rotation",
     "stage2",
     "strategy-lab",
@@ -1115,7 +1116,10 @@ _SLASH_COMMANDS: list[tuple[str, str]] = [
     ("/screenshot --no-email --out ~/Desktop/shot.png", "Capture only — save to disk, don't email"),
     # ── Intraday F&O alert monitor ─────────────────────────────────────────
     ("/intraday-alerts",                   "Running intraday F&O commentary with trigger email alerts"),
+    ("/live-intraday",                     "Alias for /intraday-alerts; launch Edge Memory-gated live intraday monitor"),
+    ("/live_intraday_alert",               "Alias for /intraday-alerts; launch live intraday alert monitor"),
     ("/live_intraday_alerts",              "Alias for /intraday-alerts; launch live intraday alert monitor"),
+    ("/ive_intraday_alerts",               "Typo-safe alias for /live_intraday_alerts"),
     ("/intraday-alerts --cycles 1 --dry-run", "One-cycle alert preview; writes email HTML preview to logs/"),
     ("/intraday-alerts --symbols BEL,MCX --min-rr 2 --trigger active", "Track selected F&O names only"),
     ("/intraday-alerts --cycles 0 --send", "Continuous loop; send trigger emails immediately"),
@@ -1177,6 +1181,7 @@ _SLASH_COMMANDS: list[tuple[str, str]] = [
     ("/mtf RELIANCE | /email --to a@x.com", "Email the rendered MTF panel as HTML"),
     # ── Report generation commands ─────────────────────────────────────────
     ("/report",                           "Generate a formatted report — PDF, HTML, or Markdown"),
+    ("/report sector NIFTY DEFENCE",      "Focused sector-specific report — candidates, technical notes, editor view"),
     ("/report sector-rotation",           "⚡ Instant sector rotation dashboard from DB (no LLM)"),
     ("/report sector-rotation pdf",       "⚡ Sector rotation report as PDF"),
     ("/report stage2",                    "⚡ Stage 2 universe tracker — top 30 leaders + new entrants (instant)"),
@@ -1199,6 +1204,7 @@ _SLASH_COMMANDS: list[tuple[str, str]] = [
     ("/backtest list",    "List EOD Strategy Lab strategies"),
     ("/strategy-lab validate", "Validate EOD backtesting data readiness"),
     ("/strategy-lab run", "Run portfolio strategy replay, DB persistence, and HTML report"),
+    ("/intraday-indicator-study --universe fno --timeframes 5m,15m", "Historical intraday F&O indicator leaderboard + report"),
     ("/strategy-council DMART", "Iterative strategist + critic EOD simulation with train/validation/test discipline"),
     ("/strategy-council DMART --iterations 3 --horizon 1w,2w,4w", "Run Strategy Council with explicit horizons"),
     ("/strategy-council DMART --llm", "Use configured LLM strategist and critics, with deterministic fallback if unavailable"),
@@ -1304,8 +1310,11 @@ _CMD_CATEGORIES: dict[str, tuple[str, str]] = {
     "/monitor":  ("Background Monitors", "👁️"),
     "/alert":    ("Watchlist Alerts",    "🔔"),
     "/intraday-alerts": ("Watchlist Alerts", "🔔"),
+    "/live-intraday": ("Watchlist Alerts", "🔔"),
     "/intraday_alerts": ("Watchlist Alerts", "🔔"),
     "/live-intraday-alerts": ("Watchlist Alerts", "🔔"),
+    "/live-intraday-alert": ("Watchlist Alerts", "🔔"),
+    "/live_intraday_alert": ("Watchlist Alerts", "🔔"),
     "/live_intraday_alerts": ("Watchlist Alerts", "🔔"),
     "/options":  ("F&O / Options",       "📊"),
     "/chain":    ("F&O / Options",       "📊"),
@@ -1334,6 +1343,8 @@ _CMD_CATEGORIES: dict[str, tuple[str, str]] = {
     "/swing-playbook": ("Report Generation", "📝"),
     "/backtest": ("Strategy Lab",         "🧪"),
     "/strategy-lab": ("Strategy Lab",     "🧪"),
+    "/intraday-indicator-study": ("Strategy Lab", "🧪"),
+    "/intraday-indicators": ("Strategy Lab", "🧪"),
     "/strategy-council": ("Strategy Council", "🧠"),
     "/council": ("Research Council",      "🧠"),
     "/investment-checklist": ("Research Council", "🧠"),
@@ -7232,7 +7243,7 @@ def _build_command_registry():
         import shlex
 
         raw = re.sub(
-            r"^\s*/(?:intraday-alerts|intraday_alerts|live-intraday-alerts|live_intraday_alerts|live-intraday-alertss|live_intraday_alertss)\b",
+            r"^\s*/(?:intraday-alerts|intraday_alerts|live-intraday|live-intraday-alert|live-intraday-alerts|live_intraday_alert|live_intraday_alerts|ive_intraday_alert|ive_intraday_alerts|live-intraday-alertss|live_intraday_alertss)\b",
             "",
             query or "",
             flags=re.IGNORECASE,
@@ -7253,7 +7264,7 @@ def _build_command_registry():
     registry.register(CommandHandler(
         name="intraday-alerts",
         match_fn=lambda q: re.match(
-            r"^/(?:intraday-alerts|intraday_alerts|live-intraday-alerts|live_intraday_alerts|live-intraday-alertss|live_intraday_alertss)(?:\s|$)",
+            r"^/(?:intraday-alerts|intraday_alerts|live-intraday|live-intraday-alert|live-intraday-alerts|live_intraday_alert|live_intraday_alerts|ive_intraday_alert|ive_intraday_alerts|live-intraday-alertss|live_intraday_alertss)(?:\s|$)",
             q,
         ) is not None,
         handler_fn=_h_intraday_alerts,
@@ -7317,7 +7328,7 @@ def _build_command_registry():
         description="Research Council orchestration",
     ))
 
-    # /backtest and /strategy-lab
+    # /backtest, /strategy-lab and intraday indicator research
     def _h_backtest(query, agent, show_trace):
         from terminal.backtest import handle_backtest_command
         _print_user(query)
@@ -7327,9 +7338,9 @@ def _build_command_registry():
         return True
     registry.register(CommandHandler(
         name="backtest",
-        match_fn=lambda q: q.startswith(("/backtest", "/strategy-lab")),
+        match_fn=lambda q: q.startswith(("/backtest", "/strategy-lab", "/intraday-indicator-study", "/intraday-indicators")),
         handler_fn=_h_backtest,
-        description="Backtest or strategy-lab run",
+        description="Backtest, strategy-lab run, or intraday indicator study",
     ))
 
     # /data-coverage
@@ -7607,6 +7618,47 @@ def _build_command_registry():
         match_fn=lambda q: q == "/skills" or q.startswith("/skills "),
         handler_fn=_h_skills,
         description="Inspect Skill Store cards, status counts, and recent activity",
+    ))
+
+    # /report sector <sector name> [format]
+    def _h_report_sector(query, agent, show_trace):
+        from terminal.reports import generate_preset_report
+
+        _print_user(query)
+        parts = query.strip().split()
+        remaining = parts[2:] if len(parts) >= 2 else []
+        rpt_fmt = "html"
+        rpt_args: list[str] = []
+        for item in remaining:
+            lowered = item.lower()
+            if lowered in ("html", "pdf", "md"):
+                rpt_fmt = lowered
+            else:
+                rpt_args.append(item)
+        result = generate_preset_report("sector", rpt_fmt, args=rpt_args)
+        if result.get("success"):
+            console.print(
+                f"  [bold green]✅  Sector report saved![/bold green]  "
+                f"[cyan]{result['path']}[/cyan]"
+            )
+            if result.get("latest_path"):
+                console.print(f"  [dim]Latest: {result.get('latest_path')}[/dim]")
+            if result.get("sector"):
+                console.print(
+                    f"  [dim]Sector: {result.get('sector')} · "
+                    f"Index: {result.get('index', 'n/a')} · Data as of: {result.get('data_as_of', 'n/a')}[/dim]"
+                )
+            if result.get("note"):
+                console.print(f"  [dim]{result.get('note')}[/dim]")
+            _open_report_path(result["path"], console)
+        else:
+            console.print(f"  [bold red]❌  {result.get('note','Sector report failed')}[/bold red]")
+        return True
+    registry.register(CommandHandler(
+        name="report-sector",
+        match_fn=lambda q: re.match(r"^/report\s+sector(?:\s|$)", q) is not None,
+        handler_fn=_h_report_sector,
+        description="Focused sector-specific market intelligence report",
     ))
 
     # /report diagnosis SYMBOL METRIC [format]
@@ -8329,7 +8381,7 @@ def _chat_loop(agent, show_trace: bool) -> None:
             _separator()
             continue
 
-        if text.lower().startswith(("/backtest", "/strategy-lab")):
+        if text.lower().startswith(("/backtest", "/strategy-lab", "/intraday-indicator-study", "/intraday-indicators")):
             from terminal.backtest import handle_backtest_command
             _print_user(text)
             output = handle_backtest_command(text)
@@ -9048,8 +9100,9 @@ def _chat_loop(agent, show_trace: bool) -> None:
                     "[dim]  Usage: /report <type> [symbol] [format][/dim]\n"
                     "[dim]  ─── Stock Reports (LLM-generated) ──────────────────────────────[/dim]\n"
                     "[dim]  Types:  technical | fundamental | forensic | research[/dim]\n"
-                    "[dim]          intraday | canslim | ric | sector[/dim]\n"
+                    "[dim]          intraday | canslim | ric[/dim]\n"
                     "[dim]  ─── Market Reports (Instant — direct from DB) ────────────────[/dim]\n"
+                    "[dim]  Types:  sector <name>    → Focused sector-specific market intelligence report[/dim]\n"
                     "[dim]  Types:  sector-rotation   → Full sector breadth & rotation dashboard[/dim]\n"
                     "[dim]          stage2            → Stage 2 universe tracker (top 30 + new entrants)[/dim]\n"
                     "[dim]          strategy-lab      → Portfolio paper strategy leaderboard + diagnostics[/dim]\n"
@@ -9061,6 +9114,8 @@ def _chat_loop(agent, show_trace: bool) -> None:
                     "[dim]  ─── Examples ────────────────────────────────────────────────────[/dim]\n"
                     "[dim]    /report sector-rotation           → HTML (instant)[/dim]\n"
                     "[dim]    /report sector-rotation pdf       → PDF  (instant)[/dim]\n"
+                    "[dim]    /report sector NIFTY DEFENCE html → Focused sector report[/dim]\n"
+                    "[dim]    /report sector IT md              → Focused sector markdown[/dim]\n"
                     "[dim]    /report stage2                    → HTML (instant)[/dim]\n"
                     "[dim]    /report stage2 md                 → Markdown[/dim]\n"
                     "[dim]    /report strategy-lab              → HTML portfolio strategy diagnostics[/dim]\n"
@@ -9090,6 +9145,11 @@ def _chat_loop(agent, show_trace: bool) -> None:
                 # For preset types, remaining is just [format]; for others [symbol] [format]
                 if rpt_type in _preset_types:
                     if rpt_type == "diagnosis":
+                        rpt_preset_args = [item for item in remaining if item.lower() not in ("html", "pdf", "md")]
+                        for item in remaining:
+                            if item.lower() in ("html", "pdf", "md"):
+                                rpt_fmt = item.lower()
+                    elif rpt_type == "sector":
                         rpt_preset_args = [item for item in remaining if item.lower() not in ("html", "pdf", "md")]
                         for item in remaining:
                             if item.lower() in ("html", "pdf", "md"):

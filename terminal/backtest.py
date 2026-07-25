@@ -18,6 +18,9 @@ from backtesting.engine import BacktestConfig, run_backtest
 from backtesting.storage import load_latest_backtest_report, persist_backtest_result
 from backtesting.strategy_registry import list_strategies
 from terminal.reports import generate_preset_report
+from terminal.intraday_indicator_study import StudyConfig, run_intraday_indicator_study
+from terminal.intraday_editorial_report import run_editorial_report
+from terminal.edge_knowledge import generate_edge_memory_report
 
 
 def _strategy_ids() -> set[str]:
@@ -66,6 +69,9 @@ def _usage_block() -> str:
         "  /backtest list                            — show available strategies\n"
         "  /strategy-lab validate                    — check EOD data readiness\n"
         "  /strategy-lab run                         — replay portfolio strategies + HTML report\n"
+        "  /intraday-indicator-study                  — rank intraday F&O indicator setups\n"
+        "  /edge-knowledge-report                     — build Edge Memory dashboard\n"
+        "  /intraday-editorial-report                 — build editorial quant F&O research note\n"
         "  /backtest run <strategy> [options]        — execute a backtest\n"
         "  /backtest <strategy> <SYMBOL>             — shorthand for last 2y on one symbol\n"
         "  /backtest report latest                   — show last persisted run\n"
@@ -78,13 +84,16 @@ def _usage_block() -> str:
         "  --to YYYY-MM-DD           end date (default: today)\n"
         "  --capital <amount>        initial capital (default 100000)\n"
         "  --persist                 store run + trades in PostgreSQL\n"
+        "  --persist-edges           store intraday findings as Edge Knowledge Nodes\n"
         "  --data <path>             override CSV (default data/nse_sec_full_data.csv)\n"
         "\n"
         "Examples:\n"
         "  /backtest stage2 DMART\n"
         "  /backtest run vcp --symbol RELIANCE --from 2024-01-01\n"
         "  /backtest run canslim --universe nifty500 --from 2024-01-01 --persist\n"
-        "  /strategy-lab run --top-n 200"
+        "  /strategy-lab run --top-n 200\n"
+        "  /intraday-indicator-study --universe fno --timeframes 5m,15m --lookback-days 30 --persist-edges\n"
+        "  /edge-knowledge-report --output-dir reports/latest"
     )
     return examples
 
@@ -133,6 +142,15 @@ def handle_backtest_command(text: str, *, project_root: Path | None = None) -> s
     if len(parts) >= 2 and parts[0].lower() == "/strategy-lab" and parts[1].lower() == "run":
         return _run_portfolio_strategy_lab_command(parts[2:], project_root=project_root)
 
+    if parts and parts[0].lower() in {"/intraday-indicator-study", "/intraday-indicators"}:
+        return _run_intraday_indicator_study_command(parts[1:], project_root=project_root)
+
+    if parts and parts[0].lower() in {"/intraday-editorial-report", "/intraday-fno-editorial"}:
+        return _run_intraday_editorial_report_command(parts[1:], project_root=project_root)
+
+    if parts and parts[0].lower() in {"/edge-knowledge-report", "/edge-memory", "/edge-memory-report"}:
+        return _run_edge_memory_report_command(parts[1:], project_root=project_root)
+
     if len(parts) >= 3 and parts[0].lower() == "/backtest" and parts[1].lower() == "run":
         return _run_backtest_command(parts[2:], project_root=project_root)
 
@@ -165,6 +183,185 @@ def handle_backtest_command(text: str, *, project_root: Path | None = None) -> s
                 "Run /backtest list to see all 12 strategies."
             )
     return f"Unrecognized: {head}\n\n{_usage_block()}{hint}"
+
+
+def _arg_csv(parts: list[str], name: str, default: str) -> tuple[str, ...]:
+    raw = _arg_value(parts, name, default) or default
+    return tuple(item.strip() for item in raw.split(",") if item.strip())
+
+
+def _run_intraday_editorial_report_command(parts: list[str], *, project_root: Path | None = None) -> str:
+    root = project_root or Path.cwd()
+    source = Path(_arg_value(parts, "--source", "reports/latest/intraday_fno_indicator_study.md"))
+    if not source.is_absolute():
+        source = root / source
+    allow_llm = "--no-llm" not in parts
+    detailed = "--detailed" in parts or "--paper" in parts
+    try:
+        result = run_editorial_report(
+            source,
+            output_dir=root / "reports" / "latest",
+            allow_llm=allow_llm,
+            detailed=detailed,
+        )
+    except Exception as exc:
+        return f"Intraday F&O Editorial Report failed: {type(exc).__name__}: {exc}"
+    paths = result.get("paths") or {}
+    lines = [
+        "Intraday F&O Editorial Report: OK",
+        f"Headline: {result.get('headline') or '-'}",
+        f"Narrative source: {(result.get('metadata') or {}).get('source') or '-'}",
+        f"Markdown: {paths.get('markdown')}",
+        f"HTML: {paths.get('html')}",
+        f"JSON: {paths.get('json')}",
+        "",
+        "Research only. Not investment advice.",
+    ]
+    if (result.get("metadata") or {}).get("llm_error"):
+        lines.insert(3, f"LLM note: {(result.get('metadata') or {}).get('llm_error')}")
+    detailed_paths = result.get("detailed_paths") or {}
+    if detailed_paths:
+        lines.insert(-2, f"Detailed paper: {detailed_paths.get('html')}")
+    return "\n".join(lines)
+
+
+def _run_intraday_indicator_study_command(parts: list[str], *, project_root: Path | None = None) -> str:
+    root = Path(project_root or Path.cwd())
+    try:
+        universe = _arg_value(parts, "--universe", "fno") or "fno"
+        symbols = _arg_csv(parts, "--symbols", "")
+        timeframes = _arg_csv(parts, "--timeframes", "5m,15m")
+        max_symbols = int(_arg_value(parts, "--max-symbols", "75") or "75")
+        max_hold_bars = int(_arg_value(parts, "--max-hold-bars", "12") or "12")
+        min_bars = int(_arg_value(parts, "--min-bars", "80") or "80")
+        slippage_bps = float(_arg_value(parts, "--slippage-bps", "3.0") or "3.0")
+        brokerage_bps = float(_arg_value(parts, "--brokerage-bps", "2.0") or "2.0")
+        promote_min_trades = int(_arg_value(parts, "--promote-min-trades", "10") or "10")
+        promote_min_expectancy_r = float(_arg_value(parts, "--promote-min-expectancy-r", "0.05") or "0.05")
+        promote_min_profit_factor = float(_arg_value(parts, "--promote-min-profit-factor", "1.10") or "1.10")
+        watch_min_trades = int(_arg_value(parts, "--watch-min-trades", "5") or "5")
+        watch_min_expectancy_r = float(_arg_value(parts, "--watch-min-expectancy-r", "0.0") or "0.0")
+        include_fno_context = "--no-fno-context" not in parts
+        persist_edges = "--persist-edges" in parts
+        start = _arg_value(parts, "--from")
+        end = _arg_value(parts, "--to")
+        lookback_days = _arg_value(parts, "--lookback-days")
+        if lookback_days and not start:
+            start = (date.today() - timedelta(days=int(lookback_days))).isoformat()
+        data_arg = _arg_value(parts, "--data")
+        data_path = Path(data_arg) if data_arg else None
+        if data_path and not data_path.is_absolute():
+            data_path = root / data_path
+        output_arg = _arg_value(parts, "--output-dir", "reports/research") or "reports/research"
+        output_dir = Path(output_arg)
+        if not output_dir.is_absolute():
+            output_dir = root / output_dir
+
+        config = StudyConfig(
+            universe=universe,
+            symbols=symbols,
+            timeframes=timeframes,
+            start=start,
+            end=end,
+            max_symbols=max_symbols,
+            max_hold_bars=max_hold_bars,
+            slippage_bps=slippage_bps,
+            brokerage_bps=brokerage_bps,
+            min_bars=min_bars,
+            data_path=data_path,
+            output_dir=output_dir,
+            include_fno_context=include_fno_context,
+            promote_min_trades=promote_min_trades,
+            promote_min_expectancy_r=promote_min_expectancy_r,
+            promote_min_profit_factor=promote_min_profit_factor,
+            watch_min_trades=watch_min_trades,
+            watch_min_expectancy_r=watch_min_expectancy_r,
+            persist_edges=persist_edges,
+        )
+        result = run_intraday_indicator_study(config)
+    except Exception as exc:
+        return f"Intraday Indicator Study failed: {type(exc).__name__}: {exc}"
+
+    report = result.get("report") or {}
+    leaderboard = result.get("leaderboard")
+    top_line = "No setup leaderboard produced."
+    if leaderboard is not None and not leaderboard.empty:
+        top = leaderboard.iloc[0]
+        top_line = (
+            f"Top setup: {top['setup']} {top['direction']} on {top['timeframe']} — "
+            f"trades={int(top['trades'])}, win={top['win_rate']:.1f}%, expectancy={top['expectancy_r']:.2f}R"
+        )
+    strategy_frame = result.get("strategy_map_frame")
+    strategy_line = "Strategy map: no symbol-level map produced."
+    if strategy_frame is not None and not strategy_frame.empty:
+        counts = strategy_frame["status"].value_counts().to_dict()
+        strategy_line = (
+            "Strategy map: "
+            f"promoted={counts.get('promoted', 0)}, "
+            f"watch={counts.get('watch_candidate', 0)}, "
+            f"avoid={counts.get('avoid', 0)}, "
+            f"insufficient={counts.get('insufficient_data', 0)}"
+        )
+    source = "; ".join(result.get("source_notes") or [])
+    state = "OK" if result.get("ok") else "DATA LIMITED"
+    edge_persistence = result.get("edge_persistence")
+    edge_line = None
+    if edge_persistence:
+        edge_line = (
+            f"Edge nodes: persisted={edge_persistence.get('nodes', 0)} "
+            f"refresh={edge_persistence.get('refresh_id') or '-'}"
+        )
+    output_lines = [
+        f"Intraday F&O Indicator Study: {state}",
+        f"Bars: {result.get('bars', 0)} | Symbols: {result.get('symbols', 0)} | Trades tested: {result.get('trades', 0)}",
+        f"F&O context rows: {len(result.get('fno_context')) if result.get('fno_context') is not None else 0}",
+        top_line,
+        strategy_line,
+    ]
+    if edge_line:
+        output_lines.append(edge_line)
+    output_lines.extend(
+        [
+            f"Source trail: {source or 'not reported'}",
+            f"Report: {report.get('html') or '-'}",
+            f"Latest: {report.get('latest_html') or '-'}",
+            f"Strategy map JSON: {report.get('latest_strategy_map') or '-'}",
+            "",
+            "Research only. Not investment advice.",
+        ]
+    )
+    return "\n".join(
+        output_lines
+    )
+
+
+def _run_edge_memory_report_command(parts: list[str], *, project_root: Path | None = None) -> str:
+    root = Path(project_root or Path.cwd())
+    output_arg = _arg_value(parts, "--output-dir", "reports/latest") or "reports/latest"
+    output_dir = Path(output_arg)
+    if not output_dir.is_absolute():
+        output_dir = root / output_dir
+    try:
+        result = generate_edge_memory_report(output_dir=output_dir)
+    except Exception as exc:
+        return f"Edge Knowledge Report failed: {type(exc).__name__}: {exc}"
+    summary = result.get("summary") or {}
+    paths = result.get("paths") or {}
+    status_counts = summary.get("status_counts") or {}
+    status_line = ", ".join(f"{key}={value}" for key, value in sorted(status_counts.items())) or "none"
+    return "\n".join(
+        [
+            "Edge Knowledge Report: OK",
+            f"Edges: {summary.get('total_edges', 0)}",
+            f"Status: {status_line}",
+            f"Active: {summary.get('active_edges', 0)} | Retired: {summary.get('retired_edges', 0)}",
+            f"HTML: {paths.get('html') or '-'}",
+            f"Markdown: {paths.get('markdown') or '-'}",
+            f"JSON: {paths.get('json') or '-'}",
+            "",
+            "Research only. Not investment advice.",
+        ]
+    )
 
 
 def _arg_value(parts: list[str], name: str, default: str | None = None) -> str | None:

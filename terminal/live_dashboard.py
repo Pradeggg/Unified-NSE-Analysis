@@ -5,7 +5,10 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import datetime
 import json
+import os
+import queue
 import re
+import threading
 import time
 from typing import Any
 
@@ -41,6 +44,20 @@ DEFAULT_TRACKER_SYMBOLS = [
     "BAJAJCON",
     "KIMS",
 ]
+
+
+def _configured_source_mode(*keys: str) -> str:
+    raw = ""
+    for key in keys:
+        raw = os.getenv(key, "").strip()
+        if raw:
+            break
+    mode = raw.lower().replace("-", "_")
+    if mode in {"bse", "bse_only", "bse_live", "bse_public", "exchange_public"}:
+        return "bse"
+    if mode in {"nse", "nse_only", "nse_quote_equity"}:
+        return "nse_only"
+    return "auto"
 
 
 @dataclass
@@ -174,6 +191,26 @@ def _window_levels(frame, label: str) -> dict[str, Any]:
     return {"label": label, "support": low, "resistance": high, "range_pct": range_pct}
 
 
+def _latest_session_frame(frame: pd.DataFrame) -> pd.DataFrame:
+    """Keep only the latest trading session from an intraday frame.
+
+    `get_intraday_candles(..., period="1d")` can fall back to a longer
+    interval/period early in the session when yfinance returns too few candles.
+    MTF current-day levels must not treat that longer fallback as "start of day".
+    """
+    if frame is None or frame.empty:
+        return frame
+    out = frame.copy().sort_index()
+    idx = pd.to_datetime(out.index)
+    if not isinstance(idx, pd.DatetimeIndex) or idx.empty:
+        return out
+    if idx.tz is not None:
+        idx = idx.tz_convert("Asia/Kolkata").tz_localize(None)
+    out.index = idx
+    latest_date = idx.max().date()
+    return out[idx.date == latest_date]
+
+
 def _nearest_level(levels: list[float], price: float | None, *, above: bool) -> float | None:
     clean = sorted({float(level) for level in levels if level is not None})
     if price is None:
@@ -188,7 +225,7 @@ def _nearest_level(levels: list[float], price: float | None, *, above: bool) -> 
 def build_mtf_level_context(symbol: str, last_price: float | None, interval: str = "5m") -> dict[str, Any]:
     """Build support/resistance context across weekly, daily, and intraday windows."""
     daily = get_intraday_candles(symbol, "1d", period="3mo")
-    intraday = get_intraday_candles(symbol, interval, period="1d")
+    intraday = _latest_session_frame(get_intraday_candles(symbol, interval, period="1d"))
     derived_last_price = _round_level(last_price)
     intraday_pct_change = None
     if not intraday.empty and "Close" in intraday:
@@ -245,6 +282,71 @@ def build_mtf_level_context(symbol: str, last_price: float | None, interval: str
         "intraday_pct_change": intraday_pct_change,
         "range_pressure_pct": _round_level(max(range_values) if range_values else None),
     }
+
+
+def _missing_mtf_context(symbol: str, exc: Exception | str) -> dict[str, Any]:
+    reason = str(exc) or f"MTF levels unavailable for {symbol}"
+    return {
+        "status": "missing",
+        "reason": reason,
+        "missing_evidence": ["mtf_levels"],
+        "windows": {},
+        "support": None,
+        "breakout": None,
+        "target": None,
+        "breakdown_target": None,
+        "last_price": None,
+        "intraday_pct_change": None,
+    }
+
+
+def _enrichment_timeout_secs(env_key: str, default: float) -> float:
+    raw = os.getenv(env_key, "").strip()
+    if not raw:
+        return default
+    try:
+        return max(0.1, float(raw))
+    except ValueError:
+        return default
+
+
+def _run_daemon_batch_with_timeout(
+    rows: list[TrackedSymbolState],
+    worker,
+    *,
+    timeout_secs: float | None,
+) -> dict[int, tuple[Any | None, Exception | None]]:
+    out: queue.Queue[tuple[int, Any | None, Exception | None]] = queue.Queue()
+    timeout = 6.0 if timeout_secs is None else max(0.1, float(timeout_secs))
+
+    def target(index: int, row: TrackedSymbolState) -> None:
+        try:
+            out.put((index, worker(row), None))
+        except Exception as exc:
+            out.put((index, None, exc))
+
+    threads = [
+        threading.Thread(target=target, args=(idx, row), daemon=True, name=f"live-enrich-{row.symbol}")
+        for idx, row in enumerate(rows)
+    ]
+    for thread in threads:
+        thread.start()
+
+    deadline = time.monotonic() + timeout
+    for thread in threads:
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            break
+        thread.join(remaining)
+
+    results: dict[int, tuple[Any | None, Exception | None]] = {}
+    while True:
+        try:
+            idx, value, exc = out.get_nowait()
+        except queue.Empty:
+            break
+        results[idx] = (value, exc)
+    return results
 
 
 def _mtf_note(mtf_levels: dict[str, Any]) -> str:
@@ -613,9 +715,20 @@ def enrich_tracked_symbols_with_mtf_levels(
     rows: list[TrackedSymbolState],
     *,
     interval: str = "5m",
+    timeout_secs: float | None = None,
 ) -> list[TrackedSymbolState]:
-    for row in rows:
-        levels = build_mtf_level_context(row.symbol, row.last_price, interval=interval)
+    timeout = timeout_secs
+    if timeout is None:
+        timeout = _enrichment_timeout_secs("AGENT_ADDA_MTF_ENRICH_TIMEOUT", 6.0)
+    results = _run_daemon_batch_with_timeout(
+        rows,
+        lambda row: build_mtf_level_context(row.symbol, row.last_price, interval=interval),
+        timeout_secs=timeout,
+    )
+    timeout_reason = f"MTF level provider timed out after {timeout:g}s"
+    for idx, row in enumerate(rows):
+        value, exc = results.get(idx, (None, TimeoutError(timeout_reason)))
+        levels = _missing_mtf_context(row.symbol, exc) if exc or value is None else value
         row.mtf_levels = levels
         if row.last_price is None:
             row.last_price = _to_float(levels.get("last_price"))
@@ -749,9 +862,27 @@ def build_fno_context(row: TrackedSymbolState) -> dict[str, Any]:
     }
 
 
-def enrich_tracked_symbols_with_fno_context(rows: list[TrackedSymbolState]) -> list[TrackedSymbolState]:
-    for row in rows:
-        row.fno_context = build_fno_context(row)
+def enrich_tracked_symbols_with_fno_context(
+    rows: list[TrackedSymbolState],
+    *,
+    timeout_secs: float | None = None,
+) -> list[TrackedSymbolState]:
+    timeout = timeout_secs
+    if timeout is None:
+        timeout = _enrichment_timeout_secs("AGENT_ADDA_FNO_ENRICH_TIMEOUT", 8.0)
+    results = _run_daemon_batch_with_timeout(rows, build_fno_context, timeout_secs=timeout)
+    timeout_reason = f"F&O provider timed out after {timeout:g}s"
+    for idx, row in enumerate(rows):
+        value, exc = results.get(idx, (None, TimeoutError(timeout_reason)))
+        if exc or value is None:
+            row.fno_context = {
+                "status": "missing",
+                "bias": "unknown",
+                "reason": str(exc) or "F&O context unavailable",
+                "missing_evidence": ["fno_context"],
+            }
+        else:
+            row.fno_context = value
     return rows
 
 
@@ -1369,6 +1500,16 @@ def generate_live_commentary(state: LiveDashboardState, backend, use_llm: bool =
 
 def fetch_live_dashboard_cycle(config: LiveDashboardConfig) -> dict[str, Any]:
     source_health: list[str] = []
+    quote_source_mode = _configured_source_mode("AGENT_ADDA_QUOTE_SOURCE", "AGENT_ADDA_INTRADAY_QUOTE_SOURCE")
+    ohlcv_source_mode = _configured_source_mode(
+        "AGENT_ADDA_INTRADAY_OHLCV_SOURCE",
+        "AGENT_ADDA_INTRADAY_QUOTE_SOURCE",
+        "AGENT_ADDA_QUOTE_SOURCE",
+    )
+    if quote_source_mode != "auto":
+        source_health.append(f"quote_source={quote_source_mode}")
+    if ohlcv_source_mode != "auto":
+        source_health.append(f"ohlcv_source={ohlcv_source_mode}")
 
     try:
         overview = get_live_market_overview()
@@ -1413,7 +1554,8 @@ def fetch_live_dashboard_cycle(config: LiveDashboardConfig) -> dict[str, Any]:
         quotes = get_nse_quotes(symbols)
         quote_map = quotes.get("quotes") or {}
         quote_freshness = str(quotes.get("as_of") or "")
-        source_health.append("get_nse_quotes ok")
+        quote_source = str(quotes.get("source") or "").strip()
+        source_health.append(f"get_nse_quotes ok: {quote_source}" if quote_source else "get_nse_quotes ok")
     except Exception as exc:
         quote_map = {}
         quote_freshness = ""

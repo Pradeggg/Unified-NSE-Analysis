@@ -166,7 +166,7 @@ class TestCommandRegistry:
         "help", "commands", "dashboard", "intraday-alerts", "interaction", "copilot-workflows", "scan", "quality-breakouts", "strategy-council", "council",
         "backtest", "data-coverage", "investment-checklist", "governance", "audit-report", "financial-rigor", "valuation-check", "broker-research", "open-last-report", "visual-scan",
         "doctor", "mtf", "strength", "skills", "email", "my-portfolio",
-        "swing-playbook", "diagnose", "report-diagnosis",
+        "swing-playbook", "diagnose", "report-sector", "report-diagnosis",
     ]
 
     def test_registry_has_all_expected_handlers(self, registry):
@@ -220,6 +220,7 @@ class TestCommandRegistry:
             "my-portfolio":     "/my-portfolio",
             "swing-playbook":    "/swing-playbook --portfolio",
             "diagnose":          "/diagnose DMART eps",
+            "report-sector":     "/report sector NIFTY DEFENCE html",
             "report-diagnosis":  "/report diagnosis DMART eps",
         }
         for name, query in test_inputs.items():
@@ -307,12 +308,15 @@ class TestCommandRegistry:
         handler_map = {h.name: h for h in registry._handlers}
         h = handler_map["intraday-alerts"]
 
+        assert h.match_fn("/live_intraday_alert --symbols BEL")
+        assert h.match_fn("/live-intraday-alert --symbols BEL")
         assert h.match_fn("/live_intraday_alerts --symbols BEL")
+        assert h.match_fn("/live-intraday --symbols BEL")
 
         with patch("nse_agent._print_user"), \
              patch("nse_agent.run_intraday_alert_commentary", create=True) as runner:
             handled = h.handler_fn(
-                "/live_intraday_alerts --symbols INDUSINDBK,NHPC --cycles 1 --interval 5 --no-llm",
+                "/live_intraday_alert --symbols INDUSINDBK,NHPC --cycles 1 --interval 5 --no-llm",
                 agent=None,
                 show_trace=False,
             )
@@ -330,11 +334,12 @@ class TestCommandRegistry:
         h = handler_map["intraday-alerts"]
 
         assert h.match_fn("/live_intraday_alertss --cycles 1")
+        assert h.match_fn("/ive_intraday_alerts --cycles 1")
 
         with patch("nse_agent._print_user"), \
              patch("nse_agent.run_intraday_alert_commentary", create=True) as runner:
             handled = h.handler_fn(
-                "/live_intraday_alertss --cycles 1 --interval 180 --candle-interval 5m --trigger active_or_near │ --min-rr 1.3 --email-every-mins 15 --max-tracked-symbols 7 --min-volume-ratio 1.2",
+                "/ive_intraday_alerts --cycles 1 --interval 180 --candle-interval 5m --trigger active_or_near │ --min-rr 1.3 --email-every-mins 15 --max-tracked-symbols 7 --min-volume-ratio 1.2",
                 agent=None,
                 show_trace=False,
             )
@@ -419,6 +424,30 @@ class TestCommandRegistry:
         assert handled is True
         generate.assert_called_once_with("diagnosis", "html", args=["DMART", "eps"])
         open_report.assert_called_once_with("/tmp/fundamental_driver_diagnosis.html", nse_agent.console)
+        assert printed.called
+
+    def test_report_sector_handler_calls_focused_sector_preset(self, registry):
+        handler_map = {h.name: h for h in registry._handlers}
+        h = handler_map["report-sector"]
+
+        fake = {
+            "success": True,
+            "path": "/tmp/sector_defence_aerospace.html",
+            "latest_path": "/tmp/latest_sector.html",
+            "sector": "Defence & Aerospace",
+            "index": "Nifty Ind Defence",
+            "data_as_of": "2026-06-19",
+            "note": "ok",
+        }
+        with patch("terminal.reports.generate_preset_report", return_value=fake) as generate, \
+             patch("nse_agent._print_user"), \
+             patch("nse_agent._open_report_path") as open_report, \
+             patch.object(nse_agent.console, "print") as printed:
+            handled = h.handler_fn("/report sector NIFTY DEFENCE html", agent=None, show_trace=False)
+
+        assert handled is True
+        generate.assert_called_once_with("sector", "html", args=["NIFTY", "DEFENCE"])
+        open_report.assert_called_once_with("/tmp/sector_defence_aerospace.html", nse_agent.console)
         assert printed.called
 
     def test_report_diagnosis_handler_parses_format(self, registry):

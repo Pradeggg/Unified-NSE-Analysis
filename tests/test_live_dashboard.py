@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+import time
 
 import pandas as pd
 from rich.console import Console
@@ -15,6 +16,7 @@ from terminal.live_dashboard import (
     deterministic_commentary,
     enrich_tracked_symbols_with_fno_context,
     enrich_tracked_symbols_with_mtf_levels,
+    _enrichment_timeout_secs,
     fetch_live_dashboard_cycle,
     generate_live_commentary,
     market_regime_from_context,
@@ -139,6 +141,79 @@ def test_fno_context_enrichment_classifies_bias(monkeypatch):
     assert enriched.fno_context["bias"] == "bullish"
     assert enriched.fno_context["pcr"] == 1.25
     assert "spot above max pain" in enriched.fno_context["reason"]
+
+
+def test_mtf_enrichment_marks_missing_when_one_symbol_fails(monkeypatch):
+    def fake_levels(symbol, last_price, interval="5m"):
+        if symbol == "BAD":
+            raise TimeoutError("provider timed out")
+        return {
+            "support": 98.0,
+            "breakout": 104.0,
+            "target": 110.0,
+            "breakdown_target": 92.0,
+            "last_price": last_price,
+            "intraday_pct_change": 1.0,
+        }
+
+    monkeypatch.setattr("terminal.live_dashboard.build_mtf_level_context", fake_levels)
+
+    bad = _symbol("BAD", "watch", price=100.0)
+    good = _symbol("GOOD", "watch", price=100.0)
+
+    enriched = enrich_tracked_symbols_with_mtf_levels([bad, good])
+
+    assert enriched[0].mtf_levels["status"] == "missing"
+    assert "provider timed out" in enriched[0].mtf_levels["reason"]
+    assert enriched[0].source == "test"
+    assert enriched[1].mtf_levels["breakout"] == 104.0
+
+
+def test_mtf_enrichment_times_out_slow_provider(monkeypatch):
+    def slow_levels(symbol, last_price, interval="5m"):
+        time.sleep(0.2)
+        return {"support": 98.0, "breakout": 104.0}
+
+    monkeypatch.setattr("terminal.live_dashboard.build_mtf_level_context", slow_levels)
+
+    row = _symbol("SLOW", "watch", price=100.0)
+
+    enriched = enrich_tracked_symbols_with_mtf_levels([row], timeout_secs=0.01)
+
+    assert enriched[0].mtf_levels["status"] == "missing"
+    assert "timed out" in enriched[0].mtf_levels["reason"]
+
+
+def test_enrichment_timeout_uses_environment_value(monkeypatch):
+    monkeypatch.setenv("AGENT_ADDA_TEST_TIMEOUT", "2")
+
+    assert _enrichment_timeout_secs("AGENT_ADDA_TEST_TIMEOUT", 6.0) == 2.0
+
+
+def test_fno_enrichment_marks_missing_when_one_symbol_fails(monkeypatch):
+    def fake_overview(symbol):
+        if symbol == "BAD":
+            raise TimeoutError("option chain timed out")
+        return {
+            "status": "ok",
+            "symbol": symbol,
+            "pcr": 0.55,
+            "basis": -1.0,
+            "max_pain": 105.0,
+            "top_oi_strikes": {"calls": [], "puts": []},
+        }
+
+    monkeypatch.setattr("terminal.live_dashboard.get_fno_overview", fake_overview)
+
+    bad = _symbol("BAD", "watch", price=100.0)
+    good = _symbol("GOOD", "watch", price=100.0)
+
+    enriched = enrich_tracked_symbols_with_fno_context([bad, good])
+
+    assert enriched[0].fno_context["status"] == "missing"
+    assert enriched[0].fno_context["bias"] == "unknown"
+    assert "option chain timed out" in enriched[0].fno_context["reason"]
+    assert enriched[1].fno_context["bias"] == "bearish"
 
 
 def test_market_regime_detects_risk_off_high_vix_breadth():
@@ -521,6 +596,38 @@ def test_fetch_live_dashboard_cycle_uses_bounded_tools(monkeypatch):
     assert "get_live_market_overview ok" in cycle["source_health"]
 
 
+def test_fetch_live_dashboard_cycle_reports_bse_source_modes(monkeypatch):
+    monkeypatch.setenv("AGENT_ADDA_QUOTE_SOURCE", "bse")
+    monkeypatch.setenv("AGENT_ADDA_INTRADAY_OHLCV_SOURCE", "bse")
+    monkeypatch.setattr(
+        "terminal.live_dashboard.get_live_market_overview",
+        lambda: {
+            "indices": {
+                "NIFTY 50": {"last": 24000, "pct_change": 0.2},
+                "NIFTY BANK": {"last": 57500, "pct_change": 0.4},
+                "INDIA VIX": {"last": 13.2, "pct_change": -0.3},
+            },
+            "adv_dec": {"advances": 430, "declines": 320},
+        },
+    )
+    monkeypatch.setattr("terminal.live_dashboard.get_top_gainers_losers", lambda **kwargs: {"gainers": [], "losers": []})
+    monkeypatch.setattr(
+        "terminal.live_dashboard.get_nse_quotes",
+        lambda symbols: {
+            "quotes": {"INFY": {"last_price": 1068.5, "pct_change": 1.5}},
+            "as_of": "22 Jun 26 | 11:00",
+            "source": "BSE live API batch",
+        },
+    )
+    monkeypatch.setattr("terminal.live_dashboard.scan_symbols_intraday", lambda **kwargs: {"top_buy": [], "top_sell": []})
+
+    cycle = fetch_live_dashboard_cycle(LiveDashboardConfig(symbols=["INFY"], interval="15m", top_n=1))
+
+    assert "quote_source=bse" in cycle["source_health"]
+    assert "ohlcv_source=bse" in cycle["source_health"]
+    assert "get_nse_quotes ok: BSE live API batch" in cycle["source_health"]
+
+
 def test_fetch_live_dashboard_cycle_filters_signals_without_volume(monkeypatch):
     monkeypatch.setattr("terminal.live_dashboard.get_live_market_overview", lambda: {})
     monkeypatch.setattr(
@@ -790,3 +897,46 @@ def test_mtf_level_enrichment_populates_watch_trigger_stop_target(monkeypatch):
     assert enriched.mtf_levels["windows"]["previous_week"]["resistance"] == 110
     assert enriched.mtf_levels["windows"]["previous_3_days"]["support"] == 100
     assert "Last 30 mins" in enriched.note
+
+
+def test_mtf_context_slices_intraday_fallback_to_latest_session(monkeypatch):
+    daily = pd.DataFrame(
+        {
+            "Open": [98, 101, 102, 104],
+            "High": [104, 106, 108, 110],
+            "Low": [94, 96, 98, 100],
+            "Close": [101, 103, 105, 107],
+            "Volume": [1000, 1100, 1200, 1300],
+        },
+        index=pd.date_range("2026-06-19", periods=4, freq="D"),
+    )
+    intraday = pd.DataFrame(
+        {
+            "Open": [70, 71, 101, 102],
+            "High": [75, 76, 104, 103],
+            "Low": [50, 69, 99, 100],
+            "Close": [72, 73, 101, 102],
+            "Volume": [1000, 1000, 1200, 1300],
+        },
+        index=pd.to_datetime(
+            [
+                "2026-03-30 09:00",
+                "2026-03-30 09:30",
+                "2026-06-24 09:00",
+                "2026-06-24 09:30",
+            ]
+        ),
+    )
+
+    def fake_candles(symbol, interval="15m", period=None):
+        return daily if interval == "1d" else intraday
+
+    monkeypatch.setattr("terminal.live_dashboard.get_intraday_candles", fake_candles)
+
+    levels = build_mtf_level_context("TEST", 102, interval="15m")
+
+    assert levels["windows"]["start_of_day"]["support"] == 99
+    assert levels["windows"]["start_of_day"]["resistance"] == 104
+    assert levels["intraday_pct_change"] == 0.99
+    assert levels["breakdown_target"] != 50
+    assert levels["range_pressure_pct"] < 20

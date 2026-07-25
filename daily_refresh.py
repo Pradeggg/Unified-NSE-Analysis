@@ -310,6 +310,17 @@ def step_materialize_stage2_vcp_picks(dry_run: bool) -> bool:
     )
 
 
+def step_rrg_breadth_report(dry_run: bool) -> bool:
+    """Generate the Market Breadth + RRG report (3 views: cap-size, sector, thematic)."""
+    _section("STEP 4E — Market Breadth & RRG Report")
+    return _run(
+        "Market Breadth + RRG (broad / sector / thematic)",
+        [PYTHON, "rrg_report.py"],
+        dry_run=dry_run,
+        timeout=360,
+    )
+
+
 def step_top_picks_report(dry_run: bool) -> bool:
     """Generate Top Investment Picks Analysis (merges sector rotation + stage-2 tracker)."""
     _section("STEP 5C — Top Investment Picks Detailed Report")
@@ -793,6 +804,8 @@ def main() -> int:
                         help="Slippage bps for portfolio strategy-lab fills")
     parser.add_argument("--portfolio-brokerage-bps", type=float, default=3.0,
                         help="Brokerage bps for portfolio strategy-lab fills")
+    parser.add_argument("--skip-rrg", action="store_true",
+                        help="Skip the Market Breadth & RRG report (STEP 4E)")
     parser.add_argument("--skip-email", action="store_true",
                         help="Skip the Top Picks email step (STEP 5D)")
     parser.add_argument("--email-send", action="store_true",
@@ -944,6 +957,13 @@ def main() -> int:
         if not step_report_validation("stage2_tracker", args.dry_run):
             print("  ⚠️  Stage 2 tracker report QA failed (non-fatal)")
             failed.append("Report QA: stage2 tracker")
+
+    # 4E. Market Breadth & RRG — reads from market.index_eod + market.equity_eod
+    #     (populated by STEP 0B). Non-fatal; LLM narratives are best-effort.
+    if not args.skip_rrg:
+        if not step_rrg_breadth_report(args.dry_run):
+            print("  ⚠️  Market Breadth & RRG report failed (non-fatal) — see logs above")
+            failed.append("Market Breadth & RRG report")
 
     # 5A. Pre-refresh screener fundamentals for today's top picks (shareholding,
     #     ratios, structured financials) so the report below renders complete.

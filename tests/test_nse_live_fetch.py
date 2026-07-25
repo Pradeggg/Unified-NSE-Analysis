@@ -128,7 +128,10 @@ class NseGetJsonRetryTests(unittest.TestCase):
 
         session = MagicMock()
         session.get.side_effect = _route
-        with patch("terminal.tools._get_live_session", return_value=session):
+        with (
+            patch("terminal.tools._get_live_session", return_value=session),
+            patch("terminal.tools._fetch_nse_index_constituents", return_value=[]),
+        ):
             result = nse_tools.get_top_gainers_losers(index="NIFTY 500", top_n=5)
 
         self.assertNotIn("error", result)
@@ -172,6 +175,158 @@ class NseGetJsonRetryTests(unittest.TestCase):
 
         self.assertEqual(result["adv_dec"], {"advances": 163, "declines": 585, "unchanged": 7})
         session.get.assert_called_once_with("https://www.nseindia.com/api/allIndices", timeout=10)
+
+
+class NSEOnlyQuoteModeTests(unittest.TestCase):
+    def test_get_live_quote_uses_quote_equity_without_yfinance_when_nse_only(self):
+        payload = {
+            "info": {"companyName": "Infosys Limited"},
+            "metadata": {"symbol": "INFY", "series": "EQ", "lastUpdateTime": "22-Jun-2026 10:30:00"},
+            "priceInfo": {
+                "lastPrice": 1062.5,
+                "open": 1070.0,
+                "previousClose": 1055.0,
+                "change": 7.5,
+                "pChange": 0.71,
+                "vwap": 1065.2,
+                "intraDayHighLow": {"max": 1072.0, "min": 1058.0},
+                "weekHighLow": {"max": 1800.0, "min": 1000.0},
+            },
+        }
+
+        with (
+            patch.dict("os.environ", {"AGENT_ADDA_QUOTE_SOURCE": "nse_only"}),
+            patch.object(nse_tools, "_nse_get_json", return_value=payload) as nse_fetch,
+            patch("yfinance.Ticker", side_effect=AssertionError("yfinance must not run in NSE-only mode")),
+        ):
+            result = nse_tools.get_live_quote("INFY")
+
+        nse_fetch.assert_called_once()
+        self.assertEqual(result["symbol"], "INFY")
+        self.assertEqual(result["source"], "NSE quote-equity live API")
+        self.assertEqual(result["last_price"], 1062.5)
+        self.assertEqual(result["pct_change"], 0.71)
+        self.assertNotIn("error", result)
+
+    def test_get_live_quote_fails_closed_when_nse_only_quote_equity_is_blocked(self):
+        with (
+            patch.dict("os.environ", {"AGENT_ADDA_NSE_ONLY_QUOTES": "1"}),
+            patch.object(nse_tools, "_nse_get_json", side_effect=RuntimeError("NSE returned HTTP 403")),
+            patch("yfinance.Ticker", side_effect=AssertionError("yfinance must not run in NSE-only mode")),
+        ):
+            result = nse_tools.get_live_quote("INFY")
+
+        self.assertEqual(result["symbol"], "INFY")
+        self.assertEqual(result["source"], "NSE quote-equity live API")
+        self.assertTrue(result["fallback_disabled"])
+        self.assertIn("NSE quote-equity unavailable", result["error"])
+        self.assertIn("HTTP 403", result["error"])
+
+    def test_get_nse_quotes_uses_sequential_nse_quotes_when_nse_only(self):
+        def fake_live_quote(symbol):
+            return {
+                "symbol": symbol,
+                "last_price": 100.0,
+                "pct_change": 1.0,
+                "source": "NSE quote-equity live API",
+            }
+
+        with (
+            patch.dict("os.environ", {"AGENT_ADDA_QUOTE_SOURCE": "NSE_ONLY"}),
+            patch.object(nse_tools, "get_live_quote", side_effect=fake_live_quote) as live_quote,
+            patch("yfinance.download", side_effect=AssertionError("yfinance batch must not run in NSE-only mode")),
+        ):
+            result = nse_tools.get_nse_quotes(["INFY", "BHEL"])
+
+        self.assertEqual(result["source"], "NSE quote-equity live API batch")
+        self.assertTrue(result["fallback_disabled"])
+        self.assertEqual(result["count"], 2)
+        self.assertEqual(set(result["quotes"]), {"INFY", "BHEL"})
+        self.assertEqual(live_quote.call_count, 2)
+
+
+class BSEQuoteModeTests(unittest.TestCase):
+    def test_get_live_quote_uses_bse_header_data_without_yfinance_when_bse_mode(self):
+        header_payload = {
+            "CurrRate": {"LTP": "1063.65", "Chg": "+11.80", "PcChg": "+1.12"},
+            "Cmpname": {"FullN": "Infosys Ltd", "ShortN": "infy", "EquityScrips": "500209"},
+            "Header": {
+                "PrevClose": "1051.85",
+                "Open": "1055.00",
+                "High": "1071.35",
+                "Low": "1055.00",
+                "Ason": "22 Jun 26 | 10:49",
+            },
+        }
+
+        with (
+            patch.dict("os.environ", {"AGENT_ADDA_QUOTE_SOURCE": "bse"}),
+            patch.object(nse_tools, "_resolve_bse_scrip_code", return_value="500209") as resolver,
+            patch.object(nse_tools, "_bse_get_json", return_value=header_payload) as bse_fetch,
+            patch("yfinance.Ticker", side_effect=AssertionError("yfinance must not run in BSE mode")),
+        ):
+            result = nse_tools.get_live_quote("INFY")
+
+        resolver.assert_called_once_with("INFY")
+        bse_fetch.assert_called_once()
+        self.assertEqual(result["symbol"], "INFY")
+        self.assertEqual(result["source"], "BSE live API")
+        self.assertEqual(result["exchange"], "BSE")
+        self.assertEqual(result["bse_scrip_code"], "500209")
+        self.assertEqual(result["last_price"], 1063.65)
+        self.assertEqual(result["open"], 1055.0)
+        self.assertEqual(result["day_high"], 1071.35)
+        self.assertEqual(result["day_low"], 1055.0)
+        self.assertEqual(result["prev_close"], 1051.85)
+        self.assertEqual(result["pct_change"], 1.12)
+        self.assertEqual(result["as_of"], "22 Jun 26 | 10:49")
+        self.assertNotIn("error", result)
+
+    def test_get_live_quote_fails_closed_when_bse_mode_cannot_resolve_symbol(self):
+        with (
+            patch.dict("os.environ", {"AGENT_ADDA_QUOTE_SOURCE": "bse_only"}),
+            patch.object(nse_tools, "_resolve_bse_scrip_code", return_value=None),
+            patch("yfinance.Ticker", side_effect=AssertionError("yfinance must not run in BSE mode")),
+        ):
+            result = nse_tools.get_live_quote("UNKNOWN")
+
+        self.assertEqual(result["symbol"], "UNKNOWN")
+        self.assertEqual(result["source"], "BSE live API")
+        self.assertTrue(result["fallback_disabled"])
+        self.assertIn("BSE scrip code unavailable", result["error"])
+
+    def test_get_nse_quotes_uses_sequential_bse_quotes_when_bse_mode(self):
+        def fake_live_quote(symbol):
+            return {
+                "symbol": symbol,
+                "last_price": 100.0,
+                "source": "BSE live API",
+            }
+
+        with (
+            patch.dict("os.environ", {"AGENT_ADDA_QUOTE_SOURCE": "exchange_public"}),
+            patch.object(nse_tools, "get_live_quote", side_effect=fake_live_quote) as live_quote,
+            patch("yfinance.download", side_effect=AssertionError("yfinance batch must not run in BSE mode")),
+        ):
+            result = nse_tools.get_nse_quotes(["INFY", "BHEL"])
+
+        self.assertEqual(result["source"], "BSE live API batch")
+        self.assertTrue(result["fallback_disabled"])
+        self.assertEqual(result["count"], 2)
+        self.assertEqual(set(result["quotes"]), {"INFY", "BHEL"})
+        self.assertEqual(live_quote.call_count, 2)
+
+    def test_resolve_bse_scrip_code_parses_peer_smart_search_html(self):
+        html_payload = (
+            "<li class='quotemenu quotemenuselect' "
+            "onclick=\"liclick('500209','Infosys Ltd')\">"
+            "<a>INFOSYS LTD<br /><span><strong>INFY</strong>&nbsp;&nbsp;&nbsp;"
+            "INE009A01021&nbsp;&nbsp;&nbsp;500209</span></a></li>"
+        )
+        with patch.object(nse_tools, "_bse_get_text", return_value=html_payload):
+            result = nse_tools._resolve_bse_scrip_code("INFY")
+
+        self.assertEqual(result, "500209")
 
 
 if __name__ == "__main__":

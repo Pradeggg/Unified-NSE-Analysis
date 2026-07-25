@@ -92,7 +92,7 @@ def _colorise_signals(text: str) -> str:
             seg = re.sub(
                 rf'(?<![\w-])({re.escape(word)})(?![\w-])',
                 rf'<span class="{cls}">\1</span>',
-                seg, flags=re.IGNORECASE
+                seg,
             )
         parts[idx] = seg
     return ''.join(parts)
@@ -4062,6 +4062,118 @@ def _strategy_lab_council_markdown(council: dict[str, object]) -> str:
     return "\n".join(md).strip()
 
 
+def _strategy_lab_robustness_markdown(summary: dict[str, object]) -> str:
+    robustness = summary.get("robustness") or {}
+    rows = list(robustness.get("rows") or [])
+    if not rows:
+        rows = [
+            row for row in list(summary.get("leaderboard") or [])
+            if row.get("critic_verdict") or row.get("robustness_score") is not None
+        ]
+    if not rows:
+        return ""
+
+    verdict_counts: dict[str, int] = {}
+    for row in rows:
+        verdict = str(row.get("critic_verdict") or "n/a").upper()
+        verdict_counts[verdict] = verdict_counts.get(verdict, 0) + 1
+    verdict_text = ", ".join(f"{key}: {value}" for key, value in sorted(verdict_counts.items()))
+    artifact = robustness.get("artifact")
+
+    md = [
+        "## Robustness Pack",
+        "",
+        (
+            "This section adds a deterministic critic pass on top of Strategy Lab results: "
+            "cost sensitivity, benchmark comparison, sample quality, turnover, drawdown, "
+            "and critic verdict. Stress-adjusted excess return is the key readout: if it "
+            "falls below zero, the apparent edge depends too much on current cost assumptions."
+        ),
+        "",
+        "| Metric | Value |",
+        "|---|---:|",
+        f"| Base cost assumption | {_fmt_num(robustness.get('base_cost_bps'), 1)} bps |",
+        f"| Stress cost assumption | {_fmt_num(robustness.get('stress_cost_bps'), 1)} bps |",
+        f"| Severe cost assumption | {_fmt_num(robustness.get('severe_cost_bps'), 1)} bps |",
+        f"| Critic verdict mix | {verdict_text or 'n/a'} |",
+    ]
+    if artifact:
+        md.append(f"| Robustness CSV | `{artifact}` |")
+    md.extend(
+        [
+            "",
+            "| Strategy | Score | Verdict | Stress-adjusted excess | Severe-adjusted excess | Main Issue |",
+            "|---|---:|---|---:|---:|---|",
+        ]
+    )
+    for row in rows:
+        md.append(
+            f"| **{_fmt_text(row.get('strategy_id'))}** | "
+            f"{_fmt_num(row.get('robustness_score'), 1)} | "
+            f"{_fmt_text(row.get('critic_verdict'))} | "
+            f"{_fmt_pct(row.get('cost_stress_excess_return_pct'), 2)} | "
+            f"{_fmt_pct(row.get('cost_severe_excess_return_pct'), 2)} | "
+            f"{_md_cell(_strategy_lab_critic_issue_text(row.get('critic_issues')))} |"
+        )
+    md.extend(
+        [
+            "",
+            "Critic rules are warnings or blockers for research governance. They do not execute trades and do not convert paper results into investment advice.",
+        ]
+    )
+    return "\n".join(md)
+
+
+def _strategy_lab_critic_issue_text(value: object) -> str:
+    if isinstance(value, list):
+        return str(value[0]) if value else "n/a"
+    if not value:
+        return "n/a"
+    try:
+        parsed = json.loads(str(value))
+    except (TypeError, json.JSONDecodeError):
+        return str(value)
+    if isinstance(parsed, list) and parsed:
+        return str(parsed[0])
+    return str(value)
+
+
+def _strategy_lab_risk_governance_markdown(summary: dict[str, object]) -> str:
+    policy = summary.get("risk_policy") or {}
+    rows = list(summary.get("leaderboard") or [])
+    if not policy and not rows:
+        return ""
+    total_blocks = sum(int(row.get("risk_blocks") or 0) for row in rows)
+    total_trims = sum(int(row.get("risk_trims") or 0) for row in rows)
+    md = [
+        "## Risk Governance",
+        "",
+        "| Control | Active Setting |",
+        "|---|---:|",
+        f"| Gross exposure cap | {_fmt_pct_plain(policy.get('max_gross_exposure_pct'), 1)} |",
+        f"| Single-stock cap | {_fmt_pct_plain(policy.get('max_single_stock_pct'), 1)} |",
+        f"| Sector cap | {_fmt_pct_plain(policy.get('max_sector_pct'), 1)} |",
+        f"| Max positions | {policy.get('max_positions', 'n/a')} |",
+        f"| Drawdown pause | {_fmt_pct_plain(policy.get('drawdown_pause_pct'), 1)} |",
+        f"| Turnover cap | {_fmt_pct_plain(policy.get('max_turnover_pct'), 1)} |",
+        f"| Trim trigger | {_fmt_pct_plain(policy.get('trim_when_position_pct_above'), 1)} |",
+        f"| Trim target | {_fmt_pct_plain(policy.get('trim_to_position_pct'), 1)} |",
+        f"| Stage 1 add block | {bool(policy.get('block_stage1_adds', False))} |",
+        "",
+        "| Governance Signal | Count |",
+        "|---|---:|",
+        f"| Blocked buy/add signals | {total_blocks} |",
+        f"| Trim signals | {total_trims} |",
+        "",
+        (
+            "**Confidence split:** entry strategy confidence comes from return, drawdown, profit factor, "
+            "expectancy, and robustness. Portfolio manager confidence comes from cap compliance, trims, "
+            "drawdown pause behavior, and turnover discipline."
+        ),
+    ]
+    return "\n".join(md)
+
+
 def _strategy_lab_verdict(row: dict, rank: int | None = None) -> tuple[str, str]:
     strategy_id = str(row.get("strategy_id") or "")
     fills = int(_float_or_none(row.get("fills")) or 0)
@@ -4157,7 +4269,7 @@ def _strategy_lab_detail_assets() -> str:
         'function toggleStrategyLabWindow(btn){var w=btn&&btn.closest?btn.closest(".aa-window,.aa-subwindow,.aa-playbook-card"):null;if(w)w.classList.toggle("collapsed");}'
         'function switchStrategyLabTab(tab){document.querySelectorAll(".aa-lab-tab").forEach(function(b){b.classList.toggle("active",b.dataset.tab===tab);});document.querySelectorAll(".aa-lab-tab-panel").forEach(function(p){p.classList.toggle("active",p.dataset.tab===tab);});}'
         'function buildStrategyLabTabs(){var body=document.getElementById("report-body");if(!body||body.querySelector(".aa-lab-tabbar"))return;var h2s=Array.from(body.children).filter(function(el){return el.tagName==="H2";});if(!h2s.length)return;'
-        'function tabFor(title){var t=(title||"").toLowerCase();if(t.indexOf("daily paper portfolio")>=0)return"paper";if(t.indexOf("risk-adjusted")>=0||t.indexOf("cost and turnover")>=0||t.indexOf("recommended paper")>=0)return"risk";if(t.indexOf("run artifacts")>=0)return"artifacts";if(t.indexOf("strategy playbook")>=0)return"playbook";if(t.indexOf("strategy leaderboard")>=0||t.indexOf("strategy verdict")>=0||t.indexOf("detailed analysis")>=0||t.indexOf("market and run")>=0||t.indexOf("fundamental and quarterly")>=0||t.indexOf("charts and visual")>=0)return"strategy";return"overview";}'
+        'function tabFor(title){var t=(title||"").toLowerCase();if(t.indexOf("daily paper portfolio")>=0)return"paper";if(t.indexOf("robustness")>=0||t.indexOf("risk governance")>=0||t.indexOf("risk-adjusted")>=0||t.indexOf("cost and turnover")>=0||t.indexOf("recommended paper")>=0)return"risk";if(t.indexOf("run artifacts")>=0)return"artifacts";if(t.indexOf("strategy playbook")>=0)return"playbook";if(t.indexOf("strategy leaderboard")>=0||t.indexOf("strategy verdict")>=0||t.indexOf("detailed analysis")>=0||t.indexOf("market and run")>=0||t.indexOf("fundamental and quarterly")>=0||t.indexOf("charts and visual")>=0)return"strategy";return"overview";}'
         'var labels={overview:"Overview",strategy:"Strategy Lab",playbook:"Strategy Playbook",paper:"Paper Trading",risk:"Risk & Turnover",artifacts:"Artifacts"};var shell=document.createElement("div");shell.className="aa-lab-tabs";shell.innerHTML=\'<div class="aa-lab-tabbar" role="tablist"></div><div class="aa-lab-tab-panels"></div>\';body.insertBefore(shell,h2s[0]);var bar=shell.querySelector(".aa-lab-tabbar");var panels=shell.querySelector(".aa-lab-tab-panels");var panelByKey={};["overview","strategy","playbook","paper","risk","artifacts"].forEach(function(key){var b=document.createElement("button");b.type="button";b.className="aa-lab-tab"+(key==="overview"?" active":"");b.dataset.tab=key;b.textContent=labels[key];b.onclick=function(){switchStrategyLabTab(key);};bar.appendChild(b);var p=document.createElement("div");p.className="aa-lab-tab-panel"+(key==="overview"?" active":"");p.dataset.tab=key;panels.appendChild(p);panelByKey[key]=p;});'
         'function wrapH3Sections(parent){var h3s=Array.from(parent.children).filter(function(el){return el.tagName==="H3";});if(!h3s.length)return;var first=h3s[0];var nodes=Array.from(parent.children);var moving=[];var started=false;nodes.forEach(function(n){if(n===first)started=true;if(started)moving.push(n);});moving.forEach(function(n){if(n.parentNode===parent)parent.removeChild(n);});var current=null;var currentBody=null;moving.forEach(function(n){if(n.tagName==="H3"){current=document.createElement("div");current.className="aa-subwindow collapsed";var title=n.textContent.trim();current.innerHTML=\'<button type="button" class="aa-subwindow-header" onclick="toggleStrategyLabWindow(this)"><span></span><span>▾</span></button><div class="aa-subwindow-body"></div>\';current.querySelector("span").textContent=title;currentBody=current.querySelector(".aa-subwindow-body");parent.appendChild(current);}else if(currentBody){currentBody.appendChild(n);}else{parent.appendChild(n);}});var firstSub=parent.querySelector(".aa-subwindow");if(firstSub)firstSub.classList.remove("collapsed");}'
         'var nodes=Array.from(body.children);var moving=[];var started=false;nodes.forEach(function(n){if(n===shell)return;if(n.tagName==="H2")started=true;if(started)moving.push(n);});moving.forEach(function(n){if(n.parentNode===body)body.removeChild(n);});var currentWin=null;var currentBody=null;var openSeen={};moving.forEach(function(n){if(n.tagName==="H2"){var title=n.textContent.trim();var key=tabFor(title);currentWin=document.createElement("div");currentWin.className="aa-window";currentWin.id=n.id||"";var collapsed=(key!=="overview"&&!openSeen[key]);if(collapsed)currentWin.classList.add("collapsed");openSeen[key]=true;currentWin.innerHTML=\'<button type="button" class="aa-window-header" onclick="toggleStrategyLabWindow(this)"><span class="aa-window-title"></span><span class="aa-window-meta"></span><span class="aa-window-caret">▾</span></button><div class="aa-window-body"></div>\';currentWin.querySelector(".aa-window-title").textContent=title;currentWin.querySelector(".aa-window-meta").textContent=key==="paper"?"Paper book isolated in this tab":"Click header to collapse or expand";currentBody=currentWin.querySelector(".aa-window-body");panelByKey[key].appendChild(currentWin);}else if(currentBody){currentBody.appendChild(n);}else{panelByKey.overview.appendChild(n);}});document.querySelectorAll(".aa-window-body").forEach(wrapH3Sections);if(location.hash&&document.querySelector(location.hash)){var target=document.querySelector(location.hash);var panel=target.closest(".aa-lab-tab-panel");if(panel)switchStrategyLabTab(panel.dataset.tab);}}'
@@ -5043,6 +5155,16 @@ def _build_strategy_lab_content() -> str:
         md.append(f"| **{row.get('strategy_id')}** | {verdict} | {reason} |")
     md.append("")
 
+    robustness_section = _strategy_lab_robustness_markdown(summary)
+    if robustness_section:
+        md.append(robustness_section)
+        md.append("")
+
+    risk_governance_section = _strategy_lab_risk_governance_markdown(summary)
+    if risk_governance_section:
+        md.append(risk_governance_section)
+        md.append("")
+
     md.append("## Risk-Adjusted Readout")
     md.append("")
     if rows:
@@ -5186,6 +5308,1897 @@ def _generate_diagnosis_preset_report(args: list[str], output_format: str) -> di
     return archive
 
 
+def _slugify_report_name(value: str) -> str:
+    text = re.sub(r"[^a-zA-Z0-9]+", "_", str(value or "").strip().lower())
+    return re.sub(r"_+", "_", text).strip("_") or "sector"
+
+
+def _norm_sector_text(value: object) -> str:
+    text = str(value or "").strip().lower().replace("&", " and ")
+    text = re.sub(r"[^a-z0-9]+", " ", text)
+    return re.sub(r"\s+", " ", text).strip()
+
+
+def _sector_query_aliases(query: str) -> set[str]:
+    q = _norm_sector_text(query)
+    alias_map = {
+        "auto": {"nifty auto", "ev and auto ancillaries", "auto and ev mobility", "automobiles"},
+        "automobile": {"nifty auto", "auto", "ev and auto ancillaries", "auto and ev mobility"},
+        "automobiles": {"nifty auto", "auto", "ev and auto ancillaries", "auto and ev mobility"},
+        "nifty auto": {"auto", "automobiles", "ev and auto ancillaries", "auto and ev mobility"},
+        "ev and auto ancillaries": {"nifty auto", "auto", "nifty ev and new age automotive"},
+        "nifty defence": {"nifty ind defence", "nifty india defence", "defence", "defence and aerospace"},
+        "nifty india defence": {"nifty ind defence", "defence", "defence and aerospace"},
+        "defence": {"nifty ind defence", "nifty india defence", "defence and aerospace"},
+        "defense": {"nifty ind defence", "nifty india defence", "defence", "defence and aerospace"},
+        "it": {"nifty it", "it and technology", "information technology"},
+        "pharma": {"nifty pharma", "nifty healthcare", "pharma and healthcare"},
+        "banking": {"nifty bank", "banking private", "banking"},
+        "psu bank": {"nifty psu bank", "banking psu"},
+        "real estate": {"nifty realty", "realty"},
+        "oil gas": {"nifty oil and gas", "energy oil and gas"},
+        "oil and gas": {"nifty oil and gas", "energy oil and gas"},
+    }
+    return {q, *alias_map.get(q, set())} - {""}
+
+
+def _sector_lens_for_index(index_name: str, fallback: str = "Sector Focus") -> str:
+    norm = _norm_sector_text(index_name)
+    mapping = {
+        "nifty auto": "EV & Auto Ancillaries",
+        "nifty ev and new age automotive": "EV & Auto Ancillaries",
+        "nifty mobility": "EV & Auto Ancillaries",
+        "nifty bank": "Banking",
+        "nifty private bank": "Banking - Private",
+        "nifty pvt bank": "Banking - Private",
+        "nifty psu bank": "Banking - PSU",
+        "nifty financial services": "Financial Services",
+        "nifty fin service": "Financial Services",
+        "nifty fmcg": "FMCG",
+        "nifty it": "IT & Technology",
+        "nifty media": "Media & Entertainment",
+        "nifty metal": "Metals & Mining",
+        "nifty pharma": "Pharma & Healthcare",
+        "nifty healthcare index": "Pharma & Healthcare",
+        "nifty realty": "Real Estate",
+        "nifty consumer durables": "Consumer Durables",
+        "nifty oil and gas": "Energy - Oil & Gas",
+        "nifty infra": "Infrastructure",
+        "nifty india defence": "Defence & Aerospace",
+        "nifty ind defence": "Defence & Aerospace",
+        "nifty india manufacturing": "Capital Goods & Industrials",
+        "nifty india mfg": "Capital Goods & Industrials",
+        "nifty transportation and logistics": "Transportation & Logistics",
+    }
+    return mapping.get(norm, fallback)
+
+
+def _latest_sector_rotation_markdown() -> Path:
+    latest_md = ROOT / "reports" / "latest" / "sector_rotation.md"
+    if latest_md.exists():
+        return latest_md
+    import sector_rotation_report
+
+    sector_rotation_report.generate_report()
+    if not latest_md.exists():
+        raise FileNotFoundError("reports/latest/sector_rotation.md was not generated")
+    return latest_md
+
+
+def _extract_markdown_section(markdown: str, heading: str, next_heading_prefix: str = "\n## ") -> str:
+    start = markdown.find(heading)
+    if start < 0:
+        return ""
+    end = markdown.find(next_heading_prefix, start + len(heading))
+    return markdown[start:end].strip() if end > start else markdown[start:].strip()
+
+
+def _extract_subsection(markdown: str, heading: str) -> str:
+    start = markdown.find(heading)
+    if start < 0:
+        return ""
+    end = markdown.find("\n### ", start + len(heading))
+    if end < 0:
+        end = markdown.find("\n## ", start + len(heading))
+    return markdown[start:end].strip() if end > start else markdown[start:].strip()
+
+
+def _sector_rotation_rows(markdown: str) -> list[dict[str, str]]:
+    rows: list[dict[str, str]] = []
+    in_table = False
+    for line in markdown.splitlines():
+        if line.startswith("| Rank | Index | Sector Lens |"):
+            in_table = True
+            continue
+        if not in_table:
+            continue
+        if line.startswith("|---"):
+            continue
+        if not line.startswith("|"):
+            if rows:
+                break
+            continue
+        cells = [c.strip() for c in line.strip().strip("|").split("|")]
+        if len(cells) >= 10 and cells[0].isdigit():
+            rows.append(
+                {
+                    "rank": cells[0],
+                    "index": cells[1],
+                    "sector": cells[2],
+                    "close": cells[3],
+                    "ret_5d": cells[4],
+                    "ret_1m": cells[5],
+                    "ret_3m": cells[6],
+                    "ret_6m": cells[7],
+                    "rs_1m": cells[8],
+                    "score": cells[-1],
+                }
+            )
+    return rows
+
+
+def _resolve_sector_from_rotation(markdown: str, sector_query: str) -> dict[str, str]:
+    aliases = _sector_query_aliases(sector_query)
+    rows = _sector_rotation_rows(markdown)
+    for row in rows:
+        haystacks = {
+            _norm_sector_text(row.get("index")),
+            _norm_sector_text(row.get("sector")),
+            _norm_sector_text(f"{row.get('index')} {row.get('sector')}"),
+        }
+        if aliases & haystacks or any(a in h or h in a for a in aliases for h in haystacks if a and h):
+            return row
+    available = ", ".join(r["sector"] for r in rows[:10]) or "none"
+    raise ValueError(f"Sector '{sector_query}' not found in latest sector rotation report. Available leading sectors: {available}")
+
+
+def _candidate_symbols_from_section(section: str) -> list[str]:
+    symbols: list[str] = []
+    for line in section.splitlines():
+        if not line.startswith("|") or line.startswith("|---") or "Symbol | Company" in line:
+            continue
+        cells = [c.strip() for c in line.strip().strip("|").split("|")]
+        if cells and re.match(r"^[A-Z0-9&.-]{2,20}$", cells[0]):
+            symbols.append(cells[0])
+    return symbols
+
+
+def _candidate_rows_from_section(section: str) -> list[dict[str, str]]:
+    rows: list[dict[str, str]] = []
+    headers: list[str] = []
+    for line in section.splitlines():
+        if not line.startswith("|"):
+            continue
+        cells = [c.strip() for c in line.strip().strip("|").split("|")]
+        if not cells:
+            continue
+        if cells[0].lower() == "symbol":
+            headers = [re.sub(r"[^a-z0-9]+", "_", c.strip().lower()).strip("_") for c in cells]
+            continue
+        if line.startswith("|---") or not headers:
+            continue
+        if len(cells) < len(headers):
+            cells += [""] * (len(headers) - len(cells))
+        row = dict(zip(headers, cells))
+        symbol = row.get("symbol", "").strip()
+        if symbol and re.match(r"^[A-Z0-9&.-]{2,20}$", symbol):
+            rows.append(row)
+    return rows
+
+
+def _parse_sector_report_args(args: list[str]) -> dict[str, object]:
+    mode_tokens = {"deep", "ric", "enriched", "publishable"}
+    out: dict[str, object] = {
+        "sector_query": "",
+        "mode": "rotation",
+        "max_companies": 5,
+        "lookback_days": 30,
+        "no_web": False,
+    }
+    query_parts: list[str] = []
+    idx = 0
+    while idx < len(args):
+        item = str(args[idx]).strip()
+        low = item.lower()
+        if low in mode_tokens:
+            out["mode"] = "ric"
+        elif low in {"--no-web", "local-only"}:
+            out["no_web"] = True
+        elif low in {"--max-companies", "--max", "--top"} and idx + 1 < len(args):
+            idx += 1
+            try:
+                out["max_companies"] = max(1, min(10, int(args[idx])))
+            except (TypeError, ValueError):
+                pass
+        elif low.startswith("--max-companies=") or low.startswith("--max=") or low.startswith("--top="):
+            try:
+                out["max_companies"] = max(1, min(10, int(item.split("=", 1)[1])))
+            except (TypeError, ValueError, IndexError):
+                pass
+        elif low in {"--lookback-days", "--lookback"} and idx + 1 < len(args):
+            idx += 1
+            try:
+                out["lookback_days"] = max(1, min(365, int(args[idx])))
+            except (TypeError, ValueError):
+                pass
+        elif low.startswith("--lookback-days=") or low.startswith("--lookback="):
+            try:
+                out["lookback_days"] = max(1, min(365, int(item.split("=", 1)[1])))
+            except (TypeError, ValueError, IndexError):
+                pass
+        else:
+            query_parts.append(item)
+        idx += 1
+    out["sector_query"] = " ".join(p for p in query_parts if p).strip()
+    return out
+
+
+def _compact_status(ok: bool, partial: bool = False) -> str:
+    if ok:
+        return "OK"
+    if partial:
+        return "partial"
+    return "missing"
+
+
+def _status_from_result(result: Any, primary_key: str | None = None) -> str:
+    if not isinstance(result, dict):
+        return "missing"
+    if result.get("error"):
+        return "missing"
+    if primary_key:
+        value = result.get(primary_key)
+        if isinstance(value, dict):
+            return "OK" if any(v for k, v in value.items() if not str(k).startswith("_")) else "partial"
+        if isinstance(value, list):
+            return "OK" if value else "partial"
+        return "OK" if value else "partial"
+    if any(result.get(k) for k in ("ratios", "facts", "bse_filings", "nse_filings", "summary", "results", "concalls")):
+        return "OK"
+    return "partial"
+
+
+def _safe_get(mapping: dict[str, Any], *keys: str, default: str = "—") -> str:
+    for key in keys:
+        value = mapping.get(key)
+        if value not in (None, "", [], {}):
+            return str(value)
+    return default
+
+
+def _last_table_value(table: dict[str, Any], *row_names: str) -> str:
+    for name in row_names:
+        values = table.get(name)
+        if isinstance(values, list) and values:
+            return str(values[-1])
+    return "—"
+
+
+def _md_cell(value: object, limit: int = 220) -> str:
+    text = re.sub(r"\s+", " ", str(value if value is not None else "—")).strip()
+    text = text.replace("|", "/")
+    if len(text) > limit:
+        return text[: max(0, limit - 3)].rstrip() + "..."
+    return text or "—"
+
+
+def _summarise_event_subject(subject: str) -> str:
+    text = re.sub(r"\s+", " ", str(subject or "")).strip()
+    return text[:140] + ("..." if len(text) > 140 else "")
+
+
+def _company_sector_profile(symbol: str, company: str, sector_name: str) -> str:
+    symbol_u = symbol.upper().strip()
+    low_sector = sector_name.lower()
+    defence_profiles = {
+        "PARAS": (
+            "Defence electronics, optics, space-engineering and EMP-protection supplier; "
+            "fits the defence/aerospace lens through specialised systems, order-book execution, "
+            "and indigenisation exposure."
+        ),
+        "ASTRAMICRO": (
+            "RF, microwave, radar and defence-electronics manufacturer; the sector fit comes from "
+            "systems used in defence, space, meteorology and communication platforms."
+        ),
+        "KERNEX": (
+            "Railway safety and anti-collision systems company; included as a defence-adjacent "
+            "electronics/safety infrastructure name where execution quality and working capital matter."
+        ),
+        "MTARTECH": (
+            "Precision engineering supplier to clean energy, space, defence and aerospace programs; "
+            "sector fit is through high-spec manufacturing and mission-critical component supply."
+        ),
+        "DATAPATTNS": (
+            "Defence and aerospace electronics company focused on radars, avionics, electronic warfare "
+            "and automated test systems."
+        ),
+        "BEML": (
+            "Defence, rail, mining and construction equipment PSU; defence fit comes through mobility, "
+            "armoured recovery, aerospace ground support and military engineering platforms."
+        ),
+        "HAL": (
+            "Aerospace and defence PSU with aircraft, helicopter, engine, maintenance and platform upgrade exposure."
+        ),
+        "BEL": (
+            "Defence electronics PSU with radar, communication, electronic warfare and systems integration exposure."
+        ),
+        "BDL": (
+            "Missile and defence systems PSU; sector fit is direct through guided weapons, launchers and defence exports."
+        ),
+        "COCHINSHIP": (
+            "Shipbuilding and repair company with naval, defence and commercial vessel exposure."
+        ),
+    }
+    if ("defence" in low_sector or "aerospace" in low_sector) and symbol_u in defence_profiles:
+        return defence_profiles[symbol_u]
+    return (
+        f"{company} is included in the {sector_name} lens because it appears in the sector rotation candidate map. "
+        "The report treats it as a sector candidate only after checking price action, fundamentals/results, "
+        "events, forensic quality, and management-commentary evidence."
+    )
+
+
+def _impact_from_subject(subject: str) -> str:
+    low = str(subject or "").lower()
+    if any(w in low for w in ("order", "contract", "upgrade", "rating", "award", "patent")):
+        return "positive"
+    if any(w in low for w in ("resignation", "downgrade", "default", "penalty", "show cause", "litigation")):
+        return "negative"
+    if any(w in low for w in ("scheme of arrangement", "merger", "demerger", "allotment", "change in management")):
+        return "neutral"
+    if any(w in low for w in ("result", "financial", "investor", "analyst", "presentation", "meeting", "approval")):
+        return "mixed"
+    return "neutral"
+
+
+def _why_event_matters(subject: str, sector_name: str) -> str:
+    low = str(subject or "").lower()
+    if any(w in low for w in ("order", "contract", "award")):
+        return f"Direct demand/order-book evidence; validate size, margin, execution timeline, and whether it broadens {sector_name} leadership."
+    if "rating" in low or "upgrade" in low or "downgrade" in low:
+        return "Credit-rating changes affect funding cost, balance-sheet confidence, and order-execution capacity."
+    if "scheme of arrangement" in low or "merger" in low or "demerger" in low:
+        return "Corporate-structure event; review valuation, minority-shareholder impact, business focus, and execution timelines before upgrading the thesis."
+    if "allotment" in low or "esos" in low or "equity shares" in low:
+        return "Capital-base/share-count event; usually not an operating catalyst, but it matters for dilution and governance tracking."
+    if "change in management" in low or "resignation" in low or "appointment" in low:
+        return "Governance and execution signal; assess whether role changes affect delivery, diversification, or risk control."
+    if "analyst" in low or "investor" in low or "presentation" in low or "meeting" in low:
+        return "Management-access event; watch for order-book, margin, capex, export, and guidance commentary rather than treating it as a standalone catalyst."
+    if "result" in low or "financial" in low:
+        return "Earnings evidence; compare revenue, margin, cash conversion, and commentary with the price-strength thesis."
+    return "Disclosure to monitor; use it as context, not as a trade trigger, unless price-volume and fundamentals confirm."
+
+
+def _editorial_event_opinion(symbol: str, subject: str, sector_name: str) -> str:
+    low = str(subject or "").lower()
+    if "scheme of arrangement" in low or "merger" in low or "demerger" in low:
+        return (
+            f"Editorial view: {symbol}'s scheme-related board action is potentially important, but it should stay neutral until the terms are read. "
+            "The key questions are whether value is being unlocked, diluted, shifted between entities, or made harder for minority shareholders to assess."
+        )
+    if any(w in low for w in ("analyst", "investor", "presentation", "meeting")):
+        return (
+            f"Editorial view: {symbol} has a management-access event, not a standalone catalyst. "
+            f"For a hot {sector_name} tape, this is useful only if the meeting/presentation clarifies order-book quality, "
+            "execution timelines, margin durability, export opportunity, or capex discipline. Without those details, keep the event as a monitor item."
+        )
+    if "allotment" in low or "esos" in low or "equity shares" in low:
+        return (
+            f"Editorial view: {symbol}'s allotment is mainly a capital-base/governance note, not operating proof. "
+            "It should not upgrade the stock thesis unless dilution is immaterial and business momentum is already supported by results and price-volume confirmation."
+        )
+    if "change in management" in low or "resignation" in low or "appointment" in low:
+        return (
+            f"Editorial view: {symbol}'s management change deserves monitoring because execution is central to the sector thesis. "
+            "A move into diversification/new-business responsibility can be constructive if it improves growth visibility, but it also raises delivery-risk questions."
+        )
+    if any(w in low for w in ("order", "contract", "award")):
+        return (
+            f"Editorial view: {symbol}'s order-related disclosure would be thesis-positive only if size, margin profile, customer quality, and delivery schedule are meaningful. "
+            "Treat headline orders cautiously until backlog conversion and cash collection are visible."
+        )
+    if "rating" in low or "upgrade" in low or "downgrade" in low:
+        return (
+            f"Editorial view: {symbol}'s rating event affects balance-sheet confidence and funding flexibility. "
+            "It is more useful as risk-quality evidence than as a direct buy/sell trigger."
+        )
+    return (
+        f"Editorial view: {symbol}'s disclosure is context rather than conclusion. "
+        "Do not upgrade the thesis without confirmation from fundamentals, management commentary, and price-volume behavior."
+    )
+
+
+def _public_source_label(source: str) -> str:
+    low = str(source or "").lower()
+    if "scrape_screener" in low or "screener" in low:
+        return "Screener quarterly"
+    if "nse" in low:
+        return "NSE filing"
+    if "bse" in low:
+        return "BSE filing"
+    return str(source or "").strip()
+
+
+def _public_error_message(error: str, *, label: str = "Evidence") -> str:
+    low = str(error or "").lower()
+    if "429" in low or "too many requests" in low:
+        return f"{label} unavailable at generation time because the source was rate-limited; branch marked unavailable rather than inferred."
+    if "404" in low or "not found" in low:
+        return f"{label} unavailable from the checked source; branch marked unavailable rather than inferred."
+    if error:
+        return f"{label} unavailable from the checked source; branch marked unavailable rather than inferred."
+    return f"{label} unavailable from the checked source; branch marked unavailable rather than inferred."
+
+
+def _public_latest_summary(summary: str) -> str:
+    text = str(summary or "").replace("scrape_screener_in.quarterly", "Screener quarterly")
+    text = text.replace("scrape_screener_in", "Screener")
+    return text
+
+
+def _latest_result_status(result: Any) -> str:
+    if not isinstance(result, dict) or result.get("error"):
+        return "missing"
+    facts = result.get("facts") or {}
+    if not facts:
+        return "partial"
+    summary = str(result.get("summary") or "").lower()
+    if "latest filing not found" in summary or "using screener" in summary:
+        return "fallback"
+    for item in facts.values():
+        if isinstance(item, dict) and "screener" in str(item.get("source") or "").lower():
+            return "fallback"
+    if str(result.get("status") or "").lower() in {"partial", "fallback"}:
+        return str(result.get("status")).lower()
+    return "OK"
+
+
+def _format_latest_facts(result: dict[str, Any], *, limit: int = 3) -> str:
+    facts = result.get("facts") or {}
+    if not isinstance(facts, dict) or not facts:
+        return "No clean revenue/PAT/EPS facts surfaced."
+    parts: list[str] = []
+    labels = {
+        "revenue": "Revenue",
+        "sales": "Sales",
+        "pat": "PAT",
+        "net_profit": "PAT",
+        "eps": "EPS",
+        "opm": "OPM",
+        "margin": "Margin",
+    }
+    for key, label in labels.items():
+        if key not in facts:
+            continue
+        item = facts.get(key)
+        if isinstance(item, dict):
+            value = item.get("value", "—")
+            period = item.get("period") or item.get("date") or ""
+            source = item.get("source") or ""
+            detail = f"{label} {value}"
+            if period:
+                detail += f" ({period})"
+            if source:
+                detail += f" via {_public_source_label(source)}"
+            parts.append(detail)
+        else:
+            parts.append(f"{label} {item}")
+        if len(parts) >= limit:
+            break
+    if not parts:
+        for key, item in list(facts.items())[:limit]:
+            if isinstance(item, dict):
+                parts.append(f"{key}: {item.get('value', '—')}")
+            else:
+                parts.append(f"{key}: {item}")
+    return "; ".join(parts)
+
+
+def _dedupe_event_items(items: list[tuple[str, str, str]]) -> list[tuple[str, str, str]]:
+    seen: set[str] = set()
+    cleaned: list[tuple[str, str, str]] = []
+    for source, subject, date_hint in items:
+        subject_clean = re.sub(r"\s+", " ", str(subject or "")).strip()
+        if not subject_clean or subject_clean.lower() == "all":
+            continue
+        key = re.sub(r"[^a-z0-9]+", " ", subject_clean.lower())[:100]
+        if key in seen:
+            continue
+        seen.add(key)
+        cleaned.append((source, subject_clean, date_hint))
+    return cleaned
+
+
+def _num(value: object, default: float | None = None) -> float | None:
+    if value is None:
+        return default
+    if isinstance(value, (int, float)):
+        return float(value)
+    text = str(value).replace(",", "").replace("%", "").replace("x", "").strip()
+    if not text or text in {"—", "N/A", "None"}:
+        return default
+    try:
+        return float(text)
+    except (TypeError, ValueError):
+        return default
+
+
+def _fmt_live_pct(value: object) -> str:
+    val = _num(value)
+    if val is None:
+        return "—"
+    return f"{val:+.2f}%"
+
+
+def _load_live_sector_topdown(limit: int = 3) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    """Return live strongest sector/thematic indices from the NSE live overview.
+
+    This is deliberately best-effort: focused sector reports must still render
+    from EOD evidence when the live API is unavailable.
+    """
+    try:
+        from terminal.tools import get_live_market_overview
+
+        overview = get_live_market_overview()
+    except Exception as exc:
+        return [], {"error": str(exc), "source": "get_live_market_overview"}
+    if not isinstance(overview, dict) or overview.get("error"):
+        return [], overview if isinstance(overview, dict) else {"error": "live overview unavailable"}
+    rows = []
+    source_rows = overview.get("top_sectors") or []
+    if not source_rows:
+        source_rows = [
+            {"name": name, **row}
+            for name, row in (overview.get("sectoral") or {}).items()
+            if isinstance(row, dict)
+        ]
+        source_rows = sorted(source_rows, key=lambda r: _num(r.get("pct_change"), -999) or -999, reverse=True)
+    for rank, row in enumerate(source_rows[: max(1, limit)], 1):
+        name = str(row.get("name") or row.get("index") or "").upper().strip()
+        if not name:
+            continue
+        rows.append(
+            {
+                "rank": rank,
+                "index": name,
+                "sector": _sector_lens_for_index(name, name.title()),
+                "last": row.get("last"),
+                "change": row.get("change"),
+                "pct_change": row.get("pct_change"),
+                "day_high": row.get("day_high"),
+                "day_low": row.get("day_low"),
+                "source": overview.get("source") or "NSE live API",
+                "as_of": overview.get("as_of"),
+            }
+        )
+    return rows, overview
+
+
+def _topdown_row_for_index(topdown_rows: list[dict[str, Any]], index_name: str) -> dict[str, Any] | None:
+    wanted = _norm_sector_text(index_name)
+    for row in topdown_rows:
+        if _norm_sector_text(row.get("index")) == wanted:
+            return row
+    return None
+
+
+def _build_broader_market_ric_section(
+    topdown_rows: list[dict[str, Any]],
+    overview: dict[str, Any],
+    *,
+    focus_index: str,
+    focus_sector: str,
+) -> str:
+    if not topdown_rows and overview.get("error"):
+        return (
+            "## Broader Market RIC Pulse\n\n"
+            f"Live top-down sector evidence was unavailable: {_md_cell(overview.get('error'))}. "
+            "The report falls back to local EOD rotation and stock evidence."
+        )
+    indices = overview.get("indices") or {}
+    nifty = indices.get("NIFTY 50") or {}
+    bank = indices.get("NIFTY BANK") or {}
+    vix = indices.get("INDIA VIX") or {}
+    breadth = overview.get("adv_dec") or {}
+    breadth_text = (
+        f"{breadth.get('advances', '—')}A/{breadth.get('declines', '—')}D"
+        if breadth
+        else "breadth unavailable"
+    )
+    lines = [
+        "## Broader Market RIC Pulse",
+        "",
+        (
+            f"Live market read: NIFTY 50 {_fmt_live_pct(nifty.get('pct_change'))}, "
+            f"BANK NIFTY {_fmt_live_pct(bank.get('pct_change'))}, "
+            f"India VIX {_fmt_live_pct(vix.get('pct_change'))}, breadth {breadth_text}. "
+            "The RIC starts with this tape check, then chooses the strongest sector/index lens before stock selection."
+        ),
+        "",
+        "## Top 3 Strongest Sector Indices Today",
+        "",
+        "| Rank | Index | Sector Lens | Last | Chg | Day Range | Read |",
+        "|---:|---|---|---:|---:|---|---|",
+    ]
+    for row in topdown_rows[:3]:
+        read = "focus candidate" if _norm_sector_text(row.get("index")) == _norm_sector_text(focus_index) else "leader board"
+        lines.append(
+            f"| {row.get('rank')} | {_md_cell(row.get('index'))} | {_md_cell(row.get('sector'))} | "
+            f"{_md_cell(_fmt_num(row.get('last'), 2))} | {_md_cell(_fmt_live_pct(row.get('pct_change')))} | "
+            f"{_md_cell(_fmt_num(row.get('day_low'), 2))} - {_md_cell(_fmt_num(row.get('day_high'), 2))} | {_md_cell(read)} |"
+        )
+    if not topdown_rows:
+        lines.append("| — | — | — | — | — | — | Live sector index rows unavailable. |")
+    focus = _topdown_row_for_index(topdown_rows, focus_index)
+    if focus:
+        selection = (
+            f"Focus sector selection: **{focus_index} / {focus_sector}** is live rank #{focus.get('rank')} "
+            f"with {_fmt_live_pct(focus.get('pct_change'))} on the day."
+        )
+    else:
+        selection = (
+            f"Focus sector selection: **{focus_index} / {focus_sector}** is the requested sector. "
+            "It is not in the live top-three list, so the report treats it as a manual focus overlay."
+        )
+    lines.extend(["", "## Focus Sector Selection", "", selection])
+    return "\n".join(lines)
+
+
+def _resolve_pg_index_symbol(index_query: str) -> str | None:
+    aliases = _sector_query_aliases(index_query)
+    preferred = []
+    for item in [index_query, *aliases]:
+        norm = _norm_sector_text(item)
+        if norm == "auto":
+            preferred.append("NIFTY AUTO")
+        elif norm and not norm.startswith("nifty ") and norm in {"bank", "it", "pharma", "media", "metal", "realty", "fmcg"}:
+            preferred.append(f"NIFTY {norm.upper()}")
+        elif norm:
+            preferred.append(str(item).upper())
+
+    try:
+        import psycopg2
+        from psycopg2.extras import RealDictCursor
+
+        conn = psycopg2.connect(PG_DSN)
+        try:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute("SELECT DISTINCT index_symbol FROM market.index_eod")
+                rows = [str(r["index_symbol"]) for r in cur.fetchall() if r.get("index_symbol")]
+        finally:
+            conn.close()
+    except Exception:
+        rows = []
+    if not rows:
+        return None
+    wanted = {_norm_sector_text(item) for item in preferred if item}
+    wanted.add(_norm_sector_text(index_query))
+    for row in rows:
+        if _norm_sector_text(row) in wanted:
+            return row
+    for row in rows:
+        row_norm = _norm_sector_text(row)
+        if any(w and (w in row_norm or row_norm in w) for w in wanted):
+            return row
+    return None
+
+
+def _return_from_history(rows: list[dict[str, Any]], offset: int) -> float | None:
+    if len(rows) <= offset:
+        return None
+    latest = _num(rows[0].get("close"))
+    past = _num(rows[offset].get("close"))
+    if latest is None or past in (None, 0):
+        return None
+    return (latest / past - 1.0) * 100.0
+
+
+def _load_index_history_rows(index_symbol: str, limit: int = 140) -> list[dict[str, Any]]:
+    try:
+        import psycopg2
+        from psycopg2.extras import RealDictCursor
+
+        conn = psycopg2.connect(PG_DSN)
+        try:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute(
+                    """
+                    SELECT trade_date, index_symbol, close, change_pct
+                    FROM market.index_eod
+                    WHERE UPPER(index_symbol)=UPPER(%s)
+                    ORDER BY trade_date DESC
+                    LIMIT %s
+                    """,
+                    (index_symbol, limit),
+                )
+                return [dict(r) for r in cur.fetchall()]
+        finally:
+            conn.close()
+    except Exception:
+        return []
+
+
+def _build_pg_rotation_row(index_query: str, topdown_rows: list[dict[str, Any]] | None = None) -> dict[str, str] | None:
+    index_symbol = _resolve_pg_index_symbol(index_query)
+    if not index_symbol:
+        return None
+    rows = _load_index_history_rows(index_symbol)
+    if not rows:
+        return None
+    bench_symbol = _resolve_pg_index_symbol("NIFTY 500") or "Nifty 500"
+    bench_rows = _load_index_history_rows(bench_symbol)
+    ret_5d = _return_from_history(rows, 5)
+    ret_1m = _return_from_history(rows, 21)
+    ret_3m = _return_from_history(rows, 63)
+    ret_6m = _return_from_history(rows, 126)
+    bench_1m = _return_from_history(bench_rows, 21) if bench_rows else None
+    rs_1m = (ret_1m - bench_1m) if ret_1m is not None and bench_1m is not None else None
+    live = _topdown_row_for_index(topdown_rows or [], index_symbol) or _topdown_row_for_index(topdown_rows or [], index_query)
+    rank = str(live.get("rank")) if live else "EOD"
+    score = None
+    if ret_1m is not None:
+        score = ret_1m * 0.45 + (ret_5d or 0) * 0.25 + (ret_3m or 0) * 0.20 + (rs_1m or 0) * 0.10
+    latest = rows[0]
+    sector = _sector_lens_for_index(index_symbol, _sector_lens_for_index(index_query, index_symbol))
+    return {
+        "rank": rank,
+        "index": index_symbol,
+        "sector": sector,
+        "close": _fmt_num(latest.get("close"), 2),
+        "ret_5d": _fmt_pct(ret_5d),
+        "ret_1m": _fmt_pct(ret_1m),
+        "ret_3m": _fmt_pct(ret_3m),
+        "ret_6m": _fmt_pct(ret_6m),
+        "rs_1m": _fmt_pct(rs_1m),
+        "score": _fmt_num(score, 1) if score is not None else "—",
+        "live_1d": _fmt_live_pct(live.get("pct_change")) if live else "—",
+        "source": "market.index_eod + NSE live topdown" if live else "market.index_eod",
+    }
+
+
+def _resolve_sector_from_rotation_or_pg(
+    markdown: str,
+    sector_query: str,
+    *,
+    topdown_rows: list[dict[str, Any]] | None = None,
+) -> dict[str, str]:
+    query = sector_query.strip()
+    if not query and topdown_rows:
+        query = str(topdown_rows[0].get("index") or "")
+    if query:
+        try:
+            return _resolve_sector_from_rotation(markdown, query)
+        except ValueError:
+            fallback = _build_pg_rotation_row(query, topdown_rows)
+            if fallback:
+                return fallback
+            raise
+    if topdown_rows:
+        fallback = _build_pg_rotation_row(str(topdown_rows[0].get("index") or ""), topdown_rows)
+        if fallback:
+            return fallback
+    raise ValueError("No sector query supplied and no live sector leader was available")
+
+
+def _candidate_action_from_metrics(row: dict[str, Any]) -> tuple[str, str, str]:
+    stage = str(row.get("stage") or "").upper()
+    supertrend = str(row.get("supertrend_state") or "").upper()
+    signal = str(row.get("trading_signal") or "").upper()
+    rsi = _num(row.get("rsi"))
+    tech = _num(row.get("technical_score"), 0) or 0
+    rs = _num(row.get("relative_strength"), 0) or 0
+    if stage not in {"STAGE_2", "2"}:
+        return "WEAK_TREND", "AVOID", "Trend not in Stage 2; use only after trend repair."
+    if supertrend and supertrend != "BULLISH":
+        return "WEAK_TREND", "AVOID", "Supertrend is not bullish."
+    if rsi is not None and rsi >= 72:
+        return "EXTENDED_MOMENTUM", "WAIT_FOR_PULLBACK", "Momentum is extended; prefer retest or a fresh base."
+    if signal in {"BUY", "STRONG_BUY"} and tech >= 55 and rs >= 0:
+        return "BREAKOUT_OR_RETEST", "BREAKOUT_WATCH", "Trend and signal are aligned; needs price-volume trigger."
+    if tech >= 50 and rs >= 0:
+        return "MOMENTUM_LEADER", "WATCHLIST", "Trend is constructive but lacks a cleaner trigger."
+    return "NEUTRAL", "WATCHLIST", "Mixed trend; keep on watch only."
+
+
+def _quality_growth_label(row: dict[str, Any]) -> str:
+    fund = _num(row.get("_enhanced_fund_score") or row.get("fund"))
+    earnings = _num(row.get("_earnings_quality"))
+    sales = _num(row.get("_sales_growth"))
+    financial = _num(row.get("_financial_strength"))
+    quality = (
+        fund is not None and fund >= 65
+        and (financial is None or financial >= 60)
+        and (earnings is None or earnings >= 55)
+    )
+    growth = (
+        sales is not None and sales >= 65
+        or (earnings is not None and earnings >= 70)
+    )
+    if quality and growth:
+        return "Quality + growth proxy"
+    if quality:
+        return "Quality/MOAT proxy"
+    if growth:
+        return "Growth proxy"
+    return "Tactical/technical only"
+
+
+def _load_focus_candidate_rows(index_name: str, sector_name: str, *, limit: int = 20) -> list[dict[str, str]]:
+    symbols: list[str] = []
+    try:
+        from terminal.tools import _fetch_nse_index_constituents
+
+        symbols = _fetch_nse_index_constituents(index_name)
+    except Exception:
+        symbols = []
+
+    symbol_filter = ""
+    params: list[Any] = []
+    if symbols:
+        symbol_filter = "AND ss.symbol = ANY(%s)"
+        params.append(symbols)
+    else:
+        symbol_filter = "AND UPPER(ss.sector)=UPPER(%s)"
+        params.append(sector_name)
+
+    try:
+        import psycopg2
+        from psycopg2.extras import RealDictCursor
+
+        conn = psycopg2.connect(PG_DSN)
+        try:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute(
+                    f"""
+                    WITH latest_px AS (
+                        SELECT DISTINCT ON (symbol) symbol, volume AS cur_vol
+                        FROM market.equity_eod
+                        ORDER BY symbol, trade_date DESC
+                    ),
+                    avg_vol AS (
+                        SELECT symbol, AVG(volume) AS avg_vol_20
+                        FROM (
+                            SELECT symbol, trade_date, volume,
+                                   ROW_NUMBER() OVER (PARTITION BY symbol ORDER BY trade_date DESC) AS rn
+                            FROM market.equity_eod
+                        ) v
+                        WHERE rn BETWEEN 2 AND 22
+                        GROUP BY symbol
+                    )
+                    SELECT
+                        ss.symbol, ss.company_name, ss.sector, ss.market_cap_cat, ss.price,
+                        ss.stage, ss.trading_signal, ss.trend_signal, ss.supertrend_state,
+                        ss.investment_score, ss.technical_score, ss.relative_strength,
+                        ss.enhanced_fund_score, ss.fundamental_score, ss.earnings_quality,
+                        ss.sales_growth, ss.financial_strength, ss.institutional_backing,
+                        ss.can_slim_score, ss.minervini_score, ss.rsi, ss.change_1d_pct,
+                        ss.change_1m_pct,
+                        CASE WHEN av.avg_vol_20 > 0 THEN ROUND((lp.cur_vol::numeric / av.avg_vol_20), 2) END AS volume_ratio
+                    FROM scores.stage_snapshots ss
+                    LEFT JOIN latest_px lp ON lp.symbol = ss.symbol
+                    LEFT JOIN avg_vol av ON av.symbol = ss.symbol
+                    WHERE ss.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)
+                      {symbol_filter}
+                    ORDER BY
+                        CASE WHEN ss.stage = 'STAGE_2' THEN 0 ELSE 1 END,
+                        ss.investment_score DESC NULLS LAST,
+                        ss.relative_strength DESC NULLS LAST
+                    LIMIT %s
+                    """,
+                    params + [limit],
+                )
+                raw_rows = [dict(r) for r in cur.fetchall()]
+        finally:
+            conn.close()
+    except Exception:
+        raw_rows = []
+
+    rows: list[dict[str, str]] = []
+    for raw in raw_rows:
+        setup, action, read = _candidate_action_from_metrics(raw)
+        label = _quality_growth_label(
+            {
+                "_enhanced_fund_score": raw.get("enhanced_fund_score"),
+                "_earnings_quality": raw.get("earnings_quality"),
+                "_sales_growth": raw.get("sales_growth"),
+                "_financial_strength": raw.get("financial_strength"),
+            }
+        )
+        rows.append(
+            {
+                "symbol": str(raw.get("symbol") or "").upper(),
+                "company": str(raw.get("company_name") or raw.get("symbol") or "").strip(),
+                "price": _fmt_num(raw.get("price"), 2),
+                "signal": str(raw.get("trading_signal") or "—"),
+                "setup": setup,
+                "action": action,
+                "score": _fmt_num(raw.get("investment_score"), 1),
+                "tech": _fmt_num(raw.get("technical_score"), 1),
+                "rs": _fmt_pct(raw.get("relative_strength")),
+                "fund": _fmt_num(raw.get("enhanced_fund_score"), 1),
+                "rsi": _fmt_num(raw.get("rsi"), 1),
+                "supertrend": str(raw.get("supertrend_state") or "—"),
+                "pattern": "INDEX_CONSTITUENT",
+                "volume_ratio": f"{_fmt_num(raw.get('volume_ratio'), 2)}x" if raw.get("volume_ratio") is not None else "—",
+                "_stage": str(raw.get("stage") or ""),
+                "_market_cap": str(raw.get("market_cap_cat") or "—"),
+                "_quality_growth": label,
+                "_enhanced_fund_score": _fmt_num(raw.get("enhanced_fund_score"), 1),
+                "_earnings_quality": _fmt_num(raw.get("earnings_quality"), 1),
+                "_sales_growth": _fmt_num(raw.get("sales_growth"), 1),
+                "_financial_strength": _fmt_num(raw.get("financial_strength"), 1),
+                "_can_slim": _fmt_num(raw.get("can_slim_score"), 1),
+                "_minervini": _fmt_num(raw.get("minervini_score"), 1),
+                "_read": read,
+            }
+        )
+    return rows
+
+
+def _load_fno_eligible_symbols() -> set[str]:
+    try:
+        import psycopg2
+
+        conn = psycopg2.connect(PG_DSN)
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT DISTINCT symbol
+                    FROM derivatives.fno_eod
+                    WHERE trade_date = (SELECT MAX(trade_date) FROM derivatives.fno_eod)
+                      AND symbol IS NOT NULL
+                    """
+                )
+                return {str(row[0]).upper() for row in cur.fetchall() if row and row[0]}
+        finally:
+            conn.close()
+    except Exception:
+        try:
+            from terminal.live_intraday_alerts import load_fno_intraday_universe
+
+            return {str(s).upper() for s in load_fno_intraday_universe()}
+        except Exception:
+            return set()
+
+
+def _load_latest_fno_signal_map(symbols: list[str]) -> dict[str, dict[str, Any]]:
+    if not symbols:
+        return {}
+    try:
+        import psycopg2
+        from psycopg2.extras import RealDictCursor
+
+        conn = psycopg2.connect(PG_DSN)
+        try:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute(
+                    """
+                    SELECT symbol, pcr, oi_change_5d, price_change, buildup, max_pain, fno_signal
+                    FROM derivatives.fno_signals
+                    WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM derivatives.fno_signals)
+                      AND symbol = ANY(%s)
+                    """,
+                    (symbols,),
+                )
+                return {str(r["symbol"]).upper(): dict(r) for r in cur.fetchall()}
+        finally:
+            conn.close()
+    except Exception:
+        return {}
+
+
+def _scan_intraday_tradeability(symbols: list[str], *, no_web: bool = False) -> dict[str, dict[str, Any]]:
+    if no_web or not symbols:
+        return {}
+    try:
+        from terminal.tools import scan_symbols_intraday
+
+        result = scan_symbols_intraday(
+            symbols=symbols[:12],
+            interval="15m",
+            strategies=["supertrend", "vcp", "volume"],
+            direction_filter="all",
+            min_rr=1.3,
+            top_n=12,
+        )
+    except Exception:
+        return {}
+    if not isinstance(result, dict) or result.get("error"):
+        return {}
+    rows = []
+    for key in ("top_buy", "top_sell", "buy_signals", "sell_signals"):
+        values = result.get(key) or []
+        if isinstance(values, list):
+            rows.extend(v for v in values if isinstance(v, dict))
+    mapped: dict[str, dict[str, Any]] = {}
+    for row in rows:
+        symbol = str(row.get("symbol") or row.get("SYMBOL") or "").upper()
+        if symbol and symbol not in mapped:
+            mapped[symbol] = row
+    return mapped
+
+
+def _build_quality_growth_lens(candidate_rows: list[dict[str, str]]) -> str:
+    if not candidate_rows:
+        return "## MOAT And Growth Lens\n\nNo candidate rows were available for quality/growth classification."
+    lines = [
+        "## MOAT And Growth Lens",
+        "",
+        "This is a **proxy lens**, not a permanent-moat claim. It uses Agent Adda fundamental quality, earnings quality, sales growth, and financial-strength fields to separate investment-quality candidates from tactical-only momentum.",
+        "",
+        "| Symbol | Quality/Growth Bucket | Fund | Earnings Quality | Sales Growth | Financial Strength | Technical Read |",
+        "|---|---|---:|---:|---:|---:|---|",
+    ]
+    for row in candidate_rows[:10]:
+        lines.append(
+            f"| {_md_cell(row.get('symbol'))} | {_md_cell(row.get('_quality_growth'))} | "
+            f"{_md_cell(row.get('_enhanced_fund_score'))} | {_md_cell(row.get('_earnings_quality'))} | "
+            f"{_md_cell(row.get('_sales_growth'))} | {_md_cell(row.get('_financial_strength'))} | "
+            f"{_md_cell(row.get('_read'), 240)} |"
+        )
+    return "\n".join(lines)
+
+
+def _build_tradeability_funnel(candidate_rows: list[dict[str, str]], *, no_web: bool = False) -> str:
+    if not candidate_rows:
+        return "## Swing, Intraday, And F&O Tradeability Funnel\n\nNo candidate rows were available for tradeability checks."
+    symbols = [str(row.get("symbol") or "").upper() for row in candidate_rows if row.get("symbol")]
+    fno_symbols = _load_fno_eligible_symbols()
+    fno_signals = _load_latest_fno_signal_map(symbols)
+    intraday = _scan_intraday_tradeability(symbols, no_web=no_web)
+    lines = [
+        "## Swing, Intraday, And F&O Tradeability Funnel",
+        "",
+        "| Symbol | Quality/Growth | Swing State | Intraday State | F&O | Route | Blockers / Next Check |",
+        "|---|---|---|---|---|---|---|",
+    ]
+    for row in candidate_rows[:12]:
+        symbol = str(row.get("symbol") or "").upper()
+        action = str(row.get("action") or "").upper()
+        stage = str(row.get("_stage") or "").upper()
+        supertrend = str(row.get("supertrend") or "").upper()
+        score = _num(row.get("score"), 0) or 0
+        fno_ok = symbol in fno_symbols
+        fno = fno_signals.get(symbol) or {}
+        scan = intraday.get(symbol) or {}
+
+        if action == "BREAKOUT_WATCH" and stage == "STAGE_2" and supertrend == "BULLISH":
+            swing = "Swing watch"
+        elif action == "WAIT_FOR_PULLBACK":
+            swing = "Swing retest only"
+        elif action == "WATCHLIST" and stage == "STAGE_2" and score >= 50:
+            swing = "Swing watch"
+        else:
+            swing = "No swing trade"
+
+        if scan:
+            side = str(scan.get("direction") or scan.get("signal") or scan.get("side") or "signal")
+            rr = scan.get("risk_reward") or scan.get("rr") or scan.get("risk_reward_ratio")
+            intraday_state = f"Live trigger watch {side}" + (f" / RR {_fmt_num(rr, 1)}" if rr is not None else "")
+        elif action in {"BREAKOUT_WATCH", "WATCHLIST"}:
+            intraday_state = "No live trigger; monitor 5m/15m"
+        elif action == "WAIT_FOR_PULLBACK":
+            intraday_state = "Avoid chase; wait retest"
+        else:
+            intraday_state = "No intraday setup"
+
+        if fno_ok and scan:
+            route = "F&O eligible; prefer defined-risk spread after option-chain check"
+        elif fno_ok and swing != "No swing trade":
+            route = "F&O eligible watch; stock/futures first, options only after chain check"
+        elif swing != "No swing trade":
+            route = "Cash-equity swing watch only"
+        else:
+            route = "No trade"
+
+        blockers = []
+        if action == "WAIT_FOR_PULLBACK":
+            blockers.append("extended")
+        if action == "AVOID":
+            blockers.append("trend repair")
+        if not fno_ok:
+            blockers.append("not F&O")
+        fno_signal = str(fno.get("fno_signal") or "").strip()
+        if fno_signal and fno_signal != "NEUTRAL":
+            blockers.append(f"F&O {fno_signal}")
+        if not scan:
+            blockers.append("needs live trigger")
+        lines.append(
+            f"| {_md_cell(symbol)} | {_md_cell(row.get('_quality_growth'))} | {_md_cell(swing)} | "
+            f"{_md_cell(intraday_state, 180)} | {_md_cell('Yes' if fno_ok else 'No')} | "
+            f"{_md_cell(route, 220)} | {_md_cell('; '.join(blockers) if blockers else 'cleaner confirmation required', 240)} |"
+        )
+    return "\n".join(lines)
+
+
+def _build_generated_technical_notes(candidate_rows: list[dict[str, str]]) -> str:
+    if not candidate_rows:
+        return "No candidate-level technical notes were available."
+    blocks: list[str] = []
+    for row in candidate_rows[:8]:
+        blocks.extend(
+            [
+                f"### {row.get('symbol')} - {row.get('company') or row.get('symbol')}",
+                "",
+                f"- **Setup:** {row.get('setup', '—')} / {row.get('action', '—')}.",
+                f"- **Trend:** stage {row.get('_stage', '—')}; Supertrend {row.get('supertrend', '—')}; signal {row.get('signal', '—')}.",
+                f"- **Strength:** score {row.get('score', '—')}; technical {row.get('tech', '—')}; RS {row.get('rs', '—')}; RSI {row.get('rsi', '—')}; volume ratio {row.get('volume_ratio', '—')}.",
+                f"- **Read:** {row.get('_read', 'Watch confirmation.')}",
+                "",
+            ]
+        )
+    return "\n".join(blocks).strip()
+
+
+def _build_compact_candidate_map(sector_name: str, candidate_rows: list[dict[str, str]]) -> str:
+    if not candidate_rows:
+        return f"## Candidate Map\n\nNo candidate rows were found for {sector_name} in the latest report."
+    score_lines = [
+        "## Candidate Map",
+        "",
+        "### Candidate Scorecard",
+        "",
+        "| Symbol | Price | Action | Score | Tech | Fund | RSI | Volume |",
+        "|---|---:|---|---:|---:|---:|---:|---:|",
+    ]
+    setup_lines = [
+        "### Setup And Risk Context",
+        "",
+        "| Symbol | Signal | Setup | RS | Supertrend | Pattern | Read |",
+        "|---|---|---|---:|---|---|---|",
+    ]
+    for row in candidate_rows:
+        score_lines.append(
+            f"| {_md_cell(row.get('symbol'))} | {_md_cell(row.get('price'))} | {_md_cell(row.get('action'))} | "
+            f"{_md_cell(row.get('score'))} | {_md_cell(row.get('tech'))} | {_md_cell(row.get('fund'))} | "
+            f"{_md_cell(row.get('rsi'))} | {_md_cell(row.get('volume_ratio'))} |"
+        )
+        read = "Extended; prefer retest/pullback" if str(row.get("action", "")).upper() == "WAIT_FOR_PULLBACK" else "Watch confirmation"
+        if str(row.get("action", "")).upper() == "AVOID":
+            read = "Avoid until trend repair"
+        setup_lines.append(
+            f"| {_md_cell(row.get('symbol'))} | {_md_cell(row.get('signal'))} | {_md_cell(row.get('setup'))} | "
+            f"{_md_cell(row.get('rs'))} | {_md_cell(row.get('supertrend'))} | {_md_cell(row.get('pattern'))} | {_md_cell(read)} |"
+        )
+    return "\n".join(score_lines + [""] + setup_lines)
+
+
+def _markdown_table_rows(table_markdown: str) -> list[dict[str, str]]:
+    headers: list[str] = []
+    rows: list[dict[str, str]] = []
+    for line in table_markdown.splitlines():
+        if not line.startswith("|") or line.startswith("|---"):
+            continue
+        cells = [c.strip() for c in line.strip().strip("|").split("|")]
+        if not headers:
+            headers = cells
+            continue
+        if len(cells) != len(headers):
+            continue
+        rows.append(dict(zip(headers, cells)))
+    return rows
+
+
+def _build_compact_peak_table(sector_name: str, peak_table: str) -> str:
+    rows = _markdown_table_rows(peak_table)
+    if not rows:
+        return f"## Peak Resilience & Fast Recovery\n\nNo {sector_name} rows passed the peak-resilience filter in the latest report."
+    lines = [
+        "## Peak Resilience & Fast Recovery",
+        "",
+        "| Rank | Symbol | Price | 52W High | Drawdown | Recovery From Low | Recovery Speed | Peak Score |",
+        "|---:|---|---:|---:|---:|---:|---:|---:|",
+    ]
+    for row in rows:
+        lines.append(
+            f"| {_md_cell(row.get('Rank'))} | {_md_cell(row.get('Symbol'))} | {_md_cell(row.get('Price'))} | "
+            f"{_md_cell(row.get('52W High'))} | {_md_cell(row.get('Drawdown From High'))} | "
+            f"{_md_cell(row.get('Recovery From Low'))} | {_md_cell(row.get('Recovery Speed'))} | {_md_cell(row.get('Peak Score'))} |"
+        )
+    return "\n".join(lines)
+
+
+def _cached_screener_payload_for_ric(symbol: str) -> dict[str, Any] | None:
+    """Return cached Screener-shaped financials for RIC fallback use."""
+    sym = str(symbol or "").strip().upper()
+    if not sym:
+        return None
+    try:
+        from terminal.financials_cache import screener_payload_from_cache
+
+        cached = screener_payload_from_cache(sym, max_age_hours=None)
+    except Exception:
+        return None
+    if not isinstance(cached, dict) or not cached:
+        return None
+    cached = dict(cached)
+    cached.setdefault("symbol", sym)
+    cached.setdefault("_source", "pg_screener_cache")
+    return cached
+
+
+def _load_screener_payload_for_ric(symbol: str, *, no_web: bool = False) -> dict[str, Any]:
+    """Load Screener fundamentals, falling back to the local read-through cache."""
+    sym = str(symbol or "").strip().upper()
+    if not sym:
+        return {"symbol": sym, "error": "Missing symbol"}
+
+    if no_web:
+        cached = _cached_screener_payload_for_ric(sym)
+        if cached:
+            cached["_fallback_note"] = "Loaded from local Screener financial cache because --no-web was set."
+            return cached
+        return {"symbol": sym, "error": "Skipped by --no-web; no local Screener financial cache available."}
+
+    try:
+        from terminal.web_research import scrape_screener_in
+
+        payload = scrape_screener_in(sym)
+    except Exception as exc:
+        payload = {"symbol": sym, "error": str(exc)}
+
+    if isinstance(payload, dict) and not payload.get("error"):
+        return payload
+
+    cached = _cached_screener_payload_for_ric(sym)
+    if cached:
+        cached["_fallback_note"] = "Loaded from local Screener financial cache after live Screener lookup failed."
+        if isinstance(payload, dict) and payload.get("error"):
+            cached["_live_error"] = payload.get("error")
+        return cached
+    return payload if isinstance(payload, dict) else {"symbol": sym, "error": "Screener lookup failed."}
+
+
+def _screener_latest_result_fallback(symbol: str, screener: dict[str, Any]) -> dict[str, Any]:
+    """Build latest revenue/PAT/EPS facts from Screener quarterly tables."""
+    sym = str(symbol or "").strip().upper()
+    if not isinstance(screener, dict) or screener.get("error"):
+        return {"symbol": sym, "status": "missing", "facts": {}}
+
+    quarterly = screener.get("quarterly") or {}
+    if not isinstance(quarterly, dict):
+        return {"symbol": sym, "status": "missing", "facts": {}}
+
+    headers = quarterly.get("_headers") or []
+    period = str(headers[-1]) if isinstance(headers, list) and headers else ""
+
+    def fact(*aliases: str) -> dict[str, str] | None:
+        value = _last_table_value(quarterly, *aliases)
+        if value == "—":
+            return None
+        out = {"value": value, "source": "Screener quarterly"}
+        if period:
+            out["period"] = period
+        return out
+
+    facts: dict[str, dict[str, str]] = {}
+    for key, aliases in (
+        ("revenue", ("Sales+", "Sales +", "Sales", "Revenue", "Revenue from Operations")),
+        ("pat", ("Net Profit+", "Net Profit +", "Net Profit", "Profit after tax", "PAT")),
+        ("eps", ("EPS in Rs", "EPS")),
+        ("opm", ("OPM %", "OPM")),
+    ):
+        item = fact(*aliases)
+        if item:
+            facts[key] = item
+
+    if not facts:
+        return {"symbol": sym, "status": "missing", "facts": {}}
+
+    source_url = screener.get("source_url") or "Screener"
+    summary = "Latest filing parser did not provide a clean result set; using Screener quarterly table"
+    if period:
+        summary += f" for {period}"
+    summary += "."
+    return {
+        "symbol": sym,
+        "status": "fallback",
+        "summary": summary,
+        "facts": facts,
+        "source": "screener.in",
+        "source_url": source_url,
+    }
+
+
+def _latest_with_screener_fallback(
+    symbol: str,
+    latest: dict[str, Any] | None,
+    screener: dict[str, Any] | None,
+) -> dict[str, Any]:
+    """Prefer filing facts, but fill missing latest-result facts from Screener."""
+    latest_dict = dict(latest or {}) if isinstance(latest, dict) else {}
+    fallback = _screener_latest_result_fallback(symbol, screener or {})
+    fallback_facts = fallback.get("facts") if isinstance(fallback, dict) else {}
+    if not isinstance(fallback_facts, dict) or not fallback_facts:
+        return latest_dict
+
+    latest_status = _latest_result_status(latest_dict)
+    latest_facts = latest_dict.get("facts") if isinstance(latest_dict.get("facts"), dict) else {}
+    if latest_status in {"missing", "partial"} or not latest_facts:
+        return fallback
+
+    merged = dict(latest_dict)
+    merged["facts"] = {**fallback_facts, **latest_facts}
+    merged["status"] = "fallback"
+    summary = str(merged.get("summary") or "").strip()
+    note = "Screener quarterly table filled missing revenue/PAT/EPS fields."
+    merged["summary"] = f"{summary} {note}".strip() if summary else note
+    return merged
+
+
+def _collect_symbol_ric_evidence(symbol: str, *, no_web: bool = False) -> dict[str, Any]:
+    evidence: dict[str, Any] = {"symbol": symbol.upper().strip(), "errors": {}}
+
+    def call(label: str, fn, *args, **kwargs):
+        try:
+            evidence[label] = fn(*args, **kwargs)
+        except Exception as exc:
+            evidence[label] = {"symbol": symbol.upper().strip(), "error": str(exc)}
+            evidence["errors"][label] = str(exc)
+
+    from terminal.tools import get_symbol_snapshot, get_technical_setup
+
+    call("snapshot", get_symbol_snapshot, symbol)
+    call("technical", get_technical_setup, symbol)
+
+    if no_web:
+        evidence["screener"] = _load_screener_payload_for_ric(symbol, no_web=True)
+        evidence["latest_results"] = _screener_latest_result_fallback(symbol, evidence.get("screener") or {})
+        for label in ("announcements", "bse_filings", "forensic", "concalls"):
+            evidence[label] = {"symbol": symbol.upper().strip(), "error": "Skipped by --no-web"}
+        return evidence
+
+    from terminal.results_tools import get_latest_results
+    from terminal.search_engine import search_nse_announcements
+    from terminal.forensics import run_forensic_analysis
+
+    evidence["screener"] = _load_screener_payload_for_ric(symbol, no_web=False)
+    call("latest_results", get_latest_results, symbol, "latest", False)
+    evidence["latest_results"] = _latest_with_screener_fallback(
+        symbol,
+        evidence.get("latest_results") if isinstance(evidence.get("latest_results"), dict) else {},
+        evidence.get("screener") if isinstance(evidence.get("screener"), dict) else {},
+    )
+    call("announcements", search_nse_announcements, symbol, 8)
+    evidence["bse_filings"] = {
+        "symbol": symbol.upper().strip(),
+        "status": "covered_by_announcements",
+        "note": "Standalone broad BSE/DDG filing sweep skipped for interactive speed; Screener/BSE links and NSE corp-info are covered by announcements.",
+    }
+    call("forensic", run_forensic_analysis, symbol)
+    screener = evidence.get("screener") if isinstance(evidence.get("screener"), dict) else {}
+    evidence["concalls"] = {
+        "symbol": symbol.upper().strip(),
+        "source": "screener_concalls",
+        "results": {},
+        "count": len(screener.get("concalls") or []),
+        "note": "Broad transcript search skipped for interactive speed; using Screener-discovered concall/presentation entries.",
+    }
+    return evidence
+
+
+def _build_sector_thesis(sector_name: str, index_name: str, row: dict[str, str]) -> str:
+    low = f"{sector_name} {index_name}".lower()
+    if "defence" in low or "aerospace" in low:
+        driver = (
+            "This lens is driven by domestic defence procurement, electronics and systems manufacturing, "
+            "aerospace supply-chain localisation, export optionality, and order-book execution. "
+            "The main risk is that strong price action can move faster than earnings delivery, so order wins, "
+            "working-capital discipline, and margin conversion matter as much as the chart."
+        )
+    elif "auto" in low or "automotive" in low or "mobility" in low:
+        driver = (
+            "This lens is driven by passenger-vehicle and two-wheeler demand, premiumisation, EV adoption, "
+            "component localisation, export cycles, commodity cost direction, and dealer/channel inventory. "
+            "The main risk is that a live sector spike can be led by a few heavyweights while many constituents remain "
+            "below durable Stage-2 structures; stock selection and retest discipline matter."
+        )
+    else:
+        driver = (
+            "The sector thesis should be judged through demand momentum, earnings revision breadth, "
+            "policy or commodity sensitivity, margin direction, and whether leadership is broadening beyond a few leaders."
+        )
+    return (
+        "## Sector Thesis And Drivers\n\n"
+        f"{sector_name} is represented by **{index_name}** in this report and currently ranks **#{row['rank']}** "
+        f"with **1M {row['ret_1m']}** and **1M relative strength {row['rs_1m']}** versus Nifty 500. {driver}\n\n"
+        "**What would invalidate the thesis:** loss of relative strength versus Nifty 500, failure of leaders to hold retests, "
+        "negative result commentary, order/capex delays, or forensic/working-capital deterioration in the leading companies."
+    )
+
+
+def _build_ric_sections(
+    sector_name: str,
+    index_name: str,
+    candidate_rows: list[dict[str, str]],
+    *,
+    max_companies: int = 5,
+    no_web: bool = False,
+) -> str:
+    selected = candidate_rows[:max_companies]
+    if not selected:
+        return "\n\n".join(
+            [
+                "## Company Profile Cards\n\nNo candidate rows were available for RIC enrichment.",
+                "## RIC Evidence Status\n\nNo company-level evidence was collected.",
+                "## RIC Setup And Results Matrix\n\nNo company-level setup/results evidence was collected.",
+                "## Event And Verdict Matrix\n\nNo event/verdict evidence was collected.",
+                "## Forensic And Quality Checks\n\nNo forensic evidence was collected.",
+            ]
+        )
+
+    packs: list[dict[str, Any]] = []
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+
+    row_by_symbol = {row.get("symbol", "").strip().upper(): row for row in selected if row.get("symbol", "").strip()}
+    if row_by_symbol:
+        max_workers = min(3, len(row_by_symbol))
+        with ThreadPoolExecutor(max_workers=max_workers) as pool:
+            futures = {
+                pool.submit(_collect_symbol_ric_evidence, symbol, no_web=no_web): symbol
+                for symbol in row_by_symbol
+            }
+            evidence_by_symbol: dict[str, dict[str, Any]] = {}
+            for future in as_completed(futures):
+                symbol = futures[future]
+                try:
+                    evidence_by_symbol[symbol] = future.result()
+                except Exception as exc:
+                    evidence_by_symbol[symbol] = {"symbol": symbol, "errors": {"ric_collection": str(exc)}}
+        for symbol, row in row_by_symbol.items():
+            packs.append({"row": row, "evidence": evidence_by_symbol.get(symbol, {"symbol": symbol})})
+
+    profile_lines = [
+        "## Company Profile Cards",
+        "",
+        "| Symbol | Company | Sector Fit | Fundamental Snapshot |",
+        "|---|---|---|---|",
+    ]
+    evidence_status_lines = [
+        "## RIC Evidence Status",
+        "",
+        "| Symbol | Technical | Fundamentals | Results | News / Events | Forensic | Calls / Presentations |",
+        "|---|---|---|---|---|---|---|",
+    ]
+    matrix_lines = [
+        "## RIC Setup And Results Matrix",
+        "",
+        "| Symbol | Technical Setup | Latest Results Evidence |",
+        "|---|---|---|",
+    ]
+    event_verdict_lines = [
+        "## Event And Verdict Matrix",
+        "",
+        "| Symbol | News / Events | Calls / Presentations | RIC Verdict |",
+        "|---|---|---|---|",
+    ]
+    limitation_notes: list[str] = []
+    results_lines = ["## Latest Results And Fundamentals", ""]
+    events_lines = [
+        "## News, Events, Announcements, And Impact",
+        "",
+        "| Symbol | Source | Event / Filing | Impact | Why It Matters |",
+        "|---|---|---|---|---|",
+    ]
+    event_opinion_lines = [
+        "## Editorial View On Key Events",
+        "",
+        "| Symbol | Event | Editorial Opinion |",
+        "|---|---|---|",
+    ]
+    forensic_lines = [
+        "## Forensic And Quality Checks",
+        "",
+        "| Symbol | Status | Overall Risk | Summary / Limitation |",
+        "|---|---|---|---|",
+    ]
+    concall_lines = ["## Investor Call Or Presentation Insights", ""]
+    verdict_lines = ["## Stock-Level RIC Verdicts", ""]
+
+    for pack in packs:
+        row = pack["row"]
+        evidence = pack["evidence"]
+        symbol = row.get("symbol", "").strip().upper()
+        company = row.get("company") or symbol
+        snapshot = evidence.get("snapshot") or {}
+        technical = evidence.get("technical") or {}
+        screener = evidence.get("screener") or {}
+        latest = evidence.get("latest_results") or {}
+        announcements = evidence.get("announcements") or {}
+        bse = evidence.get("bse_filings") or {}
+        forensic = evidence.get("forensic") or {}
+        concalls = evidence.get("concalls") or {}
+
+        ratios = screener.get("ratios") or {}
+        quarterly = screener.get("quarterly") or {}
+        annual = screener.get("annual_pl") or {}
+        pros = screener.get("pros") or []
+        cons = screener.get("cons") or []
+        shareholding = screener.get("shareholding") or {}
+
+        tech_status = _compact_status(not bool(technical.get("error")), bool(row))
+        fund_status = _status_from_result(screener, "ratios")
+        result_status = _latest_result_status(latest)
+        news_status = _compact_status(
+            bool((announcements.get("bse_filings") or []) or (announcements.get("nse_filings") or [])),
+            bool(screener.get("announcements") or bse.get("total")),
+        )
+        forensic_status = _compact_status(not bool(forensic.get("error")), False)
+        concall_status = _compact_status(bool(screener.get("concalls") or concalls.get("results")), not bool(concalls.get("error")))
+        evidence_status = (
+            f"T:{tech_status} · F:{fund_status} · R:{result_status} · "
+            f"N:{news_status} · Q:{forensic_status} · C:{concall_status}"
+        )
+        if result_status == "fallback":
+            limitation_notes.append(f"{symbol}: latest result facts use Screener quarterly fallback; exchange filing extraction did not provide a cleaner result set.")
+        elif result_status in {"partial", "missing"}:
+            limitation_notes.append(f"{symbol}: latest result evidence is {result_status}; revenue/PAT/EPS should be rechecked before relying on the result read.")
+        if forensic_status != "OK":
+            limitation_notes.append(f"{symbol}: forensic/governance model evidence is {forensic_status}; no forensic conclusion is inferred.")
+
+        technical_profile = (
+            f"{row.get('action', '—')} · RSI {row.get('rsi', '—')} · "
+            f"RS {row.get('rs', '—')} · {row.get('supertrend', '—')} · {row.get('pattern', '—')}"
+        )
+        fundamental_snapshot = (
+            f"P/E {_safe_get(ratios, 'Stock P/E')} · ROCE {_safe_get(ratios, 'ROCE')} · "
+            f"ROE {_safe_get(ratios, 'ROE')} · Sales {_last_table_value(annual, 'Sales+', 'Sales')}"
+        )
+        sector_fit = (
+            f"{_company_sector_profile(symbol, company, sector_name)} "
+            f"Current setup: {row.get('setup', '—')} / {row.get('action', '—')}."
+        )
+        profile_lines.append(
+            f"| {_md_cell(symbol)} | {_md_cell(company)} | {_md_cell(sector_fit, 420)} | {_md_cell(fundamental_snapshot, 180)} |"
+        )
+        evidence_status_lines.append(
+            f"| {_md_cell(symbol)} | {_md_cell(tech_status)} | {_md_cell(fund_status)} | {_md_cell(result_status)} | {_md_cell(news_status)} | {_md_cell(forensic_status)} | {_md_cell(concall_status)} |"
+        )
+
+        latest_summary = _public_latest_summary(
+            latest.get("summary") or "Latest-results evidence was attempted but no clean revenue/PAT/EPS facts were available."
+        )
+        result_fact_count = len(latest.get("facts") or {})
+        latest_fact_text = _format_latest_facts(latest)
+        result_source = "latest filing" if result_status == "OK" else "Screener fallback" if result_status == "fallback" else "partial evidence"
+        result_cell = f"{result_status}; {result_fact_count} fact(s); {result_source}; {latest_fact_text}"
+
+        event_items = []
+        for item in (announcements.get("nse_filings") or [])[:2]:
+            event_items.append(("NSE", item.get("subject") or item.get("desc") or "", item.get("date") or ""))
+        for item in (announcements.get("bse_filings") or [])[:2]:
+            event_items.append(("BSE", item.get("subject") or item.get("title") or "", item.get("date") or ""))
+        for item in (screener.get("announcements") or [])[:3]:
+            event_items.append(("Screener/BSE", item.get("title") or "", ""))
+        event_items = _dedupe_event_items(event_items)
+        if not event_items:
+            event_items.append(("Checked", "No recent exchange filing surfaced from available evidence.", ""))
+        top_event = _summarise_event_subject(event_items[0][1])
+        news_cell = f"{news_status}; {top_event}"
+
+        forensic_summary = forensic.get("summary") or _public_error_message(forensic.get("error", ""), label="Forensic evidence")
+        forensic_cell = f"{forensic_status}; risk {forensic.get('overall_risk', 'unknown')}. {forensic_summary.replace(chr(10), ' / ')}"
+
+        concall_list = screener.get("concalls") or []
+        concall_results = concalls.get("results") or {}
+        concall_count = len(concall_list) + sum(len(v) for v in concall_results.values()) if isinstance(concall_results, dict) else len(concall_list)
+        concall_cell = f"{concall_status}; {concall_count} item(s) found." if concall_count else f"{concall_status}; no usable call/presentation item found."
+
+        branch_count = sum(
+            1
+            for status in (tech_status, fund_status, result_status, news_status, forensic_status, concall_status)
+            if status in {"OK", "fallback"}
+        )
+        action = row.get("action", "")
+        if branch_count < 2:
+            verdict = "Missing-evidence watch; do not upgrade from technical evidence alone."
+        elif action == "WAIT_FOR_PULLBACK":
+            verdict = "Retest watch; momentum is extended, so wait for pullback/base confirmation."
+        elif action == "BREAKOUT_WATCH":
+            verdict = "Breakout watch; needs price/volume confirmation and event-quality support."
+        elif action == "AVOID":
+            verdict = "Avoid/repair; wait for trend repair or better evidence."
+        else:
+            verdict = "Research watch; evidence is mixed and needs confirmation."
+        matrix_lines.append(
+            f"| {_md_cell(symbol)} | {_md_cell(technical_profile, 220)} | {_md_cell(result_cell, 360)} |"
+        )
+        event_verdict_lines.append(
+            f"| {_md_cell(symbol)} | {_md_cell(news_cell, 260)} | {_md_cell(concall_cell, 200)} | {_md_cell(verdict, 260)} |"
+        )
+
+        results_lines += [
+            f"### {symbol} - {company}",
+            "",
+            f"- **Status:** {result_status}",
+            f"- **Summary:** {latest_summary}",
+            f"- **Evidence basis:** {result_source}.",
+            f"- **Key facts:** {latest_fact_text}.",
+            f"- **Annual snapshot:** Sales {_last_table_value(annual, 'Sales+', 'Sales')}; Net profit {_last_table_value(annual, 'Net Profit+', 'Net Profit')}; EPS {_last_table_value(annual, 'EPS in Rs', 'EPS')}; OPM {_last_table_value(annual, 'OPM %')}.",
+            f"- **Quarter snapshot:** Sales {_last_table_value(quarterly, 'Sales+', 'Sales')}; Net profit {_last_table_value(quarterly, 'Net Profit+', 'Net Profit')}; EPS {_last_table_value(quarterly, 'EPS in Rs', 'EPS')}; OPM {_last_table_value(quarterly, 'OPM %')}.",
+            f"- **Pros:** {', '.join(pros[:3]) if pros else '—'}",
+            f"- **Cons:** {', '.join(cons[:3]) if cons else '—'}",
+            f"- **Shareholding:** Promoters {_safe_get(shareholding, 'Promoters', 'Promoter')}; FII {_safe_get(shareholding, 'FIIs', 'FII')}; DII {_safe_get(shareholding, 'DIIs', 'DII')}.",
+            "",
+        ]
+
+        for source, subject, date_hint in event_items[:4]:
+            impact = _impact_from_subject(subject)
+            why = _why_event_matters(subject, sector_name)
+            events_lines.append(
+                f"| {_md_cell(symbol)} | {_md_cell(source + (' ' + date_hint if date_hint else ''))} | "
+                f"{_md_cell(_summarise_event_subject(subject), 180)} | {_md_cell(impact)} | {_md_cell(why, 260)} |"
+            )
+            event_opinion_lines.append(
+                f"| {_md_cell(symbol)} | {_md_cell(_summarise_event_subject(subject), 180)} | "
+                f"{_md_cell(_editorial_event_opinion(symbol, subject, sector_name), 360)} |"
+            )
+
+        forensic_lines.append(
+            f"| {_md_cell(symbol)} | {_md_cell(forensic_status)} | {_md_cell(forensic.get('overall_risk', 'unknown'))} | {_md_cell(forensic_summary, 420)} |"
+        )
+        concall_lines += [
+            f"### {symbol} - {company}",
+            "",
+            f"- **Status:** {concall_status}",
+            f"- **Screener concall entries:** {len(concall_list)}",
+            f"- **Search evidence:** {concall_count} total call/presentation/transcript item(s) surfaced.",
+            "- **Read-through:** Use order book, guidance, margin, capacity/capex, and risk-language changes as the next manual review checkpoint.",
+            "",
+        ]
+        verdict_lines += [
+            f"### {symbol} - {company}",
+            "",
+            f"- **Verdict:** {verdict}",
+            f"- **Bull case:** Sector leadership remains intact, {symbol} holds its technical structure, and result/event evidence confirms earnings or order-book support.",
+            f"- **Bear case:** Price fails retest/invalidation, latest filings weaken the thesis, or forensic/working-capital evidence deteriorates.",
+            "- **What would change the view:** stronger multi-branch evidence from results, filings, management commentary, and price-volume confirmation.",
+            "",
+        ]
+
+    limitations_lines = ["## Evidence Limitations", ""]
+    if limitation_notes:
+        for note in dict.fromkeys(limitation_notes):
+            limitations_lines.append(f"- {note}")
+    else:
+        limitations_lines.append("- No material RIC evidence limitations surfaced for the covered candidates.")
+
+    return "\n\n".join(
+        [
+            "\n".join(profile_lines),
+            "\n".join(evidence_status_lines),
+            "\n".join(matrix_lines),
+            "\n".join(event_verdict_lines),
+            "\n".join(limitations_lines),
+            "\n".join(results_lines).strip(),
+            "\n".join(events_lines),
+            "\n".join(event_opinion_lines),
+            "\n".join(forensic_lines).strip(),
+            "\n".join(concall_lines).strip(),
+            "\n".join(verdict_lines).strip(),
+        ]
+    )
+
+
+def _build_sector_specific_content(
+    sector_query: str,
+    *,
+    ric: bool = False,
+    max_companies: int = 5,
+    no_web: bool = False,
+) -> tuple[str, dict[str, str]]:
+    md_path = _latest_sector_rotation_markdown()
+    markdown = md_path.read_text(encoding="utf-8")
+    topdown_rows: list[dict[str, Any]] = []
+    live_overview: dict[str, Any] = {}
+    if ric:
+        topdown_rows, live_overview = _load_live_sector_topdown(limit=3)
+    row = _resolve_sector_from_rotation_or_pg(markdown, sector_query, topdown_rows=topdown_rows)
+    sector_name = row["sector"]
+    index_name = row["index"]
+
+    data_as_of = "N/A"
+    generated = "N/A"
+    for line in markdown.splitlines()[:20]:
+        if line.startswith("**Data as of:**"):
+            data_as_of = line.split("**Data as of:**", 1)[1].strip()
+        elif line.startswith("**Generated:**"):
+            generated = line.split("**Generated:**", 1)[1].strip()
+
+    market_brief = _extract_markdown_section(markdown, "## Market Brief")
+    if ric and market_brief:
+        market_brief = market_brief.replace("## Market Brief", "## EOD Market Brief Context", 1)
+    sector_section = _extract_subsection(markdown, f"### {sector_name}")
+    candidate_rows = _candidate_rows_from_section(sector_section)
+    if not candidate_rows:
+        candidate_rows = _load_focus_candidate_rows(index_name, sector_name, limit=max(12, max_companies * 3))
+    symbols = [row.get("symbol", "") for row in candidate_rows]
+
+    notes: list[str] = []
+    for symbol in symbols[:8]:
+        note = _extract_subsection(markdown, f"### {symbol} -")
+        if note:
+            notes.append(note)
+    technical_notes = "\n\n".join(notes) if notes else _build_generated_technical_notes(candidate_rows)
+
+    peak_rows: list[str] = []
+    peak_section = _extract_markdown_section(markdown, "## 4. Peak Resilience & Fast Recovery", "\n## 5.")
+    for line in peak_section.splitlines():
+        if line.startswith("| Rank |") or line.startswith("|---"):
+            peak_rows.append(line)
+        elif line.startswith("|") and sector_name in line:
+            peak_rows.append(line)
+    peak_table = "\n".join(peak_rows).strip()
+
+    extension_flags: list[str] = []
+    for line in sector_section.splitlines():
+        if not line.startswith("|") or line.startswith("|---") or "Symbol | Company" in line:
+            continue
+        cells = [c.strip() for c in line.strip().strip("|").split("|")]
+        if len(cells) >= 11:
+            try:
+                rsi = float(cells[10])
+                if rsi >= 72:
+                    extension_flags.append(f"{cells[0]} RSI {rsi:.1f}")
+            except ValueError:
+                pass
+
+    editor_view = (
+        f"{sector_name} is the focused sector because {index_name} ranks #{row['rank']} in the latest rotation board "
+        f"with {row['ret_1m']} over 1M and {row['rs_1m']} 1M relative strength versus Nifty 500. "
+        "The report should be read as a watchlist and timing document, not an entry list. "
+    )
+    if extension_flags:
+        editor_view += (
+            "Momentum is not early for several leaders; "
+            + ", ".join(extension_flags[:4])
+            + " show extended RSI conditions. Prefer breakout confirmation, retest-hold, or a controlled pullback."
+        )
+    else:
+        editor_view += "No broad RSI extension was detected in the extracted candidate table; confirmation quality and volume remain the key filters."
+
+    ric_sections = ""
+    if ric:
+        ric_sections = _build_ric_sections(
+            sector_name,
+            index_name,
+            candidate_rows,
+            max_companies=max_companies,
+            no_web=no_web,
+        )
+
+    topdown_section = ""
+    if ric:
+        topdown_section = _build_broader_market_ric_section(
+            topdown_rows,
+            live_overview,
+            focus_index=index_name,
+            focus_sector=sector_name,
+        )
+
+    live_rank = f", live 1D {row.get('live_1d')}" if row.get("live_1d") and row.get("live_1d") != "—" else ""
+    content = "\n\n".join(
+        part
+        for part in [
+            f"# Agent Adda Market Intelligence - {sector_name} Sector Report",
+            f"Issue date: {datetime.datetime.now().strftime('%Y-%m-%d')} · Data as of: {data_as_of} · Basis: {'RIC-enriched evidence' if ric else 'rotation-only evidence'}\n\n> Research only, not investment advice.",
+            topdown_section,
+            "## Executive Read\n\n"
+            f"{sector_name} is currently represented by **{index_name}** and ranks **#{row['rank']}** in the latest sector rotation board/fallback lens{live_rank}. "
+            f"The lens shows **5D {row['ret_5d']}**, **1M {row['ret_1m']}**, **3M {row['ret_3m']}**, **6M {row['ret_6m']}**, "
+            f"and **1M RS {row['rs_1m']}** versus Nifty 500. Treat this as leadership evidence, then use candidate-level setup, RSI, Supertrend, and volume to decide whether the sector is actionable or extended.",
+            _build_sector_thesis(sector_name, index_name, row) if ric else "",
+            market_brief,
+            "## Sector Rotation Snapshot\n\n"
+            "| Rank | Index | Sector Lens | Close | 5D | 1M | 3M | 6M | RS 1M | Score |\n"
+            "|---:|---|---|---:|---:|---:|---:|---:|---:|---:|\n"
+            f"| {row['rank']} | {index_name} | {sector_name} | {row['close']} | {row['ret_5d']} | {row['ret_1m']} | {row['ret_3m']} | {row['ret_6m']} | {row['rs_1m']} | {row['score']} |",
+            _build_compact_candidate_map(sector_name, candidate_rows),
+            _build_quality_growth_lens(candidate_rows) if ric else "",
+            _build_tradeability_funnel(candidate_rows, no_web=no_web) if ric else "",
+            ric_sections,
+            "## Technical Read\n\n" + (technical_notes or "No deep technical notes were found for the extracted sector candidates."),
+            _build_compact_peak_table(sector_name, peak_table),
+            "## Editor's Opinion\n\n" + editor_view,
+            "## Methodology\n\n"
+            "- Sector rotation score combines 1M return, 5D/1M/3M/6M relative strength versus Nifty 500, and cycle adjustment when available.\n"
+            "- Candidate score combines technical strength, relative strength, enhanced fundamental score, Supertrend, trading signal, pattern, and Stage analysis.\n"
+            "- RIC quality/growth buckets are proxy classifications from local fundamental quality fields; they are not permanent-moat assertions.\n"
+            "- Tradeability is a funnel: sector leadership -> quality/growth -> swing state -> live intraday trigger -> F&O eligibility -> option-chain sanity.\n"
+            "- Action buckets such as BREAKOUT_WATCH, WATCHLIST, WAIT_FOR_PULLBACK, HOLD_TRAIL, and AVOID are evidence labels, not recommendations.\n"
+            "- For extended names, prefer retest-hold or fresh base formation over chasing vertical moves.",
+            "## Source Trail\n\n"
+            "- Source artifact: latest generated sector rotation report.\n"
+            f"- Focus lens source: {row.get('source', 'latest generated sector rotation report')}.\n"
+            "- Latest sector rotation HTML/PDF are available in the generated report library when produced.\n"
+            f"- Source generated date in report: {generated}",
+        ]
+        if part
+    )
+    return content, {
+        "sector": sector_name,
+        "index": index_name,
+        "data_as_of": data_as_of,
+        "source_path": str(md_path),
+        "basis": "RIC-enriched evidence" if ric else "rotation-only evidence",
+    }
+
+
+def _generate_sector_specific_preset_report(args: list[str], output_format: str = "html") -> dict:
+    normalized_format = "md" if output_format.lower().strip() in {"md", "markdown"} else output_format.lower().strip()
+    if normalized_format not in {"html", "pdf", "md"}:
+        normalized_format = "html"
+    parsed_args = _parse_sector_report_args([str(a) for a in args])
+    sector_query = str(parsed_args.get("sector_query") or "").strip()
+    ric_mode = parsed_args.get("mode") == "ric"
+    max_companies = int(parsed_args.get("max_companies") or 5)
+    no_web = bool(parsed_args.get("no_web"))
+    if not sector_query and not ric_mode:
+        return {
+            "path": None,
+            "latest_path": None,
+            "format": normalized_format,
+            "title": "Sector-Specific Report",
+            "report_type": "sector",
+            "symbol": "",
+            "success": False,
+            "warnings": ["Usage: /report sector <sector name> [html|pdf|md]"],
+            "note": "Usage: /report sector <sector name> [html|pdf|md], e.g. /report sector NIFTY DEFENCE html, or /report sector ric html for auto-focus.",
+        }
+
+    content, meta = _build_sector_specific_content(
+        sector_query,
+        ric=ric_mode,
+        max_companies=max_companies,
+        no_web=no_web,
+    )
+    sector_name = meta["sector"]
+    title = (
+        f"{sector_name} — RIC-Enriched Sector Intelligence Report"
+        if ric_mode
+        else f"{sector_name} — Sector-Specific Market Intelligence Report"
+    )
+    ts = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = f"NSE_sector_{_slugify_report_name(sector_name)}_{ts}"
+    type_config = REPORT_TYPES["sector"]
+    REPORTS_DIR.mkdir(parents=True, exist_ok=True)
+
+    if normalized_format == "md":
+        result = _generate_md_report(content, title, "sector", sector_name, filename, type_config)
+    elif normalized_format == "pdf":
+        result = _generate_pdf_report(content, title, "sector", sector_name, filename, type_config)
+    else:
+        result = _generate_html_report(content, title, "sector", sector_name, filename, type_config)
+
+    latest_dir = ROOT / "reports" / "latest"
+    latest_dir.mkdir(parents=True, exist_ok=True)
+    latest_path = latest_dir / f"sector_{_slugify_report_name(sector_name)}.{result.get('format', normalized_format)}"
+    if result.get("success") and result.get("path"):
+        try:
+            shutil.copy2(Path(result["path"]), latest_path)
+            result["latest_path"] = str(latest_path)
+        except Exception:
+            pass
+    result.update(
+        {
+            "markdown": content,
+            "sector": sector_name,
+            "index": meta["index"],
+            "data_as_of": meta["data_as_of"],
+            "basis": meta.get("basis"),
+            "note": (
+                f"Generated RIC-enriched focused sector report for {sector_name} "
+                f"with up to {max_companies} company evidence profiles."
+                if ric_mode
+                else f"Generated focused sector report for {sector_name} from latest sector rotation evidence."
+            ),
+        }
+    )
+    return result
+
+
 def generate_preset_report(
     report_type: str,
     output_format: str = "html",
@@ -5195,8 +7208,8 @@ def generate_preset_report(
     Generate a data-direct preset report without requiring LLM content.
 
     Supported report_type values:
-        'sector-rotation', 'stage2', 'strategy-lab', 'portfolio-monitor',
-        'swing-playbook', 'diagnosis'
+        'sector', 'sector-rotation', 'stage2', 'strategy-lab',
+        'portfolio-monitor', 'swing-playbook', 'diagnosis'
 
     Returns:
         dict with keys: path, format, title, report_type, success, note
@@ -5245,9 +7258,12 @@ def generate_preset_report(
     if rt in {"diagnosis", "fundamental-driver", "fundamental_driver"}:
         return _generate_diagnosis_preset_report(preset_args, output_format)
 
+    if rt == "sector":
+        return _generate_sector_specific_preset_report(preset_args, output_format)
+
     if rt not in ("sector-rotation", "stage2", "strategy-lab"):
         raise ValueError(
-            f"generate_preset_report supports sector-rotation, stage2, strategy-lab, "
+            f"generate_preset_report supports sector, sector-rotation, stage2, strategy-lab, "
             f"portfolio-monitor, swing-playbook, diagnosis; got '{rt}'"
         )
 

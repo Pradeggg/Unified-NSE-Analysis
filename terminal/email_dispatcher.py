@@ -17,9 +17,13 @@ from __future__ import annotations
 import os
 import re
 import shlex
+import mimetypes
+import smtplib
 import subprocess
 import textwrap
 from html import unescape
+from email.message import EmailMessage as MimeEmailMessage
+from email.utils import formataddr
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -67,6 +71,12 @@ REPORT_ALIASES: dict[str, str] = {
     "market-eod":       "latest/eod_market_report.html",
     "market_eod":       "latest/eod_market_report.html",
     "eod-market-report": "latest/eod_market_report.html",
+    "rrg":               "latest/market_breadth_rrg.html",
+    "breadth":           "latest/market_breadth_rrg.html",
+    "market-breadth":    "latest/market_breadth_rrg.html",
+    "market_breadth":    "latest/market_breadth_rrg.html",
+    "rrg-report":        "latest/market_breadth_rrg.html",
+    "rotation-graph":    "latest/market_breadth_rrg.html",
 }
 
 # Dynamic aliases: resolved at lookup time via the configured glob (newest match
@@ -583,6 +593,17 @@ def _applescript_recipients(rec_type: str, addrs: list[str]) -> str:
     return "\n".join(lines)
 
 
+def _applemail_recipients(rec_type: str, addrs: list[str]) -> str:
+    lines: list[str] = []
+    for addr in addrs:
+        a = addr.replace('"', '\\"')
+        lines.append(
+            f'        make new {rec_type} recipient at end of {rec_type} recipients '
+            f'with properties {{address:"{a}"}}'
+        )
+    return "\n".join(lines)
+
+
 def _ensure_html_document(html_body: str) -> str:
     """Return a complete HTML document for Outlook's HTML composer.
 
@@ -617,6 +638,153 @@ def _html_to_plain_text(html_body: str) -> str:
     text = re.sub(r"[ \t]+\n", "\n", text)
     text = re.sub(r"\n{3,}", "\n\n", text)
     return text.strip()
+
+
+def _load_optional_dotenv() -> None:
+    """Load .env when python-dotenv is installed; no-op otherwise."""
+    try:
+        from dotenv import load_dotenv  # type: ignore
+    except Exception:
+        return
+    try:
+        load_dotenv(ROOT / ".env")
+    except Exception:
+        return
+
+
+def _email_provider() -> str:
+    _load_optional_dotenv()
+    provider = (
+        os.getenv("AGENT_ADDA_EMAIL_PROVIDER")
+        or os.getenv("EMAIL_PROVIDER")
+        or "outlook"
+    )
+    return provider.strip().lower()
+
+
+def _smtp_setting(*names: str, default: str = "") -> str:
+    for name in names:
+        value = os.getenv(name)
+        if value:
+            return value.strip()
+    return default
+
+
+def _smtp_config() -> dict[str, str | int | bool]:
+    provider = _email_provider()
+    gmail_mode = provider == "gmail"
+    icloud_mode = provider == "icloud"
+    host = _smtp_setting(
+        "SMTP_HOST",
+        default="smtp.gmail.com" if gmail_mode else "smtp.mail.me.com" if icloud_mode else "smtp.office365.com",
+    )
+    port_raw = _smtp_setting("SMTP_PORT", default="587")
+    try:
+        port = int(port_raw)
+    except ValueError:
+        port = 587
+    user = _smtp_setting("SMTP_USER", "EMAIL_USER", "GMAIL_USER")
+    password = _smtp_setting(
+        "SMTP_PASSWORD",
+        "EMAIL_PASSWORD",
+        "EMAIL_APP_PASSWORD",
+        "GMAIL_APP_PASSWORD",
+    )
+    from_addr = _smtp_setting("SMTP_FROM", "EMAIL_FROM", default=user)
+    from_name = _smtp_setting("EMAIL_FROM_NAME", default="Agent Adda")
+    use_tls_raw = _smtp_setting("SMTP_USE_TLS", default="1").lower()
+    return {
+        "provider": provider,
+        "host": host,
+        "port": port,
+        "user": user,
+        "password": password,
+        "from_addr": from_addr,
+        "from_name": from_name,
+        "use_tls": use_tls_raw not in {"0", "false", "no", "off"},
+    }
+
+
+def send_via_smtp(
+    *,
+    subject: str,
+    html_body: str,
+    to_addrs: list[str],
+    bcc_addrs: list[str],
+    attachments: list[Path],
+) -> str:
+    """Send the email through SMTP.
+
+    For Gmail, use a Google App Password with:
+      AGENT_ADDA_EMAIL_PROVIDER=gmail
+      SMTP_USER=agentadda.in@gmail.com
+      SMTP_PASSWORD=<app password>
+
+    For iCloud Mail, use an Apple app-specific password with:
+      AGENT_ADDA_EMAIL_PROVIDER=icloud
+      SMTP_USER=pgorai@icloud.com
+      SMTP_PASSWORD=<app-specific password>
+    """
+    cfg = _smtp_config()
+    host = str(cfg["host"])
+    port = int(cfg["port"])
+    user = str(cfg["user"] or "")
+    password = str(cfg["password"] or "")
+    from_addr = str(cfg["from_addr"] or user)
+    from_name = str(cfg["from_name"] or "Agent Adda")
+    use_tls = bool(cfg["use_tls"])
+    recipients = list(dict.fromkeys(list(to_addrs or []) + list(bcc_addrs or [])))
+
+    missing = [
+        name
+        for name, value in {
+            "SMTP_USER": user,
+            "SMTP_PASSWORD": password,
+            "SMTP_FROM/EMAIL_FROM": from_addr,
+        }.items()
+        if not value
+    ]
+    if missing:
+        raise RuntimeError(
+            "SMTP email provider is selected but required setting(s) are missing: "
+            + ", ".join(missing)
+            + ". For Gmail, set AGENT_ADDA_EMAIL_PROVIDER=gmail, "
+            "SMTP_USER=agentadda.in@gmail.com and SMTP_PASSWORD to a Google App Password. "
+            "For iCloud, set AGENT_ADDA_EMAIL_PROVIDER=icloud, SMTP_USER=pgorai@icloud.com "
+            "and SMTP_PASSWORD to an Apple app-specific password."
+        )
+    if not recipients:
+        raise RuntimeError("SMTP email has no recipients")
+
+    html_document = _ensure_html_document(html_body)
+    msg = MimeEmailMessage()
+    msg["Subject"] = subject
+    msg["From"] = formataddr((from_name, from_addr))
+    msg["To"] = ", ".join(to_addrs or [])
+    if bcc_addrs:
+        msg["Bcc"] = ", ".join(bcc_addrs)
+    msg.set_content(_html_to_plain_text(html_document))
+    msg.add_alternative(html_document, subtype="html")
+
+    for attachment in attachments or []:
+        path = Path(attachment).resolve()
+        if not path.exists() or not path.is_file():
+            continue
+        content_type, _ = mimetypes.guess_type(str(path))
+        maintype, subtype = (content_type or "application/octet-stream").split("/", 1)
+        msg.add_attachment(
+            path.read_bytes(),
+            maintype=maintype,
+            subtype=subtype,
+            filename=path.name,
+        )
+
+    with smtplib.SMTP(host, port, timeout=45) as server:
+        if use_tls:
+            server.starttls()
+        server.login(user, password)
+        server.send_message(msg, from_addr=from_addr, to_addrs=recipients)
+    return f"sent via SMTP as {from_addr}"
 
 
 def _build_outlook_applescript(
@@ -666,6 +834,54 @@ end tell
 '''
 
 
+def _build_applemail_applescript(
+    *,
+    subject: str,
+    html_body_path: Path,
+    plain_body_path: Path,
+    to_addrs: list[str],
+    bcc_addrs: list[str],
+    attachments: list[Path],
+    send_immediately: bool,
+    sender: str = "",
+) -> str:
+    final_action = "send newMsg" if send_immediately else "set visible of newMsg to true"
+    to_block = _applemail_recipients("to", to_addrs)
+    bcc_block = _applemail_recipients("bcc", bcc_addrs)
+
+    subj_e = subject.replace('"', '\\"')
+    sender_e = sender.replace('"', '\\"').strip()
+    html_path_str = str(html_body_path).replace('"', '\\"')
+    plain_path_str = str(plain_body_path).replace('"', '\\"')
+    sender_line = f'    set sender of newMsg to "{sender_e}"' if sender_e else ""
+    attach_lines: list[str] = []
+    for att in attachments or []:
+        if att is None:
+            continue
+        att_str = str(att).replace('"', '\\"')
+        attach_lines.append(
+            f'        set attachPath to POSIX file "{att_str}"\n'
+            f'        make new attachment with properties {{file name:attachPath}} at after the last paragraph'
+        )
+    attach_block = "\n".join(attach_lines)
+
+    return f'''
+set htmlBody to (do shell script "cat " & quoted form of "{html_path_str}")
+set plainBody to (do shell script "cat " & quoted form of "{plain_path_str}")
+tell application "Mail"
+    activate
+    set newMsg to make new outgoing message with properties {{subject:"{subj_e}", content:plainBody, visible:true}}
+{sender_line}
+    tell newMsg
+{to_block}
+{bcc_block}
+{attach_block}
+    end tell
+    {final_action}
+end tell
+'''
+
+
 def send_via_outlook(
     subject: str,
     html_body: str,
@@ -674,7 +890,11 @@ def send_via_outlook(
     attachments: list[Path],
     send_immediately: bool,
 ) -> str:
-    """Compose (and optionally send) the email via Microsoft Outlook on macOS.
+    """Compose (and optionally send) email.
+
+    Default provider is Microsoft Outlook on macOS. Set
+    AGENT_ADDA_EMAIL_PROVIDER=gmail, icloud, or smtp to send through SMTP instead.
+    Set AGENT_ADDA_EMAIL_PROVIDER=applemail to compose/send through Apple Mail.
 
     Returns a short status string.
     """
@@ -684,6 +904,39 @@ def send_via_outlook(
     html_document = _ensure_html_document(html_body)
     body_path.write_text(html_document, encoding="utf-8")
     plain_path.write_text(_html_to_plain_text(html_document), encoding="utf-8")
+
+    provider = _email_provider()
+    if provider in {"applemail", "mail", "apple_mail"}:
+        sender = _smtp_setting("APPLEMAIL_ACCOUNT", "SMTP_FROM", "EMAIL_FROM")
+        script = _build_applemail_applescript(
+            subject=subject,
+            html_body_path=body_path,
+            plain_body_path=plain_path,
+            to_addrs=to_addrs,
+            bcc_addrs=bcc_addrs,
+            attachments=attachments,
+            send_immediately=send_immediately,
+            sender=sender,
+        )
+        result = subprocess.run(["osascript", "-e", script], capture_output=True, text=True)
+        if result.returncode != 0:
+            raise RuntimeError(f"Apple Mail AppleScript failed:\n{result.stderr}")
+        return "sent via Apple Mail" if send_immediately else "draft opened in Apple Mail"
+
+    if provider in {"gmail", "icloud", "smtp"}:
+        if not send_immediately:
+            return (
+                f"{provider} draft unavailable; preview written to {body_path}. "
+                "Use --send to send through SMTP, or set AGENT_ADDA_EMAIL_PROVIDER=outlook "
+                "to open an Outlook draft."
+            )
+        return send_via_smtp(
+            subject=subject,
+            html_body=html_document,
+            to_addrs=to_addrs,
+            bcc_addrs=bcc_addrs,
+            attachments=attachments,
+        )
 
     script = _build_outlook_applescript(
         subject=subject,
@@ -842,6 +1095,14 @@ def email_command_usage() -> str:
           /email dashboard --to "a@x.com;b@y.com" --send
           /email stage2 --to a@x.com --bcc b@y.com,c@z.com --send
           /email reports/latest/index_intelligence.html --to a@x.com --as body --send
+
+        Sender:
+          Default uses Outlook. To send from Gmail SMTP, set:
+            AGENT_ADDA_EMAIL_PROVIDER=gmail
+            SMTP_USER=agentadda.in@gmail.com
+            SMTP_PASSWORD=<Google App Password>
+            SMTP_FROM=agentadda.in@gmail.com
+          Gmail SMTP sends only with --send; without --send it writes a preview.
     """)
 
 

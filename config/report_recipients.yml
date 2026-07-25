@@ -9,48 +9,52 @@
 #     to:   [primary recipients in the "To:" line]
 #     bcc:  [recipients hidden from each other in "Bcc:"]
 #
-# IMPORTANT: Every email created via this config is opened as a DRAFT in
-# Outlook for the user to review before sending. Nothing is auto-sent.
+# IMPORTANT: Delivery behavior depends on AGENT_ADDA_EMAIL_PROVIDER.
+# - outlook: opens/sends through Outlook.
+# - gmail/icloud/smtp: sends through SMTP when --send/send_immediately is used.
 # -----------------------------------------------------------------------------
 
 eod_market:
   to:
-    - pgorai@deloitte.com
+    - pgorai@icloud.com
   bcc:
-    - hibhatia@deloitte.com
-    - hikhan@deloitte.com
-    - parsmishra@DELOITTE.com
-    - sgorai@deloitte.com
+    - hitesh86@gmail.com
+    - hinamanit@gmail.com
+    - gorai.sandeep@gmail.com
     - mbinjola@deloitte.com
-    - avsen@deloitte.com
-    - amahale@deloitte.com
+    - avirup.sen@gmail.com
     - vitangirala@deloitte.com
-    - kchouhan@deloitte.com
+    - kapilsingh143@gmail.com
+    - aumahale@gmail.com
+    - pikcool@gmail.com
+    - tvphani@gmail.com
 
 top_picks:
   to:
-    - pgorai@deloitte.com
+    - pgorai@icloud.com
   bcc:
-    - hibhatia@deloitte.com
-    - hikhan@deloitte.com
-    - parsmishra@DELOITTE.com
-    - sgorai@deloitte.com
+    - hitesh86@gmail.com
+    - hinamanit@gmail.com
+    - gorai.sandeep@gmail.com
     - mbinjola@deloitte.com
-    - avsen@deloitte.com
-    - amahale@deloitte.com
+    - avirup.sen@gmail.com
     - vitangirala@deloitte.com
-    - kchouhan@deloitte.com
+    - kapilsingh143@gmail.com
+    - aumahale@gmail.com
+    - pikcool@gmail.com
+    - tvphani@gmail.com
 
 intraday_alerts:
   to:
-    - pgorai@deloitte.com
+    - pgorai@icloud.com
   bcc:
-    - hibhatia@deloitte.com
-    - hikhan@deloitte.com
-    - parsmishra@DELOITTE.com
-    - sgorai@deloitte.com
+    - hitesh86@gmail.com
+    - hinamanit@gmail.com
+    - gorai.sandeep@gmail.com
     - mbinjola@deloitte.com
-    - avsen@deloitte.com
-    - amahale@deloitte.com
+    - avirup.sen@gmail.com
     - vitangirala@deloitte.com
-    - kchouhan@deloitte.com
+    - kapilsingh143@gmail.com
+    - aumahale@gmail.com
+    - pikcool@gmail.com
+    - tvphani@gmail.com

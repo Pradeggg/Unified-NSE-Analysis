@@ -157,6 +157,29 @@ def test_strong_quality_reasonable_valuation_outranks_weak_expensive_name():
     assert ranked[0].total_score > ranked[1].total_score
 
 
+def test_positive_low_dimension_reasons_are_not_reported_as_risks():
+    result = build_checklist_result(
+        _evidence(
+            "POSLOW",
+            fundamentals={"enhanced_fund_score": 75.0},
+            valuation={},
+            governance={},
+            technical={
+                "stage": "STAGE_1",
+                "technical_score": 41.0,
+                "trend_signal": "BULLISH",
+                "trading_signal": "HOLD",
+            },
+        )
+    )
+
+    joined = " ".join(result.top_risks)
+
+    assert "Strong Agent Adda fundamental score" not in joined
+    assert "Bullish trend signal" not in joined
+    assert any("Missing valuation" in risk for risk in result.top_risks)
+
+
 def test_mirror_test_fails_when_core_claims_are_missing():
     result = build_checklist_result(_evidence("THIN", valuation={}))
 

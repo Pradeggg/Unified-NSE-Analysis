@@ -223,6 +223,300 @@ def test_diagnosis_report_preset_writes_latest_markdown_and_html(monkeypatch, tm
     assert "## Fundamental Driver Diagnosis" in Path(md["latest_path"]).read_text(encoding="utf-8")
 
 
+def test_sector_specific_report_preset_extracts_focused_sector(monkeypatch, tmp_path):
+    import terminal.reports as reports_module
+
+    monkeypatch.setattr(reports_module, "ROOT", tmp_path)
+    monkeypatch.setattr(reports_module, "REPORTS_DIR", tmp_path / "reports" / "generated")
+    latest_dir = tmp_path / "reports" / "latest"
+    latest_dir.mkdir(parents=True)
+    (latest_dir / "sector_rotation.md").write_text(
+        "\n".join(
+            [
+                "# Sector Rotation Investment Report",
+                "",
+                "**Generated:** 2026-06-20  ",
+                "**Data as of:** 2026-06-19  ",
+                "",
+                "## Market Brief",
+                "",
+                "**Market Read:** Rotation active",
+                "",
+                "## 1. Sector Rotation",
+                "",
+                "| Rank | Index | Sector Lens | Close | 5D | 1M | 3M | 6M | RS 1M | Base Score | Cycle Adj | Cycle-Adjusted Score |",
+                "|---:|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|",
+                "| 1 | Nifty Ind Defence | Defence & Aerospace | 9587.50 | 6.6% | 6.6% | 23.9% | 27.4% | 4.1% | 8.4 | 0.0 | 8.4 |",
+                "",
+                "## 2. Investment Candidates",
+                "",
+                "### Defence & Aerospace",
+                "",
+                "| Symbol | Company | Price | Signal | Setup | Action | Score | Tech | RS | Fund | RSI | Supertrend | Pattern | Volume Ratio |",
+                "|---|---|---:|---|---|---|---:|---:|---:|---:|---:|---|---|---:|",
+                "| PARAS | PARAS | 1408.65 | BUY | NEUTRAL | BREAKOUT_WATCH | 80.0 | 59.3 | 106.7% | N/A | 88.9 | BULLISH | NEAR_RESISTANCE | 3.57x |",
+                "",
+                "## 3. Deep Technical Notes",
+                "",
+                "### PARAS - PARAS",
+                "",
+                "- **Sector:** Defence & Aerospace | **Setup:** NEUTRAL | **Action:** BREAKOUT_WATCH",
+                "- **Action reason:** Near high/base setup; wait for price and volume breakout confirmation.",
+                "",
+                "## 4. Peak Resilience & Fast Recovery",
+                "",
+                "| Rank | Symbol | Sector | Price | 52W High | 52W Low | Drawdown From High | Recovery From Low | Days Since Low | Recovery Speed | Peak Score |",
+                "|---:|---|---|---:|---:|---:|---:|---:|---:|---:|---:|",
+                "| 1 | PARAS | Defence & Aerospace | 1408.65 | 1443.00 | 580.50 | -2.4% | 142.7% | 88 | 1.62%/day | 81.8 |",
+                "",
+                "## 5. Methodology",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    result = reports.generate_preset_report("sector", "md", args=["NIFTY", "DEFENCE"])
+
+    assert result["success"] is True
+    assert result["report_type"] == "sector"
+    assert result["sector"] == "Defence & Aerospace"
+    assert result["index"] == "Nifty Ind Defence"
+    assert result["data_as_of"] == "2026-06-19"
+    assert Path(result["path"]).exists()
+    assert Path(result["latest_path"]).exists()
+    assert "Candidate Map" in result["markdown"]
+    assert "### Candidate Scorecard" in result["markdown"]
+    assert "### Setup And Risk Context" in result["markdown"]
+    assert "PARAS" in result["markdown"]
+    assert "Basis: rotation-only evidence" in result["markdown"]
+    assert str(latest_dir) not in result["markdown"]
+
+
+def test_sector_specific_ric_report_adds_company_evidence(monkeypatch, tmp_path):
+    import terminal.reports as reports_module
+
+    monkeypatch.setattr(reports_module, "ROOT", tmp_path)
+    monkeypatch.setattr(reports_module, "REPORTS_DIR", tmp_path / "reports" / "generated")
+    latest_dir = tmp_path / "reports" / "latest"
+    latest_dir.mkdir(parents=True)
+    (latest_dir / "sector_rotation.md").write_text(
+        "\n".join(
+            [
+                "# Sector Rotation Investment Report",
+                "",
+                "**Generated:** 2026-06-20  ",
+                "**Data as of:** 2026-06-19  ",
+                "",
+                "## Market Brief",
+                "",
+                "**Market Read:** Rotation active",
+                "",
+                "## 1. Sector Rotation",
+                "",
+                "| Rank | Index | Sector Lens | Close | 5D | 1M | 3M | 6M | RS 1M | Base Score | Cycle Adj | Cycle-Adjusted Score |",
+                "|---:|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|",
+                "| 1 | Nifty Ind Defence | Defence & Aerospace | 9587.50 | 6.6% | 6.6% | 23.9% | 27.4% | 4.1% | 8.4 | 0.0 | 8.4 |",
+                "",
+                "## 2. Investment Candidates",
+                "",
+                "### Defence & Aerospace",
+                "",
+                "| Symbol | Company | Price | Signal | Setup | Action | Score | Tech | RS | Fund | RSI | Supertrend | Pattern | Volume Ratio |",
+                "|---|---|---:|---|---|---|---:|---:|---:|---:|---:|---|---|---:|",
+                "| PARAS | Paras Defence | 1408.65 | BUY | NEUTRAL | WAIT_FOR_PULLBACK | 80.0 | 59.3 | 106.7% | N/A | 88.9 | BULLISH | NEAR_RESISTANCE | 3.57x |",
+                "",
+                "## 3. Deep Technical Notes",
+                "",
+                "### PARAS - Paras Defence",
+                "",
+                "- **Sector:** Defence & Aerospace | **Setup:** NEUTRAL | **Action:** WAIT_FOR_PULLBACK",
+                "- **Action reason:** Momentum is extended; prefer a pullback or fresh base before entry.",
+                "",
+                "## 4. Peak Resilience & Fast Recovery",
+                "",
+                "## 5. Methodology",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    def fake_collect(symbol, *, no_web=False):
+        assert symbol == "PARAS"
+        return {
+            "symbol": symbol,
+            "snapshot": {"symbol": symbol, "company_name": "Paras Defence"},
+            "technical": {"symbol": symbol, "price": 1408.65},
+            "screener": {
+                "symbol": symbol,
+                "ratios": {"Stock P/E": "72", "ROCE": "18", "ROE": "14"},
+                "annual_pl": {"Sales+": ["100", "125"], "Net Profit+": ["10", "14"], "EPS in Rs": ["4", "5"], "OPM %": ["18%", "20%"]},
+                "quarterly": {"Sales+": ["30"], "Net Profit+": ["4"], "EPS in Rs": ["1.2"], "OPM %": ["21%"]},
+                "pros": ["Order book visibility"],
+                "cons": ["Valuation elevated"],
+                "shareholding": {"Promoters": "58%", "FIIs": "3%", "DIIs": "2%"},
+                "announcements": [{"title": "Investor presentation uploaded"}],
+                "concalls": [{"period": "Mar 2026"}],
+            },
+            "latest_results": {"facts": {"revenue": {"value": "125"}}, "summary": "Revenue evidence available."},
+            "announcements": {"bse_filings": [{"subject": "Order win announced"}], "nse_filings": []},
+            "bse_filings": {"total": 1, "results": {}},
+            "forensic": {"overall_risk": "low", "summary": "Piotroski healthy."},
+            "concalls": {"results": {"screener_concall": [{"title": "Concall transcript"}]}},
+        }
+
+    monkeypatch.setattr(reports_module, "_collect_symbol_ric_evidence", fake_collect)
+
+    result = reports.generate_preset_report("sector", "md", args=["NIFTY", "DEFENCE", "ric", "--max-companies", "1"])
+
+    assert result["success"] is True
+    assert result["basis"] == "RIC-enriched evidence"
+    assert "Basis: RIC-enriched evidence" in result["markdown"]
+    assert "## Company Profile Cards" in result["markdown"]
+    assert "## RIC Evidence Status" in result["markdown"]
+    assert "## RIC Setup And Results Matrix" in result["markdown"]
+    assert "## Event And Verdict Matrix" in result["markdown"]
+    assert "## Evidence Limitations" in result["markdown"]
+    assert "## Latest Results And Fundamentals" in result["markdown"]
+    assert "## News, Events, Announcements, And Impact" in result["markdown"]
+    assert "## Editorial View On Key Events" in result["markdown"]
+    assert "## Forensic And Quality Checks" in result["markdown"]
+    assert "| Symbol | Status | Overall Risk | Summary / Limitation |" in result["markdown"]
+    assert "## Investor Call Or Presentation Insights" in result["markdown"]
+    assert "## Stock-Level RIC Verdicts" in result["markdown"]
+    assert "Revenue evidence available." in result["markdown"]
+    assert "**Evidence basis:** latest filing" in result["markdown"]
+    assert "Order win announced" in result["markdown"]
+    assert "Direct demand/order-book evidence" in result["markdown"]
+    assert "order-related disclosure would be thesis-positive only if size" in result["markdown"]
+    assert "Piotroski healthy." in result["markdown"]
+
+
+def test_sector_specific_ric_report_labels_screener_fallback_results(monkeypatch, tmp_path):
+    import terminal.reports as reports_module
+
+    monkeypatch.setattr(reports_module, "ROOT", tmp_path)
+    monkeypatch.setattr(reports_module, "REPORTS_DIR", tmp_path / "reports" / "generated")
+    latest_dir = tmp_path / "reports" / "latest"
+    latest_dir.mkdir(parents=True)
+    (latest_dir / "sector_rotation.md").write_text(
+        "\n".join(
+            [
+                "# Sector Rotation Investment Report",
+                "",
+                "**Generated:** 2026-06-20  ",
+                "**Data as of:** 2026-06-19  ",
+                "",
+                "## Market Brief",
+                "",
+                "**Market Read:** Rotation active",
+                "",
+                "## 1. Sector Rotation",
+                "",
+                "| Rank | Index | Sector Lens | Close | 5D | 1M | 3M | 6M | RS 1M | Base Score | Cycle Adj | Cycle-Adjusted Score |",
+                "|---:|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|",
+                "| 1 | Nifty Ind Defence | Defence & Aerospace | 9587.50 | 6.6% | 6.6% | 23.9% | 27.4% | 4.1% | 8.4 | 0.0 | 8.4 |",
+                "",
+                "## 2. Investment Candidates",
+                "",
+                "### Defence & Aerospace",
+                "",
+                "| Symbol | Company | Price | Signal | Setup | Action | Score | Tech | RS | Fund | RSI | Supertrend | Pattern | Volume Ratio |",
+                "|---|---|---:|---|---|---|---:|---:|---:|---:|---:|---|---|---:|",
+                "| PARAS | Paras Defence | 1408.65 | BUY | NEUTRAL | WAIT_FOR_PULLBACK | 80.0 | 59.3 | 106.7% | N/A | 88.9 | BULLISH | NEAR_RESISTANCE | 3.57x |",
+                "",
+                "## 3. Deep Technical Notes",
+                "",
+                "## 4. Peak Resilience & Fast Recovery",
+                "",
+                "## 5. Methodology",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    def fake_collect(symbol, *, no_web=False):
+        return {
+            "symbol": symbol,
+            "snapshot": {"symbol": symbol},
+            "technical": {"symbol": symbol},
+            "screener": {
+                "ratios": {"Stock P/E": "132", "ROCE": "16.9", "ROE": "12.6"},
+                "annual_pl": {"Sales+": ["477"]},
+                "quarterly": {"Sales+": ["171"], "Net Profit+": ["39"], "EPS in Rs": ["4.27"]},
+                "announcements": [{"title": "All"}, {"title": "Announcement under Regulation 30 (LODR)-Analyst / Investor Meet - Intimation"}],
+                "concalls": [{"period": "Mar 2026"}],
+            },
+            "latest_results": {
+                "facts": {
+                    "revenue": {"value": "171", "period": "Mar 2026", "source": "scrape_screener_in.quarterly"},
+                    "pat": {"value": "39", "period": "Mar 2026", "source": "scrape_screener_in.quarterly"},
+                    "eps": {"value": "4.27", "period": "Mar 2026", "source": "scrape_screener_in.quarterly"},
+                },
+                "summary": "Latest filing not found; using Screener quarterly data from Mar 2026.",
+            },
+            "announcements": {"bse_filings": [], "nse_filings": []},
+            "forensic": {"overall_risk": "low", "summary": "Piotroski strong."},
+            "concalls": {"results": {}},
+        }
+
+    monkeypatch.setattr(reports_module, "_collect_symbol_ric_evidence", fake_collect)
+
+    result = reports.generate_preset_report("sector", "md", args=["NIFTY", "DEFENCE", "ric", "--max-companies", "1"])
+
+    assert result["success"] is True
+    assert "| PARAS | OK | OK | fallback |" in result["markdown"]
+    assert "**Status:** fallback" in result["markdown"]
+    assert "Evidence basis:** Screener fallback" in result["markdown"]
+    assert "latest result facts use Screener quarterly fallback" in result["markdown"]
+    assert "Revenue 171 (Mar 2026) via Screener quarterly" in result["markdown"]
+    assert "| PARAS | Screener/BSE | All |" not in result["markdown"]
+    assert "Management-access event" in result["markdown"]
+    assert "management-access event, not a standalone catalyst" in result["markdown"]
+
+
+def test_sector_report_arg_parser_separates_ric_options_from_sector_query():
+    parsed = reports._parse_sector_report_args(["NIFTY", "DEFENCE", "ric", "--max-companies", "3", "--no-web"])
+
+    assert parsed["sector_query"] == "NIFTY DEFENCE"
+    assert parsed["mode"] == "ric"
+    assert parsed["max_companies"] == 3
+    assert parsed["no_web"] is True
+
+
+def test_sector_event_editorial_prefers_scheme_over_board_meeting_wording():
+    opinion = reports._editorial_event_opinion(
+        "ASTRAMICRO",
+        "Board Meeting Outcome for Approval Of The Scheme Of Arrangement",
+        "Defence & Aerospace",
+    )
+
+    assert "scheme-related board action is potentially important" in opinion
+    assert "management-access event" not in opinion
+
+
+def test_compact_peak_table_uses_narrow_publish_columns():
+    table = "\n".join(
+        [
+            "| Rank | Symbol | Sector | Price | 52W High | 52W Low | Drawdown From High | Recovery From Low | Days Since Low | Recovery Speed | Peak Score |",
+            "|---:|---|---|---:|---:|---:|---:|---:|---:|---:|---:|",
+            "| 1 | PARAS | Defence & Aerospace | 1408.65 | 1443.00 | 580.50 | -2.4% | 142.7% | 88 | 1.62%/day | 81.8 |",
+        ]
+    )
+
+    rendered = reports._build_compact_peak_table("Defence & Aerospace", table)
+
+    assert "Days Since Low" not in rendered
+    assert "| Rank | Symbol | Price | 52W High | Drawdown | Recovery From Low | Recovery Speed | Peak Score |" in rendered
+    assert "PARAS" in rendered
+
+
+def test_colorise_signals_does_not_mark_plain_lowercase_prose():
+    html = reports._inline_md("This is not a buy list, but BUY remains a table signal.")
+
+    assert 'not a <span class="sig-buy">buy</span> list' not in html
+    assert '<span class="sig-buy">BUY</span>' in html
+
+
 def test_research_report_generation_appends_llm_assessment(monkeypatch, tmp_path):
     import terminal.reports as reports_module
 

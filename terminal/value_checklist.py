@@ -1271,11 +1271,44 @@ def _strengths_and_risks(
         if score.raw_score >= 70 and score.reasons:
             strengths.append(f"{score.name}: {score.reasons[0]}")
         if score.raw_score < 50 and score.reasons:
-            risks.append(f"{score.name}: {score.reasons[0]}")
+            risk_reason = _first_risk_reason(score)
+            if risk_reason:
+                risks.append(f"{score.name}: {risk_reason}")
     return (
         tuple(strengths[:3] or ("No decisive strength surfaced.",)),
         tuple(risks[:3] or ("No severe risk surfaced in collected evidence.",)),
     )
+
+
+def _first_risk_reason(score: ChecklistDimensionScore) -> str | None:
+    for reason in score.reasons:
+        low = reason.lower()
+        if score.missing_evidence and "missing" in low:
+            return reason
+        if any(
+            marker in low
+            for marker in (
+                "missing",
+                "mixed",
+                "not conclusive",
+                "requires monitoring",
+                "pledge",
+                "forensic risk",
+                "stretched",
+                "breakdown",
+                "evidence gaps",
+                "weak",
+                "negative",
+                "poor",
+                "excessive",
+                "below",
+                "bearish",
+                "sell",
+                "red flag",
+            )
+        ):
+            return reason
+    return None
 
 
 def _mirror_test(

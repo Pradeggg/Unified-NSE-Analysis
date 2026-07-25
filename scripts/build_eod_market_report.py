@@ -105,6 +105,64 @@ def _query(conn, sql: str, params: tuple[Any, ...] = ()) -> list[dict[str, Any]]
         return [dict(row) for row in cur.fetchall()]
 
 
+def load_eod_fallback_data(conn, report_date: date) -> dict[str, Any]:
+    index_daily = _query(
+        conn,
+        """
+        SELECT CASE
+                   WHEN index_symbol = 'Nifty 50' THEN 'NIFTY'
+                   WHEN index_symbol = 'Nifty Bank' THEN 'BANKNIFTY'
+                   ELSE index_symbol
+               END AS symbol,
+               open AS day_open,
+               close AS day_close,
+               high AS day_high,
+               low AS day_low,
+               change_pct AS day_pct,
+               volume
+        FROM market.index_eod
+        WHERE trade_date = %s
+          AND index_symbol IN ('Nifty 50', 'Nifty Bank')
+        ORDER BY symbol
+        """,
+        (report_date,),
+    )
+    symbol_day = _query(
+        conn,
+        """
+        WITH latest_stage AS (
+            SELECT DISTINCT ON (symbol) symbol, company_name, sector, market_cap_cat, stage,
+                   trading_signal, technical_score, relative_strength
+            FROM scores.stage_snapshots
+            WHERE snapshot_date <= %s
+            ORDER BY symbol, snapshot_date DESC
+        ),
+        ranked_eod AS (
+            SELECT e.*,
+                   row_number() OVER (
+                       PARTITION BY e.symbol
+                       ORDER BY (e.series = 'EQ') DESC, coalesce(e.volume, 0) DESC
+                   ) AS rn
+            FROM market.equity_eod e
+            WHERE e.trade_date = %s
+        )
+        SELECT e.symbol, s.company_name, coalesce(nullif(s.sector,''), 'Unclassified') AS sector,
+               s.market_cap_cat, s.stage, s.trading_signal, s.technical_score, s.relative_strength,
+               e.open AS day_open, e.close AS day_close, e.high AS day_high, e.low AS day_low,
+               e.change_pct AS day_pct, e.volume
+        FROM ranked_eod e
+        LEFT JOIN latest_stage s ON s.symbol = e.symbol
+        WHERE e.rn = 1
+        ORDER BY e.change_pct DESC NULLS LAST
+        """,
+        (report_date, report_date),
+    )
+    return {
+        "index_daily": _jsonable(index_daily),
+        "symbol_day": _jsonable(symbol_day),
+    }
+
+
 def latest_intraday_date(conn, requested: str | None = None) -> date:
     if requested:
         return datetime.strptime(requested, "%Y-%m-%d").date()
@@ -312,14 +370,24 @@ def load_report_data(conn, report_date: date) -> dict[str, Any]:
         """,
         (IST_LABEL, IST_LABEL, report_date),
     )
-    return {
+    data = {
         "report_date": report_date.isoformat(),
         "index_daily": _jsonable(index_daily),
         "hourly": _jsonable(hourly),
         "symbol_day": _jsonable(symbol_day),
         "hourly_leaders": _jsonable(hourly_leaders),
         "intraday_path": _jsonable(intraday_path),
+        "source_mode": "intraday_15m",
     }
+    if not data["index_daily"] or not data["symbol_day"]:
+        fallback = load_eod_fallback_data(conn, report_date)
+        if not data["index_daily"] and fallback["index_daily"]:
+            data["index_daily"] = fallback["index_daily"]
+        if not data["symbol_day"] and fallback["symbol_day"]:
+            data["symbol_day"] = fallback["symbol_day"]
+        if fallback["index_daily"] or fallback["symbol_day"]:
+            data["source_mode"] = "eod_only" if not data["hourly"] else "intraday_with_eod_fallback"
+    return data
 
 
 def enrich_data(data: dict[str, Any]) -> dict[str, Any]:
@@ -409,7 +477,24 @@ def build_events(data: dict[str, Any]) -> list[dict[str, str]]:
 def build_deterministic_commentary(data: dict[str, Any]) -> str:
     hourly = data["hourly"]
     if not hourly:
-        return "No hourly intraday data was available."
+        nifty = next((r for r in data["index_daily"] if r.get("symbol") == "NIFTY"), {})
+        bank = next((r for r in data["index_daily"] if r.get("symbol") == "BANKNIFTY"), {})
+        top_sector = data.get("sectors", [{}])[0] if data.get("sectors") else {}
+        bottom_sector = data.get("sectors", [{}])[-1] if data.get("sectors") else {}
+        top_gainer = data.get("top_gainers", [{}])[0] if data.get("top_gainers") else {}
+        top_loser = data.get("top_losers", [{}])[0] if data.get("top_losers") else {}
+        if not nifty and not bank and not data.get("symbol_day"):
+            return "No hourly intraday data was available."
+        return (
+            f"EOD-only session report. NIFTY closed {_fmt(nifty.get('day_pct'), 2, '%')} at {_num(nifty.get('day_close'))}, "
+            f"while BANKNIFTY closed {_fmt(bank.get('day_pct'), 2, '%')} at {_num(bank.get('day_close'))}. "
+            "Hourly intraday breadth was not available, so breadth timing, opening tone, and closing-hour participation are not inferred. "
+            f"Within the EOD equity universe, {top_sector.get('sector', 'the leading sector group')} led with an average move of {_fmt(top_sector.get('avg_pct'), 2, '%')}, "
+            f"while {bottom_sector.get('sector', 'the weakest sector group')} lagged at {_fmt(bottom_sector.get('avg_pct'), 2, '%')}. "
+            f"Top stock pressure points were {top_gainer.get('symbol', 'n/a')} on the upside at {_fmt(top_gainer.get('day_pct'), 2, '%')} "
+            f"and {top_loser.get('symbol', 'n/a')} on the downside at {_fmt(top_loser.get('day_pct'), 2, '%')}. "
+            "Use this report as an EOD close snapshot, not an intraday tape reconstruction."
+        )
     weak = min(hourly, key=lambda r: _f(r.get("adv_pct")) if _f(r.get("adv_pct")) is not None else 999)
     strong = max(hourly, key=lambda r: _f(r.get("adv_pct")) if _f(r.get("adv_pct")) is not None else -999)
     nifty = next((r for r in data["index_daily"] if r.get("symbol") == "NIFTY"), {})
@@ -955,6 +1040,19 @@ def build_html(data: dict[str, Any]) -> str:
     bank = next((r for r in data["index_daily"] if r.get("symbol") == "BANKNIFTY"), {})
     commentary = data.get("llm_commentary") or {}
     generated = datetime.now().strftime("%Y-%m-%d %H:%M IST")
+    source_mode = data.get("source_mode") or "intraday_15m"
+    source_label = "EOD Close" if source_mode == "eod_only" else "15m Bars"
+    source_note = (
+        "PostgreSQL market.index_eod + market.equity_eod · intraday bars unavailable for this session"
+        if source_mode == "eod_only"
+        else "PostgreSQL intraday.ohlcv_bars · commentary grounded in computed facts"
+    )
+    source_coverage = (
+        "Coverage note: this report uses NSE EOD close data from PostgreSQL because no 15m intraday bars were available for the session. "
+        "Hourly breadth, intraday candles, and timing claims are intentionally omitted. Research and learning only; not investment advice."
+        if source_mode == "eod_only"
+        else "Coverage note: this report uses the stored intraday 15m universe available in PostgreSQL. It is not a complete NSE-wide breadth measure unless the intraday capture universe is complete. Research and learning only; not investment advice."
+    )
     rows = data["hourly"]
     best_breadth = _safe_extreme(rows, "adv_pct", mode="max")
     weak_breadth = _safe_extreme(rows, "adv_pct", mode="min")
@@ -1018,17 +1116,19 @@ def build_html(data: dict[str, Any]) -> str:
             f"<td class='{_class_pct(row.get('avg_stock_chg_pct'))}'>{_fmt(row.get('avg_stock_chg_pct'),2,'%')}</td>"
             f"<td>{_num((_f(row.get('total_volume')) or 0)/100000,1)}L</td></tr>"
         )
+    if not hourly_rows:
+        hourly_rows.append("<tr><td colspan='7' class='muted'>No hourly intraday data available for this session.</td></tr>")
     events_html = "\n".join(
         f"<div class='event'><div class='time'>{_h(e['time'])}</div><div><strong>{_h(e['title'])}</strong><br><span class='muted'>{_h(e['detail'])}</span></div></div>"
         for e in data.get("events", [])
-    )
+    ) or "<div class='muted'>No intraday event log available for this session.</div>"
     leaders = {r["hour_ist"]: r for r in data.get("hourly_leaders", [])}
     leader_rows = "\n".join(
         f"<tr><td>{_h(row.get('hour_ist'))}</td><td>{_leaders((leaders.get(row.get('hour_ist')) or {}).get('top_gainers'))}</td>"
         f"<td>{_leaders((leaders.get(row.get('hour_ist')) or {}).get('top_losers'))}</td>"
         f"<td>{_leaders((leaders.get(row.get('hour_ist')) or {}).get('volume_leaders'), 'volume')}</td></tr>"
         for row in rows
-    )
+    ) or "<tr><td colspan='4' class='muted'>No hourly leadership data available for this session.</td></tr>"
     sector_rows = "\n".join(
         f"<tr><td>{_h(r.get('sector'))}</td><td>{_int(r.get('count'))}</td><td class='{_class_pct(r.get('avg_pct'))}'>{_fmt(r.get('avg_pct'),2,'%')}</td><td>{_int(r.get('adv'))} / {_int(r.get('decl'))}</td><td>{_fmt(r.get('adv_pct'),1,'%')}</td></tr>"
         for r in data.get("sectors", [])[:12]
@@ -1056,7 +1156,7 @@ def build_html(data: dict[str, Any]) -> str:
       <div class="title-block">
         <div class="eyebrow">NSE Market Intelligence</div>
         <h1>EOD Market Report</h1>
-        <div class="sub">{report_date} · generated {generated} · 15m intraday tape from PostgreSQL</div>
+        <div class="sub">{report_date} · generated {generated} · {_h(source_label)} from PostgreSQL</div>
       </div>
       <div class="session-badge">
         <b>{_h(session_title)}</b>
@@ -1099,8 +1199,8 @@ def build_html(data: dict[str, Any]) -> str:
     </div>
     <div class="card kpi">
       <div class="label">Source Trail</div>
-      <div class="value">15m Bars</div>
-      <div class="note">PostgreSQL intraday.ohlcv_bars · commentary grounded in computed facts</div>
+      <div class="value">{_h(source_label)}</div>
+      <div class="note">{_h(source_note)}</div>
     </div>
   </section>
 
@@ -1181,7 +1281,7 @@ def build_html(data: dict[str, Any]) -> str:
   </section>
 
   <div class="footer">
-    Coverage note: this report uses the stored intraday 15m universe available in PostgreSQL. It is not a complete NSE-wide breadth measure unless the intraday capture universe is complete. Research and learning only; not investment advice.
+    {_h(source_coverage)}
   </div>
   <script type="application/json" id="stock-detail-data">{stock_json}</script>
   <script>
@@ -1280,8 +1380,16 @@ def build_markdown(data: dict[str, Any]) -> str:
     report_date = data["report_date"]
     commentary = data.get("llm_commentary") or {}
     rows = data["hourly"]
+    source_mode = data.get("source_mode") or "intraday_15m"
     nifty = next((r for r in data["index_daily"] if r.get("symbol") == "NIFTY"), {})
     bank = next((r for r in data["index_daily"] if r.get("symbol") == "BANKNIFTY"), {})
+    best_breadth = max(rows, key=lambda r: _f(r.get("adv_pct")) or -1) if rows else {}
+    weakest_breadth = min(rows, key=lambda r: _f(r.get("adv_pct")) or 999) if rows else {}
+    coverage_note = (
+        "Coverage note: NSE EOD close data from PostgreSQL; hourly intraday data was unavailable, so intraday timing claims are omitted."
+        if source_mode == "eod_only"
+        else "Coverage note: stored PostgreSQL 15m intraday universe; research only, not investment advice."
+    )
     lines = [
         f"# End Of Day Market Report - {report_date}",
         "",
@@ -1291,8 +1399,8 @@ def build_markdown(data: dict[str, Any]) -> str:
         "",
         f"- NIFTY: {_num(nifty.get('day_close'))} ({_fmt(nifty.get('day_pct'), 2, '%')})",
         f"- BANKNIFTY: {_num(bank.get('day_close'))} ({_fmt(bank.get('day_pct'), 2, '%')})",
-        f"- Best breadth hour: {max(rows, key=lambda r:_f(r.get('adv_pct')) or -1).get('hour_ist')} ({_fmt(max(rows, key=lambda r:_f(r.get('adv_pct')) or -1).get('adv_pct'),1,'%')} advancers)",
-        f"- Weakest breadth hour: {min(rows, key=lambda r:_f(r.get('adv_pct')) or 999).get('hour_ist')} ({_fmt(min(rows, key=lambda r:_f(r.get('adv_pct')) or 999).get('adv_pct'),1,'%')} advancers)",
+        f"- Best breadth hour: {best_breadth.get('hour_ist') or 'n/a'} ({_fmt(best_breadth.get('adv_pct'),1,'%')} advancers)",
+        f"- Weakest breadth hour: {weakest_breadth.get('hour_ist') or 'n/a'} ({_fmt(weakest_breadth.get('adv_pct'),1,'%')} advancers)",
         "",
         "## Commentary",
         "",
@@ -1309,6 +1417,8 @@ def build_markdown(data: dict[str, Any]) -> str:
             f"{_int(row.get('adv'))}/{_int(row.get('decl'))} | {_fmt(row.get('adv_pct'),1,'%')} | "
             f"{_fmt(row.get('avg_stock_chg_pct'),2,'%')} | {_num((_f(row.get('total_volume')) or 0)/100000,1)}L |"
         )
+    if not rows:
+        lines.append("| n/a | n/a | n/a | n/a | n/a | n/a | n/a |")
     lines.extend(["", "## Event Log", ""])
     for event in data.get("events", []):
         lines.append(f"- **{event['time']} - {event['title']}:** {event['detail']}")
@@ -1318,7 +1428,7 @@ def build_markdown(data: dict[str, Any]) -> str:
     lines.extend(["", "## Top Losers", ""])
     for row in data.get("top_losers", [])[:10]:
         lines.append(f"- {row.get('symbol')}: {_fmt(row.get('day_pct'),2,'%')} ({row.get('sector')})")
-    lines.extend(["", "Coverage note: stored PostgreSQL 15m intraday universe; research only, not investment advice.", ""])
+    lines.extend(["", coverage_note, ""])
     return "\n".join(lines)
 
 

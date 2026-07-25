@@ -567,7 +567,10 @@ def test_strategy_lab_command_writes_leaderboard_from_postgres_adapter(monkeypat
     assert not leaderboard.empty
     assert "profit_factor" in leaderboard.columns
     assert "cost_drag_pct" in leaderboard.columns
+    assert "risk_blocks" in leaderboard.columns
+    assert "risk_trims" in leaderboard.columns
     assert summary["stage_source"] == "scores.stage_snapshots"
+    assert summary["risk_policy"]["max_gross_exposure_pct"] == 95
     assert "fundamental_coverage" in summary
     assert "rows_with_latest_result" in summary["fundamental_coverage"]
     assert paper["selected_strategy_id"] == leaderboard.iloc[0]["strategy_id"]
@@ -575,12 +578,48 @@ def test_strategy_lab_command_writes_leaderboard_from_postgres_adapter(monkeypat
     assert "| NAV | ₹" in paper_report
     assert "| Cash | ₹" in paper_report
     assert "| Daily P&L | ₹" in paper_report
+    comparison_report = (tmp_path / "lab" / "reports" / "strategy_comparison_report.md").read_text(encoding="utf-8")
+    assert "## Risk Governance" in comparison_report
+    assert "Confidence split" in comparison_report
     assert (tmp_path / "lab" / "paper" / "portfolio_state.json").exists()
     assert (tmp_path / "lab" / "paper" / "positions.csv").exists()
     assert (tmp_path / "lab" / "paper" / "daily_pnl.csv").exists()
     assert (tmp_path / "lab" / "paper" / "trades.csv").exists()
     assert (tmp_path / "lab" / "paper" / "agent_actions.jsonl").exists()
     assert (tmp_path / "lab" / "reports" / "paper_portfolio_report.md").exists()
+
+
+def test_strategy_lab_governance_ranking_demotes_blocked_strategies():
+    leaderboard = pd.DataFrame(
+        [
+            {
+                "rank": 1,
+                "strategy_id": "blocked_high_score",
+                "critic_verdict": "BLOCK",
+                "rank_score": 100.0,
+                "total_return_pct": 120.0,
+            },
+            {
+                "rank": 2,
+                "strategy_id": "warn_lower_score",
+                "critic_verdict": "WARN",
+                "rank_score": 10.0,
+                "total_return_pct": 15.0,
+            },
+            {
+                "rank": 3,
+                "strategy_id": "pass_low_score",
+                "critic_verdict": "PASS",
+                "rank_score": 1.0,
+                "total_return_pct": 2.0,
+            },
+        ]
+    )
+
+    ranked = cli._strategy_lab_governance_rank(leaderboard)
+
+    assert ranked.iloc[0]["strategy_id"] == "pass_low_score"
+    assert ranked.iloc[-1]["strategy_id"] == "blocked_high_score"
 
 
 def test_strategy_lab_command_writes_managed_portfolio_when_enabled(monkeypatch, tmp_path):

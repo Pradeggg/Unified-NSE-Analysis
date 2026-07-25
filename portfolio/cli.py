@@ -16,11 +16,16 @@ from portfolio.data_sources.postgres import default_dsn, load_postgres_replay_da
 from portfolio.defaults import sample_ohlcv, valid_strategy_spec
 from portfolio.engine.audit_log import AuditLog
 from portfolio.engine.benchmark import compare_to_benchmark
-from portfolio.engine.event_loop import ReplayConfig, run_replay
+from portfolio.engine.event_loop import ReplayConfig, ReplayRiskPolicy, run_replay
 from portfolio.engine.leaderboard import calculate_strategy_diagnostics
 from portfolio.engine.managed_portfolio import build_managed_portfolio, load_policy
 from portfolio.engine.metrics import PortfolioMetrics, calculate_metrics
 from portfolio.engine.paper_portfolio import publish_daily_paper_portfolio
+from portfolio.engine.robustness import (
+    DEFAULT_SEVERE_EXTRA_BPS,
+    DEFAULT_STRESS_EXTRA_BPS,
+    build_strategy_lab_robustness_frame,
+)
 from portfolio.engine.run_manifest import build_run_manifest
 from portfolio.engine.strategy_library import built_in_strategy_specs
 from portfolio.engine.validation import validate_ohlcv
@@ -279,10 +284,13 @@ def _cmd_strategy_lab(args: argparse.Namespace) -> int:
     strategy_specs = built_in_strategy_specs()
     leaderboard_rows: list[dict[str, Any]] = []
     report_agent = ReportAgent()
+    policy_path = getattr(args, "policy", Path("portfolio/config/portfolio_policy.yaml"))
+    risk_policy = _replay_risk_policy_from_path(policy_path)
     run_config = ReplayConfig(
         initial_capital=args.initial_capital,
         slippage_bps=args.slippage_bps,
         brokerage_bps=args.brokerage_bps,
+        risk_policy=risk_policy,
     )
     for spec in strategy_specs:
         strategy_id = str(spec["strategy_id"])
@@ -310,6 +318,7 @@ def _cmd_strategy_lab(args: argparse.Namespace) -> int:
                 "initial_capital": args.initial_capital,
                 "slippage_bps": args.slippage_bps,
                 "brokerage_bps": args.brokerage_bps,
+                "risk_policy": _risk_policy_payload(risk_policy),
             },
         )
         _write_json(run_dir / STATE_RELATIVE_PATH, state)
@@ -371,16 +380,17 @@ def _cmd_strategy_lab(args: argparse.Namespace) -> int:
                 "win_rate_pct": win_rate_pct,
                 "realized_pnl": metrics.realized_pnl,
                 "open_positions": metrics.open_positions_count,
+                "risk_blocks": sum(1 for event in result.risk_events if event.get("action") == "BLOCK_BUY"),
+                "risk_trims": sum(1 for event in result.risk_events if event.get("action") == "TRIM"),
                 **diagnostics.as_dict(),
                 "report_path": str(run_dir / REPORT_RELATIVE_PATH),
             }
         )
 
-    leaderboard = _strategy_lab_leaderboard(leaderboard_rows)
     reports_dir = output_dir / "reports"
     reports_dir.mkdir(parents=True, exist_ok=True)
+    leaderboard = _strategy_lab_leaderboard(leaderboard_rows)
     leaderboard_path = reports_dir / "strategy_leaderboard.csv"
-    leaderboard.to_csv(leaderboard_path, index=False)
     summary = {
         "run_id": args.run_id,
         "source": "PostgreSQL market.equity_eod + scores.stage_snapshots",
@@ -397,11 +407,19 @@ def _cmd_strategy_lab(args: argparse.Namespace) -> int:
         "slippage_bps": args.slippage_bps,
         "brokerage_bps": args.brokerage_bps,
         "benchmark_id": args.benchmark_id,
+        "risk_policy": _risk_policy_payload(risk_policy),
         "data_quality": validation.as_dict(),
         "stage_counts": data["stage"].value_counts().to_dict() if "stage" in data.columns else {},
         "fundamental_coverage": _fundamental_coverage(data),
-        "leaderboard": leaderboard.to_dict(orient="records"),
+        "leaderboard": [],
     }
+    robustness = _attach_strategy_lab_robustness(summary, leaderboard)
+    robustness_path = reports_dir / "strategy_robustness.csv"
+    robustness.to_csv(robustness_path, index=False)
+    summary["robustness"]["artifact"] = str(robustness_path)
+    leaderboard = _strategy_lab_governance_rank(leaderboard)
+    summary["leaderboard"] = leaderboard.to_dict(orient="records")
+    leaderboard.to_csv(leaderboard_path, index=False)
     summary["paper_portfolio"] = publish_daily_paper_portfolio(
         output_dir=output_dir,
         summary=summary,
@@ -414,7 +432,7 @@ def _cmd_strategy_lab(args: argparse.Namespace) -> int:
         selected_name = str(summary["paper_portfolio"].get("selected_strategy_name") or selected_id)
         state_path = output_dir / "runs" / selected_id / "state" / "replay_state.json"
         selected_state = _read_json(state_path) if state_path.exists() else {}
-        policy = load_policy(args.policy)
+        policy = load_policy(policy_path)
         summary["managed_portfolio"] = build_managed_portfolio(
             output_dir=output_dir,
             run_id=args.run_id,
@@ -462,6 +480,62 @@ def _strategy_lab_leaderboard(rows: list[dict[str, Any]]) -> pd.DataFrame:
     return frame.drop(columns=["active"])
 
 
+def _attach_strategy_lab_robustness(summary: dict[str, Any], leaderboard: pd.DataFrame) -> pd.DataFrame:
+    base_slippage_bps = _safe_float(summary.get("slippage_bps"))
+    base_brokerage_bps = _safe_float(summary.get("brokerage_bps"))
+    robustness = build_strategy_lab_robustness_frame(
+        leaderboard,
+        base_slippage_bps=base_slippage_bps,
+        base_brokerage_bps=base_brokerage_bps,
+    )
+    if not leaderboard.empty and not robustness.empty and "strategy_id" in leaderboard.columns:
+        by_strategy = robustness.set_index("strategy_id")
+        for column in [
+            "robustness_score",
+            "critic_verdict",
+            "critic_issues",
+            "cost_stress_return_pct",
+            "cost_stress_excess_return_pct",
+            "cost_severe_return_pct",
+            "cost_severe_excess_return_pct",
+        ]:
+            leaderboard[column] = leaderboard["strategy_id"].map(by_strategy[column])
+
+    base_cost_bps = base_slippage_bps + base_brokerage_bps
+    summary["robustness"] = {
+        "base_cost_bps": round(base_cost_bps, 6),
+        "stress_cost_bps": round(base_cost_bps + DEFAULT_STRESS_EXTRA_BPS, 6),
+        "severe_cost_bps": round(base_cost_bps + DEFAULT_SEVERE_EXTRA_BPS, 6),
+        "artifact": None,
+        "rows": robustness.to_dict(orient="records"),
+    }
+    return robustness
+
+
+def _strategy_lab_governance_rank(leaderboard: pd.DataFrame) -> pd.DataFrame:
+    if leaderboard.empty or "critic_verdict" not in leaderboard.columns:
+        return leaderboard
+    out = leaderboard.copy()
+    verdict_order = {"PASS": 0, "WARN": 1, "BLOCK": 2}
+    out["_critic_order"] = out["critic_verdict"].astype(str).str.upper().map(verdict_order).fillna(1)
+    out = out.sort_values(
+        ["_critic_order", "rank_score", "total_return_pct"],
+        ascending=[True, False, False],
+    ).reset_index(drop=True)
+    out["rank"] = out.index + 1
+    return out.drop(columns=["_critic_order"])
+
+
+def _safe_float(value: Any) -> float:
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError):
+        return 0.0
+    if not math.isfinite(parsed):
+        return 0.0
+    return parsed
+
+
 def _fundamental_coverage(data: pd.DataFrame) -> dict[str, Any]:
     if data.empty:
         return {
@@ -496,9 +570,48 @@ def _strategy_lab_state_payload(
 ) -> dict[str, Any]:
     state = _state_payload(run_id, result, metrics)
     state["config"] = config
+    risk_events = _json_safe(getattr(result, "risk_events", []))
+    state["risk_events"] = risk_events
+    state["summary"]["risk_events"] = len(risk_events)
+    state["summary"]["risk_blocks"] = sum(1 for event in risk_events if event.get("action") == "BLOCK_BUY")
+    state["summary"]["risk_trims"] = sum(1 for event in risk_events if event.get("action") == "TRIM")
     state["events"] = []
     state["summary"]["events"] = len(result.events)
     return state
+
+
+def _replay_risk_policy_from_path(path: Path | None) -> ReplayRiskPolicy:
+    if path is None:
+        return ReplayRiskPolicy()
+    try:
+        policy = load_policy(path)
+    except Exception:
+        return ReplayRiskPolicy()
+    return ReplayRiskPolicy(
+        max_gross_exposure_pct=policy.max_gross_exposure_pct,
+        max_single_stock_pct=policy.max_single_stock_pct,
+        max_sector_pct=policy.max_sector_pct,
+        max_positions=policy.max_positions,
+        drawdown_pause_pct=-15.0,
+        max_turnover_pct=2500.0,
+        trim_when_position_pct_above=policy.trim_when_position_pct_above,
+        trim_to_position_pct=policy.trim_to_position_pct,
+        block_stage1_adds=True,
+    )
+
+
+def _risk_policy_payload(policy: ReplayRiskPolicy) -> dict[str, Any]:
+    return {
+        "max_gross_exposure_pct": policy.max_gross_exposure_pct,
+        "max_single_stock_pct": policy.max_single_stock_pct,
+        "max_sector_pct": policy.max_sector_pct,
+        "max_positions": policy.max_positions,
+        "drawdown_pause_pct": policy.drawdown_pause_pct,
+        "max_turnover_pct": policy.max_turnover_pct,
+        "trim_when_position_pct_above": policy.trim_when_position_pct_above,
+        "trim_to_position_pct": policy.trim_to_position_pct,
+        "block_stage1_adds": policy.block_stage1_adds,
+    }
 
 
 def _write_strategy_lab_report(path: Path, summary: dict[str, Any]) -> None:
@@ -534,6 +647,8 @@ def _write_strategy_lab_report(path: Path, summary: dict[str, Any]) -> None:
                 **row
             )
         )
+    lines.extend(_strategy_lab_robustness_report_lines(summary))
+    lines.extend(_strategy_lab_risk_governance_lines(summary))
     lines.extend(
         [
             "",
@@ -546,6 +661,84 @@ def _write_strategy_lab_report(path: Path, summary: dict[str, Any]) -> None:
     )
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def _strategy_lab_risk_governance_lines(summary: dict[str, Any]) -> list[str]:
+    policy = summary.get("risk_policy") or {}
+    rows = list(summary.get("leaderboard") or [])
+    if not policy and not rows:
+        return []
+    total_blocks = sum(int(row.get("risk_blocks") or 0) for row in rows)
+    total_trims = sum(int(row.get("risk_trims") or 0) for row in rows)
+    return [
+        "",
+        "## Risk Governance",
+        "",
+        (
+            f"Replay policy: gross exposure cap {policy.get('max_gross_exposure_pct', 'n/a')}%, "
+            f"single-stock cap {policy.get('max_single_stock_pct', 'n/a')}%, "
+            f"sector cap {policy.get('max_sector_pct', 'n/a')}%, "
+            f"drawdown pause {policy.get('drawdown_pause_pct', 'n/a')}%, "
+            f"turnover cap {policy.get('max_turnover_pct', 'n/a')}%."
+        ),
+        "",
+        f"Portfolio manager confidence signals: {total_blocks} blocked buy/add signals and {total_trims} trim signals.",
+        "",
+        (
+            "Confidence split: entry strategy confidence comes from return, drawdown, profit factor, "
+            "expectancy, and robustness; portfolio manager confidence comes from cap compliance, trims, "
+            "drawdown pause behavior, and turnover discipline."
+        ),
+    ]
+
+
+def _strategy_lab_robustness_report_lines(summary: dict[str, Any]) -> list[str]:
+    robustness = summary.get("robustness") or {}
+    rows = list(robustness.get("rows") or [])
+    if not rows:
+        return []
+    lines = [
+        "",
+        "## Robustness Pack",
+        "",
+        (
+            f"Cost sensitivity uses total filled notional turnover and compares the base "
+            f"{robustness.get('base_cost_bps', 'n/a')} bps cost run with stress "
+            f"{robustness.get('stress_cost_bps', 'n/a')} bps and severe "
+            f"{robustness.get('severe_cost_bps', 'n/a')} bps assumptions."
+        ),
+        "",
+        "| Strategy | Robustness Score | Critic Verdict | Cost Stress Excess | Cost Severe Excess | Main Issue |",
+        "|---|---:|---|---:|---:|---|",
+    ]
+    for row in rows:
+        issues = _strategy_lab_issue_text(row.get("critic_issues"))
+        lines.append(
+            f"| {row.get('strategy_id', 'n/a')} | "
+            f"{_safe_float(row.get('robustness_score')):.1f} | "
+            f"{row.get('critic_verdict', 'n/a')} | "
+            f"{_safe_float(row.get('cost_stress_excess_return_pct')):.2f}% | "
+            f"{_safe_float(row.get('cost_severe_excess_return_pct')):.2f}% | "
+            f"{issues} |"
+        )
+    artifact = robustness.get("artifact")
+    if artifact:
+        lines.extend(["", f"Robustness CSV: `{artifact}`."])
+    return lines
+
+
+def _strategy_lab_issue_text(value: Any) -> str:
+    if isinstance(value, list):
+        return str(value[0]) if value else "n/a"
+    if not value:
+        return "n/a"
+    try:
+        parsed = json.loads(str(value))
+    except (TypeError, json.JSONDecodeError):
+        return str(value)
+    if isinstance(parsed, list) and parsed:
+        return str(parsed[0])
+    return str(value)
 
 
 def _fixture_buy_hold_benchmark(data: pd.DataFrame) -> pd.DataFrame:

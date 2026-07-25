@@ -4742,10 +4742,120 @@ def _nse_get_json(url: str, *, timeout: int = 10) -> dict:
         return _attempt(_get_live_session())
 
 
+def _quote_source_mode() -> str:
+    """Return the configured live quote source mode.
+
+    ``auto`` preserves the existing behavior. Strict exchange modes return an
+    explicit error instead of a silent Yahoo fallback when their public website
+    endpoint is unavailable.
+    """
+    raw = (
+        os.getenv("AGENT_ADDA_QUOTE_SOURCE")
+        or os.getenv("AGENT_ADDA_INTRADAY_QUOTE_SOURCE")
+        or ""
+    ).strip().lower().replace("-", "_")
+    nse_only_flag = (
+        os.getenv("AGENT_ADDA_NSE_ONLY_QUOTES")
+        or os.getenv("NSE_ONLY_QUOTES")
+        or ""
+    ).strip().lower()
+    bse_only_flag = (
+        os.getenv("AGENT_ADDA_BSE_ONLY_QUOTES")
+        or os.getenv("BSE_ONLY_QUOTES")
+        or ""
+    ).strip().lower()
+    if raw in {"nse", "nse_only", "nse_quote_equity"} or nse_only_flag in {"1", "true", "yes", "on"}:
+        return "nse_only"
+    if raw in {"bse", "bse_only", "bse_live", "bse_public", "exchange_public"} or bse_only_flag in {"1", "true", "yes", "on"}:
+        return "bse"
+    return "auto"
+
+
+def _nse_quote_equity_live_snapshot(symbol: str) -> dict:
+    """Fetch and normalize one NSE quote-equity live snapshot."""
+    from urllib.parse import quote as _url_quote
+
+    sym = symbol.strip().upper()
+    url = f"https://www.nseindia.com/api/quote-equity?symbol={_url_quote(sym)}"
+    try:
+        payload = _nse_get_json(url, timeout=10)
+        snapshot = _nse_quote_payload_to_snapshot(sym, payload, source="NSE quote-equity live API")
+        if snapshot.get("error"):
+            snapshot["source"] = "NSE quote-equity live API"
+            snapshot["fallback_disabled"] = True
+        return snapshot
+    except Exception as exc:
+        return {
+            "symbol": sym,
+            "source": "NSE quote-equity live API",
+            "error": f"NSE quote-equity unavailable: {exc}",
+            "fallback_disabled": True,
+        }
+
+
+def _bse_get_text(url: str, *, timeout: int = 10, referer: str | None = None) -> str:
+    from terminal.bse_live import bse_get_text
+
+    return bse_get_text(url, timeout=timeout, referer=referer)
+
+
+def _bse_get_json(url: str, *, timeout: int = 10, referer: str | None = None):
+    from terminal.bse_live import bse_get_json
+
+    return bse_get_json(url, timeout=timeout, referer=referer)
+
+
+def _resolve_bse_scrip_code(symbol: str) -> str | None:
+    from terminal.bse_live import resolve_bse_scrip_code
+
+    return resolve_bse_scrip_code(symbol)
+
+
+def _bse_live_quote_snapshot(symbol: str) -> dict:
+    """Fetch and normalize one BSE public website live snapshot."""
+    from terminal.bse_live import normalize_bse_header_payload
+
+    sym = symbol.strip().upper()
+    code = _resolve_bse_scrip_code(sym)
+    if not code:
+        return {
+            "symbol": sym,
+            "source": "BSE live API",
+            "exchange": "BSE",
+            "error": f"BSE scrip code unavailable for {sym}",
+            "fallback_disabled": True,
+        }
+    url = (
+        "https://api.bseindia.com/BseIndiaAPI/api/getScripHeaderData/w"
+        f"?Debtflag=&scripcode={code}&seriesid="
+    )
+    try:
+        payload = _bse_get_json(url, timeout=10)
+        snapshot = normalize_bse_header_payload(sym, code, payload if isinstance(payload, dict) else {})
+        if snapshot.get("error"):
+            snapshot["fallback_disabled"] = True
+        return snapshot
+    except Exception as exc:
+        return {
+            "symbol": sym,
+            "source": "BSE live API",
+            "exchange": "BSE",
+            "bse_scrip_code": code,
+            "error": f"BSE live quote unavailable: {exc}",
+            "fallback_disabled": True,
+        }
+
+
 def get_live_quote(symbol: str) -> dict:
     """Fetch live intraday quote for a single NSE symbol.
 
-    Primary source: yfinance (.NS suffix) — always works, no bot detection.
+    In ``AGENT_ADDA_QUOTE_SOURCE=nse_only`` mode this fails closed when NSE's
+    quote-equity endpoint is blocked. In ``AGENT_ADDA_QUOTE_SOURCE=bse`` or
+    ``exchange_public`` mode this uses BSE public website quote APIs and avoids
+    yfinance. Default auto mode preserves the historical yfinance primary path
+    with best-effort NSE enrichment.
+
+    Primary source in auto mode: yfinance (.NS suffix) — always works, no bot detection.
     Supplementary: NSE API for VWAP, circuit limits, sector PE — used when
     the session has a valid _abck cookie; silently skipped on 403.
 
@@ -4753,9 +4863,16 @@ def get_live_quote(symbol: str) -> dict:
     market cap, and where available: VWAP, circuit limits, sector P/E.
     """
     from urllib.parse import quote as _url_quote
-    import yfinance as _yf
 
     sym = symbol.strip().upper()
+    quote_mode = _quote_source_mode()
+    if quote_mode == "nse_only":
+        return _nse_quote_equity_live_snapshot(sym)
+    if quote_mode == "bse":
+        return _bse_live_quote_snapshot(sym)
+
+    import yfinance as _yf
+
     try:
         ticker = _yf.Ticker(f"{sym}.NS")
         fi     = ticker.fast_info
@@ -4838,11 +4955,13 @@ def get_live_quote(symbol: str) -> dict:
 
 
 def get_nse_quotes(symbols: list[str]) -> dict:
-    """Fetch live NSE prices for multiple symbols — fast batch via yfinance.
+    """Fetch live prices for multiple symbols.
 
-    Returns a dict keyed by symbol with price, % change, OHLC, volume.
-    Uses yf.download() for a single batch HTTP call (~2s for up to 20 symbols).
-    Faster than calling get_live_quote() sequentially.
+    Default auto mode uses yf.download() for a single batch HTTP call. Strict
+    NSE/BSE source modes call get_live_quote() sequentially so they can fail
+    closed instead of silently falling back to Yahoo.
+    Returns a dict keyed by symbol with price, % change, OHLC, volume when the
+    selected source exposes those fields.
     Use for: 'prices of RELIANCE, TCS, INFY', 'watchlist prices',
     'how are these stocks doing: X, Y, Z'.
 
@@ -4852,8 +4971,34 @@ def get_nse_quotes(symbols: list[str]) -> dict:
     import yfinance as _yf
 
     syms = [s.strip().upper() for s in symbols[:20] if s.strip()]
+    quote_mode = _quote_source_mode()
     if not syms:
-        return {"quotes": {}, "count": 0, "source": "yfinance (NSE)"}
+        if quote_mode == "nse_only":
+            source = "NSE quote-equity live API batch"
+        elif quote_mode == "bse":
+            source = "BSE live API batch"
+        else:
+            source = "yfinance (NSE)"
+        return {"quotes": {}, "count": 0, "source": source}
+
+    if quote_mode == "nse_only":
+        results = {sym: get_live_quote(sym) for sym in syms}
+        return {
+            "quotes": results,
+            "count": len(results),
+            "as_of": datetime.now().strftime("%d-%b-%Y %H:%M:%S"),
+            "source": "NSE quote-equity live API batch",
+            "fallback_disabled": True,
+        }
+    if quote_mode == "bse":
+        results = {sym: get_live_quote(sym) for sym in syms}
+        return {
+            "quotes": results,
+            "count": len(results),
+            "as_of": datetime.now().strftime("%d-%b-%Y %H:%M:%S"),
+            "source": "BSE live API batch",
+            "fallback_disabled": True,
+        }
 
     tickers_yf = [f"{s}.NS" for s in syms]
     data = _yf.download(
@@ -5524,15 +5669,19 @@ def _yfinance_snapshot_from_intraday_candles(symbol: str, fallback_reason: str) 
 
 
 def get_nse_intraday_snapshot(symbol: str) -> dict:
-    """Fetch the NSE website live snapshot before any yfinance intraday fallback.
+    """Fetch an exchange-backed live snapshot before any yfinance intraday fallback.
 
-    NSE's public website APIs provide current quote/index snapshots, not a complete
-    intraday OHLCV candle history. Agent Adda therefore tries NSE first, then uses
-    yfinance when NSE blocks stock quotes or when candle history is needed.
+    Default source priority is NSE website quote/index snapshots, then yfinance
+    fallback. In BSE quote mode, stock snapshots use BSE public website APIs
+    first while index snapshots still come from NSE allIndices.
     """
     sym = symbol.strip().upper()
     index_name = _canonical_nse_live_index(sym)
-    source_priority = ["NSE website live quote", "yfinance candles fallback"]
+    quote_mode = _quote_source_mode()
+    if quote_mode == "bse":
+        source_priority = ["BSE live API", "NSE website live quote", "yfinance candles fallback"]
+    else:
+        source_priority = ["NSE website live quote", "yfinance candles fallback"]
 
     if index_name:
         overview = get_live_market_overview()
@@ -5572,6 +5721,14 @@ def get_nse_intraday_snapshot(symbol: str) -> dict:
             browser_quote["source_priority"] = source_priority
             browser_quote["note"] = "NSE quote fetched through browser-rendered quote page."
             return _with_intraday_pg_persistence(browser_quote)
+        if quote.get("fallback_disabled"):
+            return {
+                "symbol": sym,
+                "source": quote.get("source", "NSE quote-equity live API"),
+                "source_priority": source_priority,
+                "error": f"{quote.get('error')}; {browser_quote.get('error')}",
+                "fallback_disabled": True,
+            }
         fallback_reason = f"NSE live quote unavailable: {quote['error']}; {browser_quote.get('error')}"
         fallback = _yfinance_snapshot_from_intraday_candles(
             sym,
@@ -5580,7 +5737,10 @@ def get_nse_intraday_snapshot(symbol: str) -> dict:
         return _with_intraday_pg_persistence(fallback)
     quote = dict(quote)
     quote["source_priority"] = source_priority
-    quote["note"] = "NSE website snapshot. yfinance is used only if NSE quote is unavailable or candle history is needed."
+    if quote.get("source") == "BSE live API" or quote.get("exchange") == "BSE":
+        quote["note"] = "BSE public website snapshot. yfinance is not used in BSE quote source mode."
+    else:
+        quote["note"] = "NSE website snapshot. yfinance is used only if NSE quote is unavailable or candle history is needed."
     return _with_intraday_pg_persistence(quote)
 
 
@@ -10942,6 +11102,28 @@ def run_recommendation_report(
     return generate_recommendation_report(options=opts, persist=bool(persist))
 
 
+def run_rrg_breadth_report() -> dict:
+    """Generate the Market Breadth + RRG (Relative Rotation Graph) HTML report.
+
+    Computes:
+    - Broad-market RRG: 16 cap-size universes vs Nifty 500 (current position + 4-week trail)
+    - Sector rotation timeline: 20 sectors at 4 snapshot dates showing rotation over time
+    - Constituent breadth table: % above 50D / 150D / 200D SMA + Stage-2 count per universe
+
+    Returns the path to the generated HTML report.
+    """
+    import sys
+    sys.path.insert(0, str(ROOT))
+    import rrg_report
+    out_path = rrg_report.main()
+    return {
+        "status": "ok",
+        "report_path": out_path,
+        "message": f"Market Breadth & RRG report generated at {out_path}",
+        "open_hint": f"Open in browser: file://{out_path}",
+    }
+
+
 TOOL_REGISTRY.update({
     "build_research_evidence_pack": (
         build_research_evidence_pack,
@@ -11162,6 +11344,17 @@ TOOL_REGISTRY.update({
             },
             "required": [],
         },
+    ),
+    "run_rrg_breadth_report": (
+        run_rrg_breadth_report,
+        (
+            "Generate the Market Breadth & RRG (Relative Rotation Graph) HTML report. "
+            "Shows: (1) Broad-market RRG — 16 cap-size universes vs Nifty 500 with 4-week trail; "
+            "(2) Sector rotation timeline — 20 sectors across 4 snapshot dates (capitulation to leadership); "
+            "(3) Constituent breadth table — % above 50D/150D/200D SMA and Stage-2 count per universe. "
+            "Use when the user asks for market breadth, RRG, sector rotation chart, or leading/lagging analysis."
+        ),
+        {"type": "object", "properties": {}, "required": []},
     ),
     "get_postgres_health": (
         get_postgres_health,

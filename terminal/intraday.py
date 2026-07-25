@@ -1,7 +1,8 @@
 """
 terminal/intraday.py — Intraday screening engine for Agent Adda.
 
-Data source: yfinance (5m / 15m / 30m / 1h OHLCV for NSE stocks).
+Data source: yfinance by default; opt-in BSE public website intraday graph
+             data when AGENT_ADDA_QUOTE_SOURCE/AGENT_ADDA_INTRADAY_* is BSE.
 Indicators: MACD, RSI, Supertrend, Bollinger Bands, EMA stack, OBV,
             VCP detection, Support/Resistance (pivots + swing levels).
 Signals:    BUY / SELL with entry, target, stoploss, R:R ratio.
@@ -27,12 +28,23 @@ from terminal.market_calendar import market_session_status
 
 warnings.filterwarnings("ignore", category=FutureWarning)
 
+
+def _env_number(name: str, default: float) -> float:
+    raw = os.getenv(name, "").strip()
+    if not raw:
+        return default
+    try:
+        return max(0.1, float(raw))
+    except ValueError:
+        return default
+
+
 # Max parallel downloads in screener — 25 workers gives ~60s for 500 stocks
-_SCREENER_WORKERS = 25
+_SCREENER_WORKERS = int(_env_number("AGENT_ADDA_INTRADAY_SCREENER_WORKERS", 25))
 # Per-stock download timeout in seconds
-_STOCK_TIMEOUT    = 8
+_STOCK_TIMEOUT    = _env_number("AGENT_ADDA_INTRADAY_STOCK_TIMEOUT", 8)
 # Total scan wall-clock timeout; 300s handles worst-case 500-stock scans
-_SCAN_TIMEOUT     = 300
+_SCAN_TIMEOUT     = _env_number("AGENT_ADDA_INTRADAY_SCAN_TIMEOUT", 300)
 _YF_DOWNLOAD_LOCK = threading.Lock()
 
 
@@ -175,6 +187,65 @@ def _market_context() -> dict:
         "next_open": status.next_open_at.strftime("%Y-%m-%d %H:%M IST"),
     }
 
+
+def _intraday_source_mode() -> str:
+    raw = (
+        os.getenv("AGENT_ADDA_INTRADAY_OHLCV_SOURCE")
+        or os.getenv("AGENT_ADDA_INTRADAY_QUOTE_SOURCE")
+        or os.getenv("AGENT_ADDA_QUOTE_SOURCE")
+        or ""
+    ).strip().lower().replace("-", "_")
+    bse_only_flag = (
+        os.getenv("AGENT_ADDA_BSE_ONLY_QUOTES")
+        or os.getenv("BSE_ONLY_QUOTES")
+        or ""
+    ).strip().lower()
+    if raw in {"bse", "bse_only", "bse_live", "bse_public", "exchange_public"} or bse_only_flag in {"1", "true", "yes", "on"}:
+        return "bse"
+    return "auto"
+
+
+def _resolve_bse_scrip_code_for_intraday(symbol: str) -> str | None:
+    from terminal.bse_live import resolve_bse_scrip_code
+
+    return resolve_bse_scrip_code(symbol)
+
+
+def _bse_stock_reach_graph_payload(scrip_code: str) -> dict:
+    from terminal.bse_live import fetch_bse_stock_reach_graph_payload
+
+    return fetch_bse_stock_reach_graph_payload(scrip_code)
+
+
+def _bse_stock_reach_graph_to_candles(payload: dict) -> pd.DataFrame:
+    from terminal.bse_live import bse_stock_reach_graph_to_candles
+
+    return bse_stock_reach_graph_to_candles(payload)
+
+
+def _resample_bse_candles(df: pd.DataFrame, interval: str) -> pd.DataFrame:
+    if df.empty:
+        return df
+    rule = {
+        "1m": None,
+        "3m": "3min",
+        "5m": "5min",
+        "15m": "15min",
+        "30m": "30min",
+        "1h": "1h",
+    }.get(interval)
+    if rule is None:
+        return df
+    out = df.resample(rule, origin="start_day", offset="15min").agg(
+        Open=("Open", "first"),
+        High=("High", "max"),
+        Low=("Low", "min"),
+        Close=("Close", "last"),
+        Volume=("Volume", "sum"),
+    ).dropna(subset=["Open"])
+    return out[["Open", "High", "Low", "Close", "Volume"]]
+
+
 # ── Candle fetch ─────────────────────────────────────────────────────────────
 
 def get_intraday_candles(
@@ -182,9 +253,11 @@ def get_intraday_candles(
     interval: str = "15m",
     period: str | None = None,
 ) -> pd.DataFrame:
-    """Fetch OHLCV candles from Yahoo Finance for an NSE stock or supported index.
+    """Fetch OHLCV candles for an NSE stock or supported index.
 
-    Tries NSE (.NS) first, then BSE (.BO) if NSE returns too few candles.
+    Default source is Yahoo Finance: NSE (.NS) first, then BSE (.BO) if NSE
+    returns too few candles. In BSE source mode, stock intraday bars come from
+    BSE StockReachGraph and are resampled to the requested timeframe.
     If the requested interval is too granular, auto-upgrades to the next
     coarser interval.
 
@@ -193,8 +266,6 @@ def get_intraday_candles(
     Returns DataFrame with DatetimeIndex and columns: Open, High, Low, Close, Volume.
     Empty DataFrame on error.
     """
-    import yfinance as yf
-
     sym   = symbol.strip().upper()
     # Normalise interval case: "1D" → "1d", "1H" → "1h" etc.
     interval = interval.strip().lower() if interval and interval[-1].isalpha() else interval
@@ -213,6 +284,19 @@ def get_intraday_candles(
         ).dropna(subset=["Open"])
         return df_3m
 
+    if _intraday_source_mode() == "bse" and interval != "1d":
+        try:
+            scrip_code = _resolve_bse_scrip_code_for_intraday(sym)
+            if not scrip_code:
+                return pd.DataFrame()
+            payload = _bse_stock_reach_graph_payload(scrip_code)
+            df_bse = _bse_stock_reach_graph_to_candles(payload)
+            return _resample_bse_candles(df_bse, interval)
+        except Exception:
+            return pd.DataFrame()
+
+    import yfinance as yf
+
     per   = period or _INTERVAL_PERIOD.get(interval, "5d")
     min_c = _MIN_CANDLES.get(interval, 10)
 
@@ -226,6 +310,7 @@ def get_intraday_candles(
                 progress=False,
                 auto_adjust=True,
                 prepost=False,
+                timeout=8,
             )
             if df.empty:
                 return pd.DataFrame()
@@ -2038,7 +2123,8 @@ def run_intraday_screener(
         except Exception:
             return sym, [], [], [], False
 
-    with ThreadPoolExecutor(max_workers=_SCREENER_WORKERS) as pool:
+    pool = ThreadPoolExecutor(max_workers=_SCREENER_WORKERS)
+    try:
         futures = {pool.submit(_scan_one, sym): sym for sym in symbols}
         try:
             for future in as_completed(futures, timeout=_SCAN_TIMEOUT):
@@ -2059,7 +2145,10 @@ def run_intraday_screener(
             # Partial results — mark remaining unfinished futures as errors
             for fut, sym in futures.items():
                 if not fut.done():
+                    fut.cancel()
                     errors.append(sym)
+    finally:
+        pool.shutdown(wait=False, cancel_futures=True)
 
     # Sort by R:R descending
     all_buy.sort(key=lambda x: x.get("rr") or 0, reverse=True)

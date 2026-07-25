@@ -2392,7 +2392,7 @@ def _build_market_situation_assessment_plan(query: str, data_mode: str = "histor
         return None
 
     market_terms = ("market", "nifty", "indices", "index", "breadth", "advance", "decline")
-    status_terms = ("current", "status", "today", "now", "live", "how is")
+    status_terms = ("current", "status", "today", "now", "live", "pulse", "how is")
     mover_terms = ("top gainer", "top gainers", "gainers", "losers", "movers", "top stocks", "top indices")
     flow_terms = ("fii", "dii", "institutional", "flows", "foreign investors")
     news_terms = ("news", "catalyst", "event", "headline")
@@ -3384,7 +3384,8 @@ def _keyword_intent(query: str, data_mode: str = "historical", context_symbol: s
     breadth_words = [
         "market overview", "overview of market", "breadth", "advance decline",
         "a/d", "market today", "market outlook", "nifty direction",
-        "overall market", "how is market", "market status",
+        "overall market", "how is market", "market status", "market pulse",
+        "pulse on the market", "pulse of the market",
     ]
     mover_words = [
         "top gainer", "top gainers", "gainers", "losers", "movers",

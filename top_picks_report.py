@@ -15,7 +15,10 @@ CLI:
 Outputs:
     reports/top_picks/Top_Investment_Picks_Analysis_YYYYMMDD.md
     reports/top_picks/Top_Investment_Picks_Analysis_YYYYMMDD.html
+    reports/top_picks/Top_Investment_Picks_TradingView_YYYYMMDD.txt
     reports/latest/top_picks.{md,html}
+    reports/latest/top_picks_tradingview.txt
+    reports/latest/top_picks_tradingview_lines.txt
 """
 from __future__ import annotations
 
@@ -70,6 +73,7 @@ from sector_rotation_report import (  # noqa: E402
     REPORT_DISCLAIMER,
     PRINT_FOOTER_DISCLAIMER,
     FULL_LEGAL_DISCLAIMER,
+    assign_sector,
     _llm_call,
     _asset_data_uri,
     AGENT_LOGO_PATH,
@@ -78,11 +82,14 @@ from sector_rotation_report import (  # noqa: E402
 REPORTS_DIR = ROOT / "reports"
 TOP_PICKS_DIR = REPORTS_DIR / "top_picks"
 LATEST_DIR = REPORTS_DIR / "latest"
+SWING_RESEARCH_PATH = LATEST_DIR / "swing_shortlist_deep_research.md"
 PROFILE_CACHE_DIR = ROOT / "data" / "company_profiles"
 PROFILE_CACHE_DAYS = int(os.environ.get("TOP_PICKS_PROFILE_CACHE_DAYS", "14"))
 PROFILE_FETCH_TIMEOUT = int(os.environ.get("TOP_PICKS_PROFILE_FETCH_TIMEOUT", "12"))
 PORTFOLIO_LAB_DIR = ROOT / "portfolio" / "data" / "nse_pg_strategy_lab" / "latest"
 DEFAULT_MODEL = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
+TOP_PICKS_LLM_TIMEOUT = int(os.environ.get("TOP_PICKS_LLM_TIMEOUT", "90"))
+TOP_PICKS_PORTFOLIO_LLM_TIMEOUT = int(os.environ.get("TOP_PICKS_PORTFOLIO_LLM_TIMEOUT", "120"))
 MAX_PICKS = 10
 PG_DSN = (
     os.environ.get("AGENT_ADDA_PG_DSN")
@@ -1930,6 +1937,7 @@ def _fetchone(conn, sql: str, params: tuple = ()) -> dict | None:
 class PickRationale:
     symbol: str
     sector: str
+    sub_sector: str
     source: str
     sector_rot_score: float | None
     stage2_score: float | None
@@ -1942,13 +1950,255 @@ class PickRationale:
     strategy_signal: str | None = None
     strategy_rank: int | None = None
     strategy_return_pct: float | None = None
+    research_rank: int | None = None
+    research_action: str | None = None
+    research_swing_class: str | None = None
+    research_fundamental_class: str | None = None
+    rrg_quadrant: str | None = None      # LEADING / IMPROVING / WEAKENING / LAGGING
+    rrg_rs_ratio: float | None = None    # RS-Ratio vs Nifty 500 (%)
+    rrg_rs_mom: float | None = None      # RS-Momentum (%)
+    confirmation_count: int = 0          # how many independent signals agree
+    confirmation_signals: list = None    # which signals agree (populated post-init)
+
+    def __post_init__(self):
+        if self.confirmation_signals is None:
+            self.confirmation_signals = []
 
 
 _SECTOR_EXCLUDE = frozenset({
     "Other", "N/A", "", "Unknown", "Miscellaneous",
 })
 
-def _load_top_sectors(conn, snap_date: str, top_n: int = 10) -> dict[str, float]:
+_RESEARCH_EXCLUDE_ACTION_KEYWORDS = ("deprioritize", "avoid")
+
+SUB_SECTOR_BY_SYMBOL = {
+    "SCHAEFFLER": "Bearings & Precision Motion",
+    "TIMKEN": "Bearings & Industrial Motion",
+    "CRAFTSMAN": "Auto Components & Precision Engineering",
+    "MTARTECH": "Precision Defence & Aerospace Systems",
+    "PANAMAPET": "Specialty Petroleum Products",
+    "RPTECH": "IT Hardware Distribution",
+    "WALCHANNAG": "Heavy Engineering & Aerospace Components",
+    "CUPID": "Medical Devices & Sexual Wellness",
+    "PARAS": "Defence Electronics & Optics",
+    "LAURUSLABS": "Pharma APIs & Formulations",
+    "POLYCAB": "Wires, Cables & Electricals",
+    "OLECTRA": "Electric Buses & Mobility",
+    "JBMA": "Auto Components & Electric Buses",
+    "AMBER": "Air-Conditioning Components",
+    "GVT&D": "Power Transmission Equipment",
+    "TEJASNET": "Telecom Network Equipment",
+}
+
+SECTOR_BY_SYMBOL_OVERRIDE = {
+    "PANAMAPET": "Chemicals & Specialty",
+    "WALCHANNAG": "Capital Goods & Industrials",
+    "CUPID": "Pharma & Healthcare",
+}
+
+DEFAULT_SUB_SECTOR_BY_SECTOR = {
+    "Defence & Aerospace": "Defence & Aerospace Manufacturing",
+    "EV & Auto Ancillaries": "Auto Ancillaries",
+    "Capital Goods & Industrials": "Industrial Products",
+    "Chemicals & Specialty": "Specialty Chemicals",
+    "Pharma & Healthcare": "Healthcare Products",
+    "IT & Technology": "Technology Products & Services",
+    "Financial Services": "Financial Services",
+    "PSU / CPSE": "Public Sector Enterprises",
+    "Consumer Durables": "Consumer Durables",
+}
+
+
+def _normalize_symbol(value: object) -> str:
+    text = str(value or "").strip().upper()
+    return text[:-3] if text.endswith(".NS") else text
+
+
+def _tradingview_symbols_for_picks(picks: Iterable[object]) -> list[str]:
+    """Return NSE-prefixed TradingView symbols in first-seen order."""
+    out: list[str] = []
+    seen: set[str] = set()
+    for pick in picks or []:
+        if isinstance(pick, dict):
+            raw_symbol = pick.get("symbol") or pick.get("SYMBOL")
+        else:
+            raw_symbol = getattr(pick, "symbol", "")
+        sym = _normalize_symbol(raw_symbol)
+        if not sym:
+            continue
+        prefixed = f"NSE:{sym}"
+        if prefixed in seen:
+            continue
+        seen.add(prefixed)
+        out.append(prefixed)
+    return out
+
+
+def write_top_picks_tradingview_watchlist(
+    picks: Iterable[object],
+    snap_date: str,
+    *,
+    top_picks_dir: Path = TOP_PICKS_DIR,
+    latest_dir: Path = LATEST_DIR,
+) -> tuple[Path, Path, Path]:
+    """Write Top Picks in TradingView upload formats.
+
+    The canonical project format is a single comma-separated line. The
+    line-separated file is emitted as a fallback for manual copy/import flows.
+    """
+    symbols = _tradingview_symbols_for_picks(picks)
+    comma_payload = ",".join(symbols) + ("\n" if symbols else "")
+    lines_payload = "\n".join(symbols) + ("\n" if symbols else "")
+
+    stamp = str(snap_date).replace("-", "")
+    top_picks_dir.mkdir(parents=True, exist_ok=True)
+    latest_dir.mkdir(parents=True, exist_ok=True)
+    dated_path = top_picks_dir / f"Top_Investment_Picks_TradingView_{stamp}.txt"
+    comma_path = latest_dir / "top_picks_tradingview.txt"
+    lines_path = latest_dir / "top_picks_tradingview_lines.txt"
+
+    dated_path.write_text(comma_payload, encoding="utf-8")
+    comma_path.write_text(comma_payload, encoding="utf-8")
+    lines_path.write_text(lines_payload, encoding="utf-8")
+    return comma_path, lines_path, dated_path
+
+
+def resolve_sector_profile(symbol: object, company_name: object = "", raw_sector: object = "") -> dict:
+    """Resolve report-facing sector and sub-sector without mutating source data."""
+    sym = _normalize_symbol(symbol)
+    raw = str(raw_sector or "").strip()
+    sector = SECTOR_BY_SYMBOL_OVERRIDE.get(sym)
+    if not sector:
+        sector = assign_sector(sym, str(company_name or "")) or None
+    if not sector and raw and raw not in _SECTOR_EXCLUDE:
+        sector = raw
+    if not sector:
+        sector = raw or "Other"
+    sub_sector = SUB_SECTOR_BY_SYMBOL.get(sym) or DEFAULT_SUB_SECTOR_BY_SECTOR.get(sector) or "Unmapped"
+    return {"sector": sector, "sub_sector": sub_sector, "raw_sector": raw}
+
+
+def load_research_shortlist_items(path: Path = SWING_RESEARCH_PATH) -> list[dict]:
+    """Parse the ranked swing research shortlist, preserving research action."""
+    if not path.exists():
+        return []
+    items: list[dict] = []
+    for raw in path.read_text(encoding="utf-8", errors="ignore").splitlines():
+        line = raw.strip()
+        if not line.startswith("|"):
+            continue
+        cells = [cell.strip() for cell in line.strip("|").split("|")]
+        if len(cells) < 5:
+            continue
+        try:
+            rank = int(cells[0])
+        except ValueError:
+            continue
+        symbol = _normalize_symbol(cells[1])
+        if not symbol:
+            continue
+        items.append(
+            {
+                "rank": rank,
+                "symbol": symbol,
+                "fundamental_class": cells[2],
+                "swing_class": cells[3],
+                "research_action": cells[4],
+            }
+        )
+    return items
+
+
+def _research_action_promotable(action: object) -> bool:
+    text = str(action or "").strip().lower()
+    return bool(text) and not any(keyword in text for keyword in _RESEARCH_EXCLUDE_ACTION_KEYWORDS)
+
+
+def _load_stage2_rows_for_symbols(conn, snap_date: str, symbols: set[str]) -> list[dict]:
+    if not symbols:
+        return []
+    return _fetchall(conn, """
+        SELECT symbol, sector, price, technical_score, relative_strength,
+               enhanced_fund_score, investment_score, trading_signal,
+               trend_signal, stance, stage, supertrend_state
+        FROM scores.stage_snapshots
+        WHERE snapshot_date=%s
+          AND symbol = ANY(%s)
+          AND stage='STAGE_2'
+          AND supertrend_state='BULLISH'
+          AND trend_signal IN ('BULLISH','STRONG_BULLISH')
+        ORDER BY investment_score DESC NULLS LAST
+    """, (snap_date, list(symbols)))
+
+# Maps top_picks sector labels → SECTOR_RRG_INDICES labels in rrg_report.py
+_SECTOR_TO_RRG_LABEL: dict[str, str] = {
+    "Banking - Private":           "PVT BANK",
+    "Banking - PSU":               "PSU BANK",
+    "Financial Services":          "FIN SERVICES",
+    "Capital Markets":             "CAPITAL MKT",
+    "Energy":                      "ENERGY",
+    "Energy - Power":              "ENERGY",
+    "Metals & Mining":             "METAL",
+    "Commodities":                 "COMMODITIES",
+    "Cement":                      "CEMENT",
+    "Chemicals & Specialty":       "CHEMICALS",
+    "FMCG & Consumer Goods":       "FMCG",
+    "Consumer Durables":           "CONS DURABLE",
+    "Media & Entertainment":       "MEDIA",
+    "Realty":                      "REALTY",
+    "Housing Finance":             "HOUSING",
+    "IT & Technology":             "IT",
+    "Pharma & Healthcare":         "PHARMA",
+    "Infrastructure":              "INFRA",
+    "Defence & Aerospace":         "DEFENCE",
+    "Auto":                        "AUTO",
+    "EV & Auto Ancillaries":       "AUTO",
+    "Capital Goods & Industrials": "INFRA",
+    "PSU / CPSE":                  "ENERGY",
+}
+
+# RRG quadrant → blended strength adjustment applied to sector scores
+_RRG_STRENGTH_DELTA: dict[str, float] = {
+    "LEADING":   +15.0,
+    "IMPROVING":  +5.0,
+    "WEAKENING": -10.0,
+    "LAGGING":   -25.0,
+}
+
+_rrg_sector_map_cache: dict[str, dict] | None = None
+
+
+def _load_rrg_sector_map() -> dict[str, dict]:
+    """Return {rrg_label: {quadrant, x, y}} from live compute_rrg().
+
+    Cached for the lifetime of the process. Falls back to {} on any error
+    so top_picks continues to work without rrg_report.py."""
+    global _rrg_sector_map_cache
+    if _rrg_sector_map_cache is not None:
+        return _rrg_sector_map_cache
+    try:
+        from rrg_report import load_index_history, compute_rrg, SECTOR_RRG_INDICES
+        index_df = load_index_history()
+        results = compute_rrg(index_df, SECTOR_RRG_INDICES)
+        _rrg_sector_map_cache = {
+            r["label"]: {"quadrant": r["quadrant"], "x": r["x"], "y": r["y"]}
+            for r in results
+        }
+        print(f"   [RRG] sector map loaded: {len(_rrg_sector_map_cache)} sectors")
+    except Exception as exc:
+        print(f"   [RRG] sector map unavailable ({exc}) — skipping RRG signal")
+        _rrg_sector_map_cache = {}
+    return _rrg_sector_map_cache
+
+
+def _rrg_for_sector(sector_name: str, rrg_map: dict[str, dict]) -> dict | None:
+    """Resolve top_picks sector name → RRG entry dict, or None."""
+    label = _SECTOR_TO_RRG_LABEL.get(sector_name)
+    return rrg_map.get(label) if label else None
+
+
+def _load_top_sectors(conn, snap_date: str, top_n: int = 10,
+                      rrg_map: dict[str, dict] | None = None) -> dict[str, float]:
     """Return {sector_name: sector_strength} for the top-N dynamically ranked sectors.
 
     Uses scores.sector_top_stocks (written by sector_rotation_tracker).
@@ -1968,20 +2218,39 @@ def _load_top_sectors(conn, snap_date: str, top_n: int = 10) -> dict[str, float]
         ORDER BY strength DESC NULLS LAST
         LIMIT %s
     """, (snap_date, top_n + len(_SECTOR_EXCLUDE) + 5))
+    base: dict[str, float]
     if rows:
         filtered = [
             r for r in rows
             if (r["sector_name"] or "").strip() not in _SECTOR_EXCLUDE
-        ][:top_n]
+        ]
         if filtered:
-            return {r["sector_name"]: float(r["strength"] or 0) for r in filtered}
-    # Fallback: curated default when no sector_top_stocks data exists
-    return {s: 70.0 for s in (
-        "Capital Goods & Industrials", "EV & Auto Ancillaries",
-        "Metals & Mining", "Pharma & Healthcare", "IT & Technology",
-        "Defence & Aerospace", "Capital Markets", "Chemicals & Specialty",
-        "Energy - Power", "PSU / CPSE",
-    )}
+            base = {r["sector_name"]: float(r["strength"] or 0) for r in filtered}
+        else:
+            base = {}
+    else:
+        base = {}
+
+    if not base:
+        base = {s: 70.0 for s in (
+            "Capital Goods & Industrials", "EV & Auto Ancillaries",
+            "Metals & Mining", "Pharma & Healthcare", "IT & Technology",
+            "Defence & Aerospace", "Capital Markets", "Chemicals & Specialty",
+            "Energy - Power", "PSU / CPSE",
+        )}
+
+    # Blend RRG quadrant signal into strength scores so LEADING sectors rank
+    # higher and LAGGING sectors may drop below the top_n gate.
+    if rrg_map:
+        blended: dict[str, float] = {}
+        for sect, strength in base.items():
+            rrg = _rrg_for_sector(sect, rrg_map)
+            delta = _RRG_STRENGTH_DELTA.get(rrg["quadrant"], 0.0) if rrg else 0.0
+            blended[sect] = max(0.0, strength + delta)
+        base = blended
+
+    # Re-sort after blending and cap to top_n
+    return dict(sorted(base.items(), key=lambda kv: kv[1], reverse=True)[:top_n])
 
 
 def _load_vcp_picks(conn, snap_date: str, min_inv_score: float = 45.0, min_vcp_score: float = 50.0) -> list[dict]:
@@ -2130,54 +2399,129 @@ _MAX_PER_SECTOR = 2   # cap to ensure diversification across sectors
 
 def build_pick_list(conn, snap_date: str, n: int = MAX_PICKS) -> list[PickRationale]:
     """Build ranked pick list using four aligned signals."""
-    top_sectors     = _load_top_sectors(conn, snap_date, top_n=12)
+    rrg_map         = _load_rrg_sector_map()
+    top_sectors     = _load_top_sectors(conn, snap_date, top_n=12, rrg_map=rrg_map)
     vcp_picks       = _load_vcp_picks(conn, snap_date)
     stage2_leaders  = _load_stage2_leaders(conn, snap_date)
     strategy_conf   = _portfolio_lab_best_strategy_confirmations()
     strategy_rows   = _load_rows_for_symbols(conn, snap_date, set(strategy_conf))
+    research_items  = [
+        item for item in load_research_shortlist_items()
+        if _research_action_promotable(item.get("research_action"))
+    ]
+    research_syms = {_normalize_symbol(item.get("symbol")) for item in research_items}
 
     vcp_syms  = {r["symbol"]: r for r in vcp_picks}
     st2_syms  = {r["symbol"]: r for r in stage2_leaders}
     strategy_row_by_sym = {r["symbol"]: r for r in strategy_rows}
+    research_row_by_sym = {r["symbol"]: r for r in stage2_leaders}
+    missing_research_syms = research_syms - set(research_row_by_sym)
+    if missing_research_syms:
+        for row in _load_stage2_rows_for_symbols(conn, snap_date, missing_research_syms):
+            research_row_by_sym[row["symbol"]] = row
 
     picks: list[PickRationale] = []
     seen: set[str] = set()
     per_sector: dict[str, int] = {}
 
+    def _sector_profile_for_row(sym: str, row: dict) -> dict:
+        return resolve_sector_profile(sym, row.get("company_name", ""), row.get("sector", ""))
+
     def _add(sym: str, row: dict, source: str, rationale: str,
-             vcp_row: dict | None = None) -> None:
+             vcp_row: dict | None = None, research_item: dict | None = None) -> None:
         if sym in seen or len(picks) >= n:
             return
-        sect = (row.get("sector") or "").strip()
+        sector_profile = _sector_profile_for_row(sym, row)
+        sect = sector_profile["sector"]
         # Enforce diversification cap, but allow persisted VCP-confirmed and
         # best-strategy-confirmed names to surface when the setup is thematic.
-        sector_cap = _MAX_PER_SECTOR + (3 if ("vcp" in source or "strategy" in source) else 0)
+        sector_cap = _MAX_PER_SECTOR + (3 if any(token in source for token in ("vcp", "strategy", "research")) else 0)
         if sect and per_sector.get(sect, 0) >= sector_cap:
             return
         strat = strategy_conf.get(sym) or {}
+        research_item = research_item or {}
         per_sector[sect] = per_sector.get(sect, 0) + 1
+        _rrg = _rrg_for_sector(sect, rrg_map)
+
+        # Build confirmation signal list — each entry is an independent source
+        _conf: list[str] = []
+        if _rrg and _rrg.get("quadrant") in ("LEADING", "IMPROVING"):
+            _conf.append(f"RRG {_rrg['quadrant']}")
+        if vcp_row:
+            _conf.append("VCP")
+        if strat:
+            _conf.append("Strategy Lab")
+        if research_item:
+            _conf.append("Research")
+        if sect in top_sectors:
+            _conf.append("Sector Rotation")
+
         picks.append(PickRationale(
             symbol=sym,
-            sector=row.get("sector") or "",
+            sector=sect,
+            sub_sector=sector_profile["sub_sector"],
             source=source,
             sector_rot_score=float(row.get("investment_score") or 0),
             stage2_score=float(st2_syms[sym]["investment_score"] or 0) if sym in st2_syms else None,
             vcp_score=float((vcp_row or {}).get("vcp_score") or 0) if vcp_row else None,
-            sector_strength=top_sectors.get(row.get("sector") or "", None),
+            sector_strength=top_sectors.get(sect, None),
             rationale=rationale,
+            rrg_quadrant=_rrg["quadrant"] if _rrg else None,
+            rrg_rs_ratio=_rrg["x"] if _rrg else None,
+            rrg_rs_mom=_rrg["y"] if _rrg else None,
+            confirmation_count=len(_conf),
+            confirmation_signals=_conf,
             strategy_confirmed=bool(strat),
             strategy_id=strat.get("strategy_id"),
             strategy_name=strat.get("strategy_name"),
             strategy_signal=strat.get("strategy_signal"),
             strategy_rank=strat.get("strategy_rank"),
             strategy_return_pct=strat.get("strategy_return_pct"),
+            research_rank=research_item.get("rank"),
+            research_action=research_item.get("research_action"),
+            research_swing_class=research_item.get("swing_class"),
+            research_fundamental_class=research_item.get("fundamental_class"),
         ))
         seen.add(sym)
+
+    # ── Tier -1: promoted names from the latest swing research shortlist ──
+    for item in sorted(research_items, key=lambda r: int(r.get("rank") or 9999)):
+        if len(picks) >= n:
+            break
+        sym = _normalize_symbol(item.get("symbol"))
+        row = research_row_by_sym.get(sym)
+        if not row:
+            continue
+        if str(row.get("stage") or "").upper() != "STAGE_2":
+            continue
+        if str(row.get("supertrend_state") or "").upper() != "BULLISH":
+            continue
+        if str(row.get("trend_signal") or "").upper() not in {"BULLISH", "STRONG_BULLISH"}:
+            continue
+        sect = _sector_profile_for_row(sym, row)["sector"]
+        vcp_row = vcp_syms.get(sym)
+        if vcp_row and sect in top_sectors:
+            source = "research+vcp+sector"
+        elif sect in top_sectors:
+            source = "research+sector+s2"
+        elif vcp_row:
+            source = "research+vcp"
+        else:
+            source = "research+stage2"
+        _add(
+            sym,
+            row,
+            source,
+            f"Swing research shortlist rank {item.get('rank')}: {item.get('research_action')}; "
+            f"{item.get('fundamental_class')} / {item.get('swing_class')}",
+            vcp_row=vcp_row,
+            research_item=item,
+        )
 
     # ── Tier 0: portfolio-lab best strategy confirmation + other signals ──
     for sym, row in strategy_row_by_sym.items():
         if len(picks) >= n: break
-        sect = row.get("sector") or ""
+        sect = _sector_profile_for_row(sym, row)["sector"]
         vcp_row = vcp_syms.get(sym)
         inv = float(row.get("investment_score") or 0)
         strat = strategy_conf.get(sym) or {}
@@ -2203,7 +2547,7 @@ def build_pick_list(conn, snap_date: str, n: int = MAX_PICKS) -> list[PickRation
     # ── Tier 1: VCP-confirmed + in a top-ranked sector  ───────────────────
     for r in vcp_picks:
         sym = r["symbol"]
-        sect = r.get("sector") or ""
+        sect = _sector_profile_for_row(sym, r)["sector"]
         if sect not in top_sectors:
             continue
         strength = top_sectors[sect]
@@ -2222,7 +2566,7 @@ def build_pick_list(conn, snap_date: str, n: int = MAX_PICKS) -> list[PickRation
     for r in stage2_leaders:
         if len(picks) >= n: break
         sym  = r["symbol"]
-        sect = r.get("sector") or ""
+        sect = _sector_profile_for_row(sym, r)["sector"]
         if sect not in top_sectors:
             continue
         inv  = float(r.get("investment_score") or 0)
@@ -2241,12 +2585,13 @@ def build_pick_list(conn, snap_date: str, n: int = MAX_PICKS) -> list[PickRation
     for r in vcp_picks:
         if len(picks) >= n: break
         sym  = r["symbol"]
+        sect = _sector_profile_for_row(sym, r)["sector"]
         inv  = float(r.get("investment_score") or 0)
         vcp  = float(r.get("vcp_score") or 0)
         source = "strategy+vcp" if sym in strategy_conf else "vcp"
         _add(sym, r, source,
              f"VCP-confirmed Stage 2 (vcp={vcp:.0f}, inv={inv:.1f}); "
-             f"sector {r.get('sector','')} not in current top-10 rotation"
+             f"sector {sect} not in current top-10 rotation"
              + (f"; strategy `{strategy_conf[sym].get('strategy_id')}` confirms" if sym in strategy_conf else ""),
              vcp_row=r)
 
@@ -2261,6 +2606,8 @@ def build_pick_list(conn, snap_date: str, n: int = MAX_PICKS) -> list[PickRation
              f"fund={r.get('enhanced_fund_score')}"
              + (f"; strategy `{strategy_conf[sym].get('strategy_id')}` confirms" if sym in strategy_conf else ""))
 
+    # Re-sort: higher confirmation count first, stable within same count
+    picks.sort(key=lambda p: p.confirmation_count, reverse=True)
     return picks[:n]
 
 
@@ -3618,6 +3965,7 @@ def _serialize_stocks_for_llm(stocks: list[dict]) -> str:
         rows.append({
             "symbol": s["symbol"],
             "sector": s["sector"],
+            "sub_sector": s.get("sub_sector"),
             "source_screen": s["source"],
             "strategy_lab_confirmation": s.get("strategy_confirmation") or {},
             "company_profile": {
@@ -4064,7 +4412,7 @@ def generate_narratives(stocks: list[dict], macro_context: str, snap_date: str,
                 system_msg=_DEEP_SYSTEM_MSG,
                 user_msg=deep_prompt,
                 max_tokens=8192,
-                timeout=180,
+                timeout=TOP_PICKS_LLM_TIMEOUT,
             )
             if "per_stock" not in deep_result or not isinstance(deep_result["per_stock"], dict):
                 raise ValueError("missing per_stock dict")
@@ -4125,7 +4473,7 @@ def generate_narratives(stocks: list[dict], macro_context: str, snap_date: str,
             system_msg=_PORTFOLIO_SYSTEM_MSG,
             user_msg=port_prompt,
             max_tokens=4096,
-            timeout=200,
+            timeout=TOP_PICKS_PORTFOLIO_LLM_TIMEOUT,
         )
     except Exception as exc:
         print(f"   ⚠️  Portfolio refinement LLM failed: {exc} — using rule-based portfolio summary")
@@ -4202,12 +4550,14 @@ def _selection_methodology_markdown() -> str:
         "stocks inside those sectors.\n"
         "2. **Stage 2 / VCP Tracker** — prioritises Weinstein Stage 2 stocks and persisted "
         "`scores.stage2_vcp_picks` candidates.\n"
-        "3. **Portfolio Strategy Lab** — gives extra weight to symbols confirmed by the "
+        "3. **Swing Research Shortlist** — promotes latest deep-research names only when "
+        "current EOD Stage 2 and bullish trend evidence remain intact.\n"
+        "4. **Portfolio Strategy Lab** — gives extra weight to symbols confirmed by the "
         "best-ranked paper strategy's open positions or next BUY orders.\n"
-        "4. **Technical Strength** — uses 260 trading days of EOD data: EMA20/50/200 stack, "
+        "5. **Technical Strength** — uses 260 trading days of EOD data: EMA20/50/200 stack, "
         "EMA50 slope, RSI(14), ATR(14), 52-week position, 1M/3M/6M/1Y returns, volume ratio, "
         "support/resistance, pivots, and volume profile.\n"
-        "5. **Fundamental and Risk Checks** — uses Piotroski F-score, Altman Z, Beneish M, "
+        "6. **Fundamental and Risk Checks** — uses Piotroski F-score, Altman Z, Beneish M, "
         "ROE/ROCE, 3-year growth, debt/equity, promoter holding, cash-flow quality, valuation, "
         "stop loss, targets, and risk/reward.\n\n"
         "### Weinstein Stage Framework\n\n"
@@ -4233,6 +4583,9 @@ def _selection_methodology_markdown() -> str:
         "- **Sector leadership:** strong stocks in strong sectors get preference over isolated moves.\n"
         "- **VCP / breakout evidence:** a Volatility Contraction Pattern means a strong stock "
         "has paused with tighter ranges and reduced supply before a potential breakout.\n"
+        "- **Swing research overlay:** names from the latest deep-research shortlist are promoted "
+        "only when the current EOD snapshot still confirms Stage 2 with bullish trend state, and "
+        "research actions such as avoid/deprioritize are not promoted.\n"
         "- **Portfolio strategy confirmation:** paper-trading strategies such as breakout or "
         "Darvas-style systems add independent confirmation when they mark the stock as an open "
         "position or next BUY.\n"
@@ -4264,6 +4617,7 @@ def _selection_methodology_html() -> str:
   <ol style="margin:0 0 8px 22px;font-size:.83rem;color:#334155;line-height:1.6">
     <li><strong>Sector Rotation Report</strong> — leading sectors and highest investment-score names inside them.</li>
     <li><strong>Stage 2 / VCP Tracker</strong> — Weinstein-stage-2 universe plus persisted <code>scores.stage2_vcp_picks</code>.</li>
+    <li><strong>Swing Research Shortlist</strong> — latest deep-research names are promoted only when the current EOD snapshot still confirms Stage 2 and bullish trend state.</li>
     <li><strong>Portfolio Strategy Lab</strong> — confirmation from the best-ranked paper strategy's open positions or next BUY orders.</li>
     <li><strong>Technical Strength</strong> — 260d EOD trend, EMA stack, RSI/ATR, 52w position, returns, volume, support/resistance, pivots, and volume profile.</li>
     <li><strong>Fundamental and Risk Checks</strong> — Piotroski F, Altman Z, Beneish M, ROE/ROCE, growth, D/E, promoter holding, cash flow, valuation, stops, targets, and risk/reward.</li>
@@ -4278,7 +4632,7 @@ def _selection_methodology_html() -> str:
   <h5 style="font-size:.78rem;color:#0f172a;margin:12px 0 6px;text-transform:uppercase;letter-spacing:.08em">How Ranking Works</h5>
   <p style="font-size:.83rem;color:#334155;margin:0;line-height:1.6">
     The final rank balances Stage 2 trend quality, relative strength, sector leadership, VCP or breakout evidence,
-    portfolio strategy confirmation, target/stop risk-reward, and fundamental quality. Triple-confirmed names
+    the swing research overlay, portfolio strategy confirmation, target/stop risk-reward, and fundamental quality. Triple-confirmed names
     where sector rotation + Stage 2/VCP + strategy evidence agree are prioritised, followed by dual-confirmed
     candidates with strong trend and acceptable risk.
   </p>
@@ -4297,7 +4651,7 @@ def render_markdown(snap_date: str, picks: list[PickRationale], enriched: list[d
     out.append(f"# Top Investment Picks Analysis — {snap_date}\n\n")
     out.append(f"*{AGENT_BRAND}*\n\n")
     out.append(f"**Generated:** {datetime.now().strftime('%Y-%m-%d %H:%M IST')}  \n")
-    out.append("**Sources:** Sector Rotation Report + Stage 2 Tracker + PostgreSQL `scores.*`, `market.equity_eod`\n\n")
+    out.append("**Sources:** Sector Rotation Report + Stage 2 Tracker + Swing Research Shortlist + PostgreSQL `scores.*`, `market.equity_eod`\n\n")
     out.append(f"> **Disclaimer:** {REPORT_DISCLAIMER}\n\n")
     out.append("## Executive Summary\n\n")
     out.append(f"{narratives.get('executive_summary','')}\n\n")
@@ -4306,8 +4660,8 @@ def render_markdown(snap_date: str, picks: list[PickRationale], enriched: list[d
     out.append(_selection_methodology_markdown())
 
     out.append("## Pick Summary\n\n")
-    out.append("| # | Symbol | Sector | Price | Stage | Inv.Score | RS% | 6M Tgt | RR(4M) | Risk | Source |\n")
-    out.append("|---|---|---|---:|---|---:|---:|---:|---:|:---:|---|\n")
+    out.append("| # | Symbol | Sector | Sub-sector | Price | Stage | Inv.Score | RS% | 6M Tgt | RR(4M) | Risk | Source |\n")
+    out.append("|---|---|---|---|---:|---|---:|---:|---:|---:|:---:|---|\n")
     per_stock_narr_pre = narratives.get("per_stock", {}) or {}
     for i, (p, e) in enumerate(zip(picks, enriched), 1):
         snap = e["snapshot"] or {}
@@ -4323,7 +4677,7 @@ def render_markdown(snap_date: str, picks: list[PickRationale], enriched: list[d
         try: rs_d = f"{float(rsv):.1f}" if rsv is not None else "—"
         except (TypeError, ValueError): rs_d = "—"
         out.append(
-            f"| {i} | **{p.symbol}** | {p.sector} | {_nz(snap.get('price'))} | "
+            f"| {i} | **{p.symbol}** | {p.sector} | {p.sub_sector or '—'} | {_nz(snap.get('price'))} | "
             f"{snap.get('stage','—')} | {_nz(snap.get('investment_score'))} | "
             f"{_pct(snap.get('relative_strength'))} | {tgt_d} | {rr_d} | {rs_d} | {p.source} |\n"
         )
@@ -4338,8 +4692,13 @@ def render_markdown(snap_date: str, picks: list[PickRationale], enriched: list[d
         narr = per_stock_narr.get(p.symbol, {})
         profile = e.get("company_profile") or {}
 
-        out.append(f"### {i}. {p.symbol} — {p.sector}\n\n")
+        out.append(f"### {i}. {p.symbol} — {p.sector} / {p.sub_sector or 'Sub-sector N/A'}\n\n")
         out.append(f"**Why selected:** {p.rationale}\n\n")
+        if p.research_rank is not None:
+            out.append(
+                f"**Swing research overlay:** rank {p.research_rank}, action **{p.research_action or 'watch'}**"
+                f"; {p.research_fundamental_class or 'research class N/A'} / {p.research_swing_class or 'setup class N/A'}.\n\n"
+            )
         if p.strategy_confirmed:
             signal = (p.strategy_signal or "").replace("_", " ") or "confirmed"
             ret = f", {p.strategy_return_pct:.2f}% return" if p.strategy_return_pct is not None else ""
@@ -4464,6 +4823,67 @@ def render_markdown(snap_date: str, picks: list[PickRationale], enriched: list[d
     out.append("## Full Disclaimer\n\n")
     out.append(f"{FULL_LEGAL_DISCLAIMER}\n")
     return "".join(out)
+
+
+_RRG_BADGE_STYLE: dict[str, tuple[str, str, str]] = {
+    # quadrant: (bg, border, icon+label)
+    "LEADING":   ("#052e16", "#166534", "▲ Sector: LEADING"),
+    "IMPROVING": ("#0c1a2e", "#1e3a5f", "↗ Sector: IMPROVING"),
+    "WEAKENING": ("#1c1004", "#78350f", "↘ Sector: WEAKENING"),
+    "LAGGING":   ("#2d0a0a", "#7f1d1d", "▼ Sector: LAGGING"),
+}
+_RRG_BADGE_COLOR: dict[str, str] = {
+    "LEADING": "#4ade80", "IMPROVING": "#60a5fa",
+    "WEAKENING": "#fb923c", "LAGGING": "#f87171",
+}
+
+
+def _rrg_sector_badge(p: PickRationale) -> str:
+    """Return an inline HTML chip showing the sector's current RRG quadrant."""
+    if not p.rrg_quadrant:
+        return ""
+    bg, bdr, label = _RRG_BADGE_STYLE.get(p.rrg_quadrant, ("#1e293b", "#334155", p.rrg_quadrant))
+    color = _RRG_BADGE_COLOR.get(p.rrg_quadrant, "#94a3b8")
+    rs  = f"{p.rrg_rs_ratio:+.2f}%" if p.rrg_rs_ratio is not None else ""
+    mom = f"mom {p.rrg_rs_mom:+.2f}%" if p.rrg_rs_mom is not None else ""
+    detail = f" ({rs}, {mom})" if rs else ""
+    return (
+        f'<span style="display:inline-flex;align-items:center;gap:4px;'
+        f'background:{bg};border:1px solid {bdr};color:{color};'
+        f'padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;'
+        f'margin:2px" title="Sector RRG quadrant as of latest report">'
+        f'{label}{detail}</span>'
+    )
+
+
+_CONF_TIER: dict[int, tuple[str, str, str]] = {
+    # count: (bg, border, color)
+    5: ("#0f2a1a", "#166534", "#4ade80"),
+    4: ("#0f2a1a", "#15803d", "#86efac"),
+    3: ("#0c1a2e", "#1e3a5f", "#60a5fa"),
+    2: ("#1a1209", "#78350f", "#fbbf24"),
+    1: ("#1e293b", "#334155", "#94a3b8"),
+}
+
+
+def _confirmation_badge(p: PickRationale) -> str:
+    """Render a confirmation-count chip: '4/5 signals agree · VCP · RRG LEADING · …'"""
+    n = p.confirmation_count
+    if n == 0:
+        return ""
+    bg, bdr, color = _CONF_TIER.get(n, _CONF_TIER[1])
+    label = {5: "5/5 ★★★ All signals agree", 4: "4/5 ★★★ Triple confirmed",
+             3: "3/5 ★★ Dual confirmed", 2: "2/5 ★ Partial", 1: "1/5 Single"}.get(n, f"{n}/5")
+    signals_str = " · ".join(p.confirmation_signals or [])
+    return (
+        f'<span style="display:inline-flex;align-items:center;gap:5px;'
+        f'background:{bg};border:1px solid {bdr};color:{color};'
+        f'padding:3px 12px;border-radius:20px;font-size:11px;font-weight:800;'
+        f'margin:2px;letter-spacing:.02em" title="{signals_str}">'
+        f'{label}'
+        f'<span style="font-weight:500;font-size:10px;margin-left:4px;opacity:.8">{signals_str}</span>'
+        f'</span>'
+    )
 
 
 def _stock_card_html(idx: int, p: PickRationale, e: dict, narr: dict) -> str:
@@ -4794,6 +5214,7 @@ def _stock_card_html(idx: int, p: PickRationale, e: dict, narr: dict) -> str:
         sector_html = (
             f"<ul class='rotation-context-list' style='font-size:12px'>"
             f"<li>Sector: <strong>{h(s := str(sec.get('sector_name') or p.sector))}</strong></li>"
+            f"<li>Sub-sector: <strong>{h(p.sub_sector or '—')}</strong></li>"
             f"<li>Sector strength: <strong>{_nz(sec.get('sector_strength'))}</strong></li>"
             f"<li>Peer avg RS: {_pct(sec.get('avg_rs'))} · "
             f"Avg tech: {_nz(sec.get('avg_tech'))} · "
@@ -5310,6 +5731,10 @@ def _stock_card_html(idx: int, p: PickRationale, e: dict, narr: dict) -> str:
         "sector+s2": "Sector + Stage 2",
         "vcp+sector": "VCP + Sector",
         "vcp": "VCP",
+        "research+vcp+sector": "Research + VCP + Sector",
+        "research+sector+s2": "Research + Sector + S2",
+        "research+vcp": "Research + VCP",
+        "research+stage2": "Research + Stage 2",
         "strategy+vcp+sector": "Strategy + VCP + Sector",
         "strategy+sector+s2": "Strategy + Sector + S2",
         "strategy+vcp": "Strategy + VCP",
@@ -5322,6 +5747,10 @@ def _stock_card_html(idx: int, p: PickRationale, e: dict, narr: dict) -> str:
         "sector+s2": "blue",
         "vcp+sector": "green",
         "vcp": "amber",
+        "research+vcp+sector": "green",
+        "research+sector+s2": "green",
+        "research+vcp": "green",
+        "research+stage2": "blue",
         "strategy+vcp+sector": "green",
         "strategy+sector+s2": "green",
         "strategy+vcp": "green",
@@ -5373,14 +5802,17 @@ def _stock_card_html(idx: int, p: PickRationale, e: dict, narr: dict) -> str:
   <div class="tp-card-hd">
     <div class="tp-card-num">{idx}</div>
     <div style="flex:1 1 220px">
-      <h2 class="tp-card-name">{h(p.symbol)} <small>· {h(p.sector)}</small></h2>
+      <h2 class="tp-card-name">{h(p.symbol)} <small>· {h(p.sector)} · {h(p.sub_sector or 'Sub-sector N/A')}</small></h2>
       <div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:6px">
         <span class="tp-chip {src_cls}">{h(src_label)}</span>
+        <span class="tp-chip slate">Sub-sector: {h(p.sub_sector or '—')}</span>
         {f'<span class="tp-chip green">Best Strategy: {h(p.strategy_id or "")} · {h((p.strategy_signal or "").replace("_", " "))}</span>' if p.strategy_confirmed else ''}
         {f'<span class="tp-chip {conv_cls}">Conviction: {h(conv)}</span>' if conv else ''}
         {f'<span class="tp-chip {risk_chip_cls}">Risk: {h(risk_tier)}</span>' if risk_tier else ''}
         <span class="tp-chip blue">Signal: {h(snap.get('trading_signal') or '—')}</span>
         <span class="tp-chip slate">Supertrend: {h(snap.get('supertrend_state') or '—')}</span>
+        {_rrg_sector_badge(p)}
+        {_confirmation_badge(p)}
       </div>
     </div>
     <div style="width:170px;flex:0 0 auto">{ret_spark}</div>
@@ -5536,14 +5968,18 @@ def render_html(snap_date: str, picks: list[PickRationale], enriched: list[dict]
     avg_risk = _avg(risk_vals)
     avg_up = _avg(upside_vals)
 
-    dual_n = sum(1 for p in picks if p.source == "dual")
+    # confirmation tiers using the new multi-signal confirmation_count field
+    triple_n = sum(1 for p in picks if p.confirmation_count >= 3)
+    dual_n   = sum(1 for p in picks if p.confirmation_count == 2)
+    warn_n   = sum(1 for p in picks if p.rrg_quadrant in ("LAGGING", "WEAKENING"))
     high_conv = sum(1 for p in picks
                     if (per_stock_narr.get(p.symbol, {}).get("conviction") or "").upper() == "HIGH")
 
+    conf_sub = f"{triple_n} triple · {dual_n} dual · {warn_n} sector headwind"
     hero_kpis = "".join([
         f'<div class="tp-kpi"><div class="tp-kpi-lbl">Picks</div>'
         f'<div class="tp-kpi-val">{len(picks)}</div>'
-        f'<div class="tp-kpi-sub">{dual_n} dual-confirmed</div></div>',
+        f'<div class="tp-kpi-sub">{conf_sub}</div></div>',
         f'<div class="tp-kpi"><div class="tp-kpi-lbl">Avg Inv. Score</div>'
         f'<div class="tp-kpi-val">{avg_inv:.0f}</div>'
         f'<div class="tp-kpi-sub">across portfolio</div></div>' if avg_inv is not None else '',
@@ -5571,7 +6007,9 @@ def render_html(snap_date: str, picks: list[PickRationale], enriched: list[dict]
       <div class="tp-hero-meta">
         <span class="tp-pill blue">Report Date · {h(snap_date)}</span>
         <span class="tp-pill green">{len(picks)} picks</span>
-        <span class="tp-pill violet">{dual_n} dual-confirmed</span>
+        <span class="tp-pill violet">{triple_n} triple-confirmed</span>
+        <span class="tp-pill blue">{dual_n} dual-confirmed</span>
+        {f'<span class="tp-pill amber" style="background:#7f1d1d;border-color:#991b1b">{warn_n} sector headwind</span>' if warn_n else ''}
         <span class="tp-pill amber">Generated {datetime.now().strftime('%d %b %Y %H:%M IST')}</span>
       </div>
     </div>
@@ -5646,6 +6084,10 @@ def render_html(snap_date: str, picks: list[PickRationale], enriched: list[dict]
             "sector+s2": ("blue", "Sector+S2"),
             "vcp+sector": ("green", "VCP+Sector"),
             "vcp": ("amber", "VCP"),
+            "research+vcp+sector": ("green", "Research+VCP+Sector"),
+            "research+sector+s2": ("green", "Research+Sector+S2"),
+            "research+vcp": ("green", "Research+VCP"),
+            "research+stage2": ("blue", "Research+Stage2"),
             "strategy+vcp+sector": ("green", "Strategy+VCP+Sector"),
             "strategy+sector+s2": ("green", "Strategy+Sector+S2"),
             "strategy+vcp": ("green", "Strategy+VCP"),
@@ -5655,6 +6097,7 @@ def render_html(snap_date: str, picks: list[PickRationale], enriched: list[dict]
             f"<tr><td style='font-weight:700;color:#64748b'>{i}</td>"
             f"<td><a href='#pick-{i}'>{h(p.symbol)}</a></td>"
             f"<td style='color:#475569;font-size:.78rem'>{h(p.sector)}</td>"
+            f"<td style='color:#475569;font-size:.78rem'>{h(p.sub_sector or '—')}</td>"
             f"<td style='text-align:right'>₹{_nz(snap.get('price'))}</td>"
             f"<td><span class='tp-chip slate'>{h(snap.get('stage') or '—')}</span></td>"
             f"<td style='text-align:right;font-weight:700'>{_nz(snap.get('investment_score'))}</td>"
@@ -5671,7 +6114,7 @@ def render_html(snap_date: str, picks: list[PickRationale], enriched: list[dict]
   <h2 style="font-size:1.05rem;color:var(--tp-blue);margin:0 0 10px;letter-spacing:-.01em">📊 Pick Summary — {snap_date}</h2>
   <table class="tp-master">
     <thead><tr>
-      <th>#</th><th style="text-align:left">Symbol</th><th style="text-align:left">Sector</th>
+      <th>#</th><th style="text-align:left">Symbol</th><th style="text-align:left">Sector</th><th style="text-align:left">Sub-sector</th>
       <th style='text-align:right'>Price</th>
       <th>Stage</th><th style='text-align:right'>Inv.Score</th>
       <th style='text-align:right'>RS%</th>
@@ -5812,6 +6255,7 @@ def build_report(snap_date: str | None = None, use_llm: bool = True,
             enriched.append({
                 "symbol": p.symbol,
                 "sector": p.sector,
+                "sub_sector": p.sub_sector,
                 "source": p.source,
                 "pick_rationale": p.rationale,
                 "strategy_confirmation": {
@@ -5850,7 +6294,12 @@ def build_report(snap_date: str | None = None, use_llm: bool = True,
         html_path = TOP_PICKS_DIR / f"Top_Investment_Picks_Analysis_{stamp}.html"
 
         if dry_run:
-            print(f"   [DRY RUN] would write {md_path.name} ({len(md):,} chars) + {html_path.name} ({len(html_doc):,} chars)")
+            tv_symbols = ",".join(_tradingview_symbols_for_picks(picks))
+            print(
+                f"   [DRY RUN] would write {md_path.name} ({len(md):,} chars) + "
+                f"{html_path.name} ({len(html_doc):,} chars) + TradingView list "
+                f"({tv_symbols})"
+            )
             return (md_path, html_path)
 
         md_path.write_text(md)
@@ -5858,9 +6307,13 @@ def build_report(snap_date: str | None = None, use_llm: bool = True,
         # Symlink-style copies for /latest
         (LATEST_DIR / "top_picks.md").write_text(md)
         (LATEST_DIR / "top_picks.html").write_text(html_doc)
+        tv_comma_path, tv_lines_path, tv_dated_path = write_top_picks_tradingview_watchlist(picks, snap_date)
 
         print(f"   ✅ MD:   {md_path}")
         print(f"   ✅ HTML: {html_path}")
+        print(f"   ✅ TV:   {tv_comma_path}")
+        print(f"   ✅ TV lines: {tv_lines_path}")
+        print(f"   ✅ TV archive: {tv_dated_path}")
         return (md_path, html_path)
     finally:
         conn.close()

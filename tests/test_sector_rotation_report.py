@@ -9,9 +9,11 @@ import pandas as pd
 import sector_rotation_report
 from sector_rotation_report import (
     build_technical_view_tab_html,
+    build_research_shortlist_overlay,
     build_short_term_technical_view,
     _generate_rule_based_market_brief,
     _log_signals,
+    assign_sector,
     calculate_peak_resilience,
     classify_consolidation_breakout,
     compute_supertrend,
@@ -56,6 +58,174 @@ class SectorRotationReportTests(unittest.TestCase):
         self.assertEqual(deduped["SECTOR_NAME"].tolist(), ["Metals & Mining", "Pharma & Healthcare"])
         pharma = deduped[deduped["SECTOR_NAME"] == "Pharma & Healthcare"].iloc[0]
         self.assertEqual(pharma["SYMBOL"], "NIFTY HEALTHCARE")
+
+    def test_researched_stage2_symbols_have_sector_lenses(self):
+        expected = {
+            "JBMA": "EV & Auto Ancillaries",
+            "AMBER": "Consumer Durables",
+            "SCHAEFFLER": "EV & Auto Ancillaries",
+            "GVT&D": "Capital Goods & Industrials",
+            "TEJASNET": "IT & Technology",
+            "PANAMAPET": "Chemicals & Specialty",
+            "WALCHANNAG": "Capital Goods & Industrials",
+            "CUPID": "Pharma & Healthcare",
+        }
+
+        for symbol, sector in expected.items():
+            with self.subTest(symbol=symbol):
+                self.assertEqual(assign_sector(symbol, symbol), sector)
+
+    def test_research_shortlist_overlay_keeps_stage2_names_outside_rotation_cut(self):
+        analysis = pd.DataFrame(
+            [
+                {
+                    "SYMBOL": "POLYCAB",
+                    "COMPANY_NAME": "Polycab India",
+                    "CURRENT_PRICE": 10083.0,
+                    "TRADING_SIGNAL": "BUY",
+                    "TECHNICAL_SCORE": 77.3,
+                    "RELATIVE_STRENGTH": 28.1,
+                    "ENHANCED_FUND_SCORE": 60.7,
+                    "RSI": 69.6,
+                    "SUPERTREND_STATE": "BULLISH",
+                    "SUPERTREND_VALUE": 9812.5,
+                    "STAGE": "STAGE_2",
+                    "INVESTMENT_SCORE": 65.2,
+                },
+                {
+                    "SYMBOL": "JBMA",
+                    "COMPANY_NAME": "JBM Auto",
+                    "CURRENT_PRICE": 727.3,
+                    "TRADING_SIGNAL": "BUY",
+                    "TECHNICAL_SCORE": 80.0,
+                    "RELATIVE_STRENGTH": 20.8,
+                    "ENHANCED_FUND_SCORE": 56.9,
+                    "RSI": 67.8,
+                    "SUPERTREND_STATE": "BULLISH",
+                    "STAGE": "STAGE_2",
+                    "INVESTMENT_SCORE": 64.0,
+                },
+                {
+                    "SYMBOL": "GVT&D",
+                    "COMPANY_NAME": "GE Vernova T&D India",
+                    "CURRENT_PRICE": 5533.5,
+                    "TRADING_SIGNAL": "HOLD",
+                    "TECHNICAL_SCORE": 63.3,
+                    "RELATIVE_STRENGTH": 44.0,
+                    "ENHANCED_FUND_SCORE": 10.0,
+                    "RSI": 68.3,
+                    "SUPERTREND_STATE": "BULLISH",
+                    "STAGE": "STAGE_2",
+                    "INVESTMENT_SCORE": 50.7,
+                },
+            ]
+        )
+        sector_rank = pd.DataFrame(
+            [
+                {"SECTOR_NAME": "Defence & Aerospace", "ROTATION_SCORE": 8.4},
+                {"SECTOR_NAME": "Consumer Durables", "ROTATION_SCORE": 3.9},
+            ]
+        )
+        candidates = pd.DataFrame(
+            [
+                {"SYMBOL": "AMBER", "SECTOR_NAME": "Consumer Durables"},
+            ]
+        )
+
+        overlay = build_research_shortlist_overlay(
+            analysis,
+            sector_rank,
+            candidates,
+            source_symbols=["POLYCAB", "JBMA", "GVT&D"],
+        ).set_index("SYMBOL")
+
+        self.assertEqual(overlay.loc["POLYCAB", "RESEARCH_SECTOR"], "Capital Goods & Industrials")
+        self.assertEqual(overlay.loc["JBMA", "RESEARCH_SECTOR"], "EV & Auto Ancillaries")
+        self.assertEqual(overlay.loc["GVT&D", "RESEARCH_SECTOR"], "Capital Goods & Industrials")
+        self.assertEqual(overlay.loc["POLYCAB", "SUPERTREND_STATE"], "BULLISH")
+        self.assertEqual(overlay.loc["POLYCAB", "SUPERTREND_VALUE"], 9812.5)
+        self.assertIn("Sector outside current top rotation cut", overlay.loc["POLYCAB", "REPORT_VISIBILITY"])
+
+    def test_research_shortlist_overlay_renders_in_markdown_and_html(self):
+        sector_rank = pd.DataFrame(
+            [
+                {
+                    "SYMBOL": "Nifty Ind Defence",
+                    "SECTOR_NAME": "Defence & Aerospace",
+                    "CLOSE": 1000,
+                    "RET_5D": 1.0,
+                    "RET_1M": 5.0,
+                    "RET_3M": 10.0,
+                    "RET_6M": 15.0,
+                    "RS_1M": 3.0,
+                    "ROTATION_SCORE": 8.4,
+                }
+            ]
+        )
+        candidates = pd.DataFrame(
+            [
+                {
+                    "SYMBOL": "PARAS",
+                    "COMPANY_NAME": "Paras Defence",
+                    "SECTOR_NAME": "Defence & Aerospace",
+                    "CURRENT_PRICE": 100,
+                    "TRADING_SIGNAL": "BUY",
+                    "SETUP_CLASS": "NEUTRAL",
+                    "ACTION_BUCKET": "WATCHLIST",
+                    "INVESTMENT_SCORE": 70,
+                    "TECHNICAL_SCORE": 80,
+                    "RELATIVE_STRENGTH": 20,
+                    "ENHANCED_FUND_SCORE": 60,
+                    "RSI": 65,
+                    "SUPERTREND_STATE": "BULLISH",
+                    "PATTERN": "TRENDING_OR_CHOPPY",
+                    "VOLUME_RATIO": 1.1,
+                }
+            ]
+        )
+        research_shortlist = pd.DataFrame(
+            [
+                {
+                    "SYMBOL": "POLYCAB",
+                    "COMPANY_NAME": "Polycab India",
+                    "RESEARCH_SECTOR": "Capital Goods & Industrials",
+                    "STAGE": "STAGE_2",
+                    "TRADING_SIGNAL": "BUY",
+                    "ACTION_BUCKET": "WATCHLIST",
+                    "INVESTMENT_SCORE": 65.2,
+                    "TECHNICAL_SCORE": 77.3,
+                    "RELATIVE_STRENGTH": 28.1,
+                    "ENHANCED_FUND_SCORE": 60.7,
+                    "RSI": 69.6,
+                    "SUPERTREND_STATE": "BULLISH",
+                    "REPORT_VISIBILITY": "Sector outside current top rotation cut",
+                }
+            ]
+        )
+
+        markdown = render_markdown(
+            sector_rank,
+            candidates,
+            pd.DataFrame(),
+            Path("source.csv"),
+            pd.Timestamp("2026-06-21"),
+            research_shortlist=research_shortlist,
+        )
+        html = render_html_interactive(
+            sector_rank,
+            candidates,
+            pd.DataFrame(),
+            Path("source.csv"),
+            pd.Timestamp("2026-06-21"),
+            {"sectors": {}, "stocks": {}, "market_summary": ""},
+            research_shortlist=research_shortlist,
+        )
+
+        self.assertIn("Research Shortlist / Stage 2 Swing Overlay", markdown)
+        self.assertIn("| POLYCAB | Polycab India | Capital Goods & Industrials |", markdown)
+        self.assertIn("Research Overlay", html)
+        self.assertIn("POLYCAB", html)
+        self.assertIn("Sector outside current top rotation cut", html)
 
     def test_compute_supertrend_marks_persistent_uptrend_as_bullish(self):
         prices = pd.DataFrame(
@@ -194,6 +364,64 @@ class SectorRotationReportTests(unittest.TestCase):
         self.assertEqual(ranked.loc["EXTENDED", "ACTION_BUCKET"], "WAIT_FOR_PULLBACK")
         self.assertEqual(ranked.loc["WEAK", "ACTION_BUCKET"], "AVOID")
         self.assertTrue(ranked["ACTION_REASON"].str.len().gt(0).all())
+
+    def test_near_resistance_above_level_uses_retest_reason(self):
+        stocks = pd.DataFrame(
+            [
+                {
+                    "SYMBOL": "ABOVERES",
+                    "SECTOR_NAME": "Defence",
+                    "CURRENT_PRICE": 1408.65,
+                    "RESISTANCE": 1348.40,
+                    "SUPPORT": 768.50,
+                    "TECHNICAL_SCORE": 59.3,
+                    "RELATIVE_STRENGTH": 106.7,
+                    "ENHANCED_FUND_SCORE": None,
+                    "TRADING_SIGNAL": "BUY",
+                    "PATTERN": "NEAR_RESISTANCE",
+                    "VOLUME_RATIO": 3.57,
+                    "RSI": 64,
+                    "RET_5D": 4,
+                    "RET_1M": 8,
+                    "DRAWDOWN_FROM_52W_HIGH_PCT": -10,
+                    "SUPERTREND_STATE": "BULLISH",
+                }
+            ]
+        )
+
+        ranked = rank_stock_candidates(stocks).set_index("SYMBOL")
+
+        self.assertEqual(ranked.loc["ABOVERES", "ACTION_BUCKET"], "BREAKOUT_WATCH")
+        self.assertIn("already above the marked resistance", ranked.loc["ABOVERES", "ACTION_REASON"])
+
+    def test_extended_near_high_overrides_breakout_watch_after_peak_enrichment(self):
+        stocks = pd.DataFrame(
+            [
+                {
+                    "SYMBOL": "EXTBREAK",
+                    "SECTOR_NAME": "Defence",
+                    "CURRENT_PRICE": 1408.65,
+                    "RESISTANCE": 1348.40,
+                    "SUPPORT": 768.50,
+                    "TECHNICAL_SCORE": 59.3,
+                    "RELATIVE_STRENGTH": 106.7,
+                    "ENHANCED_FUND_SCORE": None,
+                    "TRADING_SIGNAL": "BUY",
+                    "PATTERN": "NEAR_RESISTANCE",
+                    "VOLUME_RATIO": 3.57,
+                    "RSI": 88.9,
+                    "RET_5D": 6,
+                    "RET_1M": 6,
+                    "DRAWDOWN_FROM_52W_HIGH_PCT": -2.4,
+                    "SUPERTREND_STATE": "BULLISH",
+                }
+            ]
+        )
+
+        ranked = rank_stock_candidates(stocks).set_index("SYMBOL")
+
+        self.assertEqual(ranked.loc["EXTBREAK", "ACTION_BUCKET"], "WAIT_FOR_PULLBACK")
+        self.assertIn("Momentum is extended", ranked.loc["EXTBREAK", "ACTION_REASON"])
 
     def test_merge_fundamental_scores_fills_missing_scores_without_overwriting_existing(self):
         analysis = pd.DataFrame(
