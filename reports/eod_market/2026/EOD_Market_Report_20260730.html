@@ -1,0 +1,650 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EOD Market Report 2026-07-30</title>
+<style>
+    :root{--ink:#172322;--muted:#667370;--line:#d6ddda;--soft-line:#e8edeb;--bg:#f4f6f5;--card:#ffffff;--panel:#111821;--green:#0f7a5f;--red:#b4232b;--amber:#a65f00;--blue:#1f5f99;--shadow:0 18px 42px rgba(23,35,34,.08);}
+    *{box-sizing:border-box} html{scroll-behavior:smooth} body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.45}
+    .wrap{max-width:1360px;margin:0 auto;padding:24px}.eyebrow{color:var(--muted);font-size:12px;text-transform:uppercase;font-weight:850;letter-spacing:.08em}
+    header.hero{background:#ffffff;border:1px solid var(--line);border-radius:8px;padding:22px;box-shadow:var(--shadow);margin-bottom:16px}
+    .hero-top{display:flex;justify-content:space-between;gap:18px;align-items:flex-start}.title-block{max-width:760px}h1{margin:4px 0 8px;font-size:38px;line-height:1.06;letter-spacing:0}h2{font-size:19px;margin:0 0 14px}h3{font-size:15px;margin:0 0 8px;color:#223a37}.sub{color:var(--muted);font-size:14px}
+    .session-badge{min-width:260px;border-left:4px solid var(--blue);padding:8px 0 8px 14px}.session-badge b{display:block;font-size:18px}.session-badge span{display:block;margin-top:4px;color:var(--muted);font-size:13px}
+    .nav{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0 0}.nav a,.report-link{display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:999px;padding:7px 10px;background:#fbfcfb;color:#243331;text-decoration:none;font-size:12px;font-weight:850}.nav a:hover,.report-link:hover{border-color:#95aaa5;background:#eef4f2}
+    .report-pack{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:16px;padding-top:14px;border-top:1px solid var(--soft-line)}
+    .grid{display:grid;gap:16px}.kpis{grid-template-columns:repeat(4,minmax(0,1fr))}.three{grid-template-columns:repeat(3,minmax(0,1fr))}.two{grid-template-columns:1.18fr .82fr}.halves{grid-template-columns:1fr 1fr}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:16px;box-shadow:0 1px 0 rgba(23,35,34,.04)}.section{margin-top:16px}.kpi .label{color:var(--muted);font-size:11px;text-transform:uppercase;font-weight:850;letter-spacing:.08em}.kpi .value{font-size:25px;font-weight:900;margin-top:5px;line-height:1.15}.kpi .note{margin-top:6px;color:var(--muted);font-size:13px}
+    .pulse{display:grid;gap:10px}.pulse-row{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--soft-line)}.pulse-row:last-child{border-bottom:0}.pulse-row span{color:var(--muted);font-size:13px}.pulse-row b{text-align:right}
+    .pos{color:var(--green)}.neg{color:var(--red)}.flat{color:var(--amber)}.info{color:var(--blue)}
+    .table-scroll{overflow-x:auto;border:1px solid var(--soft-line);border-radius:8px}.table-scroll table{min-width:760px}table{width:100%;border-collapse:collapse;font-size:13px}th,td{border-bottom:1px solid var(--soft-line);padding:9px 8px;text-align:left;vertical-align:top}th{color:#51625f;font-size:11px;text-transform:uppercase;letter-spacing:.06em;background:#fafbfb}tr:last-child td{border-bottom:0}
+    .pill{display:inline-flex;border-radius:999px;padding:3px 9px;font-size:12px;font-weight:850;background:#eef4f2;color:#24413e}.pill.pos{background:#dcfce7;color:#166534}.pill.neg{background:#fee2e2;color:#991b1b}
+    .event{display:grid;grid-template-columns:70px 1fr;gap:10px;padding:10px 0;border-bottom:1px solid var(--soft-line)}.event:last-child{border-bottom:0}.time{font-weight:900;color:#214744}.commentary{font-size:16px;max-width:92ch}.muted{color:var(--muted)}
+    .heat{display:inline-block;min-width:62px;font-weight:900;text-align:center;border-radius:6px;color:#fff;padding:3px 8px}.heat.g1{background:#166534}.heat.g2{background:#16a34a}.heat.n{background:#a16207}.heat.r1{background:#dc2626}.heat.r2{background:#991b1b}
+    svg{max-width:100%;height:auto}.chart-dark{background:var(--panel);border-color:#1f2a38;color:#e4edf4}.chart-dark h2{color:#e4edf4}.empty-chart{min-height:220px;display:grid;place-items:center;color:var(--muted);border:1px dashed var(--line);border-radius:8px}
+    .stock-link{border:0;background:transparent;color:var(--green);font-weight:900;font:inherit;cursor:pointer;padding:0;text-decoration:underline;text-underline-offset:3px}.stock-link:focus-visible,.nav a:focus-visible,.report-link:focus-visible{outline:3px solid rgba(31,95,153,.28);outline-offset:2px}.clickable-row{cursor:pointer}.clickable-row:hover{background:#f2f8f6}
+    .detail-panel{position:sticky;top:12px}.detail-title{font-size:22px;font-weight:900}.detail-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:12px}.detail-kv{border:1px solid var(--soft-line);border-radius:8px;padding:10px;background:#fbfcfc}.detail-kv span{display:block;color:var(--muted);font-size:11px;text-transform:uppercase;font-weight:850}.detail-kv b{font-size:16px;overflow-wrap:anywhere}
+    .bubble-note{font-size:12px;color:var(--muted);margin-top:8px}.footer{margin-top:20px;color:var(--muted);font-size:12px;border-top:1px solid var(--line);padding-top:14px}
+    .bubble{transition:stroke-width .15s ease, fill-opacity .15s ease}.participation-map a{text-decoration:none}
+    @media(max-width:980px){.kpis,.three,.two,.halves{grid-template-columns:1fr}.wrap{padding:14px}.hero-top{display:block}h1{font-size:29px}.session-badge{min-width:0;margin-top:14px}.detail-panel{position:static}.table-scroll table{min-width:680px}}
+    @media(max-width:560px){.card,header.hero{padding:13px}.event{grid-template-columns:58px 1fr}.kpi .value{font-size:21px}.detail-grid{grid-template-columns:1fr}}
+    </style>
+</head>
+<body>
+<main class="wrap">
+  <header class="hero">
+    <div class="hero-top">
+      <div class="title-block">
+        <div class="eyebrow">NSE Market Intelligence</div>
+        <h1>EOD Market Report</h1>
+        <div class="sub">2026-07-30 · generated 2026-08-03 19:38 IST · 15m Bars from PostgreSQL</div>
+      </div>
+      <div class="session-badge">
+        <b>Recovery After Shakeout</b>
+        <span>Index finish improved after a weak breadth window.</span>
+      </div>
+    </div>
+    <nav class="nav" aria-label="Report sections">
+      <a href="#commentary">Commentary</a>
+      <a href="#breadth">Breadth</a>
+      <a href="#participation">Participation</a>
+      <a href="#leaders">Leadership</a>
+      <a href="#stocks">Stocks</a>
+      <a href="#sectors">Sectors</a>
+    </nav>
+    <div class="report-pack">
+      <span class="eyebrow">Report Pack</span>
+      <a class='report-link' href='file:///Users/pgorai/Documents/Projects/Unified-NSE-Analysis/reports/latest/sector_rotation.html'>Sector Rotation</a><a class='report-link' href='file:///Users/pgorai/Documents/Projects/Unified-NSE-Analysis/reports/latest/stage2_tracker.html'>Stage 2 Tracker</a><a class='report-link' href='file:///Users/pgorai/Documents/Projects/Unified-NSE-Analysis/reports/latest/top_picks.html'>Top Picks</a><a class='report-link' href='file:///Users/pgorai/Documents/Projects/Unified-NSE-Analysis/reports/latest/swing_playbook.html'>Swing Playbook</a><a class='report-link' href='file:///Users/pgorai/Documents/Projects/Unified-NSE-Analysis/reports/latest/portfolio_strategy_lab.html'>Portfolio Lab</a>
+    </div>
+  </header>
+
+  <section class="grid kpis">
+    <div class="card kpi"><div class="label">NIFTY</div><div class="value pos">24,296.60 · +0.19%</div><div class="sub">Range 24,190.00 - 24,342.95</div></div>
+    <div class="card kpi"><div class="label">BANKNIFTY</div><div class="value flat">57,102.90 · +0.01%</div><div class="sub">Range 56,768.90 - 57,236.65</div></div>
+    <div class="card kpi"><div class="label">Best Breadth Hour</div><div class="value info">12:00</div><div class="note">+80.6% advancers</div></div>
+    <div class="card kpi"><div class="label">Weakest Breadth Hour</div><div class="value flat">13:00</div><div class="note">+20.0% advancers</div></div>
+  </section>
+
+  <section class="grid three section">
+    <div class="card pulse">
+      <h2>Market Pulse</h2>
+      <div class="pulse-row"><span>Stored universe</span><b>31 stocks</b></div>
+      <div class="pulse-row"><span>Volume peak</span><b>09:00 · 119.7L</b></div>
+      <div class="pulse-row"><span>Leading sector</span><b class="neg">Unclassified -0.51%</b></div>
+      <div class="pulse-row"><span>Pressure sector</span><b class="neg">Unclassified -0.51%</b></div>
+    </div>
+    <div class="card kpi">
+      <div class="label">Breadth Swing</div>
+      <div class="value">+20.0% to +80.6%</div>
+      <div class="note">13:00 trough, 12:00 expansion</div>
+    </div>
+    <div class="card kpi">
+      <div class="label">Source Trail</div>
+      <div class="value">15m Bars</div>
+      <div class="note">PostgreSQL intraday.ohlcv_bars · commentary grounded in computed facts</div>
+    </div>
+  </section>
+
+  <section class="grid two section" id="commentary">
+    <div class="card">
+      <h2>Market Desk Commentary</h2>
+      <div class="commentary">The day was a recovery-after-shakeout session. NIFTY closed +0.19% from its first stored bar while BANKNIFTY closed +0.01%, so the index-level finish was constructive but not uniformly led by banks. The decisive intraday event was the breadth trough at 13:00, where only +20.0% of moving stocks advanced. That was followed by a breadth expansion at 12:00 with +80.6% advancers, which argues that the rebound was broader than a narrow heavyweight lift. Within the covered universe, Unclassified was the strongest sector cluster, while Unclassified lagged. For the next session, the key question is whether late-day breadth can persist; if it fades early, the recovery should be treated as a tactical bounce rather than a fresh trend impulse.</div>
+    </div>
+    <div class="card">
+      <h2>Event Log</h2>
+      <div class='event'><div class='time'>09:00</div><div><strong>Opening tone</strong><br><span class='muted'>NIFTY +0.10%, BANKNIFTY -0.31%; breadth 7 advances vs 24 declines.</span></div></div>
+<div class='event'><div class='time'>13:00</div><div><strong>Breadth trough</strong><br><span class='muted'>Only +20.0% of moving stocks advanced; this was the broadest risk-off phase.</span></div></div>
+<div class='event'><div class='time'>12:00</div><div><strong>Breadth expansion</strong><br><span class='muted'>Advancers improved to +80.6%, confirming the strongest recovery window.</span></div></div>
+<div class='event'><div class='time'>09:00</div><div><strong>Highest participation</strong><br><span class='muted'>Stored universe volume peaked at 11,970,022 shares; watch whether this marked distribution or accumulation.</span></div></div>
+<div class='event'><div class='time'>day</div><div><strong>NIFTY range</strong><br><span class='muted'>High 24,342.95 near 15:15, low 24,190.00 near 09:15.</span></div></div>
+<div class='event'><div class='time'>day</div><div><strong>BANKNIFTY range</strong><br><span class='muted'>High 57,236.65, low 56,768.90; closed +0.01% from open.</span></div></div>
+<div class='event'><div class='time'>15:00</div><div><strong>Closing tone</strong><br><span class='muted'>NIFTY +0.10%, BANKNIFTY +0.12%; late breadth 18 / 13.</span></div></div>
+    </div>
+  </section>
+
+  <section class="grid halves section">
+    <div class="card chart-dark">
+      <h2>NIFTY · Candlestick Tape</h2>
+      <svg class='tv-chart' viewBox='0 0 880 360' role='img' aria-label='NIFTY intraday candlestick chart'>
+<rect width='100%' height='100%' rx='10' fill='#101722'/>
+<g stroke='#243142' stroke-width='1'>
+<line x1='58' x2='812' y1='26.0' y2='26.0'/>
+<line x1='58' x2='812' y1='100.0' y2='100.0'/>
+<line x1='58' x2='812' y1='174.0' y2='174.0'/>
+<line x1='58' x2='812' y1='248.0' y2='248.0'/>
+<line x1='58' x2='812' y1='322.0' y2='322.0'/>
+<line x1='73.1' x2='73.1' y1='26' y2='322'/>
+<line x1='163.6' x2='163.6' y1='26' y2='322'/>
+<line x1='254.0' x2='254.0' y1='26' y2='322'/>
+<line x1='344.5' x2='344.5' y1='26' y2='322'/>
+<line x1='435.0' x2='435.0' y1='26' y2='322'/>
+<line x1='525.5' x2='525.5' y1='26' y2='322'/>
+<line x1='616.0' x2='616.0' y1='26' y2='322'/>
+<line x1='706.4' x2='706.4' y1='26' y2='322'/>
+<line x1='796.9' x2='796.9' y1='26' y2='322'/>
+</g>
+<text x='822' y='30.0' fill='#9aa7b5' font-size='12'>24,355</text>
+<text x='822' y='104.0' fill='#9aa7b5' font-size='12'>24,311</text>
+<text x='822' y='178.0' fill='#9aa7b5' font-size='12'>24,266</text>
+<text x='822' y='252.0' fill='#9aa7b5' font-size='12'>24,222</text>
+<text x='822' y='326.0' fill='#9aa7b5' font-size='12'>24,178</text>
+<line x1='73.1' x2='73.1' y1='151.0' y2='301.6' stroke='#22c7a9' stroke-width='1.4'/>
+<rect x='65.1' y='156.5' width='16.0' height='44.3' rx='2' fill='#22c7a9'/>
+<line x1='103.2' x2='103.2' y1='139.3' y2='208.5' stroke='#ef5350' stroke-width='1.4'/>
+<rect x='95.2' y='160.6' width='16.0' height='30.4' rx='2' fill='#ef5350'/>
+<line x1='133.4' x2='133.4' y1='142.2' y2='201.4' stroke='#22c7a9' stroke-width='1.4'/>
+<rect x='125.4' y='158.4' width='16.0' height='31.0' rx='2' fill='#22c7a9'/>
+<line x1='163.6' x2='163.6' y1='149.3' y2='215.7' stroke='#ef5350' stroke-width='1.4'/>
+<rect x='155.6' y='156.9' width='16.0' height='55.5' rx='2' fill='#ef5350'/>
+<line x1='193.7' x2='193.7' y1='182.9' y2='232.9' stroke='#ef5350' stroke-width='1.4'/>
+<rect x='185.7' y='211.9' width='16.0' height='19.4' rx='2' fill='#ef5350'/>
+<line x1='223.9' x2='223.9' y1='182.6' y2='243.4' stroke='#22c7a9' stroke-width='1.4'/>
+<rect x='215.9' y='186.2' width='16.0' height='44.0' rx='2' fill='#22c7a9'/>
+<line x1='254.0' x2='254.0' y1='167.0' y2='196.1' stroke='#ef5350' stroke-width='1.4'/>
+<rect x='246.0' y='184.4' width='16.0' height='5.6' rx='2' fill='#ef5350'/>
+<line x1='284.2' x2='284.2' y1='167.2' y2='204.6' stroke='#22c7a9' stroke-width='1.4'/>
+<rect x='276.2' y='176.4' width='16.0' height='14.4' rx='2' fill='#22c7a9'/>
+<line x1='314.4' x2='314.4' y1='147.3' y2='181.3' stroke='#22c7a9' stroke-width='1.4'/>
+<rect x='306.4' y='160.4' width='16.0' height='16.2' rx='2' fill='#22c7a9'/>
+<line x1='344.5' x2='344.5' y1='152.4' y2='176.7' stroke='#ef5350' stroke-width='1.4'/>
+<rect x='336.5' y='161.1' width='16.0' height='14.5' rx='2' fill='#ef5350'/>
+<line x1='374.7' x2='374.7' y1='173.6' y2='199.7' stroke='#ef5350' stroke-width='1.4'/>
+<rect x='366.7' y='175.1' width='16.0' height='5.3' rx='2' fill='#ef5350'/>
+<line x1='404.8' x2='404.8' y1='174.1' y2='203.4' stroke='#ef5350' stroke-width='1.4'/>
+<rect x='396.8' y='180.5' width='16.0' height='14.2' rx='2' fill='#ef5350'/>
+<line x1='435.0' x2='435.0' y1='172.4' y2='203.2' stroke='#22c7a9' stroke-width='1.4'/>
+<rect x='427.0' y='178.0' width='16.0' height='16.9' rx='2' fill='#22c7a9'/>
+<line x1='465.2' x2='465.2' y1='66.3' y2='181.5' stroke='#22c7a9' stroke-width='1.4'/>
+<rect x='457.2' y='104.1' width='16.0' height='73.5' rx='2' fill='#22c7a9'/>
+<line x1='495.3' x2='495.3' y1='102.1' y2='133.4' stroke='#ef5350' stroke-width='1.4'/>
+<rect x='487.3' y='104.0' width='16.0' height='21.3' rx='2' fill='#ef5350'/>
+<line x1='525.5' x2='525.5' y1='122.2' y2='203.4' stroke='#ef5350' stroke-width='1.4'/>
+<rect x='517.5' y='125.3' width='16.0' height='52.8' rx='2' fill='#ef5350'/>
+<line x1='555.6' x2='555.6' y1='142.2' y2='186.3' stroke='#22c7a9' stroke-width='1.4'/>
+<rect x='547.6' y='169.1' width='16.0' height='8.9' rx='2' fill='#22c7a9'/>
+<line x1='585.8' x2='585.8' y1='117.7' y2='173.3' stroke='#22c7a9' stroke-width='1.4'/>
+<rect x='577.8' y='135.7' width='16.0' height='33.9' rx='2' fill='#22c7a9'/>
+<line x1='616.0' x2='616.0' y1='119.0' y2='164.3' stroke='#ef5350' stroke-width='1.4'/>
+<rect x='608.0' y='137.4' width='16.0' height='7.6' rx='2' fill='#ef5350'/>
+<line x1='646.1' x2='646.1' y1='138.5' y2='192.4' stroke='#ef5350' stroke-width='1.4'/>
+<rect x='638.1' y='145.8' width='16.0' height='46.1' rx='2' fill='#ef5350'/>
+<line x1='676.3' x2='676.3' y1='184.4' y2='236.6' stroke='#ef5350' stroke-width='1.4'/>
+<rect x='668.3' y='192.8' width='16.0' height='33.7' rx='2' fill='#ef5350'/>
+<line x1='706.4' x2='706.4' y1='168.8' y2='239.4' stroke='#22c7a9' stroke-width='1.4'/>
+<rect x='698.4' y='187.0' width='16.0' height='39.0' rx='2' fill='#22c7a9'/>
+<line x1='736.6' x2='736.6' y1='145.7' y2='199.7' stroke='#22c7a9' stroke-width='1.4'/>
+<rect x='728.6' y='163.4' width='16.0' height='23.4' rx='2' fill='#22c7a9'/>
+<line x1='766.8' x2='766.8' y1='68.8' y2='170.2' stroke='#22c7a9' stroke-width='1.4'/>
+<rect x='758.8' y='87.6' width='16.0' height='75.3' rx='2' fill='#22c7a9'/>
+<line x1='796.9' x2='796.9' y1='46.4' y2='130.2' stroke='#ef5350' stroke-width='1.4'/>
+<rect x='788.9' y='89.9' width='16.0' height='33.9' rx='2' fill='#ef5350'/>
+<text x='73.1' y='348' text-anchor='middle' fill='#9aa7b5' font-size='11'>09:15</text>
+<text x='193.7' y='348' text-anchor='middle' fill='#9aa7b5' font-size='11'>10:15</text>
+<text x='314.4' y='348' text-anchor='middle' fill='#9aa7b5' font-size='11'>11:15</text>
+<text x='435.0' y='348' text-anchor='middle' fill='#9aa7b5' font-size='11'>12:15</text>
+<text x='555.6' y='348' text-anchor='middle' fill='#9aa7b5' font-size='11'>13:15</text>
+<text x='676.3' y='348' text-anchor='middle' fill='#9aa7b5' font-size='11'>14:15</text>
+<text x='796.9' y='348' text-anchor='middle' fill='#9aa7b5' font-size='11'>15:15</text>
+<line x1='58' x2='812' y1='123.7' y2='123.7' stroke='#6dd3ff' stroke-dasharray='3 5' opacity='.75'/>
+<rect x='814' y='111.7' width='58' height='24' rx='4' fill='#0ea5e9'/>
+<text x='843' y='127.7' text-anchor='middle' fill='#ffffff' font-size='12' font-weight='800'>24,297</text>
+<text x='58' y='22' fill='#e4edf4' font-size='15' font-weight='800'>NIFTY · 15m</text>
+</svg>
+    </div>
+    <div class="card chart-dark">
+      <h2>BANKNIFTY · Candlestick Tape</h2>
+      <svg class='tv-chart' viewBox='0 0 880 360' role='img' aria-label='BANKNIFTY intraday candlestick chart'>
+<rect width='100%' height='100%' rx='10' fill='#101722'/>
+<g stroke='#243142' stroke-width='1'>
+<line x1='58' x2='812' y1='26.0' y2='26.0'/>
+<line x1='58' x2='812' y1='100.0' y2='100.0'/>
+<line x1='58' x2='812' y1='174.0' y2='174.0'/>
+<line x1='58' x2='812' y1='248.0' y2='248.0'/>
+<line x1='58' x2='812' y1='322.0' y2='322.0'/>
+<line x1='73.1' x2='73.1' y1='26' y2='322'/>
+<line x1='163.6' x2='163.6' y1='26' y2='322'/>
+<line x1='254.0' x2='254.0' y1='26' y2='322'/>
+<line x1='344.5' x2='344.5' y1='26' y2='322'/>
+<line x1='435.0' x2='435.0' y1='26' y2='322'/>
+<line x1='525.5' x2='525.5' y1='26' y2='322'/>
+<line x1='616.0' x2='616.0' y1='26' y2='322'/>
+<line x1='706.4' x2='706.4' y1='26' y2='322'/>
+<line x1='796.9' x2='796.9' y1='26' y2='322'/>
+</g>
+<text x='822' y='30.0' fill='#9aa7b5' font-size='12'>57,274</text>
+<text x='822' y='104.0' fill='#9aa7b5' font-size='12'>57,138</text>
+<text x='822' y='178.0' fill='#9aa7b5' font-size='12'>57,003</text>
+<text x='822' y='252.0' fill='#9aa7b5' font-size='12'>56,867</text>
+<text x='822' y='326.0' fill='#9aa7b5' font-size='12'>56,731</text>
+<line x1='73.1' x2='73.1' y1='110.9' y2='246.4' stroke='#ef5350' stroke-width='1.4'/>
+<rect x='65.1' y='121.2' width='16.0' height='83.4' rx='2' fill='#ef5350'/>
+<line x1='103.2' x2='103.2' y1='182.8' y2='273.8' stroke='#ef5350' stroke-width='1.4'/>
+<rect x='95.2' y='204.9' width='16.0' height='60.4' rx='2' fill='#ef5350'/>
+<line x1='133.4' x2='133.4' y1='210.5' y2='283.6' stroke='#22c7a9' stroke-width='1.4'/>
+<rect x='125.4' y='216.4' width='16.0' height='49.4' rx='2' fill='#22c7a9'/>
+<line x1='163.6' x2='163.6' y1='208.2' y2='267.1' stroke='#ef5350' stroke-width='1.4'/>
+<rect x='155.6' y='215.8' width='16.0' height='48.9' rx='2' fill='#ef5350'/>
+<line x1='193.7' x2='193.7' y1='252.7' y2='285.6' stroke='#ef5350' stroke-width='1.4'/>
+<rect x='185.7' y='265.0' width='16.0' height='20.6' rx='2' fill='#ef5350'/>
+<line x1='223.9' x2='223.9' y1='246.5' y2='301.6' stroke='#22c7a9' stroke-width='1.4'/>
+<rect x='215.9' y='250.8' width='16.0' height='34.2' rx='2' fill='#22c7a9'/>
+<line x1='254.0' x2='254.0' y1='228.5' y2='258.4' stroke='#22c7a9' stroke-width='1.4'/>
+<rect x='246.0' y='241.6' width='16.0' height='9.3' rx='2' fill='#22c7a9'/>
+<line x1='284.2' x2='284.2' y1='219.9' y2='252.0' stroke='#22c7a9' stroke-width='1.4'/>
+<rect x='276.2' y='230.6' width='16.0' height='11.9' rx='2' fill='#22c7a9'/>
+<line x1='314.4' x2='314.4' y1='210.1' y2='242.6' stroke='#22c7a9' stroke-width='1.4'/>
+<rect x='306.4' y='224.0' width='16.0' height='5.6' rx='2' fill='#22c7a9'/>
+<line x1='344.5' x2='344.5' y1='210.7' y2='237.4' stroke='#ef5350' stroke-width='1.4'/>
+<rect x='336.5' y='223.3' width='16.0' height='12.2' rx='2' fill='#ef5350'/>
+<line x1='374.7' x2='374.7' y1='233.1' y2='272.9' stroke='#ef5350' stroke-width='1.4'/>
+<rect x='366.7' y='234.2' width='16.0' height='27.0' rx='2' fill='#ef5350'/>
+<line x1='404.8' x2='404.8' y1='238.4' y2='269.2' stroke='#22c7a9' stroke-width='1.4'/>
+<rect x='396.8' y='246.8' width='16.0' height='14.4' rx='2' fill='#22c7a9'/>
+<line x1='435.0' x2='435.0' y1='218.4' y2='251.3' stroke='#22c7a9' stroke-width='1.4'/>
+<rect x='427.0' y='225.0' width='16.0' height='21.7' rx='2' fill='#22c7a9'/>
+<line x1='465.2' x2='465.2' y1='100.9' y2='230.4' stroke='#22c7a9' stroke-width='1.4'/>
+<rect x='457.2' y='153.0' width='16.0' height='71.6' rx='2' fill='#22c7a9'/>
+<line x1='495.3' x2='495.3' y1='125.0' y2='163.2' stroke='#ef5350' stroke-width='1.4'/>
+<rect x='487.3' y='152.4' width='16.0' height='3.7' rx='2' fill='#ef5350'/>
+<line x1='525.5' x2='525.5' y1='152.3' y2='194.7' stroke='#ef5350' stroke-width='1.4'/>
+<rect x='517.5' y='155.8' width='16.0' height='10.3' rx='2' fill='#ef5350'/>
+<line x1='555.6' x2='555.6' y1='146.8' y2='176.7' stroke='#ef5350' stroke-width='1.4'/>
+<rect x='547.6' y='166.0' width='16.0' height='9.8' rx='2' fill='#ef5350'/>
+<line x1='585.8' x2='585.8' y1='150.4' y2='187.2' stroke='#22c7a9' stroke-width='1.4'/>
+<rect x='577.8' y='158.6' width='16.0' height='17.5' rx='2' fill='#22c7a9'/>
+<line x1='616.0' x2='616.0' y1='155.4' y2='193.0' stroke='#ef5350' stroke-width='1.4'/>
+<rect x='608.0' y='159.3' width='16.0' height='15.8' rx='2' fill='#ef5350'/>
+<line x1='646.1' x2='646.1' y1='165.6' y2='203.4' stroke='#ef5350' stroke-width='1.4'/>
+<rect x='638.1' y='175.5' width='16.0' height='22.1' rx='2' fill='#ef5350'/>
+<line x1='676.3' x2='676.3' y1='183.0' y2='213.5' stroke='#ef5350' stroke-width='1.4'/>
+<rect x='668.3' y='196.8' width='16.0' height='2.0' rx='2' fill='#ef5350'/>
+<line x1='706.4' x2='706.4' y1='161.1' y2='203.1' stroke='#22c7a9' stroke-width='1.4'/>
+<rect x='698.4' y='162.1' width='16.0' height='35.1' rx='2' fill='#22c7a9'/>
+<line x1='736.6' x2='736.6' y1='139.1' y2='168.3' stroke='#22c7a9' stroke-width='1.4'/>
+<rect x='728.6' y='155.9' width='16.0' height='6.2' rx='2' fill='#22c7a9'/>
+<line x1='766.8' x2='766.8' y1='71.3' y2='162.1' stroke='#22c7a9' stroke-width='1.4'/>
+<rect x='758.8' y='92.6' width='16.0' height='63.0' rx='2' fill='#22c7a9'/>
+<line x1='796.9' x2='796.9' y1='46.4' y2='136.3' stroke='#ef5350' stroke-width='1.4'/>
+<rect x='788.9' y='92.5' width='16.0' height='26.8' rx='2' fill='#ef5350'/>
+<text x='73.1' y='348' text-anchor='middle' fill='#9aa7b5' font-size='11'>09:15</text>
+<text x='193.7' y='348' text-anchor='middle' fill='#9aa7b5' font-size='11'>10:15</text>
+<text x='314.4' y='348' text-anchor='middle' fill='#9aa7b5' font-size='11'>11:15</text>
+<text x='435.0' y='348' text-anchor='middle' fill='#9aa7b5' font-size='11'>12:15</text>
+<text x='555.6' y='348' text-anchor='middle' fill='#9aa7b5' font-size='11'>13:15</text>
+<text x='676.3' y='348' text-anchor='middle' fill='#9aa7b5' font-size='11'>14:15</text>
+<text x='796.9' y='348' text-anchor='middle' fill='#9aa7b5' font-size='11'>15:15</text>
+<line x1='58' x2='812' y1='119.4' y2='119.4' stroke='#6dd3ff' stroke-dasharray='3 5' opacity='.75'/>
+<rect x='814' y='107.4' width='58' height='24' rx='4' fill='#0ea5e9'/>
+<text x='843' y='123.4' text-anchor='middle' fill='#ffffff' font-size='12' font-weight='800'>57,103</text>
+<text x='58' y='22' fill='#e4edf4' font-size='15' font-weight='800'>BANKNIFTY · 15m</text>
+</svg>
+    </div>
+  </section>
+
+  <section class="grid two section" id="breadth">
+    <div class="card">
+      <h2>Hourly Advance / Decline</h2>
+      <svg viewBox='0 0 880 280' role='img' aria-label='Hourly advance decline bars'>
+<rect width='100%' height='100%' rx='12' fill='#fbfcfc'/>
+<line x1='40' x2='840' y1='240' y2='240' stroke='#cad3d3'/>
+<rect x='60.6' y='194.8' width='29.7' height='45.2' rx='4' fill='#16a34a'/>
+<rect x='94.3' y='85.2' width='29.7' height='154.8' rx='4' fill='#dc2626'/>
+<text x='90.3' y='268' text-anchor='middle' font-size='11' fill='#667'>09:00</text>
+<rect x='174.9' y='194.8' width='29.7' height='45.2' rx='4' fill='#16a34a'/>
+<rect x='208.6' y='91.6' width='29.7' height='148.4' rx='4' fill='#dc2626'/>
+<text x='204.6' y='268' text-anchor='middle' font-size='11' fill='#667'>10:00</text>
+<rect x='289.1' y='136.8' width='29.7' height='103.2' rx='4' fill='#16a34a'/>
+<rect x='322.9' y='143.2' width='29.7' height='96.8' rx='4' fill='#dc2626'/>
+<text x='318.9' y='268' text-anchor='middle' font-size='11' fill='#667'>11:00</text>
+<rect x='403.4' y='78.7' width='29.7' height='161.3' rx='4' fill='#16a34a'/>
+<rect x='437.1' y='201.3' width='29.7' height='38.7' rx='4' fill='#dc2626'/>
+<text x='433.1' y='268' text-anchor='middle' font-size='11' fill='#667'>12:00</text>
+<rect x='517.7' y='201.3' width='29.7' height='38.7' rx='4' fill='#16a34a'/>
+<rect x='551.4' y='85.2' width='29.7' height='154.8' rx='4' fill='#dc2626'/>
+<text x='547.4' y='268' text-anchor='middle' font-size='11' fill='#667'>13:00</text>
+<rect x='632.0' y='149.7' width='29.7' height='90.3' rx='4' fill='#16a34a'/>
+<rect x='665.7' y='136.8' width='29.7' height='103.2' rx='4' fill='#dc2626'/>
+<text x='661.7' y='268' text-anchor='middle' font-size='11' fill='#667'>14:00</text>
+<rect x='746.3' y='123.9' width='29.7' height='116.1' rx='4' fill='#16a34a'/>
+<rect x='780.0' y='156.1' width='29.7' height='83.9' rx='4' fill='#dc2626'/>
+<text x='776.0' y='268' text-anchor='middle' font-size='11' fill='#667'>15:00</text>
+<text x='52' y='28' fill='#16a34a' font-size='13' font-weight='700'>Advances</text>
+<text x='150' y='28' fill='#dc2626' font-size='13' font-weight='700'>Declines</text>
+</svg>
+    </div>
+    <div class="card">
+      <h2>Sector Heatmap</h2>
+      <svg viewBox='0 0 880 330' role='img' aria-label='Sector heatmap'>
+<rect width='100%' height='100%' rx='12' fill='#fbfcfc'/>
+<rect x='18.0' y='18.0' width='162.4' height='62' rx='8' fill='rgba(185,28,28,0.95)'/>
+<text x='28.0' y='38.0' fill='#ffffff' font-size='12' font-weight='800'>Unclassified</text>
+<text x='28.0' y='60.0' fill='#ffffff' font-size='16' font-weight='900'>-0.51%</text>
+<text x='170.4' y='62.0' text-anchor='end' fill='#ffffff' font-size='11'>6/24</text>
+</svg>
+    </div>
+  </section>
+
+  <section class="card section" id="participation">
+    <h2>Participation Bubble Chart</h2>
+    <svg class='participation-map' viewBox='0 0 880 490' role='img' aria-label='Stock participation map by day move, technical score, and volume'>
+<rect width='100%' height='100%' rx='12' fill='#fbfcfc'/>
+<rect x='74' y='46' width='764' height='366' rx='8' fill='#ffffff' stroke='#dfe7e4'/>
+<rect x='417.8' y='46' width='420.2' height='109.4' fill='#ecfdf5' opacity='.42'/>
+<rect x='74' y='155.4' width='343.8' height='256.6' fill='#fff1f2' opacity='.5'/>
+<line x1='74' x2='838' y1='412' y2='412' stroke='#b9c6c2'/>
+<line x1='74' x2='74' y1='46' y2='412' stroke='#b9c6c2'/>
+<line x1='417.8' x2='417.8' y1='46' y2='412' stroke='#7b8b87' stroke-dasharray='4 5'/>
+<line x1='74' x2='838' y1='155.4' y2='155.4' stroke='#7b8b87' stroke-dasharray='4 5'/>
+<text x='830' y='64' text-anchor='end' fill='#166534' font-size='12' font-weight='800'>Strength + participation</text>
+<text x='82' y='402' fill='#991b1b' font-size='12' font-weight='800'>Pressure + weak score</text>
+<text x='74' y='24' fill='#172322' font-size='15' font-weight='900'>Participation Map</text>
+<text x='74' y='40' fill='#667370' font-size='12'>Day move vs technical score; circle area scales by stored intraday volume</text>
+<line x1='76.3' x2='76.3' y1='412' y2='417' stroke='#8fa09b'/>
+<text x='76.3' y='433' text-anchor='middle' fill='#667370' font-size='11'>-5.9%</text>
+<line x1='417.8' x2='417.8' y1='412' y2='417' stroke='#8fa09b'/>
+<text x='417.8' y='433' text-anchor='middle' fill='#667370' font-size='11'>0.0%</text>
+<line x1='840.3' x2='840.3' y1='412' y2='417' stroke='#8fa09b'/>
+<text x='840.3' y='433' text-anchor='middle' fill='#667370' font-size='11'>+7.3%</text>
+<line x1='69' x2='74' y1='411.3' y2='411.3' stroke='#8fa09b'/>
+<text x='65' y='415.3' text-anchor='end' fill='#667370' font-size='11'>28</text>
+<line x1='69' x2='74' y1='155.0' y2='155.0' stroke='#8fa09b'/>
+<text x='65' y='159.0' text-anchor='end' fill='#667370' font-size='11'>74</text>
+<line x1='69' x2='74' y1='43.6' y2='43.6' stroke='#8fa09b'/>
+<text x='65' y='47.6' text-anchor='end' fill='#667370' font-size='11'>94</text>
+<text x='456' y='446' text-anchor='middle' fill='#4c5b58' font-size='12' font-weight='800'>Day % move</text>
+<text x='24' y='229' fill='#4c5b58' font-size='12' font-weight='800' text-anchor='middle' transform='rotate(-90 24 229)'>Technical Score</text>
+<g id='bubble-tooltip' visibility='hidden' pointer-events='none'>
+<rect id='tt-bg' x='0' y='0' width='180' height='80' rx='6' fill='#1a2632' fill-opacity='.94'/>
+<text id='tt-sym' x='10' y='20' fill='#fff' font-size='13' font-weight='900'></text>
+<text id='tt-move' x='10' y='38' fill='#9ca3af' font-size='11'></text>
+<text id='tt-tech' x='10' y='52' fill='#9ca3af' font-size='11'></text>
+<text id='tt-vol' x='10' y='66' fill='#9ca3af' font-size='11'></text>
+</g>
+<a href='https://www.nseindia.com/get-quotes/equity?symbol=ADANIPOWER' target='_blank' rel='noopener'>
+<circle class='bubble' cx='417.8' cy='228.7' r='25.0' fill='#0f7a5f' fill-opacity='0.74' stroke='#0b5947' stroke-opacity='.55' stroke-width='1.2' style='cursor:pointer' data-sym='ADANIPOWER' data-move='0.00%' data-tech='60.8' data-vol='165.7L'/>
+</a>
+<a href='https://www.nseindia.com/get-quotes/equity?symbol=63MOONS' target='_blank' rel='noopener'>
+<circle class='bubble' cx='838.0' cy='179.7' r='20.2' fill='#0f7a5f' fill-opacity='0.74' stroke='#0b5947' stroke-opacity='.55' stroke-width='1.2' style='cursor:pointer' data-sym='63MOONS' data-move='+7.26%' data-tech='69.6' data-vol='95.4L'/>
+</a>
+<a href='https://www.nseindia.com/get-quotes/equity?symbol=ACMESOLAR' target='_blank' rel='noopener'>
+<circle class='bubble' cx='473.4' cy='88.4' r='15.7' fill='#0f7a5f' fill-opacity='0.74' stroke='#0b5947' stroke-opacity='.55' stroke-width='1.2' style='cursor:pointer' data-sym='ACMESOLAR' data-move='+0.96%' data-tech='86.0' data-vol='47.2L'/>
+</a>
+<a href='https://www.nseindia.com/get-quotes/equity?symbol=ADANIPORTS' target='_blank' rel='noopener'>
+<circle class='bubble' cx='238.4' cy='272.6' r='15.2' fill='#b4232b' fill-opacity='0.74' stroke='#7f1d1d' stroke-opacity='.55' stroke-width='1.2' style='cursor:pointer' data-sym='ADANIPORTS' data-move='-3.10%' data-tech='52.9' data-vol='43.4L'/>
+</a>
+<a href='https://www.nseindia.com/get-quotes/equity?symbol=AEQUS' target='_blank' rel='noopener'>
+<circle class='bubble' cx='722.8' cy='193.3' r='14.5' fill='#0f7a5f' fill-opacity='0.74' stroke='#0b5947' stroke-opacity='.55' stroke-width='1.2' style='cursor:pointer' data-sym='AEQUS' data-move='+5.27%' data-tech='67.1' data-vol='37.1L'/>
+</a>
+<a href='https://www.nseindia.com/get-quotes/equity?symbol=AEROFLEX' target='_blank' rel='noopener'>
+<circle class='bubble' cx='74.0' cy='124.4' r='10.8' fill='#b4232b' fill-opacity='0.74' stroke='#7f1d1d' stroke-opacity='.55' stroke-width='1.2' style='cursor:pointer' data-sym='AEROFLEX' data-move='-5.94%' data-tech='79.5' data-vol='14.1L'/>
+</a>
+<a href='https://www.nseindia.com/get-quotes/equity?symbol=ADANIENSOL' target='_blank' rel='noopener'>
+<circle class='bubble' cx='392.9' cy='57.9' r='10.6' fill='#b4232b' fill-opacity='0.74' stroke='#7f1d1d' stroke-opacity='.55' stroke-width='1.2' style='cursor:pointer' data-sym='ADANIENSOL' data-move='-0.43%' data-tech='91.4' data-vol='12.9L'/>
+</a>
+<a href='https://www.nseindia.com/get-quotes/equity?symbol=ADANIENT' target='_blank' rel='noopener'>
+<circle class='bubble' cx='452.5' cy='91.7' r='10.4' fill='#0f7a5f' fill-opacity='0.74' stroke='#0b5947' stroke-opacity='.55' stroke-width='1.2' style='cursor:pointer' data-sym='ADANIENT' data-move='+0.60%' data-tech='85.4' data-vol='12.1L'/>
+</a>
+<a href='https://www.nseindia.com/get-quotes/equity?symbol=360ONE' target='_blank' rel='noopener'>
+<circle class='bubble' cx='318.2' cy='146.4' r='10.2' fill='#b4232b' fill-opacity='0.74' stroke='#7f1d1d' stroke-opacity='.55' stroke-width='1.2' style='cursor:pointer' data-sym='360ONE' data-move='-1.72%' data-tech='75.5' data-vol='11.2L'/>
+</a>
+<a href='https://www.nseindia.com/get-quotes/equity?symbol=ABCAPITAL' target='_blank' rel='noopener'>
+<circle class='bubble' cx='401.0' cy='90.7' r='10.1' fill='#b4232b' fill-opacity='0.74' stroke='#7f1d1d' stroke-opacity='.55' stroke-width='1.2' style='cursor:pointer' data-sym='ABCAPITAL' data-move='-0.29%' data-tech='85.5' data-vol='10.9L'/>
+</a>
+<a href='https://www.nseindia.com/get-quotes/equity?symbol=ADANIGREEN' target='_blank' rel='noopener'>
+<circle class='bubble' cx='350.7' cy='220.9' r='10.1' fill='#b4232b' fill-opacity='0.74' stroke='#7f1d1d' stroke-opacity='.55' stroke-width='1.2' style='cursor:pointer' data-sym='ADANIGREEN' data-move='-1.16%' data-tech='62.2' data-vol='10.9L'/>
+</a>
+<a href='https://www.nseindia.com/get-quotes/equity?symbol=AEGISVOPAK' target='_blank' rel='noopener'>
+<circle class='bubble' cx='311.9' cy='117.4' r='8.9' fill='#b4232b' fill-opacity='0.74' stroke='#7f1d1d' stroke-opacity='.55' stroke-width='1.2' style='cursor:pointer' data-sym='AEGISVOPAK' data-move='-1.83%' data-tech='80.8' data-vol='6.2L'/>
+</a>
+<a href='https://www.nseindia.com/get-quotes/equity?symbol=ADVANCE' target='_blank' rel='noopener'>
+<circle class='bubble' cx='393.5' cy='239.1' r='8.6' fill='#b4232b' fill-opacity='0.74' stroke='#7f1d1d' stroke-opacity='.55' stroke-width='1.2' style='cursor:pointer' data-sym='ADVANCE' data-move='-0.42%' data-tech='58.9' data-vol='5.4L'/>
+</a>
+<a href='https://www.nseindia.com/get-quotes/equity?symbol=AARTIIND' target='_blank' rel='noopener'>
+<circle class='bubble' cx='346.6' cy='117.0' r='8.3' fill='#b4232b' fill-opacity='0.74' stroke='#7f1d1d' stroke-opacity='.55' stroke-width='1.2' style='cursor:pointer' data-sym='AARTIIND' data-move='-1.23%' data-tech='80.8' data-vol='4.5L'/>
+</a>
+<a href='https://www.nseindia.com/get-quotes/equity?symbol=AETHER' target='_blank' rel='noopener'>
+<circle class='bubble' cx='387.7' cy='54.1' r='8.2' fill='#b4232b' fill-opacity='0.74' stroke='#7f1d1d' stroke-opacity='.55' stroke-width='1.2' style='cursor:pointer' data-sym='AETHER' data-move='-0.52%' data-tech='92.1' data-vol='4.3L'/>
+</a>
+<a href='https://www.nseindia.com/get-quotes/equity?symbol=AADHARHFC' target='_blank' rel='noopener'>
+<circle class='bubble' cx='469.3' cy='349.4' r='8.2' fill='#0f7a5f' fill-opacity='0.74' stroke='#0b5947' stroke-opacity='.55' stroke-width='1.2' style='cursor:pointer' data-sym='AADHARHFC' data-move='+0.89%' data-tech='39.1' data-vol='4.2L'/>
+</a>
+<a href='https://www.nseindia.com/get-quotes/equity?symbol=AEGISLOG' target='_blank' rel='noopener'>
+<circle class='bubble' cx='273.7' cy='46.0' r='8.1' fill='#b4232b' fill-opacity='0.74' stroke='#7f1d1d' stroke-opacity='.55' stroke-width='1.2' style='cursor:pointer' data-sym='AEGISLOG' data-move='-2.49%' data-tech='93.6' data-vol='4.1L'/>
+</a>
+<a href='https://www.nseindia.com/get-quotes/equity?symbol=ACUTAAS' target='_blank' rel='noopener'>
+<circle class='bubble' cx='292.2' cy='161.8' r='7.9' fill='#b4232b' fill-opacity='0.74' stroke='#7f1d1d' stroke-opacity='.55' stroke-width='1.2' style='cursor:pointer' data-sym='ACUTAAS' data-move='-2.17%' data-tech='72.8' data-vol='3.6L'/>
+</a>
+<a href='https://www.nseindia.com/get-quotes/equity?symbol=ABB' target='_blank' rel='noopener'>
+<circle class='bubble' cx='386.5' cy='83.0' r='7.8' fill='#b4232b' fill-opacity='0.74' stroke='#7f1d1d' stroke-opacity='.55' stroke-width='1.2' style='cursor:pointer' data-sym='ABB' data-move='-0.54%' data-tech='86.9' data-vol='3.3L'/>
+</a>
+<a href='https://www.nseindia.com/get-quotes/equity?symbol=ABDL' target='_blank' rel='noopener'>
+<circle class='bubble' cx='386.5' cy='144.3' r='7.7' fill='#b4232b' fill-opacity='0.74' stroke='#7f1d1d' stroke-opacity='.55' stroke-width='1.2' style='cursor:pointer' data-sym='ABDL' data-move='-0.54%' data-tech='75.9' data-vol='3.0L'/>
+</a>
+<a href='https://www.nseindia.com/get-quotes/equity?symbol=AEROENTER' target='_blank' rel='noopener'>
+<circle class='bubble' cx='240.7' cy='82.4' r='7.7' fill='#b4232b' fill-opacity='0.74' stroke='#7f1d1d' stroke-opacity='.55' stroke-width='1.2' style='cursor:pointer' data-sym='AEROENTER' data-move='-3.06%' data-tech='87.0' data-vol='2.9L'/>
+</a>
+<a href='https://www.nseindia.com/get-quotes/equity?symbol=ACE' target='_blank' rel='noopener'>
+<circle class='bubble' cx='483.8' cy='118.6' r='7.3' fill='#0f7a5f' fill-opacity='0.74' stroke='#0b5947' stroke-opacity='.55' stroke-width='1.2' style='cursor:pointer' data-sym='ACE' data-move='+1.14%' data-tech='80.5' data-vol='2.2L'/>
+</a>
+<a href='https://www.nseindia.com/get-quotes/equity?symbol=AARTIDRUGS' target='_blank' rel='noopener'>
+<circle class='bubble' cx='413.7' cy='136.1' r='7.0' fill='#b4232b' fill-opacity='0.74' stroke='#7f1d1d' stroke-opacity='.55' stroke-width='1.2' style='cursor:pointer' data-sym='AARTIDRUGS' data-move='-0.07%' data-tech='77.4' data-vol='1.7L'/>
+</a>
+<a href='https://www.nseindia.com/get-quotes/equity?symbol=ACC' target='_blank' rel='noopener'>
+<circle class='bubble' cx='360.5' cy='398.9' r='7.0' fill='#b4232b' fill-opacity='0.74' stroke='#7f1d1d' stroke-opacity='.55' stroke-width='1.2' style='cursor:pointer' data-sym='ACC' data-move='-0.99%' data-tech='30.2' data-vol='1.6L'/>
+</a>
+<a href='https://www.nseindia.com/get-quotes/equity?symbol=ACI' target='_blank' rel='noopener'>
+<circle class='bubble' cx='336.2' cy='277.4' r='6.7' fill='#b4232b' fill-opacity='0.74' stroke='#7f1d1d' stroke-opacity='.55' stroke-width='1.2' style='cursor:pointer' data-sym='ACI' data-move='-1.41%' data-tech='52.0' data-vol='1.2L'/>
+</a>
+<a href='https://www.nseindia.com/get-quotes/equity?symbol=20MICRONS' target='_blank' rel='noopener'>
+<circle class='bubble' cx='414.3' cy='155.4' r='6.7' fill='#b4232b' fill-opacity='0.74' stroke='#7f1d1d' stroke-opacity='.55' stroke-width='1.2' style='cursor:pointer' data-sym='20MICRONS' data-move='-0.06%' data-tech='73.9' data-vol='1.2L'/>
+</a>
+<a href='https://www.nseindia.com/get-quotes/equity?symbol=ADVENZYMES' target='_blank' rel='noopener'>
+<circle class='bubble' cx='372.1' cy='290.5' r='6.7' fill='#b4232b' fill-opacity='0.74' stroke='#7f1d1d' stroke-opacity='.55' stroke-width='1.2' style='cursor:pointer' data-sym='ADVENZYMES' data-move='-0.79%' data-tech='49.7' data-vol='1.2L'/>
+</a>
+<a href='https://www.nseindia.com/get-quotes/equity?symbol=ADSL' target='_blank' rel='noopener'>
+<circle class='bubble' cx='384.2' cy='407.6' r='6.4' fill='#b4232b' fill-opacity='0.74' stroke='#7f1d1d' stroke-opacity='.55' stroke-width='1.2' style='cursor:pointer' data-sym='ADSL' data-move='-0.58%' data-tech='28.7' data-vol='0.9L'/>
+</a>
+<a href='https://www.nseindia.com/get-quotes/equity?symbol=AARTIPHARM' target='_blank' rel='noopener'>
+<circle class='bubble' cx='359.3' cy='412.0' r='6.4' fill='#b4232b' fill-opacity='0.74' stroke='#7f1d1d' stroke-opacity='.55' stroke-width='1.2' style='cursor:pointer' data-sym='AARTIPHARM' data-move='-1.01%' data-tech='27.9' data-vol='0.8L'/>
+</a>
+<a href='https://www.nseindia.com/get-quotes/equity?symbol=ABSLAMC' target='_blank' rel='noopener'>
+<circle class='bubble' cx='381.9' cy='244.8' r='6.3' fill='#b4232b' fill-opacity='0.74' stroke='#7f1d1d' stroke-opacity='.55' stroke-width='1.2' style='cursor:pointer' data-sym='ABSLAMC' data-move='-0.62%' data-tech='57.9' data-vol='0.7L'/>
+</a>
+<a href='https://www.nseindia.com/get-quotes/equity?symbol=ADVENTHTL' target='_blank' rel='noopener'>
+<circle class='bubble' cx='365.1' cy='308.0' r='6.0' fill='#b4232b' fill-opacity='0.74' stroke='#7f1d1d' stroke-opacity='.55' stroke-width='1.2' style='cursor:pointer' data-sym='ADVENTHTL' data-move='-0.91%' data-tech='46.5' data-vol='0.4L'/>
+</a>
+<rect x='446.8' y='222.7' width='72' height='14' rx='2' fill='#fff' fill-opacity='.85'/>
+<text x='448.8' y='232.7' text-anchor='start' fill='#172322' font-size='10.5' font-weight='700'>ADANIPOWER</text>
+<rect x='493.0' y='82.4' width='66' height='14' rx='2' fill='#fff' fill-opacity='.85'/>
+<text x='495.0' y='92.4' text-anchor='start' fill='#172322' font-size='10.5' font-weight='700'>ACMESOLAR</text>
+<rect x='257.6' y='266.6' width='72' height='14' rx='2' fill='#fff' fill-opacity='.85'/>
+<text x='259.6' y='276.6' text-anchor='start' fill='#172322' font-size='10.5' font-weight='700'>ADANIPORTS</text>
+<rect x='741.3' y='187.3' width='42' height='14' rx='2' fill='#fff' fill-opacity='.85'/>
+<text x='743.3' y='197.3' text-anchor='start' fill='#172322' font-size='10.5' font-weight='700'>AEQUS</text>
+<rect x='88.8' y='118.4' width='60' height='14' rx='2' fill='#fff' fill-opacity='.85'/>
+<text x='90.8' y='128.4' text-anchor='start' fill='#172322' font-size='10.5' font-weight='700'>AEROFLEX</text>
+<rect x='283.8' y='56.1' width='60' height='14' rx='2' fill='#fff' fill-opacity='.85'/>
+<text x='285.8' y='66.1' text-anchor='start' fill='#172322' font-size='10.5' font-weight='700'>AEGISLOG</text>
+<rect x='304.1' y='155.8' width='54' height='14' rx='2' fill='#fff' fill-opacity='.85'/>
+<text x='306.1' y='165.8' text-anchor='start' fill='#172322' font-size='10.5' font-weight='700'>ACUTAAS</text>
+<rect x='252.3' y='76.4' width='66' height='14' rx='2' fill='#fff' fill-opacity='.85'/>
+<text x='254.3' y='86.4' text-anchor='start' fill='#172322' font-size='10.5' font-weight='700'>AEROENTER</text>
+<circle cx='674' cy='432' r='15.0' fill='none' stroke='#71827e' stroke-width='1.1'/>
+<text x='674' y='460' text-anchor='middle' fill='#667370' font-size='10'>41L</text>
+<circle cx='732' cy='432' r='20.5' fill='none' stroke='#71827e' stroke-width='1.1'/>
+<text x='732' y='460' text-anchor='middle' fill='#667370' font-size='10'>99L</text>
+<circle cx='790' cy='432' r='25.0' fill='none' stroke='#71827e' stroke-width='1.1'/>
+<text x='790' y='460' text-anchor='middle' fill='#667370' font-size='10'>166L</text>
+<text x='646' y='436' text-anchor='end' fill='#4c5b58' font-size='11' font-weight='800'>Volume</text>
+<circle cx='696' cy='26' r='6' fill='#0f7a5f' fill-opacity='.78'/><text x='708' y='30' fill='#4c5b58' font-size='11'>Positive</text>
+<circle cx='766' cy='26' r='6' fill='#b4232b' fill-opacity='.78'/><text x='778' y='30' fill='#4c5b58' font-size='11'>Negative</text>
+</svg>
+    <div class="bubble-note">Bubble size represents stored intraday volume. X-axis is day move; Y-axis is latest technical score where available.</div>
+  </section>
+
+  <section class="card section">
+    <h2>Hour-By-Hour Tape</h2>
+    <div class="table-scroll"><table><thead><tr><th>Hour</th><th>NIFTY</th><th>BANKNIFTY</th><th>A/D</th><th>Adv %</th><th>Avg Stock</th><th>Volume</th></tr></thead><tbody><tr><td>09:00</td><td class='pos'>+0.10%</td><td class='neg'>-0.31%</td><td>7 / 24</td><td><span class='heat r2'>+22.6%</span></td><td class='neg'>-0.57%</td><td>119.7L</td></tr><tr><td>10:00</td><td class='neg'>-0.08%</td><td class='neg'>-0.08%</td><td>7 / 23</td><td><span class='heat r2'>+23.3%</span></td><td class='neg'>-0.27%</td><td>71.8L</td></tr><tr><td>11:00</td><td class='flat'>+0.03%</td><td class='neg'>-0.06%</td><td>16 / 15</td><td><span class='heat n'>+51.6%</span></td><td class='pos'>+0.11%</td><td>50.4L</td></tr><tr><td>12:00</td><td class='pos'>+0.14%</td><td class='pos'>+0.34%</td><td>25 / 6</td><td><span class='heat g1'>+80.6%</span></td><td class='pos'>+0.39%</td><td>70.5L</td></tr><tr><td>13:00</td><td class='flat'>-0.05%</td><td class='neg'>-0.06%</td><td>6 / 24</td><td><span class='heat r2'>+20.0%</span></td><td class='neg'>-0.21%</td><td>53.6L</td></tr><tr><td>14:00</td><td class='flat'>-0.04%</td><td class='pos'>+0.06%</td><td>14 / 16</td><td><span class='heat n'>+46.7%</span></td><td class='flat'>+0.03%</td><td>69.6L</td></tr><tr><td>15:00</td><td class='pos'>+0.10%</td><td class='pos'>+0.12%</td><td>18 / 13</td><td><span class='heat g2'>+58.1%</span></td><td class='pos'>+0.07%</td><td>78.8L</td></tr></tbody></table></div>
+  </section>
+
+  <section class="card section" id="leaders">
+    <h2>Hourly Leadership And Pressure Points</h2>
+    <div class="table-scroll"><table><thead><tr><th>Hour</th><th>Top Gainers</th><th>Top Losers</th><th>Volume Leaders</th></tr></thead><tbody><tr><td>09:00</td><td>63MOONS +2.32%, AEQUS +2.12%, AETHER +1.73%</td><td>AEROFLEX -4.47%, ACUTAAS -2.79%, ADANIPORTS -2.10%</td><td>ADANIPOWER 52.6L, ACMESOLAR 19.3L, ADANIPORTS 10.7L</td></tr>
+<tr><td>10:00</td><td>AEROFLEX +1.49%, ACMESOLAR +1.44%, 20MICRONS +0.84%</td><td>63MOONS -2.49%, 360ONE -1.55%, AETHER -1.41%</td><td>ADANIPOWER 31.7L, ACMESOLAR 8.1L, AEQUS 7.0L</td></tr>
+<tr><td>11:00</td><td>63MOONS +4.14%, ADVANCE +2.23%, AEQUS +1.51%</td><td>AETHER -1.27%, AEROENTER -1.22%, ADVENTHTL -0.87%</td><td>ADANIPOWER 13.7L, AEQUS 6.9L, ADANIPORTS 5.3L</td></tr>
+<tr><td>12:00</td><td>63MOONS +3.50%, AEQUS +1.61%, AADHARHFC +1.13%</td><td>AEGISLOG -0.70%, AEROFLEX -0.61%, ACUTAAS -0.55%</td><td>63MOONS 34.2L, ADANIPOWER 12.8L, AEQUS 4.1L</td></tr>
+<tr><td>13:00</td><td>AADHARHFC +0.71%, 360ONE +0.40%, ACMESOLAR +0.10%</td><td>ADVANCE -1.06%, AEGISVOPAK -0.78%, AEGISLOG -0.76%</td><td>63MOONS 24.4L, ADANIPOWER 8.8L, ACMESOLAR 3.5L</td></tr>
+<tr><td>14:00</td><td>ACUTAAS +1.36%, ACE +1.31%, AEQUS +1.24%</td><td>AARTIDRUGS -0.91%, AEGISLOG -0.87%, AETHER -0.71%</td><td>ADANIPOWER 19.8L, 63MOONS 18.2L, ADANIPORTS 6.7L</td></tr>
+<tr><td>15:00</td><td>ACE +1.48%, AEGISLOG +0.72%, ACUTAAS +0.70%</td><td>AEROFLEX -1.04%, AEROENTER -0.92%, ADVANCE -0.83%</td><td>ADANIPOWER 26.3L, 63MOONS 9.4L, ADANIPORTS 8.4L</td></tr></tbody></table></div>
+  </section>
+
+  <section class="grid two section" id="stocks">
+    <div class="card">
+      <h2>Top Advancers</h2>
+      <div class="table-scroll"><table><thead><tr><th>Symbol</th><th>Sector</th><th>Day %</th><th>Volume</th><th>Stage</th><th>Signal</th></tr></thead><tbody><tr class='clickable-row' data-symbol='63MOONS'><td><button class='stock-link' type='button' data-symbol='63MOONS' aria-label='Show 63MOONS detail'>63MOONS</button></td><td>Unclassified</td><td class='pos'>+7.26%</td><td>95.4L</td><td>STAGE_1</td><td>HOLD</td></tr>
+<tr class='clickable-row' data-symbol='AEQUS'><td><button class='stock-link' type='button' data-symbol='AEQUS' aria-label='Show AEQUS detail'>AEQUS</button></td><td>Unclassified</td><td class='pos'>+5.27%</td><td>37.1L</td><td>STAGE_1</td><td>HOLD</td></tr>
+<tr class='clickable-row' data-symbol='ACE'><td><button class='stock-link' type='button' data-symbol='ACE' aria-label='Show ACE detail'>ACE</button></td><td>Unclassified</td><td class='pos'>+1.14%</td><td>2.2L</td><td>STAGE_1</td><td>HOLD</td></tr>
+<tr class='clickable-row' data-symbol='ACMESOLAR'><td><button class='stock-link' type='button' data-symbol='ACMESOLAR' aria-label='Show ACMESOLAR detail'>ACMESOLAR</button></td><td>Unclassified</td><td class='pos'>+0.96%</td><td>47.2L</td><td>STAGE_2</td><td>BUY</td></tr>
+<tr class='clickable-row' data-symbol='AADHARHFC'><td><button class='stock-link' type='button' data-symbol='AADHARHFC' aria-label='Show AADHARHFC detail'>AADHARHFC</button></td><td>Unclassified</td><td class='pos'>+0.89%</td><td>4.2L</td><td>STAGE_3</td><td>HOLD</td></tr>
+<tr class='clickable-row' data-symbol='ADANIENT'><td><button class='stock-link' type='button' data-symbol='ADANIENT' aria-label='Show ADANIENT detail'>ADANIENT</button></td><td>Unclassified</td><td class='pos'>+0.60%</td><td>12.1L</td><td>STAGE_2</td><td>BUY</td></tr>
+<tr class='clickable-row' data-symbol='20MICRONS'><td><button class='stock-link' type='button' data-symbol='20MICRONS' aria-label='Show 20MICRONS detail'>20MICRONS</button></td><td>Unclassified</td><td class='pos'>-0.06%</td><td>1.2L</td><td>STAGE_1</td><td>HOLD</td></tr>
+<tr class='clickable-row' data-symbol='AARTIDRUGS'><td><button class='stock-link' type='button' data-symbol='AARTIDRUGS' aria-label='Show AARTIDRUGS detail'>AARTIDRUGS</button></td><td>Unclassified</td><td class='pos'>-0.07%</td><td>1.7L</td><td>STAGE_1</td><td>HOLD</td></tr>
+<tr class='clickable-row' data-symbol='ABCAPITAL'><td><button class='stock-link' type='button' data-symbol='ABCAPITAL' aria-label='Show ABCAPITAL detail'>ABCAPITAL</button></td><td>Unclassified</td><td class='pos'>-0.29%</td><td>10.9L</td><td>STAGE_2</td><td>BUY</td></tr>
+<tr class='clickable-row' data-symbol='ADVANCE'><td><button class='stock-link' type='button' data-symbol='ADVANCE' aria-label='Show ADVANCE detail'>ADVANCE</button></td><td>Unclassified</td><td class='pos'>-0.42%</td><td>5.4L</td><td>STAGE_3</td><td>HOLD</td></tr></tbody></table></div>
+    </div>
+    <div class="card">
+      <h2>Top Decliners</h2>
+      <div class="table-scroll"><table><thead><tr><th>Symbol</th><th>Sector</th><th>Day %</th><th>Volume</th><th>Stage</th><th>Signal</th></tr></thead><tbody><tr class='clickable-row' data-symbol='AEROFLEX'><td><button class='stock-link' type='button' data-symbol='AEROFLEX' aria-label='Show AEROFLEX detail'>AEROFLEX</button></td><td>Unclassified</td><td class='neg'>-5.94%</td><td>14.1L</td><td>STAGE_3</td><td>HOLD</td></tr>
+<tr class='clickable-row' data-symbol='ADANIPORTS'><td><button class='stock-link' type='button' data-symbol='ADANIPORTS' aria-label='Show ADANIPORTS detail'>ADANIPORTS</button></td><td>Unclassified</td><td class='neg'>-3.10%</td><td>43.4L</td><td>STAGE_3</td><td>HOLD</td></tr>
+<tr class='clickable-row' data-symbol='AEROENTER'><td><button class='stock-link' type='button' data-symbol='AEROENTER' aria-label='Show AEROENTER detail'>AEROENTER</button></td><td>Unclassified</td><td class='neg'>-3.06%</td><td>2.9L</td><td>STAGE_2</td><td>BUY</td></tr>
+<tr class='clickable-row' data-symbol='AEGISLOG'><td><button class='stock-link' type='button' data-symbol='AEGISLOG' aria-label='Show AEGISLOG detail'>AEGISLOG</button></td><td>Unclassified</td><td class='neg'>-2.49%</td><td>4.1L</td><td>STAGE_2</td><td>BUY</td></tr>
+<tr class='clickable-row' data-symbol='ACUTAAS'><td><button class='stock-link' type='button' data-symbol='ACUTAAS' aria-label='Show ACUTAAS detail'>ACUTAAS</button></td><td>Unclassified</td><td class='neg'>-2.17%</td><td>3.6L</td><td>STAGE_3</td><td>HOLD</td></tr>
+<tr class='clickable-row' data-symbol='AEGISVOPAK'><td><button class='stock-link' type='button' data-symbol='AEGISVOPAK' aria-label='Show AEGISVOPAK detail'>AEGISVOPAK</button></td><td>Unclassified</td><td class='neg'>-1.83%</td><td>6.2L</td><td>STAGE_1</td><td>HOLD</td></tr>
+<tr class='clickable-row' data-symbol='360ONE'><td><button class='stock-link' type='button' data-symbol='360ONE' aria-label='Show 360ONE detail'>360ONE</button></td><td>Unclassified</td><td class='neg'>-1.72%</td><td>11.2L</td><td>STAGE_1</td><td>HOLD</td></tr>
+<tr class='clickable-row' data-symbol='ACI'><td><button class='stock-link' type='button' data-symbol='ACI' aria-label='Show ACI detail'>ACI</button></td><td>Unclassified</td><td class='neg'>-1.41%</td><td>1.2L</td><td>STAGE_3</td><td>HOLD</td></tr>
+<tr class='clickable-row' data-symbol='AARTIIND'><td><button class='stock-link' type='button' data-symbol='AARTIIND' aria-label='Show AARTIIND detail'>AARTIIND</button></td><td>Unclassified</td><td class='neg'>-1.23%</td><td>4.5L</td><td>STAGE_2</td><td>BUY</td></tr>
+<tr class='clickable-row' data-symbol='ADANIGREEN'><td><button class='stock-link' type='button' data-symbol='ADANIGREEN' aria-label='Show ADANIGREEN detail'>ADANIGREEN</button></td><td>Unclassified</td><td class='neg'>-1.16%</td><td>10.9L</td><td>STAGE_3</td><td>HOLD</td></tr></tbody></table></div>
+    </div>
+  </section>
+
+  <section class="grid two section">
+    <div class="card">
+      <h2>Most Active Detail Panel</h2>
+      <div class="table-scroll"><table><thead><tr><th>Most Active</th><th>Sector</th><th>Day %</th><th>Volume</th><th>Stage</th><th>Signal</th></tr></thead><tbody><tr class='clickable-row' data-symbol='ADANIPOWER'><td><button class='stock-link' type='button' data-symbol='ADANIPOWER' aria-label='Show ADANIPOWER detail'>ADANIPOWER</button></td><td>Unclassified</td><td class='flat'>0.00%</td><td>165.7L</td><td>STAGE_3</td><td>HOLD</td></tr>
+<tr class='clickable-row' data-symbol='63MOONS'><td><button class='stock-link' type='button' data-symbol='63MOONS' aria-label='Show 63MOONS detail'>63MOONS</button></td><td>Unclassified</td><td class='flat'>+7.26%</td><td>95.4L</td><td>STAGE_1</td><td>HOLD</td></tr>
+<tr class='clickable-row' data-symbol='ACMESOLAR'><td><button class='stock-link' type='button' data-symbol='ACMESOLAR' aria-label='Show ACMESOLAR detail'>ACMESOLAR</button></td><td>Unclassified</td><td class='flat'>+0.96%</td><td>47.2L</td><td>STAGE_2</td><td>BUY</td></tr>
+<tr class='clickable-row' data-symbol='ADANIPORTS'><td><button class='stock-link' type='button' data-symbol='ADANIPORTS' aria-label='Show ADANIPORTS detail'>ADANIPORTS</button></td><td>Unclassified</td><td class='flat'>-3.10%</td><td>43.4L</td><td>STAGE_3</td><td>HOLD</td></tr>
+<tr class='clickable-row' data-symbol='AEQUS'><td><button class='stock-link' type='button' data-symbol='AEQUS' aria-label='Show AEQUS detail'>AEQUS</button></td><td>Unclassified</td><td class='flat'>+5.27%</td><td>37.1L</td><td>STAGE_1</td><td>HOLD</td></tr>
+<tr class='clickable-row' data-symbol='AEROFLEX'><td><button class='stock-link' type='button' data-symbol='AEROFLEX' aria-label='Show AEROFLEX detail'>AEROFLEX</button></td><td>Unclassified</td><td class='flat'>-5.94%</td><td>14.1L</td><td>STAGE_3</td><td>HOLD</td></tr>
+<tr class='clickable-row' data-symbol='ADANIENSOL'><td><button class='stock-link' type='button' data-symbol='ADANIENSOL' aria-label='Show ADANIENSOL detail'>ADANIENSOL</button></td><td>Unclassified</td><td class='flat'>-0.43%</td><td>12.9L</td><td>STAGE_2</td><td>BUY</td></tr>
+<tr class='clickable-row' data-symbol='ADANIENT'><td><button class='stock-link' type='button' data-symbol='ADANIENT' aria-label='Show ADANIENT detail'>ADANIENT</button></td><td>Unclassified</td><td class='flat'>+0.60%</td><td>12.1L</td><td>STAGE_2</td><td>BUY</td></tr>
+<tr class='clickable-row' data-symbol='360ONE'><td><button class='stock-link' type='button' data-symbol='360ONE' aria-label='Show 360ONE detail'>360ONE</button></td><td>Unclassified</td><td class='flat'>-1.72%</td><td>11.2L</td><td>STAGE_1</td><td>HOLD</td></tr>
+<tr class='clickable-row' data-symbol='ABCAPITAL'><td><button class='stock-link' type='button' data-symbol='ABCAPITAL' aria-label='Show ABCAPITAL detail'>ABCAPITAL</button></td><td>Unclassified</td><td class='flat'>-0.29%</td><td>10.9L</td><td>STAGE_2</td><td>BUY</td></tr>
+<tr class='clickable-row' data-symbol='ADANIGREEN'><td><button class='stock-link' type='button' data-symbol='ADANIGREEN' aria-label='Show ADANIGREEN detail'>ADANIGREEN</button></td><td>Unclassified</td><td class='flat'>-1.16%</td><td>10.9L</td><td>STAGE_3</td><td>HOLD</td></tr>
+<tr class='clickable-row' data-symbol='AEGISVOPAK'><td><button class='stock-link' type='button' data-symbol='AEGISVOPAK' aria-label='Show AEGISVOPAK detail'>AEGISVOPAK</button></td><td>Unclassified</td><td class='flat'>-1.83%</td><td>6.2L</td><td>STAGE_1</td><td>HOLD</td></tr></tbody></table></div>
+    </div>
+    <div class="card detail-panel" id="stock-detail">
+      <div class="detail-title">Stock Detail</div>
+      <div class="muted">Awaiting symbol selection.</div>
+    </div>
+  </section>
+
+  <section class="card section" id="sectors">
+    <h2>Sector Breadth</h2>
+    <div class="table-scroll"><table><thead><tr><th>Sector</th><th>Stocks</th><th>Avg Day %</th><th>A/D</th><th>Adv %</th></tr></thead><tbody><tr><td>Unclassified</td><td>31</td><td class='neg'>-0.51%</td><td>6 / 24</td><td>+20.0%</td></tr></tbody></table></div>
+  </section>
+
+  <div class="footer">
+    Coverage note: this report uses the stored intraday 15m universe available in PostgreSQL. It is not a complete NSE-wide breadth measure unless the intraday capture universe is complete. Research and learning only; not investment advice.
+  </div>
+  <script type="application/json" id="stock-detail-data">{"63MOONS": {"symbol": "63MOONS", "company": "63MOONS", "sector": "Unclassified", "marketCap": "-", "stage": "STAGE_1", "signal": "HOLD", "technicalScore": 69.57, "relativeStrength": 77.4648, "open": 790.0, "close": 847.349976, "high": 873.299988, "low": 772.450012, "dayPct": 7.26, "volumeL": 95.4}, "AEQUS": {"symbol": "AEQUS", "company": "AEQUS", "sector": "Unclassified", "marketCap": "-", "stage": "STAGE_1", "signal": "HOLD", "technicalScore": 67.13, "relativeStrength": 84.9765, "open": 216.589996, "close": 228.0, "high": 229.880005, "low": 216.020004, "dayPct": 5.27, "volumeL": 37.1}, "ACE": {"symbol": "ACE", "company": "ACE", "sector": "Unclassified", "marketCap": "-", "stage": "STAGE_1", "signal": "HOLD", "technicalScore": 80.54, "relativeStrength": 84.0376, "open": 1054.300049, "close": 1066.300049, "high": 1068.0, "low": 1033.099976, "dayPct": 1.14, "volumeL": 2.2}, "ACMESOLAR": {"symbol": "ACMESOLAR", "company": "ACMESOLAR", "sector": "Unclassified", "marketCap": "-", "stage": "STAGE_2", "signal": "BUY", "technicalScore": 85.95, "relativeStrength": 85.2326, "open": 357.700012, "close": 361.149994, "high": 366.700012, "low": 347.799988, "dayPct": 0.96, "volumeL": 47.2}, "AADHARHFC": {"symbol": "AADHARHFC", "company": "AADHARHFC", "sector": "Unclassified", "marketCap": "-", "stage": "STAGE_3", "signal": "HOLD", "technicalScore": 39.1, "relativeStrength": 49.1251, "open": 494.600006, "close": 499.0, "high": 499.0, "low": 487.100006, "dayPct": 0.89, "volumeL": 4.2}, "ADANIENT": {"symbol": "ADANIENT", "company": "ADANIENT", "sector": "Unclassified", "marketCap": "-", "stage": "STAGE_2", "signal": "BUY", "technicalScore": 85.36, "relativeStrength": 89.8421, "open": 3031.800049, "close": 3050.0, "high": 3059.199951, "low": 2996.699951, "dayPct": 0.6, "volumeL": 12.1}, "ADANIPOWER": {"symbol": "ADANIPOWER", "company": "ADANIPOWER", "sector": "Unclassified", "marketCap": "-", "stage": "STAGE_3", "signal": "HOLD", "technicalScore": 60.77, "relativeStrength": 34.0589, "open": 209.009995, "close": 209.0, "high": 211.190002, "low": 207.199997, "dayPct": 0.0, "volumeL": 165.7}, "20MICRONS": {"symbol": "20MICRONS", "company": "20MICRONS", "sector": "Unclassified", "marketCap": "-", "stage": "STAGE_1", "signal": "HOLD", "technicalScore": 73.94, "relativeStrength": 76.6539, "open": 200.199997, "close": 200.070007, "high": 204.399994, "low": 199.149994, "dayPct": -0.06, "volumeL": 1.2}, "AARTIDRUGS": {"symbol": "AARTIDRUGS", "company": "AARTIDRUGS", "sector": "Unclassified", "marketCap": "-", "stage": "STAGE_1", "signal": "HOLD", "technicalScore": 77.39, "relativeStrength": 74.6479, "open": 413.299988, "close": 413.0, "high": 420.700012, "low": 411.299988, "dayPct": -0.07, "volumeL": 1.7}, "ABCAPITAL": {"symbol": "ABCAPITAL", "company": "ABCAPITAL", "sector": "Unclassified", "marketCap": "-", "stage": "STAGE_2", "signal": "BUY", "technicalScore": 85.55, "relativeStrength": 78.233, "open": 395.149994, "close": 394.0, "high": 398.399994, "low": 392.149994, "dayPct": -0.29, "volumeL": 10.9}, "ADVANCE": {"symbol": "ADVANCE", "company": "ADVANCE", "sector": "Unclassified", "marketCap": "-", "stage": "STAGE_3", "signal": "HOLD", "technicalScore": 58.91, "relativeStrength": 69.1421, "open": 119.900002, "close": 119.400002, "high": 123.0, "low": 118.010002, "dayPct": -0.42, "volumeL": 5.4}, "ADANIENSOL": {"symbol": "ADANIENSOL", "company": "ADANIENSOL", "sector": "Unclassified", "marketCap": "-", "stage": "STAGE_2", "signal": "BUY", "technicalScore": 91.43, "relativeStrength": 83.0132, "open": 1663.0, "close": 1655.800049, "high": 1674.400024, "low": 1633.0, "dayPct": -0.43, "volumeL": 12.9}, "AETHER": {"symbol": "AETHER", "company": "AETHER", "sector": "Unclassified", "marketCap": "-", "stage": "STAGE_2", "signal": "BUY", "technicalScore": 92.11, "relativeStrength": 90.7384, "open": 1495.0, "close": 1487.199951, "high": 1524.5, "low": 1475.199951, "dayPct": -0.52, "volumeL": 4.3}, "ABB": {"symbol": "ABB", "company": "ABB", "sector": "Unclassified", "marketCap": "-", "stage": "STAGE_2", "signal": "BUY", "technicalScore": 86.92, "relativeStrength": 48.9543, "open": 7331.0, "close": 7291.5, "high": 7331.0, "low": 7195.0, "dayPct": -0.54, "volumeL": 3.3}, "ABDL": {"symbol": "ABDL", "company": "ABDL", "sector": "Unclassified", "marketCap": "-", "stage": "STAGE_1", "signal": "HOLD", "technicalScore": 75.92, "relativeStrength": 83.8668, "open": 652.0, "close": 648.450012, "high": 654.950012, "low": 638.0, "dayPct": -0.54, "volumeL": 3.0}, "ADSL": {"symbol": "ADSL", "company": "ADSL", "sector": "Unclassified", "marketCap": "-", "stage": "STAGE_4", "signal": "SELL", "technicalScore": 28.66, "relativeStrength": 43.1498, "open": 114.57, "close": 113.910004, "high": 114.580002, "low": 112.940002, "dayPct": -0.58, "volumeL": 0.9}, "ABSLAMC": {"symbol": "ABSLAMC", "company": "ABSLAMC", "sector": "Unclassified", "marketCap": "-", "stage": "STAGE_3", "signal": "HOLD", "technicalScore": 57.89, "relativeStrength": 43.9181, "open": 1019.299988, "close": 1013.0, "high": 1022.0, "low": 1006.400024, "dayPct": -0.62, "volumeL": 0.7}, "ADVENZYMES": {"symbol": "ADVENZYMES", "company": "ADVENZYMES", "sector": "Unclassified", "marketCap": "-", "stage": "STAGE_3", "signal": "HOLD", "technicalScore": 49.68, "relativeStrength": 21.767, "open": 310.0, "close": 307.549988, "high": 310.0, "low": 304.350006, "dayPct": -0.79, "volumeL": 1.2}, "ADVENTHTL": {"symbol": "ADVENTHTL", "company": "ADVENTHTL", "sector": "Unclassified", "marketCap": "-", "stage": "STAGE_3", "signal": "HOLD", "technicalScore": 46.53, "relativeStrength": 35.8515, "open": 149.0, "close": 147.639999, "high": 149.0, "low": 147.0, "dayPct": -0.91, "volumeL": 0.4}, "ACC": {"symbol": "ACC", "company": "ACC", "sector": "Unclassified", "marketCap": "-", "stage": "STAGE_4", "signal": "SELL", "technicalScore": 30.23, "relativeStrength": 31.8822, "open": 1370.0, "close": 1356.5, "high": 1370.0, "low": 1345.300049, "dayPct": -0.99, "volumeL": 1.6}, "AARTIPHARM": {"symbol": "AARTIPHARM", "company": "AARTIPHARM", "sector": "Unclassified", "marketCap": "-", "stage": "STAGE_4", "signal": "SELL", "technicalScore": 27.87, "relativeStrength": 33.376, "open": 681.200012, "close": 674.299988, "high": 686.400024, "low": 673.0, "dayPct": -1.01, "volumeL": 0.8}, "ADANIGREEN": {"symbol": "ADANIGREEN", "company": "ADANIGREEN", "sector": "Unclassified", "marketCap": "-", "stage": "STAGE_3", "signal": "HOLD", "technicalScore": 62.17, "relativeStrength": 72.898, "open": 1374.0, "close": 1358.0, "high": 1374.0, "low": 1350.099976, "dayPct": -1.16, "volumeL": 10.9}, "AARTIIND": {"symbol": "AARTIIND", "company": "AARTIIND", "sector": "Unclassified", "marketCap": "-", "stage": "STAGE_2", "signal": "BUY", "technicalScore": 80.82, "relativeStrength": 34.9125, "open": 485.649994, "close": 479.700012, "high": 486.799988, "low": 477.0, "dayPct": -1.23, "volumeL": 4.5}, "ACI": {"symbol": "ACI", "company": "ACI", "sector": "Unclassified", "marketCap": "-", "stage": "STAGE_3", "signal": "HOLD", "technicalScore": 52.04, "relativeStrength": 20.5292, "open": 567.0, "close": 559.0, "high": 569.599976, "low": 555.549988, "dayPct": -1.41, "volumeL": 1.2}, "360ONE": {"symbol": "360ONE", "company": "360ONE", "sector": "Unclassified", "marketCap": "-", "stage": "STAGE_1", "signal": "HOLD", "technicalScore": 75.54, "relativeStrength": 73.0687, "open": 1164.0, "close": 1144.0, "high": 1164.0, "low": 1125.800049, "dayPct": -1.72, "volumeL": 11.2}, "AEGISVOPAK": {"symbol": "AEGISVOPAK", "company": "AEGISVOPAK", "sector": "Unclassified", "marketCap": "-", "stage": "STAGE_1", "signal": "HOLD", "technicalScore": 80.75, "relativeStrength": 97.0551, "open": 297.450012, "close": 292.0, "high": 297.450012, "low": 290.5, "dayPct": -1.83, "volumeL": 6.2}, "ACUTAAS": {"symbol": "ACUTAAS", "company": "ACUTAAS", "sector": "Unclassified", "marketCap": "-", "stage": "STAGE_3", "signal": "HOLD", "technicalScore": 72.78, "relativeStrength": 91.3359, "open": 3309.699951, "close": 3237.899902, "high": 3309.699951, "low": 3152.0, "dayPct": -2.17, "volumeL": 3.6}, "AEGISLOG": {"symbol": "AEGISLOG", "company": "AEGISLOG", "sector": "Unclassified", "marketCap": "-", "stage": "STAGE_2", "signal": "BUY", "technicalScore": 93.57, "relativeStrength": 99.4025, "open": 1287.0, "close": 1255.0, "high": 1289.400024, "low": 1243.199951, "dayPct": -2.49, "volumeL": 4.1}, "AEROENTER": {"symbol": "AEROENTER", "company": "AEROENTER", "sector": "Unclassified", "marketCap": "-", "stage": "STAGE_2", "signal": "BUY", "technicalScore": 87.03, "relativeStrength": 91.9761, "open": 122.139999, "close": 118.400002, "high": 122.330002, "low": 118.110001, "dayPct": -3.06, "volumeL": 2.9}, "ADANIPORTS": {"symbol": "ADANIPORTS", "company": "ADANIPORTS", "sector": "Unclassified", "marketCap": "-", "stage": "STAGE_3", "signal": "HOLD", "technicalScore": 52.9, "relativeStrength": 48.5702, "open": 1713.800049, "close": 1660.599976, "high": 1713.800049, "low": 1659.0, "dayPct": -3.1, "volumeL": 43.4}, "AEROFLEX": {"symbol": "AEROFLEX", "company": "AEROFLEX", "sector": "Unclassified", "marketCap": "-", "stage": "STAGE_3", "signal": "HOLD", "technicalScore": 79.49, "relativeStrength": 94.8784, "open": 451.700012, "close": 424.850006, "high": 451.700012, "low": 422.600006, "dayPct": -5.94, "volumeL": 14.1}}</script>
+  <script>
+  const stockData = JSON.parse(document.getElementById('stock-detail-data').textContent);
+  const panel = document.getElementById('stock-detail');
+  function fmtNum(v, digits=2) {
+    if (v === null || v === undefined || Number.isNaN(Number(v))) return '-';
+    return Number(v).toLocaleString('en-IN', {minimumFractionDigits: digits, maximumFractionDigits: digits});
+  }
+  function fmtPct(v) {
+    if (v === null || v === undefined || Number.isNaN(Number(v))) return '-';
+    const n = Number(v);
+    return `${n > 0 ? '+' : ''}${n.toFixed(2)}%`;
+  }
+  function renderStock(sym) {
+    const d = stockData[sym];
+    if (!d) return;
+    const cls = Number(d.dayPct || 0) >= 0 ? 'pos' : 'neg';
+    panel.innerHTML = `
+      <div class="detail-title">${d.symbol}</div>
+      <div class="muted">${d.company || d.symbol} · ${d.sector}</div>
+      <div class="detail-grid">
+        <div class="detail-kv"><span>Day Move</span><b class="${cls}">${fmtPct(d.dayPct)}</b></div>
+        <div class="detail-kv"><span>Volume</span><b>${fmtNum(d.volumeL, 1)}L</b></div>
+        <div class="detail-kv"><span>Open / Close</span><b>${fmtNum(d.open)} → ${fmtNum(d.close)}</b></div>
+        <div class="detail-kv"><span>Range</span><b>${fmtNum(d.low)} - ${fmtNum(d.high)}</b></div>
+        <div class="detail-kv"><span>Stage</span><b>${d.stage || '-'}</b></div>
+        <div class="detail-kv"><span>Signal</span><b>${d.signal || '-'}</b></div>
+        <div class="detail-kv"><span>Technical Score</span><b>${fmtNum(d.technicalScore, 1)}</b></div>
+        <div class="detail-kv"><span>Relative Strength</span><b>${fmtNum(d.relativeStrength, 1)}</b></div>
+      </div>`;
+  }
+  document.querySelectorAll('[data-symbol]').forEach(el => {
+    el.addEventListener('click', () => renderStock(el.dataset.symbol));
+  });
+  const firstStock = Object.keys(stockData)[0];
+  if (firstStock) renderStock(firstStock);
+
+  // Bubble chart tooltip interactivity
+  const tooltip = document.getElementById('bubble-tooltip');
+  if (tooltip) {
+    const ttBg = document.getElementById('tt-bg');
+    const ttSym = document.getElementById('tt-sym');
+    const ttMove = document.getElementById('tt-move');
+    const ttTech = document.getElementById('tt-tech');
+    const ttVol = document.getElementById('tt-vol');
+    const svg = tooltip.closest('svg');
+    
+    document.querySelectorAll('.bubble[data-sym]').forEach(bubble => {
+      bubble.addEventListener('mouseenter', (e) => {
+        const sym = bubble.getAttribute('data-sym');
+        const move = bubble.getAttribute('data-move');
+        const tech = bubble.getAttribute('data-tech');
+        const vol = bubble.getAttribute('data-vol');
+        
+        ttSym.textContent = sym;
+        ttMove.textContent = `Day Move: ${move}`;
+        ttTech.textContent = `Technical: ${tech}`;
+        ttVol.textContent = `Volume: ${vol}`;
+        
+        // Position tooltip near bubble
+        const cx = parseFloat(bubble.getAttribute('cx'));
+        const cy = parseFloat(bubble.getAttribute('cy'));
+        const r = parseFloat(bubble.getAttribute('r'));
+        let tx = cx + r + 10;
+        let ty = cy - 40;
+        
+        // Keep within SVG bounds
+        if (tx + 180 > 880) tx = cx - r - 190;
+        if (ty < 10) ty = 10;
+        if (ty + 80 > 480) ty = 400;
+        
+        tooltip.setAttribute('transform', `translate(${tx}, ${ty})`);
+        tooltip.setAttribute('visibility', 'visible');
+        
+        // Highlight bubble on hover
+        bubble.setAttribute('stroke-width', '3');
+        bubble.setAttribute('fill-opacity', '0.95');
+      });
+      
+      bubble.addEventListener('mouseleave', () => {
+        tooltip.setAttribute('visibility', 'hidden');
+        bubble.setAttribute('stroke-width', '1.2');
+        const opacity = bubble.getAttribute('data-tech') !== 'N/A' ? '0.74' : '0.42';
+        bubble.setAttribute('fill-opacity', opacity);
+      });
+    });
+  }
+  </script>
+</main>
+</body>
+</html>
