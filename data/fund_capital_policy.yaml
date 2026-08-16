@@ -1,0 +1,35 @@
+# Agent Adda capital policy — single source of truth for fund tools.
+# Used by fund_daily.py, fund_lab_pnl.py, and fund_rebalance.py.
+# Source note: docs/fund_policies/research_updates/2026-08-15-smallcap-midcap-4l-strategy-review.md
+
+version: 1
+as_of: "2026-08-15"
+policy_note: docs/fund_policies/research_updates/2026-08-15-smallcap-midcap-4l-strategy-review.md
+
+nav:
+  total: 400000
+  smallcap: 200000
+  midcap: 200000
+
+slots:
+  smallcap: 9
+  midcap: 15
+
+gates:
+  fund_score_min: 65
+  watch_n: 5
+  high_conviction_tech: 73
+  high_conviction_fund: 75
+
+# Rupee limits at the Rs. 4,00,000 working NAV.
+risk:
+  trade_risk_normal: 2500          # midpoint of Rs. 2,000-3,000
+  trade_risk_high_conviction: 4000
+  open_risk_cap: 24000
+  min_reward_risk: 2.0
+  max_stop_distance_pct: 12.0      # skip if logical stop is wider
+  default_stop_pct: 10.0           # fallback when SMA50 / Supertrend missing
+
+caps:
+  sector: 100000                   # combined across both sleeves
+  single_stock: 40000              # combined across both sleeves
