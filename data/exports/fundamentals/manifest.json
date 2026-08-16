@@ -1,0 +1,12 @@
+{
+  "exported_at": "2026-08-16",
+  "format": "csv",
+  "symbol_filter": "all",
+  "source_db": "nse_market (local PostgreSQL)",
+  "tables": {
+    "cash_flow": {
+      "rows": 6519,
+      "description": "Annual cash flow statement"
+    }
+  }
+}
