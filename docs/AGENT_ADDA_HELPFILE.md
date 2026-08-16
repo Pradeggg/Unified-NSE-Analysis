@@ -110,7 +110,7 @@ Options:
 
 ## All Slash Commands
 
-Total registered entries: 278.
+Total registered entries: 280.
 
 ### Research Prompts
 
@@ -501,6 +501,8 @@ Total registered entries: 278.
 | Command | Description |
 |---|---|
 | `/pnl` | 💼 Live portfolio P&L — unrealised gains/losses from holdings.csv |
+| `/agent-adda-small-cap-fund` | Daily Small Cap Portfolio command: buy/sell/add/trim/stop/target/news review |
+| `/agent-adda-mid-cap-fund` | Daily Mid Cap Portfolio command: buy/sell/add/trim/stop/target/news review |
 
 ### Session
 

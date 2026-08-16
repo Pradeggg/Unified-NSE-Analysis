@@ -1,0 +1,57 @@
+{
+  "_meta": {
+    "description": "Active fund holdings — single source of truth. Edit this after each order fill.",
+    "budget_sc": 200000,
+    "budget_mc": 200000,
+    "slots_sc": 9,
+    "slots_mc": 15,
+    "inception_date": "2026-08-15",
+    "note": "smallcap = Aug SC fund, midcap = Aug MC fund. Add entries here after Monday's orders fill."
+  },
+  "smallcap": {
+    "BLSE": {
+      "entry": 314.25,
+      "entry_date": "2026-08-15",
+      "qty": 70,
+      "fund": "Aug SC",
+      "note": "ICICI Direct BLSESE — market order 15-Aug-2026"
+    },
+    "EIMCOELECO": {
+      "entry": 2005.50,
+      "entry_date": "2026-08-15",
+      "qty": 11,
+      "fund": "Aug SC",
+      "note": "ICICI Direct EIMELE — market order 15-Aug-2026"
+    },
+    "RATNAVEER": {
+      "entry": 230.16,
+      "entry_date": "2026-08-15",
+      "qty": 96,
+      "fund": "Aug SC",
+      "note": "ICICI Direct RATPRE — market order 15-Aug-2026"
+    }
+  },
+  "midcap": {
+    "ENDURANCE": {
+      "entry": 2570.12,
+      "entry_date": "2026-08-15",
+      "qty": 6,
+      "fund": "Aug MC",
+      "note": "Existing ICICI Direct holding (ENDTEC) — 6 shares, avg ₹2570.12, slot covered"
+    },
+    "COFORGE": {
+      "entry": 1439.36,
+      "entry_date": "2026-08-15",
+      "qty": 17,
+      "fund": "Aug MC",
+      "note": "Existing ICICI Direct holding (NIITEC) — 17 shares, avg ₹1439.36, slot covered"
+    },
+    "FEDERALBNK": {
+      "entry": 204.22,
+      "entry_date": "2026-08-15",
+      "qty": 221,
+      "fund": "Aug MC",
+      "note": "Existing ICICI Direct holding (FEDBAN) — 221 shares, avg ₹204.22, slot covered"
+    }
+  }
+}

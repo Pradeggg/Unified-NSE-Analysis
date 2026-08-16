@@ -318,6 +318,43 @@ def upsert_symbol(cur, sym: str, payload: dict, source_tag: str) -> tuple[int, i
         structured_n = sum(counts.values())
     except Exception as e:
         print(f"        [structured-cache] {sym} WARN {e}")
+
+    # Derive and persist enhanced fund scores to scores.fundamental_scores
+    try:
+        from terminal.fund_score_derivation import derive_fund_scores
+        scores = derive_fund_scores(payload)
+        cur.execute(
+            """
+            INSERT INTO scores.fundamental_scores
+              (score_date, symbol, enhanced_fund_score,
+               earnings_quality, sales_growth,
+               financial_strength, institutional_backing,
+               processed_date, source_file)
+            VALUES
+              (CURRENT_DATE, %s, %s, %s, %s, %s, %s, CURRENT_DATE, %s)
+            ON CONFLICT (score_date, symbol) DO UPDATE SET
+              enhanced_fund_score   = EXCLUDED.enhanced_fund_score,
+              earnings_quality      = EXCLUDED.earnings_quality,
+              sales_growth          = EXCLUDED.sales_growth,
+              financial_strength    = EXCLUDED.financial_strength,
+              institutional_backing = EXCLUDED.institutional_backing,
+              processed_date        = EXCLUDED.processed_date,
+              source_file           = EXCLUDED.source_file,
+              loaded_at             = now()
+            """,
+            (
+                sym,
+                scores.get("enhanced_fund_score"),
+                scores.get("earnings_quality"),
+                scores.get("sales_growth"),
+                scores.get("financial_strength"),
+                scores.get("institutional_backing"),
+                snap_date.isoformat(),
+            ),
+        )
+    except Exception as e:
+        print(f"        [fund-score] {sym} WARN {e}")
+
     return (1, structured_n)
 
 

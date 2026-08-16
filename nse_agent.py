@@ -1224,6 +1224,8 @@ _SLASH_COMMANDS: list[tuple[str, str]] = [
     ("/my-portfolio sell",    "🔴 Show only SELL candidates — sorted by loss depth"),
     ("/my-portfolio hold",    "🟡 Show HOLD holdings — useful for intraday monitoring"),
     ("/pnl",                  "💼 Live portfolio P&L — unrealised gains/losses from holdings.csv"),
+    ("/agent-adda-small-cap-fund", "Daily Small Cap Portfolio command: buy/sell/add/trim/stop/target/news review"),
+    ("/agent-adda-mid-cap-fund",   "Daily Mid Cap Portfolio command: buy/sell/add/trim/stop/target/news review"),
     ("/live",             "Switch to LIVE mode (real-time NSE API)"),
     ("/eod",              "Switch to EOD mode (historical CSV/DB)"),
     ("/auto",             "Switch to AUTO mode (keyword detect)"),
@@ -1369,6 +1371,8 @@ _CMD_CATEGORIES: dict[str, tuple[str, str]] = {
     "/my-portfolio": ("Portfolio",       "💼"),
     "/my_portfolio": ("Portfolio",       "💼"),
     "/pnl":      ("Portfolio",           "💼"),
+    "/agent-adda-small-cap-fund": ("Portfolio Funds", "💼"),
+    "/agent-adda-mid-cap-fund": ("Portfolio Funds", "💼"),
     "/export":   ("Session",             "💾"),
     "/live":     ("Session",             "💾"),
     "/eod":      ("Session",             "💾"),
@@ -7824,6 +7828,31 @@ def _build_command_registry():
         match_fn=lambda q: bool(_parse_quality_breakouts_command(q).get("matched")),
         handler_fn=_h_quality_breakouts,
         description="Composite new-high/VCP/breakout screener with fundamental quality overlay",
+    ))
+
+    # /agent-adda-small-cap-fund and /agent-adda-mid-cap-fund
+    def _h_agent_adda_fund(query: str, agent, show_trace: bool) -> bool:
+        from terminal.fund_commands import handle_agent_adda_fund_command
+
+        _print_user(query)
+        output = handle_agent_adda_fund_command(query)
+        _remember_generated_report(output)
+        _remember_terminal_interaction(
+            agent,
+            query,
+            output,
+            intent="agent_adda_fund_daily_command",
+            source_label="Agent Adda portfolio fund daily command",
+            result_type="portfolio_fund_daily_command",
+        )
+        console.print(Markdown(_linkify_markdown(output)))
+        return True
+
+    registry.register(CommandHandler(
+        name="agent-adda-fund",
+        match_fn=lambda q: q.startswith(("/agent-adda-small-cap-fund", "/agent-adda-mid-cap-fund")),
+        handler_fn=_h_agent_adda_fund,
+        description="Daily Agent Adda portfolio fund action review",
     ))
 
     # /my-portfolio — live intraday dashboard + EOD analysis
