@@ -48,6 +48,7 @@ _SKILLS: tuple[SkillDefinition, ...] = (
             "interpretation",
             "what_to_watch",
         ),
+        maturity="executable",
     ),
     SkillDefinition(
         id="financial_statement_analysis",

@@ -9,7 +9,7 @@ import yaml
 SEED_PATH = Path("terminal/skills/seed_cards/vcp_breakouts_with_fundamentals_v1.yml")
 REQUIRED_SQL_TEMPLATES = {
     "vcp_quality_candidates",
-    "stage2_new_high_candidates",
+    "stage2_momentum_candidates",
     "tradingview_symbol_list",
     "filter_explanation",
     "portfolio_overlap_optional",
@@ -35,6 +35,7 @@ def test_vcp_breakouts_seed_card_contract_and_required_templates():
     assert card.evidence_required.tables == (
         "scores.stage2_vcp_picks",
         "scores.stage_snapshots",
+        "portfolio.holdings",
     )
     assert {"vcp", "breakout", "fundamentals", "tradingview"}.issubset(set(card.tags))
 
@@ -44,6 +45,7 @@ def test_vcp_breakouts_sql_templates_are_safe_bounded_and_parameterized():
 
     payload = _load_seed()
     params = {
+        "account": "DEFAULT",
         "limit": 25,
         "min_rs": 20,
         "min_price": 50,
@@ -80,6 +82,7 @@ def test_vcp_breakouts_execution_plan_filters_and_optional_portfolio_overlap():
         decision,
         skill_cards=[payload],
         params={
+            "account": "DEFAULT",
             "limit": 25,
             "min_rs": 20,
             "min_price": 50,
@@ -91,7 +94,7 @@ def test_vcp_breakouts_execution_plan_filters_and_optional_portfolio_overlap():
 
     assert [step.name for step in plan.steps] == [
         "vcp_quality_candidates",
-        "stage2_new_high_candidates",
+        "stage2_momentum_candidates",
         "tradingview_symbol_list",
         "filter_explanation",
         "portfolio_overlap_optional",
@@ -102,11 +105,8 @@ def test_vcp_breakouts_execution_plan_filters_and_optional_portfolio_overlap():
     assert overlap_step.metadata["optional"] is True
 
     evidence = {
-        "vcp_quality_candidates": {
-            "rows": [{"as_of_date": "2026-06-05", "symbol": "ABC", "stage": "STAGE_2"}],
-            "row_count": 1,
-        },
-        "stage2_new_high_candidates": {
+        "vcp_quality_candidates": {"rows": [], "row_count": 0, "as_of_date": "2026-06-05"},
+        "stage2_momentum_candidates": {
             "rows": [{"as_of_date": "2026-06-05", "symbol": "XYZ", "stage": "STAGE_2"}],
             "row_count": 1,
         },
@@ -129,6 +129,7 @@ def test_vcp_breakouts_execution_plan_filters_and_optional_portfolio_overlap():
     )
 
     assert validation.passed is True
+    assert "optional result set empty: vcp_quality_candidates" in validation.warnings
     assert "optional result set empty: portfolio_overlap_optional" in validation.warnings
 
 
@@ -137,3 +138,15 @@ def test_vcp_breakouts_synthesis_guidance_does_not_invent_vcp_when_missing():
 
     assert "Do not label non-VCP candidates as VCP" in payload["synthesis_guidance"]
     assert "VCP evidence must come from scores.stage2_vcp_picks" in payload["synthesis_guidance"]
+    assert "Do not call them new highs" in payload["synthesis_guidance"]
+
+
+def test_portfolio_overlap_is_a_real_account_aware_join():
+    payload = _load_seed()
+    overlap = next(template for template in payload["sql_templates"] if template["name"] == "portfolio_overlap_optional")
+    sql = overlap["sql"].lower()
+
+    assert "portfolio.holdings" in sql
+    assert "account = :account" in sql
+    assert "left join holdings" in sql
+    assert "where false" not in sql

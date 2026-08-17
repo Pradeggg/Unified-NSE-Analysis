@@ -23,4 +23,4 @@ search = ["ddgs>=9.0.0", "googlesearch-python>=1.2.3"]
 agent-adda = "agent_adda.cli:main"
 
 [tool.setuptools.packages.find]
-include = ["agent_adda*"]
+exclude = ["tests*"]

@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "tool_count": 160,
+  "tool_count": 168,
   "tools": [
     {
       "name": "add_watchlist_alert",
@@ -31,7 +31,7 @@
       "signature": "(args: 'dict') -> 'dict'",
       "return": "'dict'",
       "doc_summary": "",
-      "source": "terminal/tools.py:9385"
+      "source": "terminal/tools.py:10204"
     },
     {
       "name": "analyze_concall_sentiment",
@@ -51,7 +51,7 @@
       "signature": "(symbol: 'str') -> 'dict'",
       "return": "'dict'",
       "doc_summary": "D4 Concall NLP — extract management tone, key themes, and sentiment from the most recent earnings call / investor day transcript for a stock.",
-      "source": "terminal/tools.py:6383"
+      "source": "terminal/tools.py:7061"
     },
     {
       "name": "analyze_document",
@@ -81,7 +81,7 @@
       "signature": "(source: 'str', max_pages: 'int' = 50, vision_fallback: 'bool' = True, vision_threshold: 'int' = 200) -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Read and extract text from a local file (PDF, DOCX, HTML, TXT, CSV) or a web URL.",
-      "source": "terminal/tools.py:9561"
+      "source": "terminal/tools.py:10380"
     },
     {
       "name": "analyze_mtf",
@@ -120,7 +120,7 @@
       "signature": "(symbol: 'str', timeframes: 'list[str] | None' = None, days: 'int' = 800) -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Aligned multi-timeframe analysis for a single symbol.",
-      "source": "terminal/tools.py:9817"
+      "source": "terminal/tools.py:10636"
     },
     {
       "name": "analyze_options_buying",
@@ -152,7 +152,7 @@
       "signature": "(symbol: 'str', direction: 'str' = 'bullish', expiry: 'str | None' = None) -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Deep options buying analysis for a symbol. Returns: ATM IV + regime, IV rank (estimated), expected move, strike selection guide (ITM/ATM/OTM with delta/theta/breakeven/probability), theta decay profile, OI support/resistance context, buying verdict (BUY / SPREAD / AVOID). direction: 'bullish' | 'bearish' | 'volatile'",
-      "source": "terminal/tools.py:8599"
+      "source": "terminal/tools.py:9397"
     },
     {
       "name": "analyze_youtube_channel_latest",
@@ -249,7 +249,7 @@
       "signature": "(state: 'dict | Any') -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Apply Research Council convergence/revision rules.",
-      "source": "terminal/tools.py:10134"
+      "source": "terminal/tools.py:10953"
     },
     {
       "name": "assess_user_situation",
@@ -272,7 +272,7 @@
       "signature": "(user_input: 'str', previous_context: 'TurnContext | None' = None, data_mode: 'str' = 'historical') -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Return the v2 situation-assessment contract used before routing.",
-      "source": "terminal/situation_assessment.py:1039"
+      "source": "terminal/situation_assessment.py:1113"
     },
     {
       "name": "audit_company_search",
@@ -370,7 +370,7 @@
       "signature": "(mode: 'str' = 'market_council', universe_filter: 'str' = 'liquid', symbols: 'list[str] | None' = None, max_stock_candidates: 'int' = 50) -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Build the Research Council evidence pack from PostgreSQL-backed sources.",
-      "source": "terminal/tools.py:10016"
+      "source": "terminal/tools.py:10835"
     },
     {
       "name": "check_watchlist_alerts",
@@ -382,7 +382,7 @@
       "signature": "(_args: 'dict') -> 'dict'",
       "return": "'dict'",
       "doc_summary": "",
-      "source": "terminal/tools.py:9402"
+      "source": "terminal/tools.py:10221"
     },
     {
       "name": "compare_reports",
@@ -443,7 +443,7 @@
       "signature": "(symbols: 'list[str]', aspects: 'list[str] | None' = None) -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Compare multiple NSE stocks side-by-side on technical AND fundamental metrics.",
-      "source": "terminal/tools.py:6878"
+      "source": "terminal/tools.py:7556"
     },
     {
       "name": "compose_plan",
@@ -466,7 +466,7 @@
       "signature": "(objective: 'str', mode: 'str' = 'market_council', **flags: 'Any') -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Compose a deterministic Research Council evidence plan.",
-      "source": "terminal/tools.py:10079"
+      "source": "terminal/tools.py:10898"
     },
     {
       "name": "comprehensive_stock_research",
@@ -530,7 +530,7 @@
       "signature": "(symbol: 'str', timeframe: 'str' = '15m') -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Compute latest intraday indicators from PostgreSQL intraday OHLCV bars.",
-      "source": "terminal/tools.py:2976"
+      "source": "terminal/tools.py:3211"
     },
     {
       "name": "deep_search",
@@ -587,7 +587,7 @@
       "signature": "(args: 'dict') -> 'dict'",
       "return": "'dict'",
       "doc_summary": "",
-      "source": "terminal/tools.py:9395"
+      "source": "terminal/tools.py:10214"
     },
     {
       "name": "detect_non_symbol_terms",
@@ -606,7 +606,7 @@
       "signature": "(text: 'str') -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Detect market/technical vocabulary that should not be resolved as tickers.",
-      "source": "terminal/entity_resolution.py:219"
+      "source": "terminal/entity_resolution.py:223"
     },
     {
       "name": "discover_financial_filings",
@@ -650,6 +650,37 @@
       "source": "terminal/postgres_tools.py:200"
     },
     {
+      "name": "execute_agent_adda_skill",
+      "description": "Execute one validated or production Agent Adda Skill Store card using safe tool/SQL steps, evidence validation, and telemetry.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "skill_id": {
+            "type": "string"
+          },
+          "params": {
+            "type": "object",
+            "default": {}
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "retrieval_id": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "skill_id"
+        ]
+      },
+      "signature": "(skill_id: 'str', params: 'dict[str, Any] | None' = None, version: 'int | None' = None, retrieval_id: 'int | None' = None, *, repository: 'Any | None' = None, call_tool_fn: 'Any | None' = None) -> 'dict[str, Any]'",
+      "return": "'dict[str, Any]'",
+      "doc_summary": "Execute one validated/production Skill Store card with validation and telemetry.",
+      "source": "terminal/skills/tool_surface.py:118"
+    },
+    {
       "name": "execute_plan",
       "description": "Execute the latest Research Council plan from a serialized CouncilState.",
       "parameters": {
@@ -666,7 +697,7 @@
       "signature": "(state: 'dict | Any') -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Execute the latest Research Council plan in a serialized state.",
-      "source": "terminal/tools.py:10092"
+      "source": "terminal/tools.py:10911"
     },
     {
       "name": "explain_intraday_setup",
@@ -695,7 +726,7 @@
       "signature": "(symbol: 'str', timeframe: 'str' = '15m') -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Explain an intraday setup from PostgreSQL intraday bars with research-only labels.",
-      "source": "terminal/tools.py:3150"
+      "source": "terminal/tools.py:3385"
     },
     {
       "name": "export_session",
@@ -719,7 +750,7 @@
       "signature": "(args: 'dict') -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Export current session to HTML or PDF.",
-      "source": "terminal/tools.py:9497"
+      "source": "terminal/tools.py:10316"
     },
     {
       "name": "fetch_article_content",
@@ -743,7 +774,7 @@
       "signature": "(url: 'str', max_chars: 'int' = 3000) -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Fetch and extract readable text from a news article URL.",
-      "source": "terminal/tools.py:3660"
+      "source": "terminal/tools.py:3895"
     },
     {
       "name": "fetch_pdf_text",
@@ -768,7 +799,35 @@
       "signature": "(url: 'str', max_pages: 'int' = 15, vision_fallback: 'bool' = True, vision_threshold: 'int' = 200) -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Download a PDF from any URL and extract its text content using PyMuPDF.",
-      "source": "terminal/tools.py:4088"
+      "source": "terminal/tools.py:4328"
+    },
+    {
+      "name": "find_agent_adda_skills",
+      "description": "Find validated or production Agent Adda skills for a natural-language task and log retrieval telemetry.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string"
+          },
+          "top_n": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 30,
+            "default": 5
+          },
+          "domain": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "query"
+        ]
+      },
+      "signature": "(query: 'str', top_n: 'int' = 5, domain: 'str | None' = None, *, repository: 'Any | None' = None) -> 'dict[str, Any]'",
+      "return": "'dict[str, Any]'",
+      "doc_summary": "Retrieve runtime Skill Store cards and record retrieval telemetry.",
+      "source": "terminal/skills/tool_surface.py:100"
     },
     {
       "name": "find_latest_report",
@@ -785,7 +844,7 @@
       "signature": "(report_type: 'str' = 'any') -> 'dict'",
       "return": "'dict'",
       "doc_summary": "List available generated reports.",
-      "source": "terminal/tools.py:3505"
+      "source": "terminal/tools.py:3740"
     },
     {
       "name": "find_portfolio_overlap",
@@ -808,7 +867,7 @@
       "signature": "(screener: 'str' = 'stage2') -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Find portfolio holdings that also appear in a DB screener result.",
-      "source": "terminal/tools.py:4282"
+      "source": "terminal/tools.py:4567"
     },
     {
       "name": "generate_portfolio_narratives",
@@ -834,7 +893,7 @@
       "signature": "(symbols: 'list[str] | None' = None, top_n: 'int' = 5) -> 'dict'",
       "return": "'dict'",
       "doc_summary": "P2-4 Portfolio Narrative Engine — per-stock LLM commentary combining technical, fundamental, and market context into a concise investment narrative.",
-      "source": "terminal/tools.py:6624"
+      "source": "terminal/tools.py:7302"
     },
     {
       "name": "generate_report",
@@ -891,7 +950,7 @@
       "signature": "(content: 'str', report_type: 'str' = 'research', symbol: 'str' = '', title: 'str' = '', output_format: 'str' = 'html', filename: 'str' = '') -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Generate a styled report file from analysis content.",
-      "source": "terminal/tools.py:10246"
+      "source": "terminal/tools.py:11065"
     },
     {
       "name": "generate_voice_briefing",
@@ -918,7 +977,7 @@
       "signature": "(text: 'str | None' = None, voice: 'str' = 'cedar', save_path: 'str | None' = None) -> 'dict'",
       "return": "'dict'",
       "doc_summary": "P3-2 Daily Voice Briefing — convert market summary to audio using OpenAI GPT TTS.",
-      "source": "terminal/tools.py:6770"
+      "source": "terminal/tools.py:7448"
     },
     {
       "name": "get_52week_extremes",
@@ -948,7 +1007,7 @@
       "signature": "(direction: 'str' = 'high', index: 'str' = 'NIFTY 500', top_n: 'int' = 15) -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Return stocks at their 52-week high or low.",
-      "source": "terminal/tools.py:5505"
+      "source": "terminal/tools.py:6019"
     },
     {
       "name": "get_bulk_block_deals",
@@ -966,7 +1025,42 @@
       "signature": "(top_n: 'int' = 20) -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Fetch today's bulk deals and block deals from NSE.",
-      "source": "terminal/tools.py:5596"
+      "source": "terminal/tools.py:6110"
+    },
+    {
+      "name": "get_cached_financials",
+      "description": "Read cached structured financial statements for a stock from PostgreSQL. Returns quarterly P&L, annual P&L, balance sheet, cash flow, section counts, and explicit pg_sources: scores.quarterly_results, scores.annual_results, scores.balance_sheet, scores.cash_flow. Use this FIRST when the user asks for cached PostgreSQL financial statements, PG-grounded fundamentals, deep fundamental analysis from PG, quarterly sales/PAT/EPS, annual ROCE, balance sheet, or cash flow.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "symbol": {
+            "type": "string"
+          },
+          "quarterly_limit": {
+            "type": "integer",
+            "default": 6
+          },
+          "annual_limit": {
+            "type": "integer",
+            "default": 5
+          },
+          "include_balance_sheet": {
+            "type": "boolean",
+            "default": true
+          },
+          "include_cash_flow": {
+            "type": "boolean",
+            "default": true
+          }
+        },
+        "required": [
+          "symbol"
+        ]
+      },
+      "signature": "(symbol: 'str', quarterly_limit: 'int' = 6, annual_limit: 'int' = 5, include_balance_sheet: 'bool' = True, include_cash_flow: 'bool' = True) -> 'dict'",
+      "return": "'dict'",
+      "doc_summary": "Read structured financial statements from the PostgreSQL cache.",
+      "source": "terminal/tools.py:7709"
     },
     {
       "name": "get_chart_summary",
@@ -999,7 +1093,7 @@
       "signature": "(symbol: 'str', timeframe: 'str' = '3mo') -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Get chart data summary for a symbol: current price, change%, RSI, MACD, EMA positions, period high/low, trend context. Does NOT render the ASCII chart — call render_chart() for that.",
-      "source": "terminal/tools.py:8908"
+      "source": "terminal/tools.py:9706"
     },
     {
       "name": "get_company_evidence_coverage",
@@ -1053,7 +1147,7 @@
       "signature": "(symbol: 'str', insight_type: 'str' = '') -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Retrieve a pre-generated LLM insight for a stock from scores.company_insights.",
-      "source": "terminal/tools.py:10612"
+      "source": "terminal/tools.py:11464"
     },
     {
       "name": "get_composite_cost_of_carry",
@@ -1127,7 +1221,7 @@
       "signature": "() -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Check freshness of all data sources.",
-      "source": "terminal/tools.py:3477"
+      "source": "terminal/tools.py:3712"
     },
     {
       "name": "get_data_source_manifest",
@@ -1153,7 +1247,7 @@
       "signature": "() -> 'dict'",
       "return": "'dict'",
       "doc_summary": "B5 Economic Cycle Tracker — detect current macro cycle phase and sector positioning.",
-      "source": "terminal/tools.py:6315"
+      "source": "terminal/tools.py:6993"
     },
     {
       "name": "get_eod_top_movers",
@@ -1184,7 +1278,7 @@
       "signature": "(index: 'str' = 'NIFTY 500', top_n: 'int' = 10, direction: 'str' = 'both') -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Return top EOD gainers and/or losers from the latest snapshot.",
-      "source": "terminal/tools.py:5387"
+      "source": "terminal/tools.py:5890"
     },
     {
       "name": "get_event_calendar_summary",
@@ -1208,7 +1302,7 @@
       "signature": "(index: 'str' = 'NIFTY 50', days_ahead: 'int' = 14) -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Quick event calendar overview for an index — upcoming dividends, splits, bonuses, results, and board meetings in the next N days.",
-      "source": "terminal/tools.py:6073"
+      "source": "terminal/tools.py:6751"
     },
     {
       "name": "get_fii_dii_activity",
@@ -1221,7 +1315,7 @@
       "signature": "() -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Fetch today's FII (Foreign Institutional Investors) and DII (Domestic) buy/sell activity from NSE. Returns net values in crores.",
-      "source": "terminal/tools.py:5570"
+      "source": "terminal/tools.py:6084"
     },
     {
       "name": "get_fno_analytics",
@@ -1242,7 +1336,7 @@
       "signature": "(symbol: 'str | None' = None, top_n: 'int' = 20) -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Return PostgreSQL-backed F&O analytics: PCR, max pain, buildup, signal.",
-      "source": "terminal/tools.py:8625"
+      "source": "terminal/tools.py:9423"
     },
     {
       "name": "get_fno_data_status",
@@ -1255,7 +1349,7 @@
       "signature": "() -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Return the status of the local F&O EOD database: available dates, record counts, and last download time.",
-      "source": "terminal/tools.py:8578"
+      "source": "terminal/tools.py:9376"
     },
     {
       "name": "get_fno_overview",
@@ -1301,7 +1395,7 @@
       "signature": "(days_ahead: 'int' = 14, limit: 'int' = 50) -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Forthcoming board meetings/events that will declare financial results.",
-      "source": "terminal/tools.py:6009"
+      "source": "terminal/tools.py:6687"
     },
     {
       "name": "get_futures_analysis",
@@ -1320,7 +1414,7 @@
       "signature": "(symbol: 'str') -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Futures basis, cost-of-carry, and rollover analysis for an index or stock.",
-      "source": "terminal/tools.py:8542"
+      "source": "terminal/tools.py:9340"
     },
     {
       "name": "get_global_market_assessment",
@@ -1333,7 +1427,7 @@
       "signature": "() -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Assess global market cues from cached global index and correlation files.",
-      "source": "terminal/tools.py:2539"
+      "source": "terminal/tools.py:2722"
     },
     {
       "name": "get_index_snapshot",
@@ -1352,7 +1446,28 @@
       "signature": "(index_name: 'str' = 'NIFTY 50') -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Get latest index OHLCV and 10-day trend from index CSV.",
-      "source": "terminal/tools.py:2416"
+      "source": "terminal/tools.py:2483"
+    },
+    {
+      "name": "get_insider_alerts",
+      "description": "Return recent insider trading and bulk-deal alerts from the local alerts database. Use when user asks 'show insider alerts', 'any insider activity today', 'bulk deal alerts', 'insider buying alerts' WITHOUT specifying a symbol.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "top_n": {
+            "type": "integer",
+            "default": 20
+          },
+          "alert_type": {
+            "type": "string",
+            "default": ""
+          }
+        }
+      },
+      "signature": "(top_n: 'int' = 20, alert_type: 'str' = '') -> 'dict'",
+      "return": "'dict'",
+      "doc_summary": "Return recent insider / bulk-deal alerts from data/insider_alerts.csv.",
+      "source": "terminal/tools.py:6155"
     },
     {
       "name": "get_intraday_analysis",
@@ -1397,7 +1512,7 @@
       "signature": "(symbol: 'str', interval: 'str' = '15m', strategies: 'list[str] | None' = None) -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Deep intraday analysis of a single stock.",
-      "source": "terminal/intraday.py:1383"
+      "source": "terminal/intraday.py:1948"
     },
     {
       "name": "get_intraday_bars",
@@ -1430,7 +1545,7 @@
       "signature": "(symbol: 'str', timeframe: 'str' = '15m', lookback: 'int' = 120) -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Read intraday OHLCV bars from PostgreSQL, seeding PG from yfinance if needed.",
-      "source": "terminal/tools.py:2783"
+      "source": "terminal/tools.py:2966"
     },
     {
       "name": "get_intraday_levels",
@@ -1459,7 +1574,7 @@
       "signature": "(symbol: 'str', timeframe: 'str' = '15m') -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Compute support/resistance levels from PostgreSQL intraday OHLCV bars.",
-      "source": "terminal/tools.py:2920"
+      "source": "terminal/tools.py:3155"
     },
     {
       "name": "get_intraday_market_recap",
@@ -1477,7 +1592,7 @@
       "signature": "(minutes: 'int' = 15) -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Summarize what changed in the broad market over the last N minutes.",
-      "source": "terminal/tools.py:4850"
+      "source": "terminal/tools.py:5302"
     },
     {
       "name": "get_intraday_source_health",
@@ -1495,7 +1610,7 @@
       "signature": "(max_age_minutes: 'int' = 30) -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Report health of PostgreSQL intraday source tables.",
-      "source": "terminal/tools.py:2715"
+      "source": "terminal/tools.py:2898"
     },
     {
       "name": "get_last_report",
@@ -1566,7 +1681,7 @@
       "signature": "(days_back: 'int' = 7, limit: 'int' = 50) -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Market-wide feed of companies that have filed quarterly financial results.",
-      "source": "terminal/tools.py:5872"
+      "source": "terminal/tools.py:6536"
     },
     {
       "name": "get_live_market_overview",
@@ -1579,7 +1694,7 @@
       "signature": "() -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Fetch live NSE index values (broad-market + sectoral) plus advances/declines.",
-      "source": "terminal/tools.py:4644"
+      "source": "terminal/tools.py:5096"
     },
     {
       "name": "get_live_quote",
@@ -1597,8 +1712,8 @@
       },
       "signature": "(symbol: 'str') -> 'dict'",
       "return": "'dict'",
-      "doc_summary": "Fetch live intraday quote for a single NSE symbol from the NSE API.",
-      "source": "terminal/tools.py:4449"
+      "doc_summary": "Fetch live intraday quote for a single NSE symbol.",
+      "source": "terminal/tools.py:4849"
     },
     {
       "name": "get_long_term_growth_candidates",
@@ -1624,7 +1739,7 @@
       "signature": "(index_scope: 'str' = 'MIDCAP', top_n: 'int' = 12, include_research: 'bool' = True) -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Rank index constituents for long-term growth research using DB evidence.",
-      "source": "terminal/tools.py:2032"
+      "source": "terminal/tools.py:2071"
     },
     {
       "name": "get_market_breadth",
@@ -1642,7 +1757,7 @@
       "signature": "(index: 'str | None' = None) -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Compute market breadth: A/D ratio, RS distribution, stage overview.",
-      "source": "terminal/tools.py:2496"
+      "source": "terminal/tools.py:2551"
     },
     {
       "name": "get_most_active_stocks",
@@ -1672,7 +1787,7 @@
       "signature": "(by: 'str' = 'value', index: 'str' = 'NIFTY 500', top_n: 'int' = 10) -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Return most actively traded stocks by volume or traded value.",
-      "source": "terminal/tools.py:5459"
+      "source": "terminal/tools.py:5973"
     },
     {
       "name": "get_nse_intraday_snapshot",
@@ -1690,8 +1805,8 @@
       },
       "signature": "(symbol: 'str') -> 'dict'",
       "return": "'dict'",
-      "doc_summary": "Fetch the NSE website live snapshot before any yfinance intraday fallback.",
-      "source": "terminal/tools.py:5219"
+      "doc_summary": "Fetch an exchange-backed live snapshot before any yfinance intraday fallback.",
+      "source": "terminal/tools.py:5671"
     },
     {
       "name": "get_nse_quotes",
@@ -1713,8 +1828,8 @@
       },
       "signature": "(symbols: 'list[str]') -> 'dict'",
       "return": "'dict'",
-      "doc_summary": "Fetch live NSE prices for multiple symbols in parallel.",
-      "source": "terminal/tools.py:4530"
+      "doc_summary": "Fetch live prices for multiple symbols.",
+      "source": "terminal/tools.py:4957"
     },
     {
       "name": "get_oi_analysis",
@@ -1736,7 +1851,7 @@
       "signature": "(symbol: 'str', expiry: 'str | None' = None) -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Focused open-interest analysis: PCR, max pain, CE/PE OI concentration, OI buildup and unwinding at key strikes. Good for support/resistance.",
-      "source": "terminal/tools.py:8517"
+      "source": "terminal/tools.py:9315"
     },
     {
       "name": "get_option_chain",
@@ -1764,7 +1879,7 @@
       "signature": "(symbol: 'str', expiry: 'str | None' = None, use_live: 'bool' = True) -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Fetch live option chain for an index or stock. Returns OI, IV, PCR, max pain, ATM greeks, OI buildup and support/resistance levels. Falls back to EOD data outside market hours.",
-      "source": "terminal/tools.py:8507"
+      "source": "terminal/tools.py:9305"
     },
     {
       "name": "get_option_chain_summary",
@@ -1810,7 +1925,7 @@
       "signature": "(symbol: 'str' = 'NIFTY', expiry_index: 'int' = 0) -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Fetch NSE options chain for a symbol with PCR, max pain, and IV data.",
-      "source": "terminal/tools.py:8397"
+      "source": "terminal/tools.py:9189"
     },
     {
       "name": "get_options_strategy",
@@ -1848,7 +1963,7 @@
       "signature": "(symbol: 'str', strategy: 'str', expiry: 'str | None' = None) -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Build a specific options strategy with live pricing. Returns legs, entry costs, max risk/reward, breakevens, and payoff curve.",
-      "source": "terminal/tools.py:8549"
+      "source": "terminal/tools.py:9347"
     },
     {
       "name": "get_pcr_summary",
@@ -1889,7 +2004,7 @@
       "signature": "(sector: 'str' = None) -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Return portfolio holdings summary, optionally filtered by sector.",
-      "source": "terminal/tools.py:4206"
+      "source": "terminal/tools.py:4446"
     },
     {
       "name": "get_portfolio_pnl",
@@ -1902,7 +2017,7 @@
       "signature": "(_args: 'dict' = None) -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Compute live unrealised P&L for all holdings in data/holdings.csv.",
-      "source": "terminal/tools.py:9469"
+      "source": "terminal/tools.py:10288"
     },
     {
       "name": "get_postgres_health",
@@ -1939,7 +2054,7 @@
       "signature": "(sector_or_symbol: 'str') -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Get sector performance and stock composition context. Pass a stock symbol (e.g. 'BHEL') to auto-detect its sector, or a sector name directly.",
-      "source": "terminal/tools.py:1576"
+      "source": "terminal/tools.py:1588"
     },
     {
       "name": "get_sector_heat_calendar",
@@ -1957,7 +2072,7 @@
       "signature": "(month: 'int | None' = None) -> 'dict'",
       "return": "'dict'",
       "doc_summary": "B3 Sectoral Heat Calendar — monthly seasonal return heatmap for NSE sectors.",
-      "source": "terminal/tools.py:6218"
+      "source": "terminal/tools.py:6896"
     },
     {
       "name": "get_strategy_recommendations",
@@ -1979,7 +2094,7 @@
       "signature": "(symbol: 'str', expiry: 'str | None' = None) -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Analyse current option chain context (PCR, IV, DTE, max pain) and recommend the top 3 options strategies with rationale.",
-      "source": "terminal/tools.py:8562"
+      "source": "terminal/tools.py:9360"
     },
     {
       "name": "get_symbol_quick_analysis",
@@ -1998,7 +2113,7 @@
       "signature": "(symbol: 'str') -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Return a deterministic single-stock quick analysis for bare ticker prompts.",
-      "source": "terminal/tools.py:1491"
+      "source": "terminal/tools.py:1503"
     },
     {
       "name": "get_symbol_snapshot",
@@ -2017,7 +2132,7 @@
       "signature": "(symbol: 'str') -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Get latest EOD snapshot for a symbol: price, stage, RS, RSI, signals, sector.",
-      "source": "terminal/tools.py:1259"
+      "source": "terminal/tools.py:1271"
     },
     {
       "name": "get_technical_setup",
@@ -2036,7 +2151,7 @@
       "signature": "(symbol: 'str', days: 'int' = 400) -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Compute technical indicators for a symbol from price history CSV.",
-      "source": "terminal/tools.py:1280"
+      "source": "terminal/tools.py:1292"
     },
     {
       "name": "get_top_gainers_losers",
@@ -2067,7 +2182,7 @@
       "signature": "(index: 'str' = 'NIFTY 500', top_n: 'int' = 10, direction: 'str' = 'both') -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Return top gaining and/or losing stocks from NSE right now.",
-      "source": "terminal/tools.py:5326"
+      "source": "terminal/tools.py:5805"
     },
     {
       "name": "get_top_oi_strikes",
@@ -2128,7 +2243,7 @@
       "signature": "(symbols: 'list[str] | None' = None, index: 'str' = 'NIFTY 50', days_ahead: 'int' = 30, event_types: 'list[str] | None' = None) -> 'dict'",
       "return": "'dict'",
       "doc_summary": "E4 Event-Driven Alert Engine: fetch upcoming corporate action events for a list of symbols or an entire index.",
-      "source": "terminal/tools.py:5653"
+      "source": "terminal/tools.py:6195"
     },
     {
       "name": "get_watchlist_alerts",
@@ -2140,7 +2255,7 @@
       "signature": "(_args: 'dict') -> 'dict'",
       "return": "'dict'",
       "doc_summary": "",
-      "source": "terminal/tools.py:9379"
+      "source": "terminal/tools.py:10198"
     },
     {
       "name": "ingest_financial_filing",
@@ -2174,6 +2289,30 @@
       "return": "'dict'",
       "doc_summary": "Download/register a filing URL using the existing filing agent.",
       "source": "terminal/results_tools.py:193"
+    },
+    {
+      "name": "list_agent_adda_skills",
+      "description": "List Agent Adda runtime Skill Store cards and static skill contracts with explicit maturity.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          },
+          "domain": {
+            "type": "string"
+          },
+          "include_contracts": {
+            "type": "boolean",
+            "default": true
+          }
+        },
+        "required": []
+      },
+      "signature": "(status: 'str | None' = None, domain: 'str | None' = None, include_contracts: 'bool' = True, *, repository: 'Any | None' = None) -> 'dict[str, Any]'",
+      "return": "'dict[str, Any]'",
+      "doc_summary": "List callable Skill Store cards and optionally static skill contracts.",
+      "source": "terminal/skills/tool_surface.py:70"
     },
     {
       "name": "list_generated_reports",
@@ -2310,7 +2449,7 @@
       "signature": "(query: 'str', top_n: 'int' = 5) -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Search NSE by company name or partial symbol → returns matching stocks with live price.",
-      "source": "terminal/tools.py:4594"
+      "source": "terminal/tools.py:5046"
     },
     {
       "name": "open_html_chart",
@@ -2348,7 +2487,7 @@
       "signature": "(symbol: 'str', timeframe: 'str' = '3mo', indicators: 'list | None' = None) -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Generate and open a full interactive Plotly HTML chart in the browser. Returns the file path.",
-      "source": "terminal/tools.py:8917"
+      "source": "terminal/tools.py:9715"
     },
     {
       "name": "open_report",
@@ -2446,7 +2585,7 @@
       "signature": "(state: 'dict | Any') -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Persist Research Council run metadata for a serialized state.",
-      "source": "terminal/tools.py:10182"
+      "source": "terminal/tools.py:11001"
     },
     {
       "name": "promote_company_evidence_to_postgres",
@@ -2565,7 +2704,40 @@
       "signature": "() -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Download the latest F&O EOD bhavcopy from NSE archives and store in PostgreSQL. Returns summary: trade_date, rows_stored, options count, futures count.",
-      "source": "terminal/tools.py:8570"
+      "source": "terminal/tools.py:9368"
+    },
+    {
+      "name": "render_fundamental_analysis_report",
+      "description": "Validate a sourced listed-company dataset and render a reproducible HTML, Markdown, or JSON fundamental-analysis report.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "dataset": {
+            "type": "object",
+            "description": "Dataset following the fundamental-analyze input schema."
+          },
+          "output_format": {
+            "type": "string",
+            "enum": [
+              "html",
+              "markdown",
+              "json"
+            ],
+            "default": "html"
+          },
+          "output_path": {
+            "type": "string",
+            "description": "Optional workspace-relative output path."
+          }
+        },
+        "required": [
+          "dataset"
+        ]
+      },
+      "signature": "(dataset: 'dict[str, Any]', output_format: 'str' = 'html', output_path: 'str | None' = None) -> 'dict[str, Any]'",
+      "return": "'dict[str, Any]'",
+      "doc_summary": "Validate a sourced fundamental dataset and render HTML, Markdown, or JSON.",
+      "source": "terminal/skills/tool_surface.py:33"
     },
     {
       "name": "render_missing_evidence_block",
@@ -2625,7 +2797,7 @@
       "signature": "(state: 'dict | Any | None' = None, run_id: 'str' = 'latest', output_format: 'str' = 'html') -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Render or locate a Research Council report.",
-      "source": "terminal/tools.py:10156"
+      "source": "terminal/tools.py:10975"
     },
     {
       "name": "request_clarification",
@@ -2647,7 +2819,7 @@
       "signature": "(question: 'str', reason: 'str' = '') -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Return a structured clarification decision.",
-      "source": "terminal/situation_assessment.py:1154"
+      "source": "terminal/situation_assessment.py:1228"
     },
     {
       "name": "resolve_company_alias",
@@ -2666,7 +2838,7 @@
       "signature": "(alias: 'str') -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Resolve a company alias/name and preserve the original alias in output.",
-      "source": "terminal/entity_resolution.py:289"
+      "source": "terminal/entity_resolution.py:293"
     },
     {
       "name": "resolve_conversation_reference",
@@ -2685,7 +2857,7 @@
       "signature": "(user_input: 'str', previous_context: 'TurnContext | None' = None) -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Resolve references like 'the report' or 'these' against prior context.",
-      "source": "terminal/situation_assessment.py:1086"
+      "source": "terminal/situation_assessment.py:1160"
     },
     {
       "name": "resolve_entity_context",
@@ -2704,7 +2876,7 @@
       "signature": "(user_input: 'str') -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Resolve an entity/topic prompt without running evidence tools.",
-      "source": "terminal/situation_assessment.py:1115"
+      "source": "terminal/situation_assessment.py:1189"
     },
     {
       "name": "resolve_index_or_stock",
@@ -2723,7 +2895,7 @@
       "signature": "(query: 'str') -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Resolve an index/derivative underlying first, otherwise resolve as stock.",
-      "source": "terminal/entity_resolution.py:296"
+      "source": "terminal/entity_resolution.py:300"
     },
     {
       "name": "resolve_stock_entity",
@@ -2742,7 +2914,7 @@
       "signature": "(query: 'str') -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Resolve a stock/company alias to a canonical NSE equity symbol.",
-      "source": "terminal/entity_resolution.py:237"
+      "source": "terminal/entity_resolution.py:241"
     },
     {
       "name": "resolve_symbol",
@@ -2761,7 +2933,7 @@
       "signature": "(query: 'str') -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Resolve a company name / partial name / alias to its NSE symbol.",
-      "source": "terminal/tools.py:797"
+      "source": "terminal/tools.py:809"
     },
     {
       "name": "resume_council_run",
@@ -2790,7 +2962,7 @@
       "signature": "(run_id: 'str' = 'latest', include_debug: 'bool' = False, output_format: 'str' = 'json') -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Load compact Research Council run metadata from PostgreSQL.",
-      "source": "terminal/tools.py:10194"
+      "source": "terminal/tools.py:11013"
     },
     {
       "name": "review_plan_execution",
@@ -2809,7 +2981,7 @@
       "signature": "(state: 'dict | Any') -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Review plan execution output and decide whether more evidence is needed.",
-      "source": "terminal/tools.py:10111"
+      "source": "terminal/tools.py:10930"
     },
     {
       "name": "run_critic_review",
@@ -2828,7 +3000,7 @@
       "signature": "(state: 'dict | Any') -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Run Research Council critic reviews against a serialized state.",
-      "source": "terminal/tools.py:10122"
+      "source": "terminal/tools.py:10941"
     },
     {
       "name": "run_data_steward_check",
@@ -2846,7 +3018,7 @@
       "signature": "(mode: 'str' = 'market_council') -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Run the Research Council data-steward freshness/readiness gate.",
-      "source": "terminal/tools.py:10068"
+      "source": "terminal/tools.py:10887"
     },
     {
       "name": "run_forensic_analysis",
@@ -2922,7 +3094,7 @@
       "signature": "(screen_type: 'str' = 'momentum', timeframe: 'str' = '15m', min_score: 'float' = 55, top_n: 'int' = 10, symbols: 'list[str] | None' = None) -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Run an intraday screener (PostgreSQL-backed or live yfinance fallback).",
-      "source": "terminal/tools.py:3318"
+      "source": "terminal/tools.py:3553"
     },
     {
       "name": "run_option_payoff_scenario",
@@ -2974,7 +3146,7 @@
       "signature": "(symbol: 'str', option_type: 'str' = 'CE', strike: 'float | None' = None, expiry_date: 'str | None' = None, entry_premium: 'float | None' = None, lots: 'int' = 1, move_start: 'float' = -5.0, move_end: 'float' = 5.0, move_step: 'float' = 2.5) -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Run PostgreSQL option payoff what-if scenarios.",
-      "source": "terminal/tools.py:8692"
+      "source": "terminal/tools.py:9490"
     },
     {
       "name": "run_quality_breakout_screener",
@@ -3064,7 +3236,7 @@
       "signature": "(symbols: 'list[str] | None' = None, indices: 'list[str] | None' = None, sectors: 'list[str] | None' = None, watchlist: 'list[str] | None' = None, output_format: 'str' = 'html', top_n: 'int' = 25, include_portfolio: 'bool' = False, persist: 'bool' = True) -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Generate a grounded recommendation report scoped by symbols, indices, or sectors.",
-      "source": "terminal/tools.py:10261"
+      "source": "terminal/tools.py:11080"
     },
     {
       "name": "run_research_council",
@@ -3117,7 +3289,20 @@
       "signature": "(objective: 'str', mode: 'str | None' = None, symbols: 'list[str] | None' = None, horizon: 'str | None' = None, risk_budget: 'str | None' = None, dry_run: 'bool' = False, output_format: 'str' = 'md', **flags: 'Any') -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Run the Research Council state machine and return a compact summary.",
-      "source": "terminal/tools.py:10037"
+      "source": "terminal/tools.py:10856"
+    },
+    {
+      "name": "run_rrg_breadth_report",
+      "description": "Generate the Market Breadth & RRG (Relative Rotation Graph) HTML report. Shows: (1) Broad-market RRG — 16 cap-size universes vs Nifty 500 with 4-week trail; (2) Sector rotation timeline — 20 sectors across 4 snapshot dates (capitulation to leadership); (3) Constituent breadth table — % above 50D/150D/200D SMA and Stage-2 count per universe. Use when the user asks for market breadth, RRG, sector rotation chart, or leading/lagging analysis.",
+      "parameters": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "signature": "() -> 'dict'",
+      "return": "'dict'",
+      "doc_summary": "Generate the Market Breadth + RRG (Relative Rotation Graph) HTML report.",
+      "source": "terminal/tools.py:11105"
     },
     {
       "name": "run_scenario_analysis",
@@ -3151,7 +3336,7 @@
       "signature": "(symbol: 'str', price_scenarios: 'list[float] | None' = None, scenario_labels: 'list[str] | None' = None) -> 'dict'",
       "return": "'dict'",
       "doc_summary": "P2-2 Scenario Engine — what-if price analysis for a held stock.",
-      "source": "terminal/tools.py:6499"
+      "source": "terminal/tools.py:7177"
     },
     {
       "name": "run_screener_query",
@@ -3187,7 +3372,7 @@
       "signature": "(screen_type: 'str' = 'stage2', top_n: 'int' = 10) -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Run a pre-built EOD screener from the DB snapshot data.",
-      "source": "terminal/tools.py:1702"
+      "source": "terminal/tools.py:1714"
     },
     {
       "name": "run_visual_scan",
@@ -3271,7 +3456,7 @@
       "signature": "(index: 'str' = 'NIFTY 50', interval: 'str' = '15m', strategies: 'list[str] | None' = None, direction_filter: 'str' = 'all', min_rr: 'float' = 1.5, top_n: 'int' = 5) -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Scan all stocks in an NSE index for intraday trading signals.",
-      "source": "terminal/tools.py:7015"
+      "source": "terminal/tools.py:7756"
     },
     {
       "name": "scan_mtf_aligned",
@@ -3324,7 +3509,7 @@
       "signature": "(symbols: 'list[str] | None' = None, index: 'str | None' = None, direction: 'str' = 'bullish', min_score: 'int' = 70, timeframes: 'list[str] | None' = None, top_n: 'int' = 10) -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Rank a universe by MTF confluence in a given direction.",
-      "source": "terminal/tools.py:9843"
+      "source": "terminal/tools.py:10662"
     },
     {
       "name": "scan_options_buys",
@@ -3358,7 +3543,7 @@
       "signature": "(direction: 'str' = 'bullish', max_iv: 'float' = 25.0, min_oi: 'int' = 500000, top_n: 'int' = 10) -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Scan all F&O-eligible stocks and indices for the best options buying opportunities. Ranks by: low ATM IV (cheap options) + adequate OI liquidity + ideal DTE. Returns top N symbols with ATM IV, straddle cost, expected move, and buying score. direction: 'bullish' | 'bearish' | 'volatile' max_iv: IV ceiling (default 25%) — lower = cheaper options only",
-      "source": "terminal/tools.py:8611"
+      "source": "terminal/tools.py:9409"
     },
     {
       "name": "scan_symbols_intraday",
@@ -3423,7 +3608,7 @@
       "signature": "(symbols: 'list[str]', interval: 'str' = '15m', strategies: 'list[str] | None' = None, direction_filter: 'str' = 'all', min_rr: 'float' = 1.3, top_n: 'int' = 10) -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Scan a specific list of NSE stocks for intraday signals.",
-      "source": "terminal/tools.py:7055"
+      "source": "terminal/tools.py:7796"
     },
     {
       "name": "scrape_screener_in",
@@ -3466,6 +3651,25 @@
       "return": "'dict'",
       "doc_summary": "Run forensic screening across a list of symbols. Returns ranked results with overall risk rating for each stock. Useful for portfolio-level forensic checks or pre-buy due diligence.",
       "source": "terminal/forensics.py:671"
+    },
+    {
+      "name": "screen_portfolio_forensic_watchlist",
+      "description": "Run forensic accounting screening across the current portfolio holdings. Loads holdings from the configured portfolio source, screens up to eight holdings with Beneish, Piotroski and Altman models, and ranks high-risk holdings first. Use for: forensic screen my portfolio, accounting red flags in my holdings, financial health of my portfolio.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "max_symbols": {
+            "type": "integer",
+            "description": "Maximum portfolio symbols to screen; capped at 8.",
+            "default": 8
+          }
+        },
+        "required": []
+      },
+      "signature": "(max_symbols: 'int' = 8) -> 'dict'",
+      "return": "'dict'",
+      "doc_summary": "Run forensic accounting screening on the current portfolio holdings.",
+      "source": "terminal/tools.py:4523"
     },
     {
       "name": "search_analyst_coverage",
@@ -3667,7 +3871,7 @@
       "signature": "(symbol: 'str', max_results: 'int' = 5) -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Search for recent news/catalysts for a symbol via DuckDuckGo Lite.",
-      "source": "terminal/tools.py:3530"
+      "source": "terminal/tools.py:3765"
     },
     {
       "name": "search_market_knowledge",
@@ -3701,7 +3905,7 @@
       "signature": "(query: 'str', sources: 'list[str] | None' = None) -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Source-backed market education from Wikipedia and Investopedia.",
-      "source": "terminal/tools.py:3720"
+      "source": "terminal/tools.py:3955"
     },
     {
       "name": "search_mf_holdings",
@@ -3880,7 +4084,7 @@
       "signature": "(symbol: 'str', insight_type: 'str', question: 'str', answer: 'str', evidence: 'dict | None' = None, source_date: 'str' = '') -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Persist an LLM-generated insight for a stock into scores.company_insights KB.",
-      "source": "terminal/tools.py:10657"
+      "source": "terminal/tools.py:11509"
     },
     {
       "name": "summarize_latest_results",
@@ -3940,7 +4144,7 @@
       "signature": "(state: 'dict | Any') -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Synthesize the final Research Council decision from findings and reviews.",
-      "source": "terminal/tools.py:10145"
+      "source": "terminal/tools.py:10964"
     },
     {
       "name": "validate_answer_against_evidence",
@@ -3997,7 +4201,7 @@
       "signature": "(intent: 'str', evidence_plan: 'list[str] | tuple[str, ...] | None' = None, required_tools: 'list[str] | tuple[str, ...] | None' = None) -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Validate that an assessment/tool plan covers the required evidence tools.",
-      "source": "terminal/situation_assessment.py:1136"
+      "source": "terminal/situation_assessment.py:1210"
     },
     {
       "name": "validate_requested_symbols",
@@ -4022,7 +4226,7 @@
       "signature": "(query: 'str', executed_symbols: 'list[str] | None' = None) -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Compare explicit ticker-looking user tokens against executed evidence symbols.",
-      "source": "terminal/entity_resolution.py:488"
+      "source": "terminal/entity_resolution.py:492"
     },
     {
       "name": "validate_required_tools_executed",
@@ -4078,7 +4282,7 @@
       "signature": "(symbols: 'list[str]', top_n: 'int' = 20) -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Validate CANSLIM/RS/fundamental/Piotroski strength from auditable sources.",
-      "source": "terminal/tools.py:2212"
+      "source": "terminal/tools.py:2276"
     }
   ]
 }

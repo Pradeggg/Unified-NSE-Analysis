@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Literal
 
 
 @dataclass(frozen=True)
@@ -12,6 +13,7 @@ class SkillDefinition:
     entities_required: tuple[str, ...] = ()
     evidence_required: tuple[str, ...] = ()
     output_contract: tuple[str, ...] = ()
+    maturity: Literal["contract", "executable"] = "contract"
 
 
 @dataclass(frozen=True)

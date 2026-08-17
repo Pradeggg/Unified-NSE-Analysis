@@ -1,0 +1,4 @@
+interface:
+  display_name: "Fundamental Analyzer"
+  short_description: "Research and value listed companies"
+  default_prompt: "Use $fundamental-analyze to analyze this listed company using current primary filings, Screener history, normalized earnings, risks, and valuation scenarios."

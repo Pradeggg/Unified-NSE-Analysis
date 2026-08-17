@@ -11596,6 +11596,71 @@ TOOL_REGISTRY.update({
 })
 
 
+from terminal.skills.tool_surface import (
+    execute_agent_adda_skill,
+    find_agent_adda_skills,
+    list_agent_adda_skills,
+    render_fundamental_analysis_report,
+)
+
+
+TOOL_REGISTRY.update({
+    "render_fundamental_analysis_report": (
+        render_fundamental_analysis_report,
+        "Validate a sourced listed-company dataset and render a reproducible HTML, Markdown, or JSON fundamental-analysis report.",
+        {
+            "type": "object",
+            "properties": {
+                "dataset": {"type": "object", "description": "Dataset following the fundamental-analyze input schema."},
+                "output_format": {"type": "string", "enum": ["html", "markdown", "json"], "default": "html"},
+                "output_path": {"type": "string", "description": "Optional workspace-relative output path."},
+            },
+            "required": ["dataset"],
+        },
+    ),
+    "list_agent_adda_skills": (
+        list_agent_adda_skills,
+        "List Agent Adda runtime Skill Store cards and static skill contracts with explicit maturity.",
+        {
+            "type": "object",
+            "properties": {
+                "status": {"type": "string"},
+                "domain": {"type": "string"},
+                "include_contracts": {"type": "boolean", "default": True},
+            },
+            "required": [],
+        },
+    ),
+    "find_agent_adda_skills": (
+        find_agent_adda_skills,
+        "Find validated or production Agent Adda skills for a natural-language task and log retrieval telemetry.",
+        {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string"},
+                "top_n": {"type": "integer", "minimum": 1, "maximum": 30, "default": 5},
+                "domain": {"type": "string"},
+            },
+            "required": ["query"],
+        },
+    ),
+    "execute_agent_adda_skill": (
+        execute_agent_adda_skill,
+        "Execute one validated or production Agent Adda Skill Store card using safe tool/SQL steps, evidence validation, and telemetry.",
+        {
+            "type": "object",
+            "properties": {
+                "skill_id": {"type": "string"},
+                "params": {"type": "object", "default": {}},
+                "version": {"type": "integer", "minimum": 1},
+                "retrieval_id": {"type": "integer", "minimum": 1},
+            },
+            "required": ["skill_id"],
+        },
+    ),
+})
+
+
 def call_tool(name: str, args: dict) -> dict:
     """Execute a registered tool by name with given arguments.
 

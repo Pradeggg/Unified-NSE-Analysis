@@ -4,7 +4,7 @@ status: validated
 domain: screening
 title: VCP Breakouts With Fundamentals
 description: >
-  Find Stage 2 VCP breakout candidates and high-quality breakout or new-high
+  Find Stage 2 VCP breakout candidates and high-quality Stage 2 momentum
   candidates with strong technical and fundamental evidence, returning a
   bounded TradingView-ready watchlist.
 input_patterns:
@@ -24,6 +24,7 @@ evidence_required:
   tables:
     - scores.stage2_vcp_picks
     - scores.stage_snapshots
+    - portfolio.holdings
   freshness:
     max_age_days: 5
     stale_is_error: false
@@ -109,10 +110,11 @@ sql_templates:
     safety_findings: []
     metadata:
       evidence_role: vcp_candidates
+      optional: true
       required_filters:
         stage: STAGE_2
 
-  - name: stage2_new_high_candidates
+  - name: stage2_momentum_candidates
     sql: >
       WITH latest AS (
         SELECT MAX(snapshot_date) AS as_of_date
@@ -184,7 +186,7 @@ sql_templates:
     safety_status: passed
     safety_findings: []
     metadata:
-      evidence_role: new_high_breakout_candidates
+      evidence_role: stage2_momentum_candidates
       required_filters:
         stage: STAGE_2
 
@@ -298,27 +300,61 @@ sql_templates:
 
   - name: portfolio_overlap_optional
     sql: >
-      WITH selected AS (
+      WITH selected_raw AS (
         SELECT
           v.snapshot_date AS as_of_date,
           v.symbol,
-          'candidate' AS overlap_status
+          v.rank AS candidate_rank
         FROM scores.stage2_vcp_picks v
         WHERE v.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks)
-        ORDER BY v.rank ASC
+        UNION ALL
+        SELECT
+          s.snapshot_date AS as_of_date,
+          s.symbol,
+          1000 + ROW_NUMBER() OVER (ORDER BY s.investment_score DESC NULLS LAST) AS candidate_rank
+        FROM scores.stage_snapshots s
+        WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)
+          AND s.stage = 'STAGE_2'
+          AND COALESCE(s.trading_signal, '') IN ('STRONG_BUY', 'BUY')
+      ),
+      selected AS (
+        SELECT DISTINCT ON (symbol)
+          as_of_date,
+          symbol,
+          candidate_rank
+        FROM selected_raw
+        ORDER BY symbol, candidate_rank ASC
+      ),
+      bounded AS (
+        SELECT *
+        FROM selected
+        ORDER BY candidate_rank ASC
         LIMIT :limit
+      ),
+      holdings AS (
+        SELECT
+          UPPER(symbol) AS symbol,
+          SUM(qty) AS qty
+        FROM portfolio.holdings
+        WHERE account = :account
+        GROUP BY UPPER(symbol)
+        HAVING SUM(qty) > 0
       )
       SELECT
-        as_of_date,
-        symbol,
-        overlap_status
-      FROM selected
-      WHERE false
+        s.as_of_date,
+        s.symbol,
+        h.qty,
+        CASE WHEN h.symbol IS NULL THEN 'NOT_HELD' ELSE 'EXISTING_HOLDING' END AS overlap_status
+      FROM bounded s
+      LEFT JOIN holdings h ON h.symbol = UPPER(s.symbol)
+      ORDER BY s.candidate_rank ASC
     required_params:
+      - account
       - limit
     expected_columns:
       - as_of_date
       - symbol
+      - qty
       - overlap_status
     row_limit: 100
     safety_status: passed
@@ -329,7 +365,7 @@ sql_templates:
 
 output_contract:
   - vcp_quality_candidates
-  - stage2_new_high_candidates
+  - stage2_momentum_candidates
   - tradingview_symbol_list
   - filter_explanation
   - portfolio_overlap_optional
@@ -340,6 +376,7 @@ validation_rules:
       tables:
         - scores.stage2_vcp_picks
         - scores.stage_snapshots
+        - portfolio.holdings
   - name: sql_is_read_only
     severity: error
     config:
@@ -360,14 +397,16 @@ validation_rules:
 synthesis_guidance: >
   VCP evidence must come from scores.stage2_vcp_picks. Do not label non-VCP
   candidates as VCP; Stage 2 candidates from scores.stage_snapshots may be
-  described only as quality breakout, new-high, or momentum candidates based on
-  their explicit evidence. Explain all filters and return the TradingView-ready
+  described only as quality-breakout or momentum candidates based on their
+  explicit evidence. Do not call them new highs without separate 52-week-high
+  evidence. Explain all filters and return the TradingView-ready
   symbols exactly as provided in tradingview_symbol_list.
 generation_model: human-authored
 created_by: codex
 metadata:
   runtime:
     default_params:
+      account: DEFAULT
       limit: 25
       min_rs: 20
       min_price: 50

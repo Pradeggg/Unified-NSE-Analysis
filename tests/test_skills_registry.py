@@ -24,3 +24,15 @@ def test_fundamental_driver_skill_contract_is_explicit():
     assert "metric_bridge" in skill.output_contract
     assert any("eps" in trigger for trigger in skill.triggers)
     assert any("roce" in trigger for trigger in skill.triggers)
+    assert skill.maturity == "executable"
+
+
+def test_metadata_only_skills_are_explicitly_contract_maturity():
+    skills = list_skills()
+
+    assert {skill.maturity for skill in skills} <= {"contract", "executable"}
+    assert all(
+        skill.maturity == "contract"
+        for skill in skills
+        if skill.id != "fundamental_driver_diagnosis"
+    )

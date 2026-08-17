@@ -24,6 +24,9 @@ __pycache__/
 
 # IDE
 .vscode/
+!.vscode/
+.vscode/*
+!.vscode/mcp.json
 .idea/
 *.swp
 *.swo

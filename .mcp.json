@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "agent-adda": {
+      "type": "stdio",
+      "command": ".venv/bin/python",
+      "args": ["integrations/agent_adda_mcp/server.py"]
+    }
+  }
+}
