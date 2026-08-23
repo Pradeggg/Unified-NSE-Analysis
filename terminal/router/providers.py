@@ -45,6 +45,7 @@ class RouteProvider(Protocol):
 
 _LABEL_PATTERN = re.compile(r"^\s*([A-Za-z]|\d{1,2})\s*$")
 _FOLLOWUP_PHRASES = (
+    # Original phrases
     "based on the above",
     "based on above",
     "what would be your recommendation",
@@ -59,6 +60,35 @@ _FOLLOWUP_PHRASES = (
     "and now",
     "go deeper",
     "expand on that",
+    # Common natural follow-ups users actually type
+    "add more details",
+    "more details",
+    "add more",
+    "more info",
+    "more information",
+    "elaborate",
+    "elaborate on",
+    "drill down",
+    "dig deeper",
+    "give me more",
+    "give more",
+    "show more",
+    "tell me more about",
+    "can you add",
+    "can you elaborate",
+    "can you expand",
+    "anything else",
+    "what else",
+    "go further",
+    "expand further",
+    "break it down",
+    "break that down",
+    "explain further",
+    "more on this",
+    "more on that",
+    "say more",
+    "continue",
+    "go on",
 )
 _REPORT_PHRASES = (
     "the report",

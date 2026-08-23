@@ -68,6 +68,21 @@ _LOCAL_SYMBOLS: set[str] | None = None
 _LOCAL_NAME_ALIASES: dict[str, str] | None = None
 _SESSION_MEMORY: dict[str, dict[str, Any]] = {}
 _CONTEXT_RE = re.compile(r"\b(it|its|this|that|these|those|them|same|above|previous|earlier)\b", re.IGNORECASE)
+# Bare follow-up phrases that imply "expand on the prior subject"
+_FOLLOWUP_RE = re.compile(
+    r"^(add|give|show|tell|provide|explain|elaborate|expand|more|go\s+deeper|"
+    r"dig\s+(in|into|deeper)|break\s+(it\s+)?down|what\s+(else|more)|"
+    r"any\s+(more|additional)|further|detail(s)?|summarize|summarise|"
+    r"can\s+you\s+add|can\s+you\s+give|be\s+more\s+specific|"
+    r"what\s+about\s+the|what\s+does\s+this\s+mean|what\s+should\s+i\s+look\s+at)\b",
+    re.IGNORECASE,
+)
+# Answer patterns that indicate the bridge produced a symbol-resolution failure
+_BRIDGE_FAILURE_RE = re.compile(
+    r"(unresolved;\s*candidates|No exact NSE symbol found|could not build a full evidence|"
+    r"try a direct prompt such as)",
+    re.IGNORECASE,
+)
 _EVIDENCE_RE = re.compile(r"\b(gaps?|evidence|sources?|freshness|stale|missing|used)\b", re.IGNORECASE)
 _ADVICE_RE = re.compile(r"\b(should\s+i\s+(buy|sell)|can\s+i\s+(buy|sell)|buy\s+it|sell\s+it|recommend|advice)\b", re.IGNORECASE)
 _FINANCIAL_RE = re.compile(
@@ -1376,6 +1391,11 @@ async def _chat_via_bridge(req: TalkChatRequest, session_id: str) -> TalkChatRes
 
     trace      = result.get("trace") or []
     answer     = result.get("answer") or ""
+
+    # If the bridge produced a symbol-resolution failure or empty answer,
+    # fall back to the legacy pipeline which has its own graceful degradation.
+    if not answer.strip() or _BRIDGE_FAILURE_RE.search(answer):
+        return await _chat_legacy(req, session_id)
     backend    = result.get("backend") or "unknown"
     intent     = extract_intent(result)
 
