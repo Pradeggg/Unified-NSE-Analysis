@@ -62,7 +62,9 @@ STOCK_RESULT_COLUMNS = [
     'SYMBOL', 'COMPANY_NAME', 'SECTOR', 'MARKET_CAP_CATEGORY', 'CURRENT_PRICE',
     'CHANGE_1D', 'CHANGE_1W', 'CHANGE_1M', 'TECHNICAL_SCORE', 'RSI',
     'RELATIVE_STRENGTH', 'CAN_SLIM_SCORE', 'MINERVINI_SCORE',
-    'ENHANCED_FUND_SCORE', 'TREND_SIGNAL', 'TRADING_SIGNAL',
+    'ENHANCED_FUND_SCORE', 'EARNINGS_QUALITY', 'SALES_GROWTH',
+    'FINANCIAL_STRENGTH', 'INSTITUTIONAL_BACKING',
+    'TREND_SIGNAL', 'TRADING_SIGNAL',
 ]
 
 print("Starting ENHANCED NSE Universe Analysis (Python)...")
@@ -356,9 +358,47 @@ def load_index_data():
         raise
 
 def load_fundamental_data():
-    """Load fundamental scores database"""
-    print("Loading fundamental scores database...")
-    
+    """Load fundamental scores.
+
+    Primary: PostgreSQL scores.fundamental_scores (latest row per symbol).
+    Fallback: local fundamental_scores_database.csv (stale but offline-safe).
+
+    Returns a DataFrame with columns:
+        symbol, ENHANCED_FUND_SCORE, EARNINGS_QUALITY, SALES_GROWTH,
+        FINANCIAL_STRENGTH, INSTITUTIONAL_BACKING
+    """
+    print("Loading fundamental scores database…")
+
+    # ── 1. Try PostgreSQL (v_latest_fundamental_scores view) ────────────────
+    try:
+        import psycopg2 as _pg2
+        _conn = _pg2.connect(PG_DSN)
+        try:
+            # Use the view that already picks the most-recent row per symbol
+            _df = pd.read_sql_query(
+                """
+                SELECT symbol,
+                       enhanced_fund_score AS "ENHANCED_FUND_SCORE",
+                       earnings_quality    AS "EARNINGS_QUALITY",
+                       sales_growth        AS "SALES_GROWTH",
+                       financial_strength  AS "FINANCIAL_STRENGTH",
+                       institutional_backing AS "INSTITUTIONAL_BACKING"
+                FROM scores.v_latest_fundamental_scores
+                WHERE enhanced_fund_score IS NOT NULL
+                """,
+                _conn,
+            )
+        finally:
+            _conn.close()
+
+        if not _df.empty:
+            print(f"Fundamental scores from PG: {len(_df)} symbols "
+                  f"(enhanced_fund coverage {_df['ENHANCED_FUND_SCORE'].notna().sum()})")
+            return _df
+    except Exception as _e:
+        print(f"PG fundamental scores unavailable ({_e}); falling back to CSV…")
+
+    # ── 2. CSV fallback ──────────────────────────────────────────────────────
     fund_file = next(
         (
             path for path in [
@@ -372,15 +412,15 @@ def load_fundamental_data():
         None,
     )
     if fund_file is None:
-        print("Fundamental scores file not found, continuing without fundamental data")
+        print("Fundamental scores not available (PG down, CSV not found)")
         return None
-    
+
     try:
         df = pd.read_csv(fund_file, encoding='utf-8')
-        print(f"Loaded fundamental scores data: {len(df)} records")
+        print(f"Fundamental scores from CSV fallback: {len(df)} records")
         return df
     except Exception as e:
-        print(f"Error loading fundamental data: {e}")
+        print(f"Error loading fundamental CSV: {e}")
         return None
 
 def load_company_names():
@@ -446,7 +486,10 @@ def calculate_tech_score(stock_data, index_data=None, fundamental_data=None, sym
         return {
             'score': None, 'rsi': None, 'trend': 'NEUTRAL',
             'relative_strength': None, 'can_slim_score': 0,
-            'minervini_score': 0, 'fundamental_score': 0
+            'minervini_score': 0, 'fundamental_score': 0,
+            'enhanced_fund_score': None, 'earnings_quality': None,
+            'sales_growth': None, 'financial_strength': None,
+            'institutional_backing': None,
         }
     
     prices = stock_data['CLOSE'].values
@@ -646,11 +689,26 @@ def calculate_tech_score(stock_data, index_data=None, fundamental_data=None, sym
     # Fundamental Score (25 points)
     fundamental_score = 0
     enhanced_fund_score = None
-    
+    earnings_quality = None
+    sales_growth_score = None
+    financial_strength = None
+    institutional_backing = None
+
     if fundamental_data is not None and symbol is not None:
-        fund_row = fundamental_data[fundamental_data['symbol'] == symbol]
+        # Support both PG-sourced DFs (col='symbol') and CSV DFs (col='symbol')
+        sym_col = 'symbol' if 'symbol' in fundamental_data.columns else 'SYMBOL'
+        fund_row = fundamental_data[fundamental_data[sym_col] == symbol]
         if len(fund_row) > 0:
             enhanced_fund_score = fund_row['ENHANCED_FUND_SCORE'].iloc[0]
+            earnings_quality     = fund_row['EARNINGS_QUALITY'].iloc[0]    if 'EARNINGS_QUALITY'    in fund_row.columns else None
+            sales_growth_score   = fund_row['SALES_GROWTH'].iloc[0]        if 'SALES_GROWTH'        in fund_row.columns else None
+            financial_strength   = fund_row['FINANCIAL_STRENGTH'].iloc[0]  if 'FINANCIAL_STRENGTH'  in fund_row.columns else None
+            institutional_backing = fund_row['INSTITUTIONAL_BACKING'].iloc[0] if 'INSTITUTIONAL_BACKING' in fund_row.columns else None
+            # Convert NaN → None
+            earnings_quality      = None if pd.isna(earnings_quality)      else float(earnings_quality)
+            sales_growth_score    = None if pd.isna(sales_growth_score)    else float(sales_growth_score)
+            financial_strength    = None if pd.isna(financial_strength)    else float(financial_strength)
+            institutional_backing = None if pd.isna(institutional_backing) else float(institutional_backing)
             if pd.notna(enhanced_fund_score):
                 if enhanced_fund_score >= 70:
                     fundamental_score = 25
@@ -716,7 +774,11 @@ def calculate_tech_score(stock_data, index_data=None, fundamental_data=None, sym
         'can_slim_score': can_slim_score,
         'minervini_score': minervini_score,
         'fundamental_score': fundamental_score,
-        'enhanced_fund_score': enhanced_fund_score
+        'enhanced_fund_score': enhanced_fund_score,
+        'earnings_quality': earnings_quality,
+        'sales_growth': sales_growth_score,
+        'financial_strength': financial_strength,
+        'institutional_backing': institutional_backing,
     }
 
 # =============================================================================
@@ -876,6 +938,10 @@ def analyze_stocks(stock_data, index_data, fundamental_data, company_names, late
                 'CAN_SLIM_SCORE': tech_result['can_slim_score'],
                 'MINERVINI_SCORE': tech_result['minervini_score'],
                 'ENHANCED_FUND_SCORE': tech_result['enhanced_fund_score'],
+                'EARNINGS_QUALITY': tech_result.get('earnings_quality'),
+                'SALES_GROWTH': tech_result.get('sales_growth'),
+                'FINANCIAL_STRENGTH': tech_result.get('financial_strength'),
+                'INSTITUTIONAL_BACKING': tech_result.get('institutional_backing'),
                 'TREND_SIGNAL': tech_result['trend'],
                 'TRADING_SIGNAL': trading_signal
             }
