@@ -1,6 +1,6 @@
 """Shared Pydantic schemas — mirrors browser_plugin/src/types.ts."""
 from __future__ import annotations
-from typing import Literal, Optional
+from typing import Any, Literal, Optional
 from pydantic import BaseModel, Field, field_validator
 
 
@@ -90,3 +90,46 @@ class AnalysisResult(BaseModel):
 class FollowUpRequest(BaseModel):
     capture_id: str
     question: str
+
+
+class TalkChatRequest(BaseModel):
+    question: str = Field(..., min_length=1)
+    session_id: Optional[str] = None
+    watchlist: list[str] = Field(default_factory=list)
+    mode: Literal["permissive", "strict"] = "permissive"
+
+
+class TalkEvidenceItem(BaseModel):
+    label: str
+    value: Any = None
+    source: str
+    as_of: Optional[str] = None
+    freshness: Literal["fresh", "stale", "unknown"] = "unknown"
+
+
+class TalkAction(BaseModel):
+    label: str
+    action: str
+    payload: dict[str, Any] = Field(default_factory=dict)
+
+
+class TalkChatResponse(BaseModel):
+    session_id: str
+    intent: str
+    answer: str
+    symbols: list[str] = Field(default_factory=list)
+    comparison: list[dict[str, Any]] = Field(default_factory=list)
+    market_context: list[dict[str, Any]] = Field(default_factory=list)
+    evidence: list[TalkEvidenceItem] = Field(default_factory=list)
+    gaps: list[str] = Field(default_factory=list)
+    next_actions: list[TalkAction] = Field(default_factory=list)
+    model_route: dict[str, Any] = Field(default_factory=dict)
+    input_tokens: int = 0
+    output_tokens: int = 0
+    cost_usd: float = 0.0
+
+
+class TalkCompareRequest(BaseModel):
+    symbols: list[str] = Field(..., min_length=2, max_length=10)
+    question: str = ""
+    mode: Literal["permissive", "strict"] = "permissive"

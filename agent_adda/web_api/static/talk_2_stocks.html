@@ -1,0 +1,1099 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Talk 2 Stocks by Agent Adda</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #F8FAFF;
+      --panel: #ffffff;
+      --panel-2: #F0F9FF;
+      --panel-3: #FAFAF9;
+      --text: #1C1917;
+      --muted: #78716C;
+      --line: #E7E5E4;
+      --accent: #0284C7;
+      --accent-2: #0EA5E9;
+      --accent-pale: #E0F2FE;
+      --danger: #DC2626;
+      --warn: #D97706;
+      --good: #059669;
+      --shadow: 0 1px 3px rgba(28, 25, 23, 0.08);
+      --shadow-md: 0 12px 30px rgba(28, 25, 23, 0.08);
+      --font-display: "Playfair Display", Georgia, "Times New Roman", serif;
+      --font-sans: "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      height: 100%;
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-sans);
+      font-size: 13px;
+      letter-spacing: 0;
+    }
+
+    body {
+      min-width: 320px;
+      background-image:
+        radial-gradient(ellipse 80% 60% at 50% 4%, rgba(14, 165, 233, 0.08) 0%, transparent 70%),
+        url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%230EA5E9' fill-opacity='0.04'%3E%3Cpath d='M30 0l30 30-30 30L0 30z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    }
+
+    button, input, textarea {
+      font: inherit;
+    }
+
+    button {
+      border: 1px solid var(--line);
+      background: var(--panel);
+      color: var(--text);
+      border-radius: 8px;
+      min-height: 36px;
+      padding: 0 12px;
+      cursor: pointer;
+      transition: border-color 0.16s ease, background 0.16s ease, color 0.16s ease, box-shadow 0.16s ease;
+    }
+
+    button:hover { border-color: var(--accent); }
+    button:disabled { cursor: not-allowed; opacity: 0.55; }
+
+    .app {
+      min-height: 100%;
+      display: grid;
+      grid-template-rows: auto 1fr;
+    }
+
+    .topbar {
+      height: 68px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 0 24px;
+      border-bottom: 1px solid rgba(231, 229, 228, 0.86);
+      background: rgba(248, 250, 255, 0.96);
+      backdrop-filter: blur(12px);
+      position: sticky;
+      top: 0;
+      z-index: 20;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 250px;
+      white-space: nowrap;
+    }
+
+    .brand-mark {
+      width: 36px;
+      height: 36px;
+      border-radius: 999px;
+      display: inline-grid;
+      place-items: center;
+      color: #fff;
+      font-weight: 800;
+      font-size: 12px;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      box-shadow: 0 8px 20px rgba(2, 132, 199, 0.22);
+      flex: 0 0 auto;
+    }
+
+    .brand-copy {
+      display: grid;
+      gap: 1px;
+    }
+
+    .brand strong {
+      font-family: var(--font-display);
+      font-size: 17px;
+      font-weight: 700;
+      letter-spacing: 0;
+    }
+
+    .brand span {
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 650;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .tabs {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .tab {
+      border: 0;
+      border-radius: 999px;
+      height: 34px;
+      min-width: 86px;
+      background: transparent;
+      color: #57534E;
+      font-size: 13px;
+      font-weight: 650;
+    }
+
+    .tab.active {
+      color: #fff;
+      background: var(--accent);
+      box-shadow: 0 8px 18px rgba(2, 132, 199, 0.18);
+    }
+
+    .tab:not(.active):hover {
+      background: var(--panel-2);
+      color: var(--accent);
+    }
+
+    .status {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--muted);
+      font-size: 12px;
+      white-space: nowrap;
+      font-weight: 600;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      display: inline-block;
+      background: var(--warn);
+    }
+
+    .dot.ok { background: var(--good); }
+    .dot.bad { background: var(--danger); }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 380px;
+      min-height: 0;
+      width: min(1480px, calc(100vw - 40px));
+      margin: 20px auto;
+      border: 1px solid rgba(231, 229, 228, 0.9);
+      border-radius: 16px;
+      overflow: hidden;
+      background: rgba(255, 255, 255, 0.74);
+      box-shadow: var(--shadow-md);
+    }
+
+    .main {
+      min-width: 0;
+      display: grid;
+      grid-template-rows: 1fr auto;
+      min-height: calc(100vh - 110px);
+      border-right: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.64);
+    }
+
+    .chat-log {
+      min-height: 0;
+      overflow: auto;
+      padding: 24px;
+    }
+
+    .message {
+      max-width: 980px;
+      margin: 0 auto 16px;
+      display: grid;
+      grid-template-columns: 104px minmax(0, 1fr);
+      gap: 14px;
+    }
+
+    .role {
+      color: var(--muted);
+      font-size: 11px;
+      padding-top: 11px;
+      text-align: right;
+      font-weight: 750;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .bubble {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 14px 16px;
+      line-height: 1.55;
+      box-shadow: var(--shadow);
+      overflow-wrap: anywhere;
+      color: #44403C;
+    }
+
+    .bubble h3,
+    .bubble h4 {
+      margin: 0 0 6px;
+      color: var(--ink);
+      font-size: 13px;
+      font-weight: 700;
+      line-height: 1.3;
+    }
+
+    .bubble h4 {
+      margin-top: 12px;
+      font-size: 12px;
+    }
+
+    .bubble p {
+      margin: 0 0 10px;
+    }
+
+    .bubble ul,
+    .bubble ol {
+      margin: 6px 0 12px 20px;
+      padding: 0;
+    }
+
+    .bubble li {
+      margin: 4px 0;
+    }
+
+    .message.user .bubble {
+      border-color: #BAE6FD;
+      background: #F0F9FF;
+      color: #0C4A6E;
+    }
+
+    .composer {
+      padding: 14px 20px 18px;
+      border-top: 1px solid var(--line);
+      background: rgba(248, 250, 255, 0.94);
+    }
+
+    .composer-inner {
+      max-width: 980px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: end;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 54px;
+      max-height: 160px;
+      resize: vertical;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--panel);
+      color: var(--text);
+      padding: 13px 14px;
+      outline: none;
+      line-height: 1.45;
+      box-shadow: var(--shadow);
+    }
+
+    textarea:focus { border-color: var(--accent-2); box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.16); }
+
+    .send {
+      min-width: 92px;
+      min-height: 54px;
+      border-color: var(--accent);
+      background: var(--accent);
+      color: #fff;
+      font-weight: 650;
+      border-radius: 12px;
+    }
+
+    .send:hover {
+      background: #0369A1;
+      border-color: #0369A1;
+    }
+
+    .side {
+      min-width: 0;
+      background: var(--panel);
+      display: grid;
+      grid-template-rows: auto auto auto 1fr auto;
+      min-height: calc(100vh - 110px);
+    }
+
+    .side-section {
+      padding: 14px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .side-title {
+      font-size: 12px;
+      color: var(--muted);
+      text-transform: uppercase;
+      font-weight: 750;
+      letter-spacing: 0.13em;
+      margin-bottom: 10px;
+    }
+
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .chip {
+      min-height: 30px;
+      padding: 0 9px;
+      font-size: 12px;
+      color: #57534E;
+      background: var(--panel-2);
+      border-color: transparent;
+      font-weight: 650;
+    }
+
+    .chip.active {
+      color: var(--accent);
+      border-color: var(--accent);
+      background: var(--accent-pale);
+    }
+
+    .actions {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
+    }
+
+    .action {
+      text-align: left;
+      background: #FAFAF9;
+      color: #44403C;
+      font-weight: 650;
+    }
+
+    .evidence {
+      min-height: 0;
+      overflow: auto;
+      padding: 14px;
+    }
+
+    .kv {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      margin-bottom: 10px;
+      overflow: hidden;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+    }
+
+    .kv-head {
+      padding: 9px 10px;
+      background: #F0F9FF;
+      border-bottom: 1px solid var(--line);
+      font-size: 12px;
+      font-weight: 750;
+      color: #0C4A6E;
+    }
+
+    .kv-body {
+      padding: 10px;
+      font-size: 12px;
+      color: var(--muted);
+      display: grid;
+      gap: 6px;
+    }
+
+    .table-wrap {
+      overflow: auto;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--panel);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+      min-width: 640px;
+    }
+
+    th, td {
+      padding: 9px 10px;
+      text-align: left;
+      border-bottom: 1px solid var(--line);
+      vertical-align: top;
+      white-space: nowrap;
+    }
+
+    th {
+      color: #F8FAFF;
+      background: #1C1917;
+      font-weight: 750;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    tbody tr:nth-child(even) { background: #FAFAF9; }
+
+    .gap-list {
+      color: var(--warn);
+      margin: 0;
+      padding-left: 18px;
+    }
+
+    .footer-note {
+      padding: 10px 14px;
+      color: var(--muted);
+      font-size: 11px;
+      border-top: 1px solid var(--line);
+      background: #EEF4FF;
+    }
+
+    .empty {
+      color: var(--muted);
+      padding: 18px;
+      text-align: center;
+      border: 1px dashed var(--line);
+      border-radius: 12px;
+      background: #FAFAF9;
+      font-size: 12px;
+    }
+
+    /* ── Prompt library ─────────────────────────────────────────── */
+    .prompt-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .prompt-toggle {
+      font-size: 10px;
+      color: var(--muted);
+      transition: transform 0.18s ease;
+      display: inline-block;
+    }
+
+    .prompt-body {
+      margin-top: 10px;
+      overflow: hidden;
+    }
+
+    .prompt-cats {
+      display: flex;
+      gap: 4px;
+      flex-wrap: wrap;
+      margin-bottom: 8px;
+    }
+
+    .prompt-cat {
+      padding: 0 8px;
+      height: 24px;
+      font-size: 11px;
+      font-weight: 650;
+      border-radius: 999px;
+      border-color: transparent;
+      background: var(--panel-2);
+      color: var(--muted);
+    }
+
+    .prompt-cat.active {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+
+    .prompt-list {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .prompt-item {
+      width: 100%;
+      text-align: left;
+      font-size: 11.5px;
+      font-weight: 500;
+      line-height: 1.4;
+      padding: 6px 10px;
+      border-radius: 8px;
+      background: var(--panel-3);
+      border-color: transparent;
+      color: var(--text);
+      white-space: normal;
+      height: auto;
+      min-height: 0;
+    }
+
+    .prompt-item:hover {
+      background: var(--accent-pale);
+      border-color: var(--accent-2);
+      color: #0C4A6E;
+    }
+
+    @media (max-width: 900px) {
+      .topbar {
+        height: auto;
+        flex-wrap: wrap;
+        padding: 10px 12px;
+      }
+
+      .brand { min-width: 100%; }
+      .tabs { order: 3; width: 100%; overflow: auto; padding-bottom: 2px; }
+      .tab { height: 38px; min-width: 86px; }
+      .status { margin-left: 0; }
+
+      .workspace {
+        grid-template-columns: 1fr;
+        width: min(100vw - 20px, 1480px);
+        margin: 10px auto;
+        border-radius: 12px;
+      }
+
+      .main {
+        min-height: calc(100vh - 110px);
+        border-right: 0;
+      }
+
+      .side {
+        min-height: auto;
+        border-top: 1px solid var(--line);
+      }
+
+      .message {
+        grid-template-columns: 1fr;
+        gap: 6px;
+      }
+
+      .role {
+        text-align: left;
+        padding-top: 0;
+      }
+
+      .composer-inner {
+        grid-template-columns: 1fr;
+      }
+
+      .send {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">AA</div>
+        <div class="brand-copy">
+          <strong>Talk 2 Stocks</strong>
+          <span>by AgentAdda</span>
+        </div>
+      </div>
+      <nav class="tabs" aria-label="Primary">
+        <button class="tab active" data-tab="chat">Chat</button>
+        <button class="tab" data-tab="compare">Compare</button>
+        <button class="tab" data-tab="watchlist">Watchlist</button>
+      </nav>
+      <div class="status">
+        <span><span id="api-dot" class="dot"></span> <span id="api-status">checking API</span></span>
+        <span id="model-status">local</span>
+      </div>
+    </header>
+
+    <div class="workspace">
+      <main class="main">
+        <section id="chat-log" class="chat-log" aria-live="polite"></section>
+        <section class="composer">
+          <div class="composer-inner">
+            <textarea id="question" placeholder="Ask about a stock, sector, index, watchlist, or comparison"></textarea>
+            <button id="send" class="send">Ask</button>
+          </div>
+        </section>
+      </main>
+
+      <aside class="side">
+        <section class="side-section">
+          <div class="side-title">Watchlist</div>
+          <div id="watchlist" class="chips"></div>
+        </section>
+        <section class="side-section">
+          <div class="side-title">Next Actions</div>
+          <div id="actions" class="actions">
+            <div class="empty">Run a question to bind actions.</div>
+          </div>
+        </section>
+        <section class="side-section" id="prompt-section">
+          <div class="prompt-header" id="prompt-toggle-row">
+            <div class="side-title" style="margin-bottom:0">Prompt Library</div>
+            <span class="prompt-toggle" id="prompt-chevron">▾</span>
+          </div>
+          <div class="prompt-body" id="prompt-body">
+            <div class="prompt-cats" id="prompt-cats"></div>
+            <div class="prompt-list" id="prompt-list"></div>
+          </div>
+        </section>
+        <section class="evidence">
+          <div class="side-title">Evidence</div>
+          <div id="evidence-panel">
+            <div class="empty">Evidence trail appears after each answer.</div>
+          </div>
+        </section>
+        <div class="footer-note">Research only. Not investment advice. MVP runs permissive mode with explicit gaps.</div>
+      </aside>
+    </div>
+  </div>
+
+  <script>
+    const API = "/api/talk";
+    const state = {
+      tab: "chat",
+      sessionId: localStorage.getItem("t2s_session_id") || crypto.randomUUID(),
+      watchlist: JSON.parse(localStorage.getItem("t2s_watchlist") || "[]"),
+      lastResponse: null,
+      busy: false
+    };
+    localStorage.setItem("t2s_session_id", state.sessionId);
+
+    const examples = {
+      chat: "How is HDFCBANK looking fundamentally and technically?",
+      compare: "Compare TCS vs INFY vs HCLTECH",
+      watchlist: "Review my watchlist and show the strongest names"
+    };
+
+    // ── Prompt library ────────────────────────────────────────────
+    const PROMPT_LIBRARY = [
+      {
+        cat: "Stock", tab: "chat", prompts: [
+          "How is HDFCBANK looking technically and fundamentally?",
+          "Give me a deep dive on RELIANCE",
+          "What is the Weinstein stage and trend signal for TCS?",
+          "Show TATAMOTORS key technical levels and RSI",
+          "Is NESTLEIND in a breakout or consolidation phase?",
+        ]
+      },
+      {
+        cat: "Compare", tab: "compare", prompts: [
+          "Compare TCS vs INFY vs HCLTECH on fundamentals and technicals",
+          "Compare HDFCBANK vs ICICIBANK vs KOTAKBANK",
+          "How do RELIANCE vs TATAMOTORS look on investment score?",
+          "Compare ADANIENT vs ADANIPORTS vs ADANIGREEN",
+        ]
+      },
+      {
+        cat: "Market", tab: "chat", prompts: [
+          "What sectors are leading the market today?",
+          "Show NIFTY 50 breadth — advances, declines, and A/D ratio",
+          "How is NIFTY BANK breadth compared to NIFTY 50?",
+          "Which sectors have the strongest relative strength scores?",
+          "What is the regime today — bull, chop, or rotation?",
+        ]
+      },
+      {
+        cat: "Fundamentals", tab: "chat", prompts: [
+          "Show TCS latest quarterly results and earnings quality",
+          "What are INFY financials — revenue, PAT, OPM trend?",
+          "How is NESTLEIND on sales growth and institutional backing?",
+          "Show HDFCBANK balance sheet and net debt position",
+        ]
+      },
+      {
+        cat: "Watchlist", tab: "watchlist", prompts: [
+          "Review my watchlist and rank by investment score",
+          "Which stocks in my watchlist are in Stage 2?",
+          "Which watchlist names have the strongest momentum today?",
+          "Show fundamental scores for my watchlist",
+        ]
+      },
+    ];
+
+    let promptCatIdx = 0;
+    let promptOpen = true;
+
+    function renderPromptLibrary() {
+      const cats = document.getElementById("prompt-cats");
+      const list = document.getElementById("prompt-list");
+      const body = document.getElementById("prompt-body");
+      const chevron = document.getElementById("prompt-chevron");
+
+      // Category tabs
+      cats.innerHTML = PROMPT_LIBRARY.map((c, i) =>
+        `<button class="prompt-cat${i === promptCatIdx ? " active" : ""}" data-idx="${i}">${c.cat}</button>`
+      ).join("");
+      cats.querySelectorAll(".prompt-cat").forEach(btn => {
+        btn.addEventListener("click", () => {
+          promptCatIdx = Number(btn.dataset.idx);
+          renderPromptLibrary();
+        });
+      });
+
+      // Prompt list
+      const current = PROMPT_LIBRARY[promptCatIdx];
+      list.innerHTML = current.prompts.map(p =>
+        `<button class="prompt-item" data-prompt="${escapeHtml(p)}" data-tab="${escapeHtml(current.tab)}">${escapeHtml(p)}</button>`
+      ).join("");
+      list.querySelectorAll(".prompt-item").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const targetTab = btn.dataset.tab;
+          if (targetTab && targetTab !== state.tab) {
+            document.querySelector(`.tab[data-tab="${targetTab}"]`)?.click();
+          }
+          el.question.value = btn.dataset.prompt;
+          el.question.focus();
+        });
+      });
+
+      // Toggle visibility
+      body.style.display = promptOpen ? "block" : "none";
+      chevron.style.transform = promptOpen ? "rotate(0deg)" : "rotate(-90deg)";
+    }
+
+    function initPromptLibrary() {
+      renderPromptLibrary();
+      document.getElementById("prompt-toggle-row").addEventListener("click", () => {
+        promptOpen = !promptOpen;
+        renderPromptLibrary();
+      });
+    }
+
+    const el = {
+      log: document.getElementById("chat-log"),
+      question: document.getElementById("question"),
+      send: document.getElementById("send"),
+      watchlist: document.getElementById("watchlist"),
+      actions: document.getElementById("actions"),
+      evidence: document.getElementById("evidence-panel"),
+      apiDot: document.getElementById("api-dot"),
+      apiStatus: document.getElementById("api-status"),
+      modelStatus: document.getElementById("model-status")
+    };
+
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function fmt(value, suffix = "") {
+      const num = Number(value);
+      if (!Number.isFinite(num)) return "n/a";
+      const out = Math.abs(num) >= 100 ? num.toFixed(0) : num.toFixed(1);
+      return out + suffix;
+    }
+
+    function addMessage(role, text) {
+      const node = document.createElement("div");
+      node.className = "message " + (role === "You" ? "user" : "agent");
+      node.innerHTML = `<div class="role">${escapeHtml(role)}</div><div class="bubble">${renderMarkdown(text)}</div>`;
+      el.log.appendChild(node);
+      el.log.scrollTop = el.log.scrollHeight;
+    }
+
+    function renderInlineMarkdown(text) {
+      return escapeHtml(text)
+        .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+        .replace(/`([^`]+)`/g, "<code>$1</code>");
+    }
+
+    function renderMarkdown(text) {
+      const lines = String(text || "").split(/\n/);
+      const out = [];
+      let list = null;
+      // Track numbered-item count across all <ol> elements so that each new
+      // <ol start="N"> continues from where the previous one left off — even
+      // when bullet-point sub-lists interrupt the numbered sequence.
+      let numberedCount = 0;
+      const closeList = () => {
+        if (list) {
+          out.push(`</${list}>`);
+          list = null;
+        }
+      };
+      for (const raw of lines) {
+        const line = raw.trim();
+        if (!line) {
+          closeList();
+          continue;
+        }
+        const heading = line.match(/^(#{3,4})\s+(.+)$/);
+        if (heading) {
+          closeList();
+          out.push(`<${heading[1].length === 3 ? "h3" : "h4"}>${renderInlineMarkdown(heading[2])}</${heading[1].length === 3 ? "h3" : "h4"}>`);
+          continue;
+        }
+        const bullet = line.match(/^[-*]\s+(.+)$/);
+        if (bullet) {
+          if (list !== "ul") {
+            closeList();
+            list = "ul";
+            out.push("<ul>");
+          }
+          out.push(`<li>${renderInlineMarkdown(bullet[1])}</li>`);
+          continue;
+        }
+        const numbered = line.match(/^\d+\.\s+(.+)$/);
+        if (numbered) {
+          numberedCount++;
+          if (list !== "ol") {
+            closeList();
+            list = "ol";
+            // Use start= so this <ol> picks up from the global counter,
+            // not from 1, even when bullet sub-lists interrupted it.
+            out.push(`<ol start="${numberedCount}">`);
+          }
+          out.push(`<li>${renderInlineMarkdown(numbered[1])}</li>`);
+          continue;
+        }
+        closeList();
+        out.push(`<p>${renderInlineMarkdown(line)}</p>`);
+      }
+      closeList();
+      return out.join("");
+    }
+
+    function renderWelcome() {
+      el.log.innerHTML = "";
+      addMessage("Agent Adda", "Ask naturally. Start with a stock, a comparison, market breadth, or your watchlist. Evidence and gaps will stay visible on the right.");
+      el.question.value = examples[state.tab];
+    }
+
+    function renderWatchlist() {
+      const list = state.watchlist.length ? state.watchlist : ["NIFTY", "BANKNIFTY", "RELIANCE", "HDFCBANK", "TCS", "INFY", "ICICIBANK", "SBIN"];
+      state.watchlist = list;
+      localStorage.setItem("t2s_watchlist", JSON.stringify(list));
+      el.watchlist.innerHTML = list.map(symbol => `<button class="chip" data-symbol="${escapeHtml(symbol)}">${escapeHtml(symbol)}</button>`).join("");
+      el.watchlist.querySelectorAll("button").forEach(btn => {
+        btn.addEventListener("click", () => {
+          el.question.value = state.tab === "compare"
+            ? `Compare ${btn.dataset.symbol} vs TCS vs INFY`
+            : `Analyze ${btn.dataset.symbol}`;
+          el.question.focus();
+        });
+      });
+    }
+
+    function renderActions(actions) {
+      if (!actions || !actions.length) {
+        el.actions.innerHTML = `<div class="empty">No bound actions yet.</div>`;
+        return;
+      }
+      el.actions.innerHTML = actions.map(action => (
+        `<button class="action" data-action="${escapeHtml(action.action)}">${escapeHtml(action.label)}</button>`
+      )).join("");
+      el.actions.querySelectorAll("button").forEach((btn, idx) => {
+        btn.addEventListener("click", () => {
+          const action = actions[idx];
+          if (action.action === "compare" && action.payload.symbols && action.payload.symbols.length) {
+            el.question.value = "Compare " + action.payload.symbols.join(" vs ");
+          } else if (action.action === "deep_dive" && action.payload.symbol) {
+            el.question.value = "Deep dive " + action.payload.symbol;
+          } else if (action.action === "save_watchlist" && action.payload.symbols) {
+            const merged = Array.from(new Set([...state.watchlist, ...action.payload.symbols]));
+            state.watchlist = merged.slice(0, 20);
+            renderWatchlist();
+            return;
+          } else {
+            el.question.value = "What sectors are strong today?";
+          }
+          el.question.focus();
+        });
+      });
+    }
+
+    function renderComparison(rows) {
+      if (!rows || !rows.length) return "";
+      const body = rows.map(row => `
+        <tr>
+          <td>${escapeHtml(row.symbol)}</td>
+          <td>${escapeHtml(row.company || "")}</td>
+          <td>${fmt(row.price)}</td>
+          <td>${escapeHtml(row.stage || "n/a")}</td>
+          <td>${fmt(row.rsi)}</td>
+          <td>${fmt(row.technical_score)}</td>
+          <td>${escapeHtml(row.technical_assessment || "n/a")}</td>
+          <td>${fmt(row.enhanced_fund_score || row.fundamental_score || row.investment_score)}</td>
+          <td>${escapeHtml(row.fundamental_assessment || "n/a")}</td>
+          <td>${fmt(row.investment_score)}</td>
+          <td>${escapeHtml(row.trend_signal || "n/a")}</td>
+        </tr>
+      `).join("");
+      return `
+        <div class="kv">
+          <div class="kv-head">Comparison</div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Symbol</th><th>Company</th><th>Price</th><th>Stage</th><th>RSI</th><th>Tech</th><th>Tech View</th><th>Fund</th><th>Fund View</th><th>Invest</th><th>Trend</th></tr></thead>
+              <tbody>${body}</tbody>
+            </table>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderMarket(rows) {
+      if (!rows || !rows.length) return "";
+      // Detect whether rows are index rows (have advances/declines) or sector rows (have pct_above_50dma).
+      const isIndexRows = rows.some(r => r.advances != null || r.ad_ratio != null);
+      let thead, body;
+      if (isIndexRows) {
+        // Index context: show breadth stats available from get_market_breadth
+        thead = `<tr><th>Index</th><th>Advances</th><th>Declines</th><th>A/D Ratio</th><th>Avg RS</th></tr>`;
+        body = rows.map(row => `
+          <tr>
+            <td>${escapeHtml(row.index_name || row.index || "")}</td>
+            <td>${row.advances != null ? row.advances : "n/a"}</td>
+            <td>${row.declines != null ? row.declines : "n/a"}</td>
+            <td>${row.ad_ratio != null ? Number(row.ad_ratio).toFixed(1) : "n/a"}</td>
+            <td>${row.avg_rs_pct != null ? Number(row.avg_rs_pct).toFixed(1) + "%" : "n/a"}</td>
+          </tr>
+        `).join("");
+      } else {
+        // Sector context: show pct_above_50dma and 5D change
+        thead = `<tr><th>Sector</th><th>Index</th><th>Above 50DMA</th><th>5D</th><th>Signal</th></tr>`;
+        body = rows.map(row => `
+          <tr>
+            <td>${escapeHtml(row.sector || "")}</td>
+            <td>${escapeHtml(row.index_name || "")}</td>
+            <td>${fmt(row.pct_above_50dma, "%")}</td>
+            <td>${fmt(row.change_5d, "%")}</td>
+            <td>${escapeHtml(row.breadth_signal || "n/a")}</td>
+          </tr>
+        `).join("");
+      }
+      return `
+        <div class="kv">
+          <div class="kv-head">Market Context</div>
+          <div class="table-wrap">
+            <table>
+              <thead>${thead}</thead>
+              <tbody>${body}</tbody>
+            </table>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderEvidence(response) {
+      const gaps = response.gaps || [];
+      const evidence = response.evidence || [];
+      let html = "";
+      html += renderComparison(response.comparison);
+      html += renderMarket(response.market_context);
+      if (gaps.length) {
+        html += `
+          <div class="kv">
+            <div class="kv-head">Gaps</div>
+            <div class="kv-body"><ul class="gap-list">${gaps.slice(0, 8).map(g => `<li>${escapeHtml(g)}</li>`).join("")}</ul></div>
+          </div>
+        `;
+      }
+      html += `
+        <div class="kv">
+          <div class="kv-head">Route</div>
+          <div class="kv-body">
+            <div>Intent: ${escapeHtml(response.intent)}</div>
+            <div>Router: ${escapeHtml(response.model_route?.router || "gpt-5-nano")}</div>
+            <div>Synthesis: ${escapeHtml(response.model_route?.synthesis || "local")}</div>
+            <div>Cost: $${Number(response.cost_usd || 0).toFixed(6)}</div>
+          </div>
+        </div>
+      `;
+      if (evidence.length) {
+        html += `
+          <div class="kv">
+            <div class="kv-head">Sources</div>
+            <div class="kv-body">
+              ${evidence.slice(0, 8).map(item => `<div>${escapeHtml(item.label)} - ${escapeHtml(item.source)}${item.as_of ? " - " + escapeHtml(item.as_of) : ""}</div>`).join("")}
+            </div>
+          </div>
+        `;
+      }
+      el.evidence.innerHTML = html || `<div class="empty">No evidence returned.</div>`;
+    }
+
+    async function ask(question) {
+      if (!question || state.busy) return;
+      state.busy = true;
+      el.send.disabled = true;
+      addMessage("You", question);
+      addMessage("Agent Adda", "Checking evidence...");
+      const pending = el.log.lastElementChild;
+      try {
+        const res = await fetch(API + "/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            question,
+            session_id: state.sessionId,
+            watchlist: state.watchlist,
+            mode: "permissive"
+          })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || `HTTP ${res.status}`);
+        state.lastResponse = data;
+        pending.querySelector(".bubble").innerHTML = renderMarkdown(data.answer);
+        renderEvidence(data);
+        renderActions(data.next_actions);
+        el.modelStatus.textContent = data.model_route?.synthesis || "local";
+      } catch (err) {
+        pending.querySelector(".bubble").textContent = "Request failed: " + err.message;
+      } finally {
+        state.busy = false;
+        el.send.disabled = false;
+        el.log.scrollTop = el.log.scrollHeight;
+      }
+    }
+
+    async function checkApi() {
+      try {
+        const res = await fetch("/api/health");
+        const data = await res.json();
+        const ok = res.ok && data.status === "ok";
+        el.apiDot.className = "dot " + (ok ? "ok" : "bad");
+        el.apiStatus.textContent = ok ? "API online" : "API issue";
+      } catch {
+        el.apiDot.className = "dot bad";
+        el.apiStatus.textContent = "API offline";
+      }
+    }
+
+    document.querySelectorAll(".tab").forEach(tab => {
+      tab.addEventListener("click", () => {
+        document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+        tab.classList.add("active");
+        state.tab = tab.dataset.tab;
+        el.question.value = examples[state.tab];
+        el.question.focus();
+      });
+    });
+
+    el.send.addEventListener("click", () => {
+      const question = el.question.value.trim();
+      if (question) {
+        el.question.value = "";
+        ask(question);
+      }
+    });
+
+    el.question.addEventListener("keydown", event => {
+      if (event.key === "Enter" && !event.shiftKey) {
+        event.preventDefault();
+        el.send.click();
+      }
+    });
+
+    renderWatchlist();
+    renderWelcome();
+    initPromptLibrary();
+    checkApi();
+    setInterval(checkApi, 15000);
+  </script>
+</body>
+</html>
