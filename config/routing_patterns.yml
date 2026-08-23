@@ -1,0 +1,219 @@
+# config/routing_patterns.yml
+#
+# Centralised pattern library for Agent Adda's intent router.
+# Loaded by:
+#   - terminal/situation_assessment.py   (_CONTEXTUAL_PATTERNS, _AFFIRMATIVE_FOLLOWUPS)
+#   - terminal/router/providers.py       (_FOLLOWUP_PHRASES)
+#   - agent_adda/web_api/routes/talk.py  (off_domain, advice_boundary, stopwords)
+#
+# Edit this file to tune routing — no Python source changes needed.
+# Patterns are lowercase unless noted.  Regex patterns are IGNORECASE.
+
+# ── Contextual follow-up phrases ────────────────────────────────────────────
+# When any of these appear in the user input AND prior context exists,
+# situation_assessment.py routes to _stage_situation_assessment instead of
+# _stage_entity_topic (which would try to resolve "add" as an NSE ticker, etc.).
+#
+# Rule: substring match (any(p in query for p in patterns))
+contextual_patterns:
+  # depth / expansion requests
+  - "add more"
+  - "more details"
+  - "more info"
+  - "more information"
+  - "more on"
+  - "elaborate"
+  - "expand on"
+  - "dig deeper"
+  - "drill down"
+  - "break it down"
+  - "break that down"
+  - "explain further"
+  - "give me more"
+  - "tell me more"
+  - "say more"
+  - "go further"
+  - "go deeper"
+  - "go on"
+  - "continue from"
+  - "can you add"
+  - "can you elaborate"
+  - "can you expand"
+  - "what else"
+  - "anything else"
+  # collective references to a prior result list
+  - "above stocks"
+  - "above list"
+  - "the above"
+  - "from above"
+  - "these stocks"
+  - "those stocks"
+  - "for these"
+  - "for those"
+  - "for the above"
+  - "of the above"
+  - "the gainers"
+  - "the losers"
+  - "the movers"
+  # existing CLI patterns (kept here for single-source-of-truth)
+  - "deep dive"
+  - "deep-dive"
+  - "details on"
+  - "the longs"
+  - "the shorts"
+
+# ── Affirmative follow-up words ──────────────────────────────────────────────
+# Exact-match set: bare words that mean "proceed / yes / keep going".
+# These must NEVER be parsed as NSE tickers.
+affirmative_followups:
+  - "yes"
+  - "yes please"
+  - "please"
+  - "do it"
+  - "go ahead"
+  - "sure"
+  - "ok"
+  - "okay"
+  - "continue"
+  - "proceed"
+  - "go on"
+  - "go"
+  - "next"
+
+# ── ContextualFollowupProvider trigger phrases ───────────────────────────────
+# When ANY of these are found in the input AND context_pack has recent_turns or
+# active_symbols, ContextualFollowupProvider fires and routes to situation_assessment.
+#
+# Rule: multi-word phrases → substring match; single-word → exact full-input match.
+followup_phrases:
+  # original 14
+  - "based on the above"
+  - "tell me more"
+  - "expand on that"
+  - "go deeper"
+  - "dive deeper"
+  - "can you elaborate"
+  - "more details"
+  - "based on your analysis"
+  - "based on the analysis"
+  - "given the above"
+  - "what do you think"
+  - "what is your take"
+  - "what is your view"
+  - "what is your opinion"
+  - "summarize"
+  - "summarise"
+  # follow-up expansions added 2026-08
+  - "add more details"
+  - "more info"
+  - "elaborate on"
+  - "drill down"
+  - "dig deeper"
+  - "give me more"
+  - "give more"
+  - "show more"
+  - "can you add"
+  - "break it down"
+  - "explain further"
+  - "more on this"
+  - "more on that"
+  - "what else"
+  - "anything else"
+  - "say more"
+  - "go further"
+  - "go on"
+  - "continue from"
+  - "can you expand"
+  # single-word (exact-match only)
+  - "elaborate"
+  - "continue"
+  - "proceed"
+
+# ── Off-domain patterns ──────────────────────────────────────────────────────
+# Queries that are clearly outside NSE equities / derivatives scope.
+# These are short-circuited BEFORE the agent bridge (T2S) or flagged early
+# in the CLI pipeline so the full tool cascade is never invoked.
+#
+# Rule: regex match against the full query (re.IGNORECASE, anchored at start).
+off_domain:
+  patterns:
+    - "what('s| is) (the |today'?s? )?(weather|temperature|forecast|climate)"
+    - "(cricket|football|hockey|ipl|sports?) (score|match|result|update|live)"
+    - "who (won|is winning|is playing)"
+    - "(india|eng(land)?|aus(tralia)?|pak(istan)?) vs? (india|eng|aus|pak)"
+    - "(recipe|cook|bake|restaurant|food|diet|calorie)"
+    - "(movie|film|show|netflix|hotstar|series|episode)"
+    - "(song|music|album|singer|band)"
+    - "(joke|tell me a joke|story|poem)"
+  response: |
+    I'm Agent Adda — focused on NSE equities and derivatives research.
+
+    That question is outside my coverage. I can help you with:
+    - **Stock analysis** — stage, technicals, fundamentals, options
+    - **Market breadth** — advances/declines, regime, sector rotation
+    - **Screeners** — Stage 2 leaders, VCP setups, high RS movers
+    - **Portfolio** — watchlist review, comparison, P&L
+
+    Try: *How is RELIANCE looking technically?* or *Show Stage 2 leaders today*
+
+# ── Investment-advice boundary ────────────────────────────────────────────────
+# "Should I buy / sell X?" must be answered with a research boundary notice,
+# not a full evidence run.  Short-circuit before the bridge.
+#
+# Rule: regex search (anywhere in query, re.IGNORECASE).
+advice_boundary:
+  patterns:
+    - "should i (buy|sell|hold|invest|exit|enter)"
+    - "can you (recommend|advise|tell me to buy|tell me to sell)"
+    - "is it safe to (buy|invest)"
+  response: |
+    Agent Adda provides research and educational market analysis — not personalised investment advice.
+
+    I can show you the **objective evidence**: stage classification, technical score,
+    fundamental sub-scores, signal rating, and sector context.  The investment decision is always yours.
+
+    Try: *Show me TCS stage and technical setup* or *What are TCS fundamentals?*
+
+# ── T2S symbol-extraction stopwords ─────────────────────────────────────────
+# Tokens excluded during symbol extraction in the legacy pipeline.
+stopwords:
+  - A
+  - ABOUT
+  - ADD
+  - AN
+  - AND
+  - ARE
+  - AS
+  - AT
+  - BUY
+  - CAN
+  - COMPARE
+  - DO
+  - FOR
+  - FROM
+  - GOOD
+  - HOW
+  - IN
+  - INDEX
+  - IS
+  - IT
+  - LOOKING
+  - ME
+  - MY
+  - OF
+  - ON
+  - OR
+  - SECTOR
+  - SELL
+  - SHOW
+  - STOCK
+  - STOCKS
+  - THE
+  - THIS
+  - TODAY
+  - TRACK
+  - VS
+  - WATCH
+  - WATCHLIST
+  - WHAT
+  - WITH

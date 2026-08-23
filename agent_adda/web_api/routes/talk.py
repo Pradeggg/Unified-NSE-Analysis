@@ -83,6 +83,55 @@ _BRIDGE_FAILURE_RE = re.compile(
     r"try a direct prompt such as)",
     re.IGNORECASE,
 )
+
+# ── Off-domain fast-path ─────────────────────────────────────────────────────
+# Queries that are clearly outside the NSE equities/derivatives domain.
+# Patterns and responses are loaded from config/routing_patterns.yml; the
+# inline regex below is the fallback used if the YAML cannot be loaded.
+try:
+    from terminal.routing_patterns import (
+        get_off_domain_regex as _get_off_domain_re,
+        get_off_domain_response as _get_off_domain_resp,
+        get_advice_boundary_regex as _get_advice_re,
+        get_advice_boundary_response as _get_advice_resp,
+    )
+    _OFF_DOMAIN_PATTERNS = _get_off_domain_re()
+    _OFF_DOMAIN_ANSWER   = _get_off_domain_resp()
+    _ADVICE_BOUNDARY_RE  = _get_advice_re()
+    _ADVICE_BOUNDARY_ANSWER = _get_advice_resp()
+except Exception:  # noqa: BLE001 — YAML or import unavailable; use inline defaults
+    _OFF_DOMAIN_PATTERNS = re.compile(
+        r"(what('s| is) (the |today'?s? )?(weather|temperature|forecast|climate)|"
+        r"(cricket|football|hockey|ipl|sports?)\s+(score|match|result|update|live)|"
+        r"who (won|is winning|is playing)|"
+        r"(india|eng(land)?|aus(tralia)?|pak(istan)?)\s+vs?\s+(india|eng|aus|pak)\b(?!.*\b(nse|stock|share)\b)|"
+        r"(recipe|cook|bake|restaurant|food|diet|calorie)|"
+        r"(movie|film|show|netflix|hotstar|series|episode)|"
+        r"(song|music|album|singer|band)|"
+        r"(joke|tell me a joke|story|poem)|"
+        r"(politics|government|election|vote|parliament)\b(?!.*\bnse\b))",
+        re.IGNORECASE,
+    )
+    _OFF_DOMAIN_ANSWER = (
+        "I'm Agent Adda — focused on NSE equities and derivatives research.\n\n"
+        "That question is outside my coverage. I can help you with:\n"
+        "- **Stock analysis** — stage, technicals, fundamentals, options\n"
+        "- **Market breadth** — advances/declines, regime, sector rotation\n"
+        "- **Screeners** — Stage 2 leaders, VCP setups, high RS movers\n"
+        "- **Portfolio** — watchlist review, comparison, P&L\n\n"
+        "Try: *How is RELIANCE looking technically?* or *Show Stage 2 leaders today*"
+    )
+    _ADVICE_BOUNDARY_RE = re.compile(
+        r"\bshould\s+i\s+(buy|sell|hold|invest|exit|enter)\b", re.IGNORECASE
+    )
+    _ADVICE_BOUNDARY_ANSWER = (
+        "Agent Adda provides research and educational market analysis — "
+        "not personalised investment advice.\n\n"
+        "I can show you the **objective evidence**: stage classification, "
+        "technical score, fundamental sub-scores, signal rating, and sector context. "
+        "The investment decision is always yours.\n\n"
+        "Try: *Show me TCS stage and technical setup* or *What are TCS fundamentals?*"
+    )
 _EVIDENCE_RE = re.compile(r"\b(gaps?|evidence|sources?|freshness|stale|missing|used)\b", re.IGNORECASE)
 _ADVICE_RE = re.compile(r"\b(should\s+i\s+(buy|sell)|can\s+i\s+(buy|sell)|buy\s+it|sell\s+it|recommend|advice)\b", re.IGNORECASE)
 _FINANCIAL_RE = re.compile(
@@ -1581,6 +1630,34 @@ async def _chat_legacy(req: TalkChatRequest, session_id: str) -> TalkChatRespons
 @router.post("/chat", response_model=TalkChatResponse)
 async def chat(req: TalkChatRequest):
     session_id = req.session_id or str(uuid.uuid4())
+
+    # ── Off-domain fast-path ──────────────────────────────────────────────────
+    # Detect clearly non-NSE queries and return immediately (< 50 ms) so the
+    # agent pipeline doesn't spend 15+ minutes exhausting its tool cascade on
+    # weather, cricket scores, etc.
+    q = (req.question or "").strip()
+    if _OFF_DOMAIN_PATTERNS.search(q):
+        return TalkChatResponse(
+            session_id=session_id,
+            answer=_OFF_DOMAIN_ANSWER,
+            intent="off_domain",
+            symbols=[],
+            gaps=["Question is outside NSE market coverage"],
+        )
+
+    # ── Investment-advice guardrail fast-path ─────────────────────────────────
+    # "Should I buy / sell X?" reaches the agent pipeline and triggers a full
+    # evidence run (technicals + fundamentals + concall) before the advice
+    # guardrail fires.  Short-circuit here so the boundary is enforced < 50 ms.
+    if _ADVICE_BOUNDARY_RE.search(q):
+        return TalkChatResponse(
+            session_id=session_id,
+            answer=_ADVICE_BOUNDARY_ANSWER,
+            intent="advice_boundary",
+            symbols=[],
+            gaps=["Investment advice queries are outside Agent Adda's scope"],
+        )
+
     if _env_use_agent_bridge():
         try:
             return await _chat_via_bridge(req, session_id)

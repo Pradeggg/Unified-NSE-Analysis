@@ -27,6 +27,13 @@ from .schema import (
     ToolCallSpec,
 )
 
+# Central pattern registry — config/routing_patterns.yml is the source of truth.
+try:
+    from terminal.routing_patterns import get_followup_phrases as _get_followup_phrases
+    _YAML_FOLLOWUP_PHRASES = _get_followup_phrases()
+except Exception:  # noqa: BLE001 — YAML unavailable; inline list is the fallback
+    _YAML_FOLLOWUP_PHRASES = ()
+
 
 class RouteProvider(Protocol):
     """Protocol every provider implements."""
@@ -89,7 +96,8 @@ _FOLLOWUP_PHRASES = (
     "say more",
     "continue",
     "go on",
-)
+) + _YAML_FOLLOWUP_PHRASES  # extended from config/routing_patterns.yml
+_FOLLOWUP_PHRASES = tuple(dict.fromkeys(_FOLLOWUP_PHRASES))  # deduplicate, preserve order
 _REPORT_PHRASES = (
     "the report",
     "that report",

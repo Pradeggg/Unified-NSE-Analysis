@@ -14,6 +14,16 @@ from .post_assessment_planner import (
     plan_review_setups,
 )
 
+# Central pattern registry — config/routing_patterns.yml is the source of
+# truth.  Import lazily so a missing yaml dep never breaks the CLI.
+try:
+    from .routing_patterns import get_contextual_patterns, get_affirmative_followups as _get_affirmative
+    _YAML_CONTEXTUAL = get_contextual_patterns()
+    _YAML_AFFIRMATIVE = _get_affirmative()
+except Exception:  # noqa: BLE001
+    _YAML_CONTEXTUAL = ()
+    _YAML_AFFIRMATIVE = frozenset()
+
 logger = logging.getLogger(__name__)
 
 
@@ -279,7 +289,8 @@ _CONTEXTUAL_PATTERNS = (
     "top gainers above",
     "above gainers",
     "above losers",
-)
+) + _YAML_CONTEXTUAL  # extended from config/routing_patterns.yml
+
 _AFFIRMATIVE_FOLLOWUPS = {
     "yes",
     "yes please",
@@ -295,7 +306,7 @@ _AFFIRMATIVE_FOLLOWUPS = {
     "go on",
     "go",
     "next",
-}
+} | _YAML_AFFIRMATIVE  # extended from config/routing_patterns.yml
 
 _ENTITY_TOPIC_COMMANDS = {
     "/analyze",
