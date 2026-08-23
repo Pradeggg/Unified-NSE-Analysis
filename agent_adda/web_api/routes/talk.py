@@ -105,10 +105,11 @@ except Exception:  # noqa: BLE001 — YAML or import unavailable; use inline def
         r"(cricket|football|hockey|ipl|sports?)\s+(score|match|result|update|live)|"
         r"who (won|is winning|is playing)|"
         r"(india|eng(land)?|aus(tralia)?|pak(istan)?)\s+vs?\s+(india|eng|aus|pak)\b(?!.*\b(nse|stock|share)\b)|"
-        r"(recipe|cook|bake|restaurant|food|diet|calorie)|"
-        r"(movie|film|show|netflix|hotstar|series|episode)|"
-        r"(song|music|album|singer|band)|"
-        r"(joke|tell me a joke|story|poem)|"
+        r"(recipe for|how to cook|how to bake|restaurant recommendation|calorie count)|"
+        r"(netflix|hotstar|prime video|disney plus)\s+(show|series|episode|movie|film)|"
+        r"(watch|stream|download)\s+(movie|film|series|episode)|"
+        r"(song lyrics|music recommendation|album review|singer biography)|"
+        r"(tell me a joke|write me a poem|write a story|compose a|create a limerick)|"
         r"(politics|government|election|vote|parliament)\b(?!.*\bnse\b))",
         re.IGNORECASE,
     )

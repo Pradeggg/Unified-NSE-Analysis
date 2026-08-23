@@ -141,10 +141,11 @@ off_domain:
     - "(cricket|football|hockey|ipl|sports?) (score|match|result|update|live)"
     - "who (won|is winning|is playing)"
     - "(india|eng(land)?|aus(tralia)?|pak(istan)?) vs? (india|eng|aus|pak)"
-    - "(recipe|cook|bake|restaurant|food|diet|calorie)"
-    - "(movie|film|show|netflix|hotstar|series|episode)"
-    - "(song|music|album|singer|band)"
-    - "(joke|tell me a joke|story|poem)"
+    - "(recipe for|how to cook|how to bake|restaurant (recommendation|near)|calorie count)"
+    - "(netflix|hotstar|prime video|disney plus) (show|series|episode|movie|film|recommendation)"
+    - "(watch|stream|download) (movie|film|series|episode|show)"
+    - "(song lyrics|music recommendation|album review|singer biography|band history)"
+    - "(tell me a joke|write me a poem|write a story|compose a|create a limerick)"
   response: |
     I'm Agent Adda — focused on NSE equities and derivatives research.
 
