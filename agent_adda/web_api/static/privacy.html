@@ -295,15 +295,49 @@
   <section class="section">
     <h2>What Agent Adda is</h2>
     <p>
-      Agent Adda (including Talk&nbsp;2&nbsp;Stocks, the web chat interface) is a
-      market research assistant for the National Stock Exchange of India (NSE).
-      It aggregates publicly available price data, earnings filings, and
-      technical indicators to help you do your own research.
+      Agent Adda is a research-grade equities and derivatives analysis platform
+      built for the National Stock Exchange of India (NSE). It is designed for
+      retail investors, traders, and students who want to do serious market
+      research without needing a Bloomberg terminal or a team of analysts.
+    </p>
+    <p>
+      The platform has two interfaces:
+    </p>
+    <ul class="plain" style="margin-bottom: 0.8rem;">
+      <li>
+        <strong>Talk&nbsp;2&nbsp;Stocks</strong> — a conversational web interface
+        where you ask questions in plain English and receive structured market
+        analysis: stock stage classification, technical scores, fundamental
+        sub-scores, options data, screener results, and market breadth.
+      </li>
+      <li>
+        <strong>Agent Adda CLI</strong> — a terminal REPL for deeper research,
+        running the same analysis engine with additional commands for backtesting,
+        voice briefings, PDF reports, and sector rotation tracking.
+      </li>
+    </ul>
+    <p>
+      Under the hood, Agent Adda runs a daily data pipeline that ingests NSE
+      bhavcopy (end-of-day price files), F&amp;O (futures &amp; options) data,
+      corporate events, FII/DII flows, and company fundamentals from public
+      sources. This data is scored using a rules-based engine covering
+      Weinstein stage analysis, technical momentum, and five fundamental
+      sub-scores (earnings quality, sales growth, financial strength,
+      institutional backing, and a composite enhanced score). An LLM layer
+      synthesises these signals into readable research summaries.
+    </p>
+    <p>
+      Agent Adda covers approximately 1,500 NSE-listed stocks and indices
+      including NIFTY&nbsp;50, NIFTY&nbsp;BANK, NIFTY&nbsp;MIDCAP, and
+      NIFTY&nbsp;500 constituents, along with ~40 built-in screeners
+      (Stage&nbsp;2 leaders, VCP setups, high relative-strength movers,
+      quality breakouts, and more).
     </p>
     <p>
       <strong>It does not provide investment advice.</strong> All outputs are
       educational and informational. No analysis constitutes a recommendation
-      to buy, sell, or hold any security.
+      to buy, sell, or hold any security. Agent Adda is not registered with
+      SEBI as an investment advisor.
     </p>
   </section>
 
