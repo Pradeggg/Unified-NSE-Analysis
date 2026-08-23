@@ -348,11 +348,18 @@ _METRIC_TOOLTIPS: dict[str, str] = {
 _EXTRA_CSS = """
 /* ===== Top Picks enhancements (overrides + additions on top of _CSS) ===== */
 :root{
-  --tp-ink:#0f172a; --tp-ink-soft:#334155; --tp-mute:#64748b; --tp-line:#e2e8f0;
-  --tp-bg:#f8fafc; --tp-card:#ffffff; --tp-blue:#1e3a5f; --tp-blue2:#2563eb;
-  --tp-teal:#0f766e; --tp-violet:#7c3aed; --tp-amber:#d97706; --tp-green:#16a34a;
-  --tp-red:#b91c1c;
-  --tp-radius:14px;
+  /* Shared canonical tokens — must match reports/report_styles.py */
+  --bg:#f8fafc; --card:#ffffff; --soft-border:#f1f5f9; --border:#e2e8f0;
+  --text:#0f172a; --muted:#64748b;
+  --primary:#1e3a5f; --primary-alt:#2563eb;
+  --good:#16a34a; --risk:#b91c1c; --watch:#d97706;
+  --radius:8px; --shadow:0 1px 3px rgba(0,0,0,.08); --shadow-md:0 4px 8px rgba(0,0,0,.10);
+  --container:1400px;
+  /* top_picks namespace aliases (backward-compat) */
+  --tp-ink:var(--text); --tp-ink-soft:#334155; --tp-mute:var(--muted); --tp-line:var(--border);
+  --tp-bg:var(--bg); --tp-card:var(--card); --tp-blue:var(--primary); --tp-blue2:var(--primary-alt);
+  --tp-teal:#0f766e; --tp-violet:#7c3aed; --tp-amber:var(--watch); --tp-green:var(--good);
+  --tp-red:var(--risk); --tp-radius:14px;
 }
 body{
   font-family:'Inter','Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,sans-serif;
@@ -2125,7 +2132,7 @@ def _load_stage2_rows_for_symbols(conn, snap_date: str, symbols: set[str]) -> li
         WHERE snapshot_date=%s
           AND symbol = ANY(%s)
           AND stage='STAGE_2'
-          AND supertrend_state='BULLISH'
+          AND (supertrend_state='BULLISH' OR supertrend_state IS NULL)
           AND trend_signal IN ('BULLISH','STRONG_BULLISH')
         ORDER BY investment_score DESC NULLS LAST
     """, (snap_date, list(symbols)))
@@ -2287,7 +2294,7 @@ def _load_stage2_leaders(conn, snap_date: str) -> list[dict]:
         FROM scores.stage_snapshots
         WHERE snapshot_date=%s
           AND stage='STAGE_2'
-          AND supertrend_state='BULLISH'
+          AND (supertrend_state='BULLISH' OR supertrend_state IS NULL)
           AND trend_signal IN ('BULLISH','STRONG_BULLISH')
         ORDER BY investment_score DESC NULLS LAST
         LIMIT 50
@@ -4353,8 +4360,8 @@ def _rule_based_narratives(stocks: list[dict]) -> dict:
         "executive_summary": (
             f"Mechanically-synthesised basket of {len(stocks)} stocks combining sector-rotation "
             "leadership and Weinstein stage-2 momentum, deep-screened across "
-            "P&L, BS, CF, fundamental scores and corporate events. LLM unavailable — "
-            "rule-based narrative."
+            "P&L, BS, CF, fundamental scores and corporate events. AgentAdda Insights — "
+            "rule-based."
         ),
         "top_conviction_picks": [
             s["symbol"] for s in stocks
@@ -4388,7 +4395,7 @@ def generate_narratives(stocks: list[dict], macro_context: str, snap_date: str,
 
     api_key = os.environ.get("OPENAI_API_KEY")
     if not api_key:
-        print("   ⚠️  OPENAI_API_KEY not set — using rule-based narrative")
+        print("   ⚠️  OPENAI_API_KEY not set — using AgentAdda Insights (rule-based)")
         return rule_fallback
 
     # ---- Pass 1: per-stock deep analysis (chunked for reliable JSON) ----
@@ -4396,7 +4403,7 @@ def generate_narratives(stocks: list[dict], macro_context: str, snap_date: str,
     # the model into emitting trailing junk → JSONDecodeError. Chunking into
     # batches of CHUNK_SIZE stocks keeps each response under ~10KB and lets
     # one bad batch fall back to rule-based without losing the rest.
-    print("   🧠 LLM pass 1/2: per-stock deep analysis (chunked)…")
+    print("   🧠 AgentAdda Insights pass 1/2: per-stock deep analysis (chunked)…")
     CHUNK_SIZE = 3
     per_stock: dict = {}
     chunks = [stocks[i:i + CHUNK_SIZE] for i in range(0, len(stocks), CHUNK_SIZE)]
@@ -4465,7 +4472,7 @@ def generate_narratives(stocks: list[dict], macro_context: str, snap_date: str,
 
     # ---- Pass 2: portfolio-level refinement ----
     try:
-        print("   🧠 LLM pass 2/2: portfolio-level synthesis…")
+        print("   🧠 AgentAdda Insights pass 2/2: portfolio-level synthesis…")
         port_prompt = _build_portfolio_refine_prompt(per_stock, stocks, macro_context, snap_date)
         port_result = _llm_call(
             api_key=api_key,
@@ -4476,7 +4483,7 @@ def generate_narratives(stocks: list[dict], macro_context: str, snap_date: str,
             timeout=TOP_PICKS_PORTFOLIO_LLM_TIMEOUT,
         )
     except Exception as exc:
-        print(f"   ⚠️  Portfolio refinement LLM failed: {exc} — using rule-based portfolio summary")
+        print(f"   ⚠️  Portfolio refinement AgentAdda Insights failed: {exc} — using rule-based portfolio summary")
         port_result = {}
 
     return {

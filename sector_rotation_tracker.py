@@ -74,6 +74,11 @@ FUNDAMENTAL_SCORE_FIELDS = [
     "FINANCIAL_STRENGTH",
     "INSTITUTIONAL_BACKING",
 ]
+STAGE2_SCORE_FORMULA_VERSION = "stage2-fund-ready-v2"
+STAGE2_REPORT_SOURCE_LABEL = "PostgreSQL/scores.stage_snapshots + market.equity_eod; SQLite stage_changes for transition diffs"
+FUND_READY_MIN_SCORE = 65.0
+FUND_READY_MIN_EARNINGS = 60.0
+FUND_READY_MIN_FINANCIAL_STRENGTH = 60.0
 
 
 def _tradingview_symbols(rows: list[dict]) -> list[str]:
@@ -103,11 +108,7 @@ def write_tradingview_watchlist(
     latest_dir = latest_dir or (ROOT / "reports" / "latest")
 
     def _fund_ok(row: dict) -> bool:
-        try:
-            score = float(row.get("enhanced_fund_score") or row.get("fundamental_score") or 0)
-        except (TypeError, ValueError):
-            score = 0.0
-        return score >= 65.0
+        return _fund_action(row)[0] in {"ADD", "ACCUMULATE"}
 
     selected: list[dict] = []
     for row in _apply_stage2_rs_signals(list(report.get("stage2_now") or [])):
@@ -161,7 +162,7 @@ def _vcp_pick_pg_rows(report: dict) -> list[dict]:
             "earnings_quality": row.get("earnings_quality"),
             "sales_growth": row.get("sales_growth"),
             "financial_strength": row.get("financial_strength"),
-            "vcp_score": row.get("vcp_score") or row.get("investment_score") or 0,
+            "vcp_score": row.get("vcp_score"),
             "vcp_breakout_pct": row.get("vcp_breakout_pct"),
             "vcp_contraction_pct": row.get("vcp_contraction_pct"),
             "stance": row.get("stance"),
@@ -188,21 +189,10 @@ def backfill_vcp_picks_to_pg(start_date: str | None = None) -> int:
         picks = []
         if not stage2.empty:
             df = stage2.copy()
-            score_col = "investment_score" if "investment_score" in df.columns else None
-            if score_col:
-                df = df.sort_values(score_col, ascending=False)
             for row in df.to_dict("records"):
                 pick = dict(row)
-                try:
-                    inv = float(pick.get("investment_score") or 0)
-                except (TypeError, ValueError):
-                    inv = 0.0
-                try:
-                    tech = float(pick.get("technical_score") or 0)
-                except (TypeError, ValueError):
-                    tech = 0.0
-                pick.setdefault("vcp_score", round(max(inv, tech), 2))
-                picks.append(pick)
+                if _is_confirmed_vcp_setup(pick):
+                    picks.append(pick)
         report = {"snap_date": str(snap), "vcp_breakout_picks": picks}
         saved += int(write_vcp_picks_to_pg(report) or 0)
     return saved
@@ -376,9 +366,16 @@ def _load_json(path: Path) -> dict:
 
 def _strategy_lab_report_url(path: Path) -> str:
     try:
-        return path.resolve().as_uri()
+        resolved = path.resolve()
+        latest_dir = (ROOT / "reports" / "latest").resolve()
+        reports_dir = (ROOT / "reports").resolve()
+        if resolved.is_relative_to(latest_dir):
+            return resolved.name
+        if resolved.is_relative_to(reports_dir):
+            return os.path.relpath(resolved, latest_dir)
+        return ""
     except Exception:
-        return str(path)
+        return ""
 
 
 def _load_strategy_lab_context(snap_date: str) -> dict:
@@ -643,9 +640,9 @@ def _load_price_history() -> pd.DataFrame:
         df = pd.read_csv(STOCK_CSV, usecols=lambda c: c in cols)
         df["TIMESTAMP"] = pd.to_datetime(df["TIMESTAMP"])
         max_history = int(df.groupby("SYMBOL")["TIMESTAMP"].nunique().max()) if not df.empty else 0
-        if max_history >= 50:
+        if max_history >= 200:
             return df
-        print("  Local CSV has insufficient history; loading PostgreSQL EOD history …")
+        print(f"  Local CSV has only {max_history} days (need 200 for SMA200); loading PostgreSQL EOD history …")
 
     pg_df = _pg_query(
         """
@@ -732,15 +729,51 @@ def _apply_latest_history_prices(candidates: pd.DataFrame, hist: pd.DataFrame) -
 
 
 def _compute_supertrend_for_symbols(hist: pd.DataFrame, symbols: list) -> dict:
-    """Returns {symbol: {state: str, value: float}} using price history."""
-    if hist.empty or not HAS_SUPERTREND:
+    """Returns {symbol: {state: str, value: float}} using PostgreSQL price history.
+
+    Always reads from ``market.equity_eod`` (last 60 bars per symbol) so results
+    are consistent regardless of whether the CSV snapshot is up to date.
+    Falls back to the CSV-based ``hist`` DataFrame only if PostgreSQL is unavailable.
+    """
+    if not HAS_SUPERTREND:
         return {}
     results: dict = {}
-    hist_all = hist.copy()
-    hist_all["TIMESTAMP"] = pd.to_datetime(hist_all["TIMESTAMP"])
+
+    # Always prefer PostgreSQL
+    pg_df: pd.DataFrame = pd.DataFrame()
+    try:
+        import psycopg2
+        conn_pg = psycopg2.connect(host="/tmp", dbname="nse_market", user="nse_admin")
+        cur = conn_pg.cursor()
+        cur.execute(
+            """
+            SELECT symbol, trade_date AS TIMESTAMP, open AS OPEN,
+                   high AS HIGH, low AS LOW, close AS CLOSE, volume AS VOLUME
+            FROM market.equity_eod
+            WHERE symbol = ANY(%s)
+            ORDER BY symbol, trade_date
+            """,
+            (symbols,),
+        )
+        rows = cur.fetchall()
+        conn_pg.close()
+        if rows:
+            pg_df = pd.DataFrame(rows, columns=["SYMBOL", "TIMESTAMP", "OPEN", "HIGH", "LOW", "CLOSE", "VOLUME"])
+            pg_df["TIMESTAMP"] = pd.to_datetime(pg_df["TIMESTAMP"])
+    except Exception:
+        pass
+
+    # CSV fallback if PG unavailable
+    csv_df: pd.DataFrame = pd.DataFrame()
+    if pg_df.empty and not hist.empty:
+        csv_df = hist.copy()
+        csv_df["TIMESTAMP"] = pd.to_datetime(csv_df["TIMESTAMP"])
+
+    source = pg_df if not pg_df.empty else csv_df
+
     for sym in symbols:
         try:
-            sym_hist = hist_all[hist_all["SYMBOL"] == sym].sort_values("TIMESTAMP").tail(60)
+            sym_hist = source[source["SYMBOL"] == sym].sort_values("TIMESTAMP").tail(60)
             if len(sym_hist) < 20:
                 continue
             # compute_supertrend expects uppercase HIGH/LOW/CLOSE columns (already present)
@@ -1699,59 +1732,66 @@ def _build_company_name_map() -> dict[str, str]:
     return result
 
 
-def _investment_score(r: dict) -> float:
-    """Composite investment score 0-100."""
-    def _n(v, lo=0, hi=100):
-        try:
-            fv = float(v)
-            return max(0.0, min(100.0, (fv - lo) / (hi - lo) * 100))
-        except (TypeError, ValueError):
-            return 50.0  # neutral
-
-    tech = _n(r.get("technical_score"))
-    fund = _n(r.get("enhanced_fund_score") if r.get("enhanced_fund_score") is not None else r.get("fundamental_score"))
-    rs = _n(r.get("relative_strength"), -50, 50)
-    stage_s = _n(r.get("stage_score"))
-
-    # RSI: optimal 50-70 = 1.0, degrade outside
+def _score_value(value, *, legacy_25_point_scale: bool = False) -> float | None:
+    """Return a real 0-100 score; missing evidence remains missing."""
     try:
-        rsi = float(r.get("rsi") or 50)
-        if 50 <= rsi <= 70:
-            rsi_score = 100.0
-        elif rsi < 50:
-            rsi_score = max(0, (rsi - 20) / 30 * 100)
-        else:
-            rsi_score = max(0, (90 - rsi) / 20 * 100)
+        score = float(value)
     except (TypeError, ValueError):
-        rsi_score = 50.0
+        return None
+    if math.isnan(score):
+        return None
+    if legacy_25_point_scale and 0 <= score <= 25:
+        score *= 4.0
+    return max(0.0, min(100.0, score))
 
-    score = (tech * 0.30 + fund * 0.25 + rs * 0.15 + stage_s * 0.15 + rsi_score * 0.15)
-    return round(score, 1)
+
+def _fundamental_quality(r: dict) -> float | None:
+    raw = r.get("enhanced_fund_score")
+    if raw is not None:
+        return _score_value(raw)
+    return _score_value(r.get("fundamental_score"), legacy_25_point_scale=True)
+
+
+def _rs_percentile(r: dict) -> float | None:
+    """Use an explicit percentile and never reinterpret it as excess return."""
+    raw = r.get("rs_percentile")
+    if raw is None:
+        raw = r.get("relative_strength")
+    return _score_value(raw)
+
+
+def _fundamental_coverage(r: dict) -> tuple[int, int]:
+    values = [
+        _fundamental_quality(r),
+        _score_value(r.get("earnings_quality")),
+        _score_value(r.get("sales_growth")),
+        _score_value(r.get("financial_strength")),
+    ]
+    return sum(value is not None for value in values), len(values)
+
+
+def _investment_score(r: dict) -> float | None:
+    """Evidence-based composite; unavailable inputs receive no free points."""
+    components = [
+        (_fundamental_quality(r), 0.35),
+        (_score_value(r.get("earnings_quality")), 0.15),
+        (_score_value(r.get("financial_strength")), 0.15),
+        (_score_value(r.get("sales_growth")), 0.10),
+        (_score_value(r.get("technical_score")), 0.15),
+        (_rs_percentile(r), 0.07),
+        (_score_value(r.get("stage_score")), 0.03),
+    ]
+    available = [(value, weight) for value, weight in components if value is not None]
+    if not available:
+        return None
+    covered_weight = sum(weight for _, weight in available)
+    return round(sum(value * weight for value, weight in available) / covered_weight, 1)
 
 
 def _stage2_rs_signal_score(r: dict) -> float:
-    """Stage 2 signal score emphasizing RS leadership and VCP quality."""
-    def _n(v, lo=0.0, hi=100.0, neutral=50.0):
-        try:
-            fv = float(v)
-        except (TypeError, ValueError):
-            return neutral
-        if hi == lo:
-            return neutral
-        return max(0.0, min(100.0, (fv - lo) / (hi - lo) * 100.0))
-
-    tech = _n(r.get("technical_score"))
-    rs = _n(r.get("relative_strength"), -50.0, 50.0)
-    vcp = _n(r.get("minervini_score"), 0.0, 20.0)
-
-    fund_raw = r.get("enhanced_fund_score")
-    if fund_raw is None:
-        fund_raw = r.get("fundamental_score")
-        try:
-            fund_raw = float(fund_raw) * 4.0 if fund_raw is not None and float(fund_raw) <= 25.0 else fund_raw
-        except (TypeError, ValueError):
-            pass
-    fund = _n(fund_raw)
+    """Pure technical setup score; fund suitability is evaluated separately."""
+    tech = _score_value(r.get("technical_score"))
+    rs = _rs_percentile(r)
 
     trend = str(r.get("trend_signal") or "").upper().replace(" ", "_")
     trend_score = {
@@ -1760,10 +1800,13 @@ def _stage2_rs_signal_score(r: dict) -> float:
         "NEUTRAL": 50.0,
         "BEARISH": 25.0,
         "STRONG_BEARISH": 0.0,
-    }.get(trend, 50.0)
-
-    score = tech * 0.35 + rs * 0.25 + vcp * 0.20 + fund * 0.15 + trend_score * 0.05
-    return round(score, 1)
+    }.get(trend)
+    components = [(tech, 0.55), (rs, 0.30), (trend_score, 0.15)]
+    available = [(value, weight) for value, weight in components if value is not None]
+    if not available:
+        return 0.0
+    weight = sum(item_weight for _, item_weight in available)
+    return round(sum(value * item_weight for value, item_weight in available) / weight, 1)
 
 
 def _stage2_rs_trading_signal(r: dict) -> str:
@@ -1772,11 +1815,8 @@ def _stage2_rs_trading_signal(r: dict) -> str:
         return str(r.get("trading_signal") or "")
 
     score = _stage2_rs_signal_score(r)
-    try:
-        rs = float(r.get("relative_strength"))
-    except (TypeError, ValueError):
-        rs = 0.0
-    if rs < 0:
+    rs = _rs_percentile(r)
+    if rs is None or rs < 50:
         score = min(score, 64.9)
 
     if score >= 80:
@@ -1790,10 +1830,53 @@ def _stage2_rs_trading_signal(r: dict) -> str:
     return "SELL"
 
 
+def _fund_action(r: dict) -> tuple[str, str]:
+    """Return the gated fund action and its primary, auditable reason."""
+    if str(r.get("stage") or "").upper() != "STAGE_2":
+        return "NOT_ELIGIBLE", "Not in Stage 2"
+    coverage, total = _fundamental_coverage(r)
+    fund = _fundamental_quality(r)
+    earnings = _score_value(r.get("earnings_quality"))
+    strength = _score_value(r.get("financial_strength"))
+    if fund is None or earnings is None or strength is None:
+        return "RESEARCH_REQUIRED", f"Mandatory fundamental evidence missing ({coverage}/{total} fields covered)"
+    if fund < 50:
+        return "AVOID", f"Fundamental quality {fund:.0f} is below 50"
+    if fund < FUND_READY_MIN_SCORE:
+        return "WATCH", f"Fundamental quality {fund:.0f} is below {FUND_READY_MIN_SCORE:.0f}"
+    if earnings < FUND_READY_MIN_EARNINGS:
+        return "RESEARCH_REQUIRED", f"Earnings quality {earnings:.0f} is below {FUND_READY_MIN_EARNINGS:.0f}"
+    if strength < FUND_READY_MIN_FINANCIAL_STRENGTH:
+        return "RESEARCH_REQUIRED", f"Financial strength {strength:.0f} is below {FUND_READY_MIN_FINANCIAL_STRENGTH:.0f}"
+    rsi = _score_value(r.get("rsi"))
+    if rsi is not None and rsi > 70:
+        return "NO_CHASE", f"RSI {rsi:.0f} is above 70; wait for a lower-risk entry"
+    technical_signal = _stage2_rs_trading_signal(r)
+    if technical_signal == "STRONG_BUY":
+        return "ADD", "Fundamentals pass and technical setup is strong"
+    if technical_signal == "BUY":
+        return "ACCUMULATE", "Fundamentals pass and technical setup is constructive"
+    return "WATCH", f"Fundamentals pass; technical signal is {technical_signal.replace('_', ' ')}"
+
+
+def _is_confirmed_vcp_setup(r: dict) -> bool:
+    """Require actual VCP measurements; generic momentum is not a VCP."""
+    vcp = _score_value(r.get("vcp_score"))
+    contraction = _score_value(r.get("vcp_contraction_pct"))
+    breakout = _score_value(r.get("vcp_breakout_pct"))
+    return vcp is not None and vcp >= 65 and contraction is not None and breakout is not None
+
+
 def _apply_stage2_rs_signals(rows: list[dict]) -> list[dict]:
-    """Apply the RS-weighted signal to Stage 2 snapshot rows."""
+    """Refresh every derived score and keep technical/fund decisions separate."""
     for row in rows:
-        row["trading_signal"] = _stage2_rs_trading_signal(row)
+        row["investment_score"] = _investment_score(row)
+        row["technical_signal"] = _stage2_rs_trading_signal(row)
+        row["trading_signal"] = row["technical_signal"]  # compatibility for existing consumers
+        row["technical_setup_score"] = _stage2_rs_signal_score(row)
+        row["fundamental_coverage"] = round(_fundamental_coverage(row)[0] / _fundamental_coverage(row)[1] * 100)
+        row["fund_action"], row["fund_action_reason"] = _fund_action(row)
+        row["score_formula_version"] = STAGE2_SCORE_FORMULA_VERSION
     return rows
 
 
@@ -1809,7 +1892,9 @@ def _generate_narrative(r: dict, fund_details: dict | None) -> tuple[str, str]:
     fund = r.get("fundamental_score")
     eq = r.get("earnings_quality")
     sg = r.get("sales_growth")
-    inv_s = r.get("investment_score") or _investment_score(r)
+    inv_s = r.get("investment_score")
+    if inv_s is None:
+        inv_s = _investment_score(r)
 
     # Determine stance
     try:
@@ -1859,7 +1944,8 @@ def _generate_narrative(r: dict, fund_details: dict | None) -> tuple[str, str]:
 
     # Action sentence
     action = {"BULLISH": "well-positioned for a trending move", "BEARISH": "caution advised — consider watching", "NEUTRAL": "suitable for monitoring on confirmation"}[stance]
-    sent3 = f"Composite Investment Score {inv_s:.0f} — {action}."
+    score_text = f"{inv_s:.0f}" if inv_s is not None else "—"
+    sent3 = f"Composite Investment Score {score_text} — {action}."
 
     narrative = f"{sent1} {sent2} {sent3}"
     return narrative, stance
@@ -1975,7 +2061,9 @@ def build_change_report(
       - summary: counts
     """
     pg_dates = _pg_snapshot_dates()
-    conn = None if pg_dates else get_conn()
+    # Always open SQLite as fallback even when PG is primary, so empty-PG
+    # result fallbacks don't crash with NoneType conn.
+    conn = get_conn()
     dates = pg_dates or list_snapshot_dates(conn)
     if not dates:
         if conn is not None:
@@ -2180,22 +2268,26 @@ def build_change_report(
             "S3_to_S2": int(len(chg_all[(chg_all.stage_prev == "STAGE_3") & (chg_all.stage_now == "STAGE_2")])),
         }
 
-    # Top investment picks from stage2_now sorted by investment_score
-    top_picks = sorted(result["stage2_now"], key=lambda r: float(r.get("investment_score") or 0), reverse=True)[:15]
+    # Recompute all derived values at report time so refreshed fundamentals can
+    # never be paired with a stale persisted composite score.
+    result["stage2_now"] = _apply_stage2_rs_signals(result["stage2_now"])
+    fund_ready = [
+        row for row in result["stage2_now"]
+        if row.get("fund_action") in {"ADD", "ACCUMULATE"}
+    ]
+    top_picks = sorted(
+        fund_ready,
+        key=lambda r: (
+            float(r.get("investment_score") or 0),
+            float(r.get("technical_setup_score") or 0),
+        ),
+        reverse=True,
+    )[:15]
     result["top_picks"] = top_picks
     result["vcp_setups"] = sorted(
-        [
-            r for r in result["stage2_now"]
-            if str(r.get("supertrend_state") or "").upper() == "BULLISH"
-            and _num_or_none(r.get("change_1w_pct")) is not None
-            and abs(float(r.get("change_1w_pct") or 0)) < 2.0
-            and _num_or_none(r.get("rsi")) is not None
-            and 45 <= float(r.get("rsi") or 0) <= 65
-        ],
-        key=lambda r: (
-            abs(float(r.get("change_1w_pct") or 0)),
-            -float(r.get("investment_score") or 0),
-        ),
+        [r for r in result["stage2_now"] if _is_confirmed_vcp_setup(r)],
+        key=lambda r: float(r.get("vcp_score") or 0),
+        reverse=True,
     )
     result["strategy_lab"] = _load_strategy_lab_context(today_snap)
 
@@ -2236,6 +2328,21 @@ def _report_price_date(report: dict) -> str:
     return _latest_eod_close_date() or str(report.get("snap_date", "N/A"))[:10]
 
 
+def _eod_label_for_date(value: object) -> str:
+    try:
+        if isinstance(value, datetime):
+            dt = value.date()
+        elif isinstance(value, date):
+            dt = value
+        else:
+            dt = datetime.strptime(str(value)[:10], "%Y-%m-%d").date()
+        while dt.weekday() >= 5:
+            dt -= timedelta(days=1)
+        return f"EOD {dt.strftime('%A')}, {dt.strftime('%d %b %Y')}"
+    except Exception:
+        return "EOD date unavailable"
+
+
 def _badge(stage: str) -> str:
     colors = {
         "STAGE_2": ("background:#16a34a;color:#fff", "S2 ✅"),
@@ -2271,8 +2378,16 @@ def _price_cell(v) -> str:
 
 CSS = """
 <style>
+:root{
+--bg:#f0f4f8;--card:#ffffff;--border:#e2e8f0;--soft-border:#f1f5f9;
+--text:#1a2332;--muted:#64748b;
+--primary:#1e3a5f;--primary-alt:#2563eb;
+--good:#16a34a;--risk:#dc2626;--watch:#d97706;
+--radius:8px;--shadow:0 1px 3px rgba(0,0,0,.08);--shadow-md:0 4px 8px rgba(0,0,0,.10);
+--container:1400px;
+}
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Segoe UI',system-ui,sans-serif;background:#f1f5f9;color:#0f172a;font-size:14px}
+body{font-family:'Inter','Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;background:var(--bg);color:var(--text);font-size:14px}
 .app-bar{background:linear-gradient(135deg,#065f46,#059669);color:#fff;padding:18px 24px}
 .app-bar h1{font-size:1.4rem;font-weight:700}
 .app-bar p{font-size:0.82rem;opacity:.8;margin-top:4px}
@@ -2462,6 +2577,8 @@ def build_html_report(report: dict) -> str:
     prev = report.get("prev_date", "N/A")
     week = report.get("week_snap", "N/A")
     close_date = _report_price_date(report)
+    close_label = _eod_label_for_date(close_date)
+    week_label = _eod_label_for_date(week) if week not in (None, "", "N/A") else "N/A"
     summ = report.get("summary", {})
     now_ts = datetime.now().strftime("%Y-%m-%d %H:%M")
 
@@ -2521,7 +2638,7 @@ def build_html_report(report: dict) -> str:
             return '<td style="color:#94a3b8">—</td>'
 
     def _make_detail_row(r: dict, tid: str, ri: int) -> str:
-        inv = r.get("investment_score") or 0
+        inv = r.get("investment_score")
         stance = str(r.get("stance") or "NEUTRAL").upper()
         stance_cls = {"BULLISH": "stance-bull", "BEARISH": "stance-bear"}.get(stance, "stance-neut")
         narrative_txt = str(r.get("narrative") or "")
@@ -2553,7 +2670,7 @@ def build_html_report(report: dict) -> str:
 
         card_inv = (
             f'<div class="det-card"><h4>Investment Score</h4>'
-            + f'<p><span class="inv-score-big">{float(inv):.0f}</span> / 100</p>'
+            + (f'<p><span class="inv-score-big">{float(inv):.0f}</span> / 100</p>' if inv is not None else '<p>—</p>')
             + (
                 f'<p>VCP Score: {_sb(r.get("vcp_score"), "#7c3aed")}</p>'
                 if r.get("vcp_score") is not None else ""
@@ -2571,7 +2688,7 @@ def build_html_report(report: dict) -> str:
             f'<p>Tech Score: {_sb(r.get("technical_score"))}</p>'
             f'<p>RSI: {_H(str(r.get("rsi") or "—"))}</p>'
             f'<p>Trend: {_H(str(r.get("trend_signal") or "—"))}</p>'
-            f'<p>Signal: {sig_chip(r.get("trading_signal",""))}</p>'
+            f'<p>Technical Signal: {sig_chip(r.get("technical_signal") or r.get("trading_signal", ""))}</p>'
             f'</div>'
         )
         _has_fund_scores = any(r.get(k) is not None for k in ("enhanced_fund_score", "earnings_quality", "sales_growth", "financial_strength", "institutional_backing"))
@@ -2589,6 +2706,9 @@ def build_html_report(report: dict) -> str:
                 if _has_fund_scores else
                 f'<p style="color:#94a3b8;font-size:.78rem">Numeric scores not available — see Fund Details →</p>'
             )
+            + f'<p>Coverage: {_H(str(r.get("fundamental_coverage", "—")))}%</p>'
+            + f'<p>Fund Action: <strong>{_H(str(r.get("fund_action", "RESEARCH_REQUIRED")).replace("_", " "))}</strong></p>'
+            + f'<p style="font-size:.74rem;color:#64748b">{_H(str(r.get("fund_action_reason") or ""))}</p>'
             + f'</div>'
         )
         card_fd = (
@@ -2635,7 +2755,7 @@ def build_html_report(report: dict) -> str:
                 {"key": "company",     "label": "Company",               "toggleable": True, "default": True},
                 {"key": "sector",      "label": "Sector",                "toggleable": True, "default": True},
                 {"key": "stage",       "label": "Stage",                 "toggleable": True, "default": True},
-                {"key": "signal",      "label": "Signal",                "toggleable": True, "default": True},
+                {"key": "signal",      "label": "Technical Signal",      "toggleable": True, "default": True},
                 {"key": "live_price",  "label": "Live ₹",                "toggleable": True, "default": True},
                 {"key": "csv_price",   "label": f"Close {close_date}",   "toggleable": True, "default": True},
                 {"key": "live_pct",    "label": "Live Chg%",             "toggleable": True, "default": True},
@@ -2734,13 +2854,15 @@ def build_html_report(report: dict) -> str:
                 st_value = r.get("supertrend_value")
 
                 def _supertrend_cell(state, value, col_idx):
-                    if not state or state == "UNKNOWN":
+                    state_txt = str(state or "").strip().upper()
+                    if not state_txt or state_txt in {"UNKNOWN", "NAN", "NONE", "NULL"}:
                         return f'<td{td_style(col_idx)} style="color:#94a3b8">—</td>'
-                    color = "#16a34a" if state == "BULLISH" else "#dc2626"
-                    arrow = "↑" if state == "BULLISH" else "↓"
-                    val_str = f"₹{float(value):,.0f}" if value else ""
+                    color = "#16a34a" if state_txt == "BULLISH" else "#dc2626"
+                    arrow = "↑" if state_txt == "BULLISH" else "↓"
+                    value_num = _num_or_none(value)
+                    val_str = f"₹{value_num:,.0f}" if value_num is not None else "—"
                     return (f'<td{td_style(col_idx)}>'
-                            f'<span style="color:{color};font-weight:600;font-size:.82rem">{arrow} {state}</span>'
+                            f'<span style="color:{color};font-weight:600;font-size:.82rem">{arrow} {state_txt}</span>'
                             f'<br><span style="font-size:.72rem;color:#64748b">{val_str}</span>'
                             f'</td>')
 
@@ -2996,8 +3118,8 @@ def build_html_report(report: dict) -> str:
 
     def vcp_section_html(rows):
         note = (
-            "Stage 2 + bullish Supertrend + weekly range under 2% + RSI 45-65. "
-            "This is the VCP/tight-range pocket inside the Stage 2 tracker."
+            "Only setups with an explicit VCP score, measured contraction and measured breakout are shown. "
+            "Generic momentum or a quiet week is not classified as VCP."
         )
         if rows:
             body = s2_table(rows[:30], table_id="vcp-bt")
@@ -3024,6 +3146,14 @@ def build_html_report(report: dict) -> str:
             nv = _num_or_none(v)
             return default if nv is None else nv
 
+        def _json_text(v, default="N/A"):
+            if _is_missing(v):
+                return default
+            text = str(v).strip()
+            if not text or text.lower() in {"nan", "none", "null"}:
+                return default
+            return text
+
         # Build JSON data for all picks (for the modal)
         picks_data = []
         for pk in picks:
@@ -3033,12 +3163,16 @@ def build_html_report(report: dict) -> str:
             except Exception:
                 pass
             picks_data.append({
-                "symbol": str(pk.get("symbol", "")),
-                "company": str(pk.get("company_name", ""))[:60],
-                "sector": str(pk.get("sector", "Other")),
+                "symbol": _json_text(pk.get("symbol"), "")[:30],
+                "company": _json_text(pk.get("company_name"), "")[:60],
+                "sector": _json_text(pk.get("sector"), "N/A"),
                 "investment_score": _json_num(pk.get("investment_score")),
-                "stance": str(pk.get("stance") or "NEUTRAL"),
-                "narrative": str(pk.get("narrative") or ""),
+                "technical_signal": _json_text(pk.get("technical_signal") or pk.get("trading_signal"), ""),
+                "fund_action": _json_text(pk.get("fund_action"), "RESEARCH_REQUIRED"),
+                "fund_action_reason": _json_text(pk.get("fund_action_reason"), ""),
+                "fundamental_coverage": _json_num(pk.get("fundamental_coverage")),
+                "stance": _json_text(pk.get("stance"), "NEUTRAL"),
+                "narrative": _json_text(pk.get("narrative"), ""),
                 "technical_score": _json_num(pk.get("technical_score")),
                 "rsi": _json_num(pk.get("rsi")),
                 "enhanced_fund_score": _json_num(pk.get("enhanced_fund_score")),
@@ -3048,10 +3182,10 @@ def build_html_report(report: dict) -> str:
                 "institutional_backing": _json_num(pk.get("institutional_backing")),
                 "can_slim_score": _json_num(pk.get("can_slim_score")),
                 "minervini_score": _json_num(pk.get("minervini_score")),
-                "pnl_summary": str(fd.get("pnl_summary") or ""),
-                "quarterly_summary": str(fd.get("quarterly_summary") or ""),
-                "ratios_summary": str(fd.get("ratios_summary") or ""),
-                "trend_signal": str(pk.get("trend_signal") or ""),
+                "pnl_summary": _json_text(fd.get("pnl_summary"), ""),
+                "quarterly_summary": _json_text(fd.get("quarterly_summary"), ""),
+                "ratios_summary": _json_text(fd.get("ratios_summary"), ""),
+                "trend_signal": _json_text(pk.get("trend_signal"), ""),
                 "live_price": _json_num(pk.get("live_price"), _json_num(pk.get("price"))),
                 "stage_score": _json_num(pk.get("stage_score")),
             })
@@ -3068,7 +3202,7 @@ def build_html_report(report: dict) -> str:
                 f'<div class="pk-co">{_H(str(pk.get("company_name",""))[:40])}</div>'
                 f'<span class="pk-sector">{_H(str(pk.get("sector","Other")))}</span>'
                 f'<div class="pk-inv">{float(inv):.0f} <span style="font-size:.8rem;color:#64748b">inv. score</span></div>'
-                f'<div class="pk-meta">Tech {pk.get("technical_score") or "—"} · RSI {pk.get("rsi") or "—"} · <span class="{stance_cls}">{stance}</span></div>'
+                f'<div class="pk-meta">Tech {pk.get("technical_score") or "—"} · RSI {pk.get("rsi") or "—"} · Fund action: {_H(str(pk.get("fund_action") or "—").replace("_", " "))}</div>'
                 f'</div>'
             )
 
@@ -3085,9 +3219,9 @@ def build_html_report(report: dict) -> str:
             + modal_html
             + '<div class="section" style="margin-bottom:20px">'
             '<div class="sec-hdr" style="border-left:4px solid #059669">'
-            '<h2>🏆 Top Investment Picks (Stage 2)</h2>'
+            '<h2>🏆 Fund-Ready Stage 2 Candidates</h2>'
             f'<span class="badge-count">{len(picks)}</span>'
-            '<span style="font-size:.75rem;color:#64748b;margin-left:8px">Click any card for details</span>'
+            f'<span style="font-size:.75rem;color:#64748b;margin-left:8px">Fundamental gate ≥ {FUND_READY_MIN_SCORE:.0f}; mandatory earnings and financial-strength evidence required · click for details</span>'
             '</div>'
             f'{tv_html}'
             f'<div class="picks-grid">{"".join(pick_cards)}</div>'
@@ -3191,8 +3325,16 @@ def build_html_report(report: dict) -> str:
 
         title = "Best Portfolio Strategy" if strategy_key == "best" else "VCP Strategy From Lab"
         accent = "#059669" if strategy_key == "best" else "#7c3aed"
-        report_url = strat.get("report_url") or ctx.get("lab_report_url") or "#"
+        report_url = strat.get("report_url") or ""
         lab_url = ctx.get("lab_report_url") or "#"
+        links = []
+        if lab_url and lab_url != "#":
+            links.append(f'<a href="{_H(lab_url)}">Open lab report</a>')
+        if report_url and report_url != "#":
+            links.append(f'<a href="{_H(report_url)}">Open strategy report</a>')
+        link_html = " · ".join(links)
+        if link_html:
+            link_html = f" {link_html}"
         subtitle = (
             f'{_H(str(entry.get("name") or entry.get("strategy_id") or "Strategy"))} '
             f'({_H(str(entry.get("strategy_id") or ""))})'
@@ -3204,7 +3346,7 @@ def build_html_report(report: dict) -> str:
             '</div>'
             f'<p style="color:#64748b;font-size:.84rem;margin:0 0 12px">{subtitle}. '
             'This tab is populated from the latest portfolio strategy-lab run before the Stage 2 tracker is rendered. '
-            f'<a href="{_H(lab_url)}">Open lab report</a> · <a href="{_H(report_url)}">Open strategy report</a></p>'
+            f'{link_html}</p>'
             f'<div class="summary-grid" style="margin-bottom:14px">{metric_html}</div>'
             f'{pos_table}'
             f'{leaderboard_html if strategy_key == "best" else ""}'
@@ -3227,7 +3369,7 @@ def build_html_report(report: dict) -> str:
     <p style="font-size:.84rem;color:#334155;line-height:1.8">
       <strong>Daily refresh</strong> → <strong>Portfolio Strategy Lab</strong> → <strong>Sector Rotation</strong> → <strong>Stage 2 Tracker</strong> → <strong>Top Investment Picks Detailed Report</strong> → <strong>My Portfolio EOD Report</strong>.
     </p>
-    <p style="margin-top:8px;color:#475569">Read this tracker after the strategy lab and sector rotation reports. The Best Strategy and VCP Strategy tabs are pulled from the latest strategy-lab run, while the Stage 2 tables use the latest PostgreSQL stage snapshot.</p>
+    <p style="margin-top:8px;color:#475569">Read this tracker after the strategy lab and sector rotation reports. The Best Strategy and VCP Strategy tabs are pulled from the latest strategy-lab run. Stage 2 tables use the latest PostgreSQL stage snapshot and EOD price history; daily/weekly transition cards use the local SQLite stage_changes diff cache.</p>
   </div>
 
   <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:16px;margin-bottom:20px">
@@ -3346,7 +3488,7 @@ def build_html_report(report: dict) -> str:
         '<button class="tab-btn" data-tab="t-new" onclick="showTab(\'t-new\',this)">New Entrants (Day)</button>'
         '<button class="tab-btn" data-tab="t-exit" onclick="showTab(\'t-exit\',this)">Exits (Day)</button>'
         '<button class="tab-btn" data-tab="t-all" onclick="showTab(\'t-all\',this)">All Stage Changes (Day)</button>'
-        f'<button class="tab-btn" data-tab="t-week" onclick="showTab(\'t-week\',this)">Weekly View ({week})</button>'
+        f'<button class="tab-btn" data-tab="t-week" onclick="showTab(\'t-week\',this)">Weekly View ({week_label})</button>'
         '<button class="tab-btn" data-tab="t-strategy" onclick="showTab(\'t-strategy\',this)">Best Strategy</button>'
         '<button class="tab-btn" data-tab="t-vcp-strategy" onclick="showTab(\'t-vcp-strategy\',this)">VCP Strategy</button>'
         '<button class="tab-btn" data-tab="t-vcp" onclick="showTab(\'t-vcp\',this)">VCP Setups</button>'
@@ -3361,7 +3503,7 @@ def build_html_report(report: dict) -> str:
         f'{s2_table(w_new, show_prev=True)}'
         f'<h3 style="font-size:.9rem;font-weight:600;padding:14px 18px 6px;color:#dc2626">Stage 2 exits this week ({len(w_exit)})</h3>'
         f'{s2_table(w_exit, show_prev=True)}'
-        f'<h3 style="font-size:.9rem;font-weight:600;padding:14px 18px 6px;color:#2563eb">Stage 2 — all {len(w_price)} stocks (vs {week})</h3>'
+        f'<h3 style="font-size:.9rem;font-weight:600;padding:14px 18px 6px;color:#2563eb">Stage 2 — all {len(w_price)} stocks (vs {week_label})</h3>'
         f'{s2_table(w_price)}'
         f'</div>'
         f'<div class="tab-panel" id="t-strategy">{strategy_lab_tab}</div>'
@@ -3650,15 +3792,17 @@ function closePickModal() {
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Stage 2 Tracker – {snap}</title>
+<title>Stage 2 Tracker – {close_label}</title>
 {CSS}
 </head>
 <body>
 <div class="app-bar">
   <h1>📈 Sector Rotation – Stage 2 Tracker</h1>
-  <p>Snapshot: <strong>{snap}</strong> &nbsp;·&nbsp; EOD Close: <strong>{close_date}</strong>
+  <p>Snapshot: <strong>{snap}</strong> &nbsp;·&nbsp; EOD Close: <strong>{close_label}</strong>
      &nbsp;·&nbsp; Compared vs: <strong>{prev}</strong>
-     &nbsp;·&nbsp; Week vs: <strong>{week}</strong> &nbsp;·&nbsp; Generated: {now_ts}</p>
+     &nbsp;·&nbsp; Week vs: <strong>{week_label}</strong> &nbsp;·&nbsp; Formula: <strong>{STAGE2_SCORE_FORMULA_VERSION}</strong>
+     &nbsp;·&nbsp; Source: <strong>{STAGE2_REPORT_SOURCE_LABEL}</strong>
+     &nbsp;·&nbsp; Generated: {now_ts}</p>
 </div>
 <div class="container">
   <div class="summary-grid">{cards}</div>

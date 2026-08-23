@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import base64
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import date, datetime, timedelta
 from pathlib import Path
 import html as html_mod
 import json
@@ -68,6 +68,38 @@ FULL_LEGAL_DISCLAIMER = (
     "qualified SEBI-registered professionals and independently verify all facts before making any financial or "
     "legal decision."
 )
+
+
+def _is_trading_day(value: object) -> bool:
+    """Treat Monday-Friday as trading days for report labeling."""
+    if value in (None, "", "N/A"):
+        return False
+    try:
+        if isinstance(value, datetime):
+            dt = value.date()
+        elif isinstance(value, date):
+            dt = value
+        else:
+            dt = datetime.strptime(str(value)[:10], "%Y-%m-%d").date()
+        return dt.weekday() < 5
+    except Exception:
+        return False
+
+
+def _eod_label_for_date(value: object) -> str:
+    """Return a human-readable EOD label like 'EOD Friday, 22 Aug 2026'."""
+    try:
+        if isinstance(value, datetime):
+            dt = value.date()
+        elif isinstance(value, date):
+            dt = value
+        else:
+            dt = datetime.strptime(str(value)[:10], "%Y-%m-%d").date()
+        while dt.weekday() >= 5:
+            dt -= timedelta(days=1)
+        return f"EOD {dt.strftime('%A')}, {dt.strftime('%d %b %Y')}"
+    except Exception:
+        return "EOD (date unavailable)"
 FUNDAMENTAL_FALLBACK_CSVS = [
     ROOT / "data" / "fundamental_scores_database.csv",
     ROOT / "organized" / "data" / "fundamental_scores_database.csv",
@@ -532,6 +564,10 @@ def _rule_based_technical_view_narrative(metrics: pd.DataFrame, missing_indices:
             "Run the PostgreSQL loader so market.index_eod has EOD index OHLC history, then regenerate the report."
         )
     trend_counts = metrics["TREND"].value_counts().to_dict()
+    trend_summary = ", ".join(
+        f"{int(count)} {str(label).replace('_', ' ').lower()}"
+        for label, count in trend_counts.items()
+    )
     bullish_count = int(metrics["TREND"].isin(["BULLISH", "CONSTRUCTIVE"]).sum())
     weak_count = int(metrics["TREND"].isin(["WEAK", "BEARISH"]).sum())
     leader = metrics.sort_values(["RS_1M", "RET_1M"], ascending=False).iloc[0]
@@ -553,7 +589,7 @@ def _rule_based_technical_view_narrative(metrics: pd.DataFrame, missing_indices:
         f"support is near {float(nrow['SUPPORT']):.2f}, and resistance is near {float(nrow['RESISTANCE']):.2f}. "
         f"Relative strength leadership is with {leader['SYMBOL']} at {float(leader['RS_1M']):+.1f}% 1M RS versus Nifty 50, while "
         f"{laggard['SYMBOL']} lags at {float(laggard['RS_1M']):+.1f}% 1M RS. "
-        f"SMA alignment shows {trend_counts}. VCP contraction flags are present in "
+        f"SMA / trend alignment: {trend_summary}. VCP contraction flags are present in "
         f"{int((metrics['VCP_FLAG'] == 'YES').sum())} indices, indicating selective volatility contraction rather than a broad setup. "
         f"{vwap_msg}{missing_msg}"
     )
@@ -1722,6 +1758,15 @@ def _fmt(value: object, suffix: str = "", digits: int = 1) -> str:
         return str(value)
 
 
+def _sfloat(v: object, default: float = 0.0) -> float:
+    """float(v) that maps NaN / None / inf → default instead of propagating nan."""
+    try:
+        f = float(v)  # type: ignore[arg-type]
+        return default if math.isnan(f) or math.isinf(f) else f
+    except (TypeError, ValueError):
+        return default
+
+
 def _first_non_empty_value(df: pd.DataFrame, columns: list[str], default: str = "N/A") -> str:
     for column in columns:
         if column not in df.columns:
@@ -1856,8 +1901,8 @@ def render_markdown(
         lines += ["No external swing research shortlist was available for this run.", ""]
     else:
         lines += [
-            "| Rank | Symbol | Company | Sector Lens | Stage | Signal | Action | Score | Tech | RS | Fund | RSI | Supertrend | Report Visibility |",
-            "|---:|---|---|---|---|---|---|---:|---:|---:|---:|---:|---|---|",
+            "| Rank | Symbol | Company | Sector Lens | Stage | Signal | Action | Score | Tech | RS | Fund | RSI | Supertrend |",
+            "|---:|---|---|---|---|---|---|---:|---:|---:|---:|---:|---|",
         ]
         for rank, (_, row) in enumerate(research_shortlist.iterrows(), start=1):
             lines.append(
@@ -1865,7 +1910,7 @@ def render_markdown(
                 f"{row.get('RESEARCH_SECTOR', '')} | {row.get('STAGE', '')} | {row.get('TRADING_SIGNAL', '')} | "
                 f"{row.get('ACTION_BUCKET', '')} | {_fmt(row.get('INVESTMENT_SCORE'))} | {_fmt(row.get('TECHNICAL_SCORE'))} | "
                 f"{_fmt(row.get('RELATIVE_STRENGTH'), '%')} | {_fmt(row.get('ENHANCED_FUND_SCORE'))} | {_fmt(row.get('RSI'))} | "
-                f"{row.get('SUPERTREND_STATE', '')} | {row.get('REPORT_VISIBILITY', '')} |"
+                f"{row.get('SUPERTREND_STATE', '')} |"
             )
         lines.append("")
 
@@ -2192,19 +2237,21 @@ def _build_narrative_prompt(sector_rank: pd.DataFrame, candidates: pd.DataFrame,
         "SECTOR ROTATION RANKINGS (vs Nifty 500 benchmark):",
     ]
     for rank, (_, row) in enumerate(sector_rank.iterrows(), start=1):
-        ret5d = float(row.get("RET_5D", 0) or 0)
-        ret1m = float(row.get("RET_1M", 0) or 0)
-        ret3m = float(row.get("RET_3M", 0) or 0)
-        ret6m = float(row.get("RET_6M", 0) or 0)
-        rs1m = float(row.get("RS_1M", 0) or 0)
-        score = float(row.get("ROTATION_SCORE", 0) or 0)
-        close = float(row.get("CLOSE", 0) or 0)
+        ret5d = _sfloat(row.get("RET_5D"))
+        ret1m = _sfloat(row.get("RET_1M"))
+        ret3m = _sfloat(row.get("RET_3M"))
+        ret6m = _sfloat(row.get("RET_6M"))
+        rs1m  = _sfloat(row.get("RS_1M"))
+        score = _sfloat(row.get("ROTATION_SCORE"))
+        close = _sfloat(row.get("CLOSE"))
+        breadth_pct = row.get("BREADTH_PCT50")
+        breadth_str = f"{_sfloat(breadth_pct):.0f}%" if breadth_pct is not None and not (isinstance(breadth_pct, float) and math.isnan(breadth_pct)) else "N/A"
         lines.append(
             f"  Rank #{rank}: {row['SECTOR_NAME']} ({row['SYMBOL']}) | "
             f"Index Close: {close:.2f} | 5D: {ret5d:+.1f}% | 1M: {ret1m:+.1f}% | "
             f"3M: {ret3m:+.1f}% | 6M: {ret6m:+.1f}% | RS vs Nifty500 1M: {rs1m:+.1f}% | "
             f"Rotation Score: {score:.1f} | Seasonal: {row.get('SEASONAL_SIGNAL', 'NEUTRAL')} | "
-            f"Breadth(50DMA): {row.get('BREADTH_PCT50', float('nan')):.0f}% {row.get('BREADTH_SIGNAL', 'NO_DATA')}"
+            f"Breadth(50DMA): {breadth_str} {row.get('BREADTH_SIGNAL', 'NO_DATA')}"
             + (f" ⚠ {row.get('BREADTH_DIVERGENCE')}" if str(row.get('BREADTH_DIVERGENCE', 'NONE')) != 'NONE' else "")
         )
 
@@ -2587,13 +2634,13 @@ def _generate_rule_based_narratives(sector_rank: pd.DataFrame, candidates: pd.Da
     # Sector narratives
     for rank, (_, row) in enumerate(sector_rank.iterrows(), start=1):
         sector = str(row["SECTOR_NAME"])
-        ret1m = float(row.get("RET_1M", 0) or 0)
-        ret3m = float(row.get("RET_3M", 0) or 0)
-        ret6m = float(row.get("RET_6M", 0) or 0)
-        ret5d = float(row.get("RET_5D", 0) or 0)
-        rs1m = float(row.get("RS_1M", 0) or 0)
-        score = float(row.get("ROTATION_SCORE", 0) or 0)
-        close = float(row.get("CLOSE", 0) or 0)
+        ret1m = _sfloat(row.get("RET_1M"))
+        ret3m = _sfloat(row.get("RET_3M"))
+        ret6m = _sfloat(row.get("RET_6M"))
+        ret5d = _sfloat(row.get("RET_5D"))
+        rs1m  = _sfloat(row.get("RS_1M"))
+        score = _sfloat(row.get("ROTATION_SCORE"))
+        close = _sfloat(row.get("CLOSE"))
 
         accel = ret1m > (ret3m / 3.0) if ret3m != 0 else True
         momentum_desc = "accelerating" if accel else "decelerating"
@@ -2632,6 +2679,10 @@ def _generate_rule_based_narratives(sector_rank: pd.DataFrame, candidates: pd.Da
             f"would confirm the rotation is durable. "
             f"{'Risk: rotation score of ' + str(round(score, 1)) + ' is below 5, suggesting weak conviction — monitor for a drop out of the top 6.' if score < 5 else 'Conviction: HIGH — rotation score above 10 with RS in double digits supports active positioning.'}"
         )
+
+        addendum = _sector_narrative_addendum(sector, row)
+        if addendum:
+            para3 = f"{para3} {addendum}"
 
         conviction = "HIGH" if score > 10 else "MEDIUM" if score > 5 else "LOW"
         key_themes = [
@@ -2755,7 +2806,40 @@ def generate_narratives(sector_rank: pd.DataFrame, candidates: pd.DataFrame,
                         fund_details: dict | None = None) -> dict:
     """Generate investment narratives. Uses OpenAI API if available, falls back to rule-based."""
     try:
-        return _generate_llm_narratives(sector_rank, candidates, fund_details=fund_details)
+        narratives = _generate_llm_narratives(sector_rank, candidates, fund_details=fund_details)
+        fallback = _generate_rule_based_narratives(sector_rank, candidates)
+        sector_lookup = {}
+        if isinstance(sector_rank, pd.DataFrame) and not sector_rank.empty and "SECTOR_NAME" in sector_rank.columns:
+            sector_lookup = {
+                str(row.get("SECTOR_NAME", "")): row
+                for _, row in sector_rank.iterrows()
+                if str(row.get("SECTOR_NAME", ""))
+            }
+
+        narratives.setdefault("market_summary", fallback.get("market_summary", ""))
+        narratives.setdefault("sectors", {})
+        narratives.setdefault("stocks", {})
+
+        for sector, payload in fallback.get("sectors", {}).items():
+            current = narratives["sectors"].get(sector, {})
+            if not isinstance(current, dict) or not current.get("narrative"):
+                narratives["sectors"][sector] = payload
+                continue
+            addendum = _sector_narrative_addendum(sector, sector_lookup[sector]) if sector in sector_lookup else ""
+            if addendum and addendum not in str(current.get("narrative", "")):
+                current["narrative"] = f"{current.get('narrative', '').rstrip()}\n\n{addendum}"
+                themes = current.get("key_themes", [])
+                if isinstance(themes, list) and addendum:
+                    themes = list(themes)
+                    themes.append("Sector-specific tactical note")
+                    current["key_themes"] = themes
+                narratives["sectors"][sector] = current
+
+        for sym, payload in fallback.get("stocks", {}).items():
+            if sym not in narratives["stocks"] or not str(narratives["stocks"].get(sym, {}).get("narrative", "")).strip():
+                narratives["stocks"][sym] = payload
+
+        return narratives
     except Exception as exc:
         print(f"  LLM narrative generation skipped ({type(exc).__name__}), using rule-based narratives.")
         return _generate_rule_based_narratives(sector_rank, candidates)
@@ -3136,6 +3220,38 @@ _SECTOR_PARA_LABELS = [
 ]
 
 
+def _sector_narrative_addendum(sector: str, row: pd.Series) -> str:
+    """Add sector-specific tactical detail for key rotating groups."""
+    ret1m = _sfloat(row.get("RET_1M"))
+    rs1m = _sfloat(row.get("RS_1M"))
+    breadth_pct = row.get("BREADTH_PCT50")
+    breadth_str = (
+        f"{_sfloat(breadth_pct):.0f}% of names above 50DMA"
+        if breadth_pct is not None and not (isinstance(breadth_pct, float) and math.isnan(breadth_pct))
+        else "breadth data is not tracked for this sector"
+    )
+
+    if sector == "Pharma & Healthcare":
+        return (
+            f"Pharma is still behaving like a defensive-growth pocket rather than a broad beta leader. "
+            f"The sector is up {ret1m:+.1f}% over 1M with RS {rs1m:+.1f}% vs Nifty 500, but only {breadth_str}, "
+            f"so the trade remains selective. Prefer earnings-visible leaders and avoid paying up for weak follow-through."
+        )
+    if sector == "Capital Markets":
+        return (
+            f"Capital Markets is a secondary rotation lane at the moment: {ret1m:+.1f}% over 1M and RS {rs1m:+.1f}% "
+            f"show constructive but not decisive leadership, while {breadth_str} keeps conviction below the primary leaders. "
+            f"Use this group tactically and demand price confirmation before adding exposure."
+        )
+    if sector == "Logistics & Transport":
+        return (
+            f"Logistics and Transport is one of the cleaner mid-tier rotation pockets: {ret1m:+.1f}% over 1M with "
+            f"RS {rs1m:+.1f}% and {breadth_str}. The trend is usable, but follow-through can still be noisy because "
+            f"the group is sensitive to fuel, freight, and flow-driven reversals."
+        )
+    return ""
+
+
 def _narrative_points(text: object) -> list[str]:
     """Split narrative prose into concise bullet points without changing meaning."""
     cleaned = re.sub(r"\s+", " ", str(text or "").replace("\\n", "\n")).strip()
@@ -3265,10 +3381,9 @@ def build_global_us_context_tab_html(
     data_root: Path | str = ROOT / "data" / "global_market",
 ) -> str:
     """Render the Global / US Context tab without blocking the NSE report."""
-    report_path = Path(latest_report_path)
     context = _global_us_context_from_cache(data_root)
 
-    if not report_path.exists():
+    if not context.get("available"):
         reason = context.get("reason", "Run the US/global report command to generate this section.")
         return (
             '<div class="summary-card global-us-context">'
@@ -3279,50 +3394,102 @@ def build_global_us_context_tab_html(
             '</div>'
         )
 
-    report_href = html_mod.escape(report_path.resolve().as_uri(), quote=True)
-    report_label = html_mod.escape(report_path.name)
-    generated_hint = datetime.fromtimestamp(report_path.stat().st_mtime).strftime("%Y-%m-%d %H:%M")
+    top_sector = context.get("top_sector") or {}
+    top_sector_text = "No sector ETF leader available."
+    if top_sector:
+        top_sector_text = (
+            f"{top_sector.get('symbol', 'N/A')} - {top_sector.get('name', 'N/A')} "
+            f"1M {_fmth(top_sector.get('ret_1m'), '%')} | RS/SPY {_fmth(top_sector.get('rs_spy'))}"
+        )
 
-    if context.get("available"):
-        top_sector = context.get("top_sector") or {}
-        top_sector_text = "No sector ETF leader available."
-        if top_sector:
-            top_sector_text = (
-                f"{top_sector.get('symbol', 'N/A')} - {top_sector.get('name', 'N/A')} "
-                f"1M {_fmth(top_sector.get('ret_1m'), '%')} | RS/SPY {_fmth(top_sector.get('rs_spy'))}"
+    stage2_list = context.get("stage2", []) or []
+    vcp_list = context.get("vcp", []) or []
+    india_readthrough = context.get("india_readthrough", []) or []
+    regime = str(context.get("regime", "N/A")).upper()
+    latest_date = str(context.get("latest_date", "N/A"))
+    symbols = int(context.get("symbols", 0))
+
+    stage2_leaders_text = ", ".join(stage2_list[:4]) if stage2_list else "No Stage 2 leaders in cache."
+    vcp_text = ", ".join(vcp_list[:4]) if vcp_list else "No VCP setups in cache."
+    india_text = "; ".join(india_readthrough[:4]) if india_readthrough else "No strong India read-through signals crossed thresholds."
+
+    regime_take = {
+        "BULL": "Risk appetite is likely broadening and global leadership is leaning toward higher-beta participation.",
+        "BEAR": "The tape is defensive, so India should bias toward quality, cashflow, and lower drawdown names.",
+        "ROTATION": "Leadership is moving between groups rather than trending in one straight line, so follow the strongest relative-strength pockets.",
+        "RISK_ON": "Global strength is supportive, which usually helps India cyclicals and momentum names if domestic breadth confirms.",
+        "RISK_OFF": "Global risk is being reduced, so India should prefer defensives and names with strong balance sheets.",
+    }.get(regime, "The global backdrop is mixed, so the best Indian trades will still come from local relative strength and price confirmation.")
+
+    freshness_note = ""
+    is_stale_cache = False
+    try:
+        latest_dt = datetime.strptime(latest_date[:10], "%Y-%m-%d").date()
+        stale_days = (datetime.now().date() - latest_dt).days
+        if stale_days > 14:
+            is_stale_cache = True
+            freshness_note = (
+                f" The cache is {stale_days} days old, so this section is stale directional context, not a current global market read."
             )
-        body_html = (
-            '<div class="global-us-grid">'
-            '<div class="global-us-card"><div class="global-us-label">Regime</div>'
-            f'<div class="global-us-value">{html_mod.escape(str(context.get("regime", "N/A")).upper())}</div>'
-            f'<div class="global-us-meta">Latest cache: {html_mod.escape(str(context.get("latest_date", "N/A")))} | Symbols: {int(context.get("symbols", 0))}</div></div>'
-            '<div class="global-us-card"><div class="global-us-label">Sector ETF Leader</div>'
-            f'<div class="global-us-text">{html_mod.escape(top_sector_text)}</div></div>'
-            '<div class="global-us-card"><div class="global-us-label">US Stage 2 Leaders</div>'
-            f'{_simple_list_html(context.get("stage2", []), "No Stage 2 leaders in cache.")}</div>'
-            '<div class="global-us-card"><div class="global-us-label">VCP / Contraction Watch</div>'
-            f'{_simple_list_html(context.get("vcp", []), "No VCP setups in cache.")}</div>'
-            '<div class="global-us-card global-us-wide"><div class="global-us-label">India Read-Through</div>'
-            f'{_simple_list_html(context.get("india_readthrough", []), "No strong India read-through signals crossed thresholds.")}</div>'
-            '</div>'
+    except Exception:
+        pass
+
+    readthrough_take = (
+        f"The clearest India read-through from this cache is: {india_text}. "
+        f"That does not automatically translate into a trade, but it does help rank sectors that may benefit if global leadership keeps holding."
+    )
+    if is_stale_cache:
+        narrative_intro = (
+            f'The cached Global / US snapshot from <strong>{html_mod.escape(latest_date)}</strong> showed '
+            f'<strong>{html_mod.escape(regime)}</strong> conditions, with {html_mod.escape(top_sector_text)} setting the tone. '
+        )
+        regime_label = "Regime From Cache"
+        tactical_take = (
+            f"At the time of this cache, the read was: {regime_take}"
+            f"{freshness_note} {readthrough_take}"
         )
     else:
-        body_html = (
-            '<div class="global-us-grid">'
-            '<div class="global-us-card global-us-wide">'
-            '<div class="global-us-label">Cache Summary</div>'
-            f'<p class="global-us-empty">{html_mod.escape(str(context.get("reason", "Cache summary unavailable.")))}</p>'
-            '</div></div>'
+        narrative_intro = (
+            f'Global markets are currently in <strong>{html_mod.escape(regime)}</strong> mode as of '
+            f'<strong>{html_mod.escape(latest_date)}</strong>, with {html_mod.escape(top_sector_text)} setting the tone. '
         )
+        regime_label = "Regime"
+        tactical_take = f"{regime_take}{freshness_note} {readthrough_take}"
+
+    narrative_html = (
+        '<div class="global-us-narrative">'
+        f'<div class="global-us-label">Narrative</div>'
+        f'<p class="global-us-narrative-text">{narrative_intro}'
+        f'Across the current cache we have {symbols} tracked symbols, {len(stage2_list)} Stage 2 leaders, and {len(vcp_list)} VCP / contraction watches. '
+        f'{html_mod.escape(tactical_take)}</p>'
+        '</div>'
+    )
+
+    body_html = (
+        narrative_html
+        + '<div class="global-us-grid">'
+        f'<div class="global-us-card"><div class="global-us-label">{html_mod.escape(regime_label)}</div>'
+        f'<div class="global-us-value">{html_mod.escape(regime)}</div>'
+        f'<div class="global-us-meta">Latest cache: {html_mod.escape(latest_date)} | Symbols: {symbols}</div></div>'
+        '<div class="global-us-card"><div class="global-us-label">Sector ETF Leader</div>'
+        f'<div class="global-us-text">{html_mod.escape(top_sector_text)}</div></div>'
+        '<div class="global-us-card"><div class="global-us-label">US Stage 2 Leaders</div>'
+        f'<div class="global-us-text">{html_mod.escape(stage2_leaders_text)}</div></div>'
+        '<div class="global-us-card"><div class="global-us-label">VCP / Contraction Watch</div>'
+        f'<div class="global-us-text">{html_mod.escape(vcp_text)}</div></div>'
+        '<div class="global-us-card global-us-wide"><div class="global-us-label">India Read-Through</div>'
+        f'<div class="global-us-text">{html_mod.escape(india_text)}</div></div>'
+        '</div>'
+        '<div class="global-us-card global-us-wide" style="margin-top:10px">'
+        '<div class="global-us-label">Tactical Read</div>'
+        f'<p class="global-us-text">{html_mod.escape(tactical_take)}</p>'
+        '</div>'
+    )
 
     return (
         '<div class="summary-card global-us-context">'
         '<h3>Global / US Context</h3>'
-        '<p>Standalone US/global market report with index tape, sector ETF rotation, screeners, and India read-through.</p>'
-        '<div class="global-us-link-row">'
-        f'<a class="global-us-link" href="{report_href}" target="_blank" rel="noopener">Open US/global report</a>'
-        f'<span class="global-us-note">Latest file: {report_label} | Generated: {html_mod.escape(generated_hint)}</span>'
-        '</div>'
+        '<p>Local cache-driven global backdrop for the NSE report. No external report is opened from this tab.</p>'
         f'{body_html}'
         '<p class="global-us-note">This tab uses local US/global cache only. It does not fetch data while rendering the NSE report.</p>'
         '</div>'
@@ -3335,19 +3502,24 @@ _CSS = """
 :root {
   --bg: #f0f4f8;
   --card: #ffffff;
+  --soft-border: #f1f5f9;
   --text: #1a2332;
   --muted: #64748b;
   --border: #e2e8f0;
   --primary: #1e3a5f;
   --primary-alt: #2563eb;
+  --good: #16a34a;
+  --risk: #dc2626;
+  --watch: #d97706;
   --hdr-h: 56px;
   --nav-h: 44px;
   --radius: 8px;
   --shadow: 0 1px 3px rgba(0,0,0,0.08);
   --shadow-md: 0 4px 8px rgba(0,0,0,0.1);
+  --container: 1400px;
 }
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Inter",sans-serif;background:var(--bg);color:var(--text);line-height:1.6;font-size:14px}
+body{font-family:'Inter',-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--text);line-height:1.6;font-size:14px}
 a{color:var(--primary-alt);text-decoration:none}
 
 /* ---- HEADER ---- */
@@ -3413,9 +3585,8 @@ a{color:var(--primary-alt);text-decoration:none}
 .brief-list li::before{content:"";position:absolute;left:0;top:.72em;width:5px;height:5px;border-radius:50%;background:#3b82f6}
 @media(max-width:900px){.brief-grid{grid-template-columns:1fr}}
 .global-us-context h3{font-size:15px;color:var(--primary);margin-bottom:8px}
-.global-us-link-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:12px 0 14px}
-.global-us-link{display:inline-flex;align-items:center;justify-content:center;padding:8px 12px;border-radius:6px;background:var(--primary);color:#fff;font-size:12px;font-weight:800}
-.global-us-link:hover{background:#16324f;color:#fff}
+.global-us-narrative{background:linear-gradient(180deg,#eff6ff 0%,#f8fafc 100%);border:1px solid #bfdbfe;border-radius:10px;padding:14px 16px;margin:12px 0 14px}
+.global-us-narrative-text{font-size:13px;line-height:1.65;color:#1f2937;margin:0}
 .global-us-note{font-size:11px;color:var(--muted);line-height:1.5}
 .global-us-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:10px}
 .global-us-card{background:#f8fafc;border:1px solid var(--border);border-radius:8px;padding:12px;min-width:0}
@@ -3858,6 +4029,26 @@ details.narr[open] summary::before{transform:rotate(90deg)}
   .metrics-row{gap:8px}
   .metric-card{min-width:140px}
   .hdr-title{font-size:.9rem}
+  .hdr-inner{padding:8px 12px;gap:8px}
+  .hdr-meta{width:100%;justify-content:flex-start}
+  .disc{padding:7px 12px}
+  .nav-inner{padding:0 10px}
+  .nav-btn{padding:10px 12px;font-size:12px}
+  .summary-card,.card,.sec-narr-card{padding:14px}
+  .sec-hdr{gap:8px;padding:12px 0 8px}
+  .sec-name{font-size:14px}
+  .sec-narr-hdr{align-items:flex-start}
+  .themes{gap:4px}
+  .theme-chip{font-size:10px;padding:2px 8px}
+  .brief-card{padding:14px}
+  .brief-grid{grid-template-columns:1fr}
+  .global-us-grid{grid-template-columns:1fr}
+  .global-us-wide{grid-column:auto}
+  .rotation-insight-grid{grid-template-columns:1fr}
+  .breadth-kpis{grid-template-columns:1fr 1fr}
+  .rot-hm-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .sec-pills{gap:4px}
+  .sec-pill{padding:4px 10px;font-size:11px}
 }
 @media(max-width:900px){
   #tab-candidates table{min-width:800px}
@@ -3897,6 +4088,10 @@ details.narr[open] summary::before{transform:rotate(90deg)}
   #tab-candidates .levels{display:block;line-height:1.55}
   #tab-candidates .levels span{display:block;margin-bottom:2px}
   #tab-candidates .levels-sub{display:none}
+  .overview-grid,.global-us-grid,.tech-charts,.tech-narr-grid,.rotation-insight-grid{grid-template-columns:1fr}
+  .brief-grid{grid-template-columns:1fr}
+  .breadth-kpis{grid-template-columns:1fr 1fr}
+  .rot-hm-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
 """
 
@@ -4438,6 +4633,8 @@ def render_html_interactive(
     sector_rank = dedupe_sector_rank_by_display_name(sector_rank)
     gen_date = generated_at.strftime("%Y-%m-%d")
     data_date = _first_non_empty_value(candidates, ["ANALYSIS_DATE", "SNAPSHOT_DATE", "PRICE_DATE", "DATE"], default=gen_date)
+    eod_label = _eod_label_for_date(data_date)
+    trading_day_state = "Trading day" if _is_trading_day(data_date) else "Non-trading day"
     score_label = (
         "Cycle-Adjusted Score"
         if {"ROTATION_SCORE_BASE", "CYCLE_ADJUSTMENT"}.issubset(sector_rank.columns)
@@ -5117,7 +5314,6 @@ def render_html_interactive(
             company = _h(r.get("COMPANY_NAME", sym))
             sector = _h(r.get("RESEARCH_SECTOR", "Other"))
             stage = _h(r.get("STAGE", ""))
-            visibility = _h(r.get("REPORT_VISIBILITY", ""))
             action = _h(r.get("ACTION_BUCKET", "WATCHLIST"))
             setup = _h(r.get("SETUP_CLASS", "STAGE2_RESEARCH"))
             signal_html = _signal_badge(str(r.get("TRADING_SIGNAL", "")))
@@ -5137,7 +5333,6 @@ def render_html_interactive(
                 f'<td data-val="{_fmth(r.get("ENHANCED_FUND_SCORE"))}">{_score_bar(r.get("ENHANCED_FUND_SCORE"), "fund")}</td>'
                 f'<td class="num" data-val="{_fmth(r.get("RSI"))}">{_fmth(r.get("RSI"))}</td>'
                 f"<td>{_h(r.get('SUPERTREND_STATE', ''))}</td>"
-                f"<td>{visibility}</td>"
                 "</tr>"
             )
         research_overlay_html = (
@@ -5146,7 +5341,7 @@ def render_html_interactive(
             '<div class="tbl-wrap"><table><thead><tr>'
             '<th>#</th><th>Symbol</th><th>Company</th><th>Sector Lens</th><th>Stage / Setup</th>'
             '<th>Signal</th><th class="num">Price</th><th>Score</th><th>Tech</th><th class="num">RS%</th>'
-            '<th>Fund</th><th class="num">RSI</th><th>Supertrend</th><th>Report Visibility</th>'
+            '<th>Fund</th><th class="num">RSI</th><th>Supertrend</th>'
             f'</tr></thead><tbody>{overlay_rows}</tbody></table></div>'
         )
 
@@ -5560,7 +5755,7 @@ def render_html_interactive(
         '<head>',
         '<meta charset="utf-8">',
         '<meta name="viewport" content="width=device-width, initial-scale=1">',
-        f'<title>NSE Sector Rotation Report — {gen_date}</title>',
+        f'<title>NSE Sector Rotation Report — {eod_label}</title>',
         '<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>',
         f'<style>{_CSS}</style>',
         '</head>',
@@ -5574,12 +5769,13 @@ def render_html_interactive(
         logo_html,
         '<div class="hdr-copy">',
         f'<div class="hdr-kicker">{html_mod.escape(AGENT_BRAND)}</div>',
-        '<div class="hdr-title">NSE Sector Rotation Report</div>',
+        f'<div class="hdr-title">NSE Sector Rotation Report — {html_mod.escape(eod_label)}</div>',
         '</div>',
         '</div>',
         '<div class="hdr-meta">',
         f'<span class="mbadge mbadge-date">Report Date: {gen_date}</span>',
-        f'<span class="mbadge mbadge-data">Data as of: {html_mod.escape(str(data_date))}</span>',
+        f'<span class="mbadge mbadge-data">EOD Close: {html_mod.escape(eod_label)}</span>',
+        f'<span class="mbadge mbadge-data">Posting: {html_mod.escape(trading_day_state)} · {html_mod.escape(str(gen_date))}</span>',
         '</div></div>',
         '</header>',
         f'<div class="disc"><strong>Disclaimer:</strong> {html_mod.escape(REPORT_DISCLAIMER)}</div>',

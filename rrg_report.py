@@ -870,9 +870,18 @@ def generate_html(
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
 <style>
-:root{{--bg:#0f172a;--card:#1e293b;--bdr:#334155;--txt:#e2e8f0;--mu:#94a3b8;--rad:12px}}
+:root{{
+--bg:#0f172a;--card:#1e293b;--border:#334155;--soft-border:#1e293b;
+--text:#e2e8f0;--muted:#94a3b8;
+--primary:#38bdf8;--primary-alt:#60a5fa;
+--good:#4ade80;--risk:#f87171;--watch:#fbbf24;
+--radius:12px;--shadow:0 2px 8px rgba(0,0,0,.35);--shadow-md:0 6px 20px rgba(0,0,0,.45);
+--container:1440px;
+/* Backward-compat aliases */
+--bdr:var(--border);--txt:var(--text);--mu:var(--muted);--rad:var(--radius);
+}}
 *{{box-sizing:border-box;margin:0;padding:0}}
-body{{background:var(--bg);color:var(--txt);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Inter",sans-serif;font-size:14px;line-height:1.6}}
+body{{background:var(--bg);color:var(--text);font-family:'Inter',-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:14px;line-height:1.6}}
 .hdr{{background:linear-gradient(135deg,#1e3a5f,#0f172a);padding:22px 28px;border-bottom:1px solid var(--bdr)}}
 .kicker{{font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#60a5fa;margin-bottom:3px}}
 .htitle{{font-size:1.5rem;font-weight:800;letter-spacing:-.02em;margin-bottom:2px}}

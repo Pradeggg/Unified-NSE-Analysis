@@ -8,6 +8,7 @@ import html
 import json
 import math
 import os
+import re
 import shutil
 import sys
 from dataclasses import dataclass
@@ -99,6 +100,37 @@ def _h(text: Any) -> str:
     return html.escape("" if text is None else str(text))
 
 
+def _inline_markdown_html(text: str) -> str:
+    """Render the small markdown subset used in generated commentary."""
+    escaped = _h(text)
+    escaped = re.sub(r"\*\*([^*\n][^*]*?)\*\*", r"<strong>\1</strong>", escaped)
+    escaped = re.sub(r"(?<!\*)\*([^*\n][^*]*?)\*(?!\*)", r"<em>\1</em>", escaped)
+    return escaped
+
+
+def _commentary_markdown_html(text: Any) -> str:
+    """Safely render generated market commentary instead of showing raw markdown markers."""
+    raw = str(text or "").strip()
+    if not raw:
+        return '<p class="muted">No commentary available for this session.</p>'
+    paragraphs = [part.strip() for part in re.split(r"\n\s*\n", raw) if part.strip()]
+    if not paragraphs:
+        return '<p class="muted">No commentary available for this session.</p>'
+
+    rendered: list[str] = []
+    for para in paragraphs:
+        lines = [line.strip() for line in para.splitlines() if line.strip()]
+        if not lines:
+            continue
+        if all(line.startswith(("- ", "* ")) for line in lines):
+            items = "".join(f"<li>{_inline_markdown_html(line[2:].strip())}</li>" for line in lines)
+            rendered.append(f"<ul>{items}</ul>")
+            continue
+        body = "<br>".join(_inline_markdown_html(line) for line in lines)
+        rendered.append(f"<p>{body}</p>")
+    return "".join(rendered) or '<p class="muted">No commentary available for this session.</p>'
+
+
 def _query(conn, sql: str, params: tuple[Any, ...] = ()) -> list[dict[str, Any]]:
     with conn.cursor(cursor_factory=RealDictCursor) as cur:
         cur.execute(sql, params)
@@ -175,9 +207,16 @@ def latest_intraday_date(conn, requested: str | None = None) -> date:
         """,
         (IST_LABEL,),
     )
-    dt = rows[0].get("dt") if rows else None
+    intraday_dt = rows[0].get("dt") if rows else None
+
+    # Always check equity EOD — use whichever is more recent so the report
+    # doesn't get pinned to a stale intraday date when EOD is fresher.
+    eod_rows = _query(conn, "SELECT max(trade_date) AS dt FROM market.equity_eod", ())
+    eod_dt = eod_rows[0].get("dt") if eod_rows else None
+
+    dt = max(filter(None, [intraday_dt, eod_dt]), default=None)
     if not dt:
-        raise RuntimeError("No intraday 15m bars found in PostgreSQL.")
+        raise RuntimeError("No intraday bars or equity EOD data found in PostgreSQL.")
     return dt
 
 
@@ -370,6 +409,50 @@ def load_report_data(conn, report_date: date) -> dict[str, Any]:
         """,
         (IST_LABEL, IST_LABEL, report_date),
     )
+    # EOD daily candles for fallback candlestick chart (last 60 trading days)
+    eod_candles = _query(
+        conn,
+        """
+        SELECT index_symbol,
+               to_char(trade_date, 'DD-Mon') AS trade_date,
+               open, high, low, close
+        FROM market.index_eod
+        WHERE index_symbol IN ('Nifty 50', 'Nifty Bank')
+          AND trade_date <= %s
+        ORDER BY index_symbol, trade_date DESC
+        LIMIT 120
+        """,
+        (report_date,),
+    )
+    # Reverse so oldest→newest per symbol for chart left-to-right order
+    nifty_eod = list(reversed([r for r in eod_candles if r.get("index_symbol") == "Nifty 50"]))
+    bank_eod  = list(reversed([r for r in eod_candles if r.get("index_symbol") == "Nifty Bank"]))
+    eod_candles_sorted = nifty_eod + bank_eod
+
+    # FII/DII flows
+    fii_rows = _query(
+        conn,
+        "SELECT fii_net_today, dii_net_today, fii_net_5d, dii_net_5d FROM signals.fii_dii_flows WHERE trade_date = %s",
+        (report_date,),
+    )
+    fii_dii = _jsonable(fii_rows[0]) if fii_rows else {}
+
+    # Market regime
+    regime_rows = _query(
+        conn,
+        "SELECT regime, confidence FROM signals.regime_history WHERE trade_date = %s",
+        (report_date,),
+    )
+    regime = _jsonable(regime_rows[0]) if regime_rows else {}
+
+    # McClellan from breadth.market_daily
+    breadth_rows = _query(
+        conn,
+        "SELECT advances, declines, unchanged, ad_oscillator, trin, market_sentiment FROM breadth.market_daily WHERE trade_date = %s",
+        (report_date,),
+    )
+    market_breadth = _jsonable(breadth_rows[0]) if breadth_rows else {}
+
     data = {
         "report_date": report_date.isoformat(),
         "index_daily": _jsonable(index_daily),
@@ -377,6 +460,10 @@ def load_report_data(conn, report_date: date) -> dict[str, Any]:
         "symbol_day": _jsonable(symbol_day),
         "hourly_leaders": _jsonable(hourly_leaders),
         "intraday_path": _jsonable(intraday_path),
+        "eod_candles": _jsonable(eod_candles_sorted),
+        "fii_dii": fii_dii,
+        "regime": regime,
+        "market_breadth": market_breadth,
         "source_mode": "intraday_15m",
     }
     if not data["index_daily"] or not data["symbol_day"]:
@@ -676,10 +763,26 @@ def svg_sector_bars(data: dict[str, Any]) -> str:
 
 def svg_candlestick(data: dict[str, Any], symbol: str) -> str:
     bars = [row for row in data["intraday_path"] if row.get("symbol") == symbol]
+    is_daily = False
     width, height = 880, 360
     pad_l, pad_r, pad_t, pad_b = 58, 68, 26, 38
     if not bars:
-        return f"<div class='empty-chart'>No intraday OHLC bars available for {_h(symbol)}</div>"
+        # Fallback: use 60-day EOD OHLC from market.index_eod
+        eod_sym = "Nifty 50" if symbol == "NIFTY" else "Nifty Bank"
+        eod_bars = [
+            r for r in data.get("eod_candles", [])
+            if r.get("index_symbol") == eod_sym
+        ]
+        if not eod_bars:
+            return f"<div class='empty-chart'>No intraday OHLC bars available for {_h(symbol)}</div>"
+        bars = [
+            {
+                "open": r["open"], "high": r["high"], "low": r["low"],
+                "close": r["close"], "time_ist": r["trade_date"],
+            }
+            for r in eod_bars
+        ]
+        is_daily = True
     prices: list[float] = []
     for row in bars:
         for key in ("open", "high", "low", "close"):
@@ -739,7 +842,8 @@ def svg_candlestick(data: dict[str, Any], symbol: str) -> str:
         parts.append(f"<line x1='{pad_l}' x2='{width-pad_r}' y1='{ly:.1f}' y2='{ly:.1f}' stroke='#6dd3ff' stroke-dasharray='3 5' opacity='.75'/>")
         parts.append(f"<rect x='{width-66}' y='{ly-12:.1f}' width='58' height='24' rx='4' fill='#0ea5e9'/>")
         parts.append(f"<text x='{width-37}' y='{ly+4:.1f}' text-anchor='middle' fill='#ffffff' font-size='12' font-weight='800'>{_num(last_close, 0)}</text>")
-    parts.append(f"<text x='{pad_l}' y='22' fill='#e4edf4' font-size='15' font-weight='800'>{_h(symbol)} · 15m</text>")
+    chart_label = f"{_h(symbol)} · Daily (60d)" if is_daily else f"{_h(symbol)} · 15m"
+    parts.append(f"<text x='{pad_l}' y='22' fill='#e4edf4' font-size='15' font-weight='800'>{chart_label}</text>")
     parts.append("</svg>")
     return "\n".join(parts)
 
@@ -794,7 +898,7 @@ def svg_stock_bubbles(data: dict[str, Any]) -> str:
     if y_min == y_max:
         y_min -= 5
         y_max += 5
-    max_vol = max(vols or [1])
+    max_vol = max(vols or [1]) or 1  # guard against all-zero volumes
     score_mid = sorted(scores)[len(scores) // 2] if scores else 50.0
 
     def x(value: Any) -> float:
@@ -988,11 +1092,7 @@ def _session_label(nifty_pct: Any, bank_pct: Any, best_breadth: Any, weak_breadt
 
 
 def _latest_report_href(filename: str) -> str:
-    path = LATEST_DIR / filename
-    try:
-        return path.as_uri()
-    except ValueError:
-        return "#"
+    return f"/reports/{filename}"
 
 
 def _stock_detail_payload(data: dict[str, Any]) -> str:
@@ -1079,8 +1179,18 @@ def build_html(data: dict[str, Any]) -> str:
         for label, filename in report_links
     )
     style = """
-    :root{--ink:#172322;--muted:#667370;--line:#d6ddda;--soft-line:#e8edeb;--bg:#f4f6f5;--card:#ffffff;--panel:#111821;--green:#0f7a5f;--red:#b4232b;--amber:#a65f00;--blue:#1f5f99;--shadow:0 18px 42px rgba(23,35,34,.08);}
-    *{box-sizing:border-box} html{scroll-behavior:smooth} body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.45}
+    :root{
+    --bg:#f0f4f8;--card:#ffffff;--border:#e2e8f0;--soft-border:#f1f5f9;
+    --text:#1a2332;--muted:#64748b;
+    --primary:#1e3a5f;--primary-alt:#2563eb;
+    --good:#16a34a;--risk:#dc2626;--watch:#d97706;
+    --radius:8px;--shadow:0 1px 3px rgba(0,0,0,.08);--shadow-md:0 4px 8px rgba(0,0,0,.10);
+    --panel:#111821;
+    /* Backward-compat aliases — do not reference these in new CSS */
+    --ink:var(--text);--line:var(--border);--soft-line:var(--soft-border);
+    --green:var(--good);--red:var(--risk);--amber:var(--watch);--blue:var(--primary-alt);
+    }
+    *{box-sizing:border-box} html{scroll-behavior:smooth} body{margin:0;background:var(--bg);color:var(--text);font-family:'Inter','Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;font-size:14px;line-height:1.6}
     .wrap{max-width:1360px;margin:0 auto;padding:24px}.eyebrow{color:var(--muted);font-size:12px;text-transform:uppercase;font-weight:850;letter-spacing:.08em}
     header.hero{background:#ffffff;border:1px solid var(--line);border-radius:8px;padding:22px;box-shadow:var(--shadow);margin-bottom:16px}
     .hero-top{display:flex;justify-content:space-between;gap:18px;align-items:flex-start}.title-block{max-width:760px}h1{margin:4px 0 8px;font-size:38px;line-height:1.06;letter-spacing:0}h2{font-size:19px;margin:0 0 14px}h3{font-size:15px;margin:0 0 8px;color:#223a37}.sub{color:var(--muted);font-size:14px}
@@ -1093,7 +1203,7 @@ def build_html(data: dict[str, Any]) -> str:
     .pos{color:var(--green)}.neg{color:var(--red)}.flat{color:var(--amber)}.info{color:var(--blue)}
     .table-scroll{overflow-x:auto;border:1px solid var(--soft-line);border-radius:8px}.table-scroll table{min-width:760px}table{width:100%;border-collapse:collapse;font-size:13px}th,td{border-bottom:1px solid var(--soft-line);padding:9px 8px;text-align:left;vertical-align:top}th{color:#51625f;font-size:11px;text-transform:uppercase;letter-spacing:.06em;background:#fafbfb}tr:last-child td{border-bottom:0}
     .pill{display:inline-flex;border-radius:999px;padding:3px 9px;font-size:12px;font-weight:850;background:#eef4f2;color:#24413e}.pill.pos{background:#dcfce7;color:#166534}.pill.neg{background:#fee2e2;color:#991b1b}
-    .event{display:grid;grid-template-columns:70px 1fr;gap:10px;padding:10px 0;border-bottom:1px solid var(--soft-line)}.event:last-child{border-bottom:0}.time{font-weight:900;color:#214744}.commentary{font-size:16px;max-width:92ch}.muted{color:var(--muted)}
+    .event{display:grid;grid-template-columns:70px 1fr;gap:10px;padding:10px 0;border-bottom:1px solid var(--soft-line)}.event:last-child{border-bottom:0}.time{font-weight:900;color:#214744}.commentary{font-size:16px;max-width:92ch}.commentary p{margin:0 0 14px}.commentary p:last-child{margin-bottom:0}.commentary strong{color:#172322}.commentary ul{margin:0 0 14px 18px;padding:0}.commentary li{margin:4px 0}.muted{color:var(--muted)}
     .heat{display:inline-block;min-width:62px;font-weight:900;text-align:center;border-radius:6px;color:#fff;padding:3px 8px}.heat.g1{background:#166534}.heat.g2{background:#16a34a}.heat.n{background:#a16207}.heat.r1{background:#dc2626}.heat.r2{background:#991b1b}
     svg{max-width:100%;height:auto}.chart-dark{background:var(--panel);border-color:#1f2a38;color:#e4edf4}.chart-dark h2{color:#e4edf4}.empty-chart{min-height:220px;display:grid;place-items:center;color:var(--muted);border:1px dashed var(--line);border-radius:8px}
     .stock-link{border:0;background:transparent;color:var(--green);font-weight:900;font:inherit;cursor:pointer;padding:0;text-decoration:underline;text-underline-offset:3px}.stock-link:focus-visible,.nav a:focus-visible,.report-link:focus-visible{outline:3px solid rgba(31,95,153,.28);outline-offset:2px}.clickable-row{cursor:pointer}.clickable-row:hover{background:#f2f8f6}
@@ -1207,7 +1317,7 @@ def build_html(data: dict[str, Any]) -> str:
   <section class="grid two section" id="commentary">
     <div class="card">
       <h2>Market Desk Commentary</h2>
-      <div class="commentary">{_h(commentary.get('text')).replace(chr(10), '<br>')}</div>
+      <div class="commentary">{_commentary_markdown_html(commentary.get('text'))}</div>
     </div>
     <div class="card">
       <h2>Event Log</h2>
@@ -1397,15 +1507,55 @@ def build_markdown(data: dict[str, Any]) -> str:
         "",
         "## Summary",
         "",
-        f"- NIFTY: {_num(nifty.get('day_close'))} ({_fmt(nifty.get('day_pct'), 2, '%')})",
-        f"- BANKNIFTY: {_num(bank.get('day_close'))} ({_fmt(bank.get('day_pct'), 2, '%')})",
-        f"- Best breadth hour: {best_breadth.get('hour_ist') or 'n/a'} ({_fmt(best_breadth.get('adv_pct'),1,'%')} advancers)",
-        f"- Weakest breadth hour: {weakest_breadth.get('hour_ist') or 'n/a'} ({_fmt(weakest_breadth.get('adv_pct'),1,'%')} advancers)",
+        f"- NIFTY: {_num(nifty.get('day_close'))} ({_fmt(nifty.get('day_pct'), 2, '%')}) · Range: {_num(nifty.get('day_low'))}–{_num(nifty.get('day_high'))}",
+        f"- BANKNIFTY: {_num(bank.get('day_close'))} ({_fmt(bank.get('day_pct'), 2, '%')}) · Range: {_num(bank.get('day_low'))}–{_num(bank.get('day_high'))}",
+    ]
+    # FII/DII
+    fii = data.get("fii_dii") or {}
+    if fii:
+        lines.append(f"- FII: ₹{_fmt(fii.get('fii_net_today'), 2)} Cr · DII: ₹{_fmt(fii.get('dii_net_today'), 2)} Cr (5D FII: ₹{_fmt(fii.get('fii_net_5d'), 2)} Cr)")
+    # Market breadth (EOD A/D + AD oscillator + TRIN)
+    mb = data.get("market_breadth") or {}
+    if mb:
+        adv, dec = mb.get("advances") or 0, mb.get("declines") or 0
+        ad_osc = mb.get("ad_oscillator")
+        trin = mb.get("trin")
+        sentiment = mb.get("market_sentiment") or ""
+        breadth_parts = [f"A/D {_int(adv)}/{_int(dec)}"]
+        if ad_osc is not None:
+            breadth_parts.append(f"AD Oscillator {_fmt(ad_osc, 1)}")
+        if trin is not None:
+            breadth_parts.append(f"TRIN {_fmt(trin, 2)}")
+        if sentiment:
+            breadth_parts.append(sentiment)
+        lines.append(f"- Breadth: {' · '.join(breadth_parts)}")
+    # Intraday breadth hours (only when available)
+    if best_breadth.get("hour_ist"):
+        lines.append(f"- Best breadth hour: {best_breadth['hour_ist']} ({_fmt(best_breadth.get('adv_pct'),1,'%')} advancers)")
+        lines.append(f"- Weakest breadth hour: {weakest_breadth.get('hour_ist')} ({_fmt(weakest_breadth.get('adv_pct'),1,'%')} advancers)")
+    else:
+        lines.append("- Best breadth hour: n/a")
+        lines.append("- Weakest breadth hour: n/a")
+    # Regime
+    regime = data.get("regime") or {}
+    if regime.get("regime"):
+        lines.append(f"- Market Regime: **{regime['regime']}** (confidence {regime.get('confidence', '—')}%)")
+    lines += [
         "",
         "## Commentary",
         "",
-        str(commentary.get("text") or ""),
-        "",
+    ]
+    # Format commentary: insert blank line before each bold subsection heading
+    raw_commentary = str(commentary.get("text") or "").strip()
+    formatted_commentary = raw_commentary
+    import re as _re
+    # Ensure each **Section** heading is preceded by a blank line and followed by a blank line
+    formatted_commentary = _re.sub(r'(?<!\n)\n(\*\*[A-Z][^*]+\*\*)', r'\n\n\1', formatted_commentary)
+    formatted_commentary = _re.sub(r'(\*\*[A-Z][^*]+\*\*)\n(?!\n)', r'\1\n\n', formatted_commentary)
+    lines += [formatted_commentary, ""]
+
+    # Hour-by-hour tape
+    lines += [
         "## Hour-By-Hour Tape",
         "",
         "| Hour | NIFTY | BANKNIFTY | A/D | Adv % | Avg Stock | Volume |",
@@ -1418,17 +1568,31 @@ def build_markdown(data: dict[str, Any]) -> str:
             f"{_fmt(row.get('avg_stock_chg_pct'),2,'%')} | {_num((_f(row.get('total_volume')) or 0)/100000,1)}L |"
         )
     if not rows:
-        lines.append("| n/a | n/a | n/a | n/a | n/a | n/a | n/a |")
-    lines.extend(["", "## Event Log", ""])
-    for event in data.get("events", []):
-        lines.append(f"- **{event['time']} - {event['title']}:** {event['detail']}")
+        lines.append("| — | Intraday bars not available for this session | — | — | — | — | — |")
+
+    # Event log — only include section if there are events
+    events = data.get("events", [])
+    if events:
+        lines.extend(["", "## Event Log", ""])
+        for event in events:
+            lines.append(f"- **{event['time']} — {event['title']}:** {event['detail']}")
+
+    top_gainers = data.get("top_gainers") or sorted(
+        data.get("symbol_day", []),
+        key=lambda row: _f(row.get("day_pct")) if _f(row.get("day_pct")) is not None else -999999,
+        reverse=True,
+    )
+    top_losers = data.get("top_losers") or sorted(
+        data.get("symbol_day", []),
+        key=lambda row: _f(row.get("day_pct")) if _f(row.get("day_pct")) is not None else 999999,
+    )
     lines.extend(["", "## Top Gainers", ""])
-    for row in data.get("top_gainers", [])[:10]:
-        lines.append(f"- {row.get('symbol')}: {_fmt(row.get('day_pct'),2,'%')} ({row.get('sector')})")
+    for row in top_gainers[:10]:
+        lines.append(f"- **{row.get('symbol')}**: {_fmt(row.get('day_pct'),2,'%')} ({row.get('sector')})")
     lines.extend(["", "## Top Losers", ""])
-    for row in data.get("top_losers", [])[:10]:
-        lines.append(f"- {row.get('symbol')}: {_fmt(row.get('day_pct'),2,'%')} ({row.get('sector')})")
-    lines.extend(["", coverage_note, ""])
+    for row in top_losers[:10]:
+        lines.append(f"- **{row.get('symbol')}**: {_fmt(row.get('day_pct'),2,'%')} ({row.get('sector')})")
+    lines.extend(["", f"> {coverage_note}", ""])
     return "\n".join(lines)
 
 
