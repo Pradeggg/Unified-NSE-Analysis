@@ -3,11 +3,24 @@ from __future__ import annotations
 import sys
 import types
 
+import pytest
 from fastapi.testclient import TestClient
 
 from agent_adda.web_api.main import app
-from agent_adda.web_api.routes.talk import _SESSION_MEMORY, _is_local_symbol, _llm_synthesis
+from agent_adda.web_api.routes.talk import (
+    _SESSION_MEMORY,
+    _fallback_answer,
+    _is_local_symbol,
+    _llm_synthesis,
+    _resolve_query_symbols,
+    _resolve_query_symbols_with_gaps,
+)
 from agent_adda.web_api.schemas import TalkEvidenceItem
+
+
+@pytest.fixture(autouse=True)
+def _disable_agent_bridge_for_talk_unit_tests(monkeypatch):
+    monkeypatch.setenv("T2S_USE_AGENT_BRIDGE", "0")
 
 
 def test_talk_defaults_route():
@@ -64,6 +77,8 @@ def test_talk_llm_synthesis_uses_openai_when_configured(monkeypatch):
             assert kwargs["model"] == "gpt-4o-mini"
             assert kwargs["max_tokens"] == 700
             assert "Evidence:" in kwargs["messages"][0]["content"]
+            assert "Only call something an evidence gap if it appears in the Gaps block." in kwargs["messages"][0]["content"]
+            assert "Structured gaps present: no." in kwargs["messages"][0]["content"]
             return _Response()
 
     class _OpenAI:
@@ -187,6 +202,41 @@ def test_talk_stock_response_exposes_fundamental_and_technical_assessments(monke
     )
 
 
+def test_talk_financial_fallback_formats_results_as_tables():
+    answer = _fallback_answer(
+        "financials_review",
+        "TRENT latest financial results",
+        ["TRENT"],
+        [
+            {
+                "symbol": "TRENT",
+                "latest_quarter": "Jun 2026",
+                "revenue": 5755,
+                "pat": 518,
+                "eps": 9.73,
+                "opm_pct": 19.0,
+                "financial_unit": "INR crore",
+                "financial_source": "Screener",
+                "financial_source_url": "https://www.screener.in/company/TRENT/consolidated/",
+                "latest_annual": {"period_label": "Mar 2026", "revenue": 20074, "pat": 1721, "eps": 32.25, "opm_pct": 19.0},
+                "latest_balance_sheet": {"period_label": "Mar 2026", "net_debt": 1176, "borrowings": 2561, "reserves": 6949},
+                "latest_cash_flow": {"period_label": "Mar 2026", "operating_cf": 2668, "net_cf": -57},
+            }
+        ],
+        [],
+        [],
+    )
+
+    assert "**TRENT Latest Financial Results**" in answer
+    assert "| Period | Revenue (INR crore) | PAT (INR crore) | EPS | OPM |" in answer
+    assert "| Jun 2026 | 5,755 | 518 | 9.73 | 19.0% |" in answer
+    assert "| Mar 2026 | 20,074 | 1,721 | 32.25 | 19.0% |" in answer
+    assert "| Metric | Value (INR crore) |" in answer
+    assert "| Operating cash flow | 2,668 |" in answer
+    assert "| Net cash flow | -57 |" in answer
+    assert "[Screener](https://www.screener.in/company/TRENT/consolidated/)" in answer
+
+
 def test_talk_banknifty_routes_as_index_not_stock(monkeypatch):
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
     client = TestClient(app)
@@ -207,6 +257,63 @@ def test_talk_banknifty_routes_as_index_not_stock(monkeypatch):
     assert any(item["source"] == "get_index_snapshot" for item in body["evidence"])
     assert any(item["source"] == "get_market_breadth" for item in body["evidence"])
     assert not any("price history" in gap.lower() for gap in body["gaps"])
+
+
+def test_talk_hdfcbank_routes_as_stock_even_with_default_indices(monkeypatch):
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    client = TestClient(app)
+
+    res = client.post(
+        "/api/talk/chat",
+        json={
+            "question": "Fundamental and Technical Analysis of HDFCBANK",
+            "watchlist": ["NIFTY", "BANKNIFTY", "RELIANCE", "HDFCBANK", "TCS", "INFY", "ICICIBANK", "SBIN"],
+            "mode": "permissive",
+        },
+    )
+    assert res.status_code == 200
+    body = res.json()
+    assert body["intent"] == "financials_review"
+    assert body["symbols"] == ["HDFCBANK"]
+    assert body["comparison"]
+    assert not body["market_context"]
+    assert any(item["source"] == "get_symbol_snapshot" for item in body["evidence"])
+    assert any(item["source"] == "get_technical_setup" for item in body["evidence"])
+    assert not any(item["source"] == "get_index_snapshot" for item in body["evidence"])
+
+
+@pytest.mark.parametrize(
+    ("prompt", "expected"),
+    [
+        ("Analyze Tata Consultancy Services", ["TCS"]),
+        ("Analyze Larsen and Toubro", ["LT"]),
+        ("Analyze Mahindra and Mahindra", ["M&M"]),
+        ("Analyze Bajaj Finance", ["BAJFINANCE"]),
+        ("Analyze Hindustan Unilever", ["HINDUNILVR"]),
+        ("Analyze Sun Pharma", ["SUNPHARMA"]),
+        ("Analyze Asian Paints", ["ASIANPAINT"]),
+        ("Analyze Axis Bank", ["AXISBANK"]),
+        ("Analyze Kotak Mahindra Bank", ["KOTAKBANK"]),
+        ("Analyze Tata Motors", ["TATAMOTORS"]),
+        ("Analyze Tata Technologies", ["TATATECH"]),
+    ],
+)
+def test_talk_resolves_multi_word_stock_names_before_tokens(prompt, expected):
+    watchlist = ["NIFTY", "BANKNIFTY", "RELIANCE", "HDFCBANK", "TCS", "INFY", "ICICIBANK", "SBIN"]
+    assert _resolve_query_symbols(prompt, watchlist) == expected
+
+
+def test_talk_does_not_silently_resolve_ambiguous_single_token_prefixes():
+    symbols, gaps = _resolve_query_symbols_with_gaps("Analyze Tata", [])
+    assert symbols == []
+    assert any("ambiguous company prefix" in gap for gap in gaps)
+    assert not any("ANALYZE" in gap for gap in gaps)
+
+
+def test_talk_does_not_fall_back_to_token_after_weak_phrase_match():
+    symbols, gaps = _resolve_query_symbols_with_gaps("Analyze Titan Company", [])
+    assert symbols == []
+    assert any("TITAN COMPANY" in gap and "weak/ambiguous" in gap for gap in gaps)
 
 
 def test_talk_index_partial_score_coverage_is_warning_not_gap(monkeypatch):
@@ -260,3 +367,150 @@ def test_talk_index_partial_score_coverage_is_warning_not_gap(monkeypatch):
     assert row["composition_count"] == 12
     assert row["coverage_pct"] == 91.67
     assert row["warnings"] == ["constituent_score_coverage:11/12"]
+
+
+def test_talk_chat_routes_high_rs_screener_without_symbol_noise(monkeypatch):
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+
+    def fake_run_screener_query(screen_type, top_n=10):
+        assert screen_type == "high_rs"
+        assert top_n == 5
+        return {
+            "description": "High RS leaders",
+            "snapshot_date": "2026-08-21",
+            "results": [
+                {
+                    "symbol": "AAA",
+                    "company_name": "AAA Limited",
+                    "sector": "Capital Goods",
+                    "price": 123.4,
+                    "stage": "STAGE_2",
+                    "rsi": 61.2,
+                    "rs_pct": 88.5,
+                    "technical_score": 72,
+                    "investment_score": 66,
+                    "trading_signal": "BULLISH",
+                    "setup_tags": ["high_rs", "stage2"],
+                }
+            ],
+        }
+
+    monkeypatch.setattr("terminal.tools.run_screener_query", fake_run_screener_query)
+
+    client = TestClient(app)
+    res = client.post(
+        "/api/talk/chat",
+        json={"question": "Show top 5 high RS leaders", "mode": "permissive"},
+    )
+    assert res.status_code == 200
+    body = res.json()
+    assert body["intent"] == "screener"
+    assert body["symbols"] == ["AAA"]
+    assert body["screener_results"][0]["symbol"] == "AAA"
+    assert any(item["source"] == "run_screener_query" for item in body["evidence"])
+    assert not any("HIGH" in gap or "LEADERS" in gap for gap in body["gaps"])
+
+
+def test_talk_screener_endpoint_returns_structured_results(monkeypatch):
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+
+    def fake_run_screener_query(screen_type, top_n=10):
+        assert screen_type == "stage2"
+        assert top_n == 3
+        return {
+            "snapshot_date": "2026-08-21",
+            "results": [
+                {"symbol": "BBB", "company": "BBB Industries", "stage": "STAGE_2", "technical_score": 70}
+            ],
+        }
+
+    monkeypatch.setattr("terminal.tools.run_screener_query", fake_run_screener_query)
+
+    client = TestClient(app)
+    res = client.post(
+        "/api/talk/screener",
+        json={"screen_type": "stage2", "top_n": 3, "mode": "permissive"},
+    )
+    assert res.status_code == 200
+    body = res.json()
+    assert body["intent"] == "screener"
+    assert body["screener_results"][0]["symbol"] == "BBB"
+    assert body["next_actions"][0]["action"] == "compare"
+
+
+def test_talk_screener_endpoint_reports_unknown_screen_without_rows(monkeypatch):
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+
+    client = TestClient(app)
+    res = client.post(
+        "/api/talk/screener",
+        json={"screen_type": "unknown_screen", "top_n": 3, "mode": "permissive"},
+    )
+    assert res.status_code == 200
+    body = res.json()
+    assert body["intent"] == "screener"
+    assert body["screener_results"] == []
+    assert any("Unknown screener" in gap for gap in body["gaps"])
+
+
+def test_talk_watchlist_strength_uses_watchlist_symbols(monkeypatch):
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    captured = {}
+
+    def fake_validate_strength_watchlist(symbols, top_n=20):
+        captured["symbols"] = symbols
+        captured["top_n"] = top_n
+        return {
+            "snapshot_date": "2026-08-21",
+            "results": [
+                {"symbol": "TCS", "company_name": "TCS", "strength_score": 64, "verdict": "VALID"}
+            ],
+            "input_symbols": symbols,
+        }
+
+    monkeypatch.setattr("terminal.tools.validate_strength_watchlist", fake_validate_strength_watchlist)
+
+    client = TestClient(app)
+    res = client.post(
+        "/api/talk/chat",
+        json={
+            "question": "Validate my watchlist strength",
+            "watchlist": ["NIFTY", "BANKNIFTY", "TCS"],
+            "mode": "permissive",
+        },
+    )
+    assert res.status_code == 200
+    body = res.json()
+    assert body["intent"] == "screener"
+    assert captured["symbols"] == ["TCS"]
+    assert captured["top_n"] == 10
+    assert body["screener_results"][0]["screen_type"] == "watchlist_strength"
+
+
+def test_talk_intraday_health_gates_live_setups(monkeypatch):
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+
+    def fake_get_intraday_source_health(max_age_minutes=30):
+        return {
+            "data_mode": "intraday",
+            "overall_status": "MISSING",
+            "tables": {
+                "intraday_bars": {"status": "MISSING", "rows": 0, "latest_ts": None}
+            },
+        }
+
+    monkeypatch.setattr("terminal.tools.get_intraday_source_health", fake_get_intraday_source_health)
+
+    client = TestClient(app)
+    res = client.post(
+        "/api/talk/chat",
+        json={"question": "Check intraday source health", "mode": "permissive"},
+    )
+    assert res.status_code == 200
+    body = res.json()
+    assert body["intent"] == "intraday_health"
+    assert body["symbols"] == []
+    assert body["intraday_context"]["overall_status"] == "MISSING"
+    assert any(item["source"] == "get_intraday_source_health" for item in body["evidence"])
+    assert any("gated" in gap.lower() for gap in body["gaps"])
+    assert not any("CHECK INTRADAY" in gap for gap in body["gaps"])

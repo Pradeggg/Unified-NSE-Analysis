@@ -98,6 +98,8 @@ _MANUAL_STOCK_ALIASES: dict[str, str] = {
     "KOTAK BANK":                     "KOTAKBANK",
     "TATA STEEL":                     "TATASTEEL",
     "TATA MOTORS":                    "TATAMOTORS",
+    "TATA TECHNOLOGIES":              "TATATECH",
+    "TATA TECHNOLOGIES LIMITED":      "TATATECH",
     "USL":                            "UNITDSPR",
     "UNITED SPIRITS":                 "UNITDSPR",
     "UNITED SPIRITS LIMITED":         "UNITDSPR",
