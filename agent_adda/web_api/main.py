@@ -72,6 +72,16 @@ async def talk_2_stocks_app():
     return HTMLResponse(static_file.read_text(encoding="utf-8"))
 
 
+@app.get("/privacy", response_class=HTMLResponse)
+@app.get("/privacy.html", response_class=HTMLResponse)
+async def privacy_page():
+    """Privacy policy — served at /privacy on agentadda.in."""
+    static_file = Path(__file__).resolve().parent / "static" / "privacy.html"
+    if not static_file.exists():
+        raise HTTPException(status_code=404, detail="Privacy policy not found")
+    return HTMLResponse(static_file.read_text(encoding="utf-8"))
+
+
 if __name__ == "__main__":
     import uvicorn
     port = int(os.getenv("AGENT_ADDA_WEB_PORT", "8765"))

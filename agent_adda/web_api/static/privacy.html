@@ -1,0 +1,507 @@
+<title>Privacy Policy</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+  /* ── Tokens ──────────────────────────────────────────────────── */
+  :root {
+    --bg:        #F7F6F3;
+    --bg-card:   #FFFFFF;
+    --text:      #1C2B3A;
+    --muted:     #6B7A8D;
+    --border:    #E2E4E9;
+    --accent:    #E8820C;
+    --accent-dim: rgba(232,130,12,0.12);
+    --navy:      #0F1E3C;
+    --link:      #1855A8;
+    --section-stripe: 3px solid var(--accent);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg:        #0B1420;
+      --bg-card:   #111E30;
+      --text:      #E8E4DC;
+      --muted:     #8A9BB0;
+      --border:    #1E2F44;
+      --accent:    #F09A30;
+      --accent-dim: rgba(240,154,48,0.10);
+      --navy:      #0B1420;
+      --link:      #5B9BF5;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg:        #0B1420;
+    --bg-card:   #111E30;
+    --text:      #E8E4DC;
+    --muted:     #8A9BB0;
+    --border:    #1E2F44;
+    --accent:    #F09A30;
+    --accent-dim: rgba(240,154,48,0.10);
+    --navy:      #0B1420;
+    --link:      #5B9BF5;
+  }
+
+  /* ── Reset ───────────────────────────────────────────────────── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { font-size: 16px; scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 1rem;
+    line-height: 1.7;
+    min-height: 100vh;
+  }
+
+  /* ── Top bar ─────────────────────────────────────────────────── */
+  .topbar {
+    background: var(--navy);
+    padding: 0.85rem 2rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    border-bottom: 2px solid var(--accent);
+  }
+  .topbar-logo {
+    font-family: 'Instrument Serif', Georgia, serif;
+    font-size: 1.1rem;
+    color: #fff;
+    letter-spacing: 0.01em;
+  }
+  .topbar-logo span { color: var(--accent); }
+  .topbar-sep {
+    width: 1px; height: 1.1rem;
+    background: rgba(255,255,255,0.2);
+  }
+  .topbar-label {
+    font-size: 0.8rem;
+    color: rgba(255,255,255,0.55);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+  .topbar-date {
+    margin-left: auto;
+    font-size: 0.75rem;
+    color: rgba(255,255,255,0.4);
+  }
+
+  /* ── Main layout ─────────────────────────────────────────────── */
+  main {
+    max-width: 700px;
+    margin: 0 auto;
+    padding: 3.5rem 1.75rem 6rem;
+  }
+
+  /* ── Page header ─────────────────────────────────────────────── */
+  .page-header { margin-bottom: 3rem; }
+  .page-header h1 {
+    font-family: 'Instrument Serif', Georgia, serif;
+    font-size: clamp(2rem, 5vw, 2.75rem);
+    font-weight: 400;
+    line-height: 1.2;
+    color: var(--text);
+    text-wrap: balance;
+    margin-bottom: 0.6rem;
+  }
+  .page-header .subtitle {
+    color: var(--muted);
+    font-size: 0.9rem;
+  }
+  .page-header .subtitle a {
+    color: var(--link);
+    text-decoration: none;
+  }
+  .page-header .subtitle a:hover { text-decoration: underline; }
+
+  /* ── Lead ────────────────────────────────────────────────────── */
+  .lead {
+    background: var(--accent-dim);
+    border-left: var(--section-stripe);
+    border-radius: 0 6px 6px 0;
+    padding: 1.1rem 1.3rem;
+    margin-bottom: 2.75rem;
+    font-size: 0.975rem;
+    color: var(--text);
+  }
+  .lead strong { color: var(--accent); }
+
+  /* ── Sections ────────────────────────────────────────────────── */
+  .section {
+    border-left: var(--section-stripe);
+    padding-left: 1.3rem;
+    margin-bottom: 2.5rem;
+  }
+  .section h2 {
+    font-family: 'Instrument Serif', Georgia, serif;
+    font-size: 1.25rem;
+    font-weight: 400;
+    color: var(--text);
+    margin-bottom: 0.6rem;
+    line-height: 1.3;
+  }
+  .section p {
+    color: var(--text);
+    font-size: 0.95rem;
+    margin-bottom: 0.65rem;
+  }
+  .section p:last-child { margin-bottom: 0; }
+
+  /* ── Lists ───────────────────────────────────────────────────── */
+  ul.plain { list-style: none; padding: 0; }
+  ul.plain li {
+    position: relative;
+    padding-left: 1.4rem;
+    font-size: 0.95rem;
+    color: var(--text);
+    margin-bottom: 0.45rem;
+  }
+  ul.plain li::before {
+    content: "—";
+    position: absolute;
+    left: 0;
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  /* ── Chips (third-party services) ───────────────────────────── */
+  .service-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-top: 0.4rem;
+  }
+  .service-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.9rem;
+  }
+  .service-name {
+    font-weight: 600;
+    font-size: 0.875rem;
+    color: var(--text);
+    min-width: 110px;
+    padding-top: 0.05rem;
+  }
+  .service-desc {
+    font-size: 0.875rem;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+  .service-desc a {
+    color: var(--link);
+    text-decoration: none;
+    font-size: 0.8rem;
+    margin-left: 0.3rem;
+  }
+  .service-desc a:hover { text-decoration: underline; }
+
+  /* ── "We don't" callout ─────────────────────────────────────── */
+  .dont-box {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.25rem 1.4rem;
+    margin-top: 0.5rem;
+  }
+  .dont-box ul.plain li { margin-bottom: 0.55rem; }
+
+  /* ── Inline code ─────────────────────────────────────────────── */
+  code {
+    font-family: 'SF Mono', 'Fira Mono', monospace;
+    font-size: 0.82em;
+    background: var(--accent-dim);
+    color: var(--accent);
+    padding: 0.1em 0.45em;
+    border-radius: 3px;
+  }
+
+  /* ── Divider ─────────────────────────────────────────────────── */
+  .divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 2.5rem 0;
+  }
+
+  /* ── Contact card ────────────────────────────────────────────── */
+  .contact-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.4rem 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+  }
+  .contact-card .contact-name {
+    font-family: 'Instrument Serif', Georgia, serif;
+    font-size: 1.1rem;
+    color: var(--text);
+  }
+  .contact-card .contact-row {
+    font-size: 0.875rem;
+    color: var(--muted);
+  }
+  .contact-card a {
+    color: var(--link);
+    text-decoration: none;
+  }
+  .contact-card a:hover { text-decoration: underline; }
+
+  /* ── Footer ──────────────────────────────────────────────────── */
+  footer {
+    border-top: 1px solid var(--border);
+    margin-top: 4rem;
+    padding-top: 1.5rem;
+    font-size: 0.8rem;
+    color: var(--muted);
+    text-align: center;
+    line-height: 1.6;
+  }
+  footer a { color: var(--muted); text-decoration: underline; }
+</style>
+
+<!-- Top navigation bar -->
+<div class="topbar">
+  <div class="topbar-logo">Agent<span>Adda</span></div>
+  <div class="topbar-sep"></div>
+  <div class="topbar-label">Privacy Policy</div>
+  <div class="topbar-date">Updated 23 Aug 2026</div>
+</div>
+
+<main>
+
+  <!-- Page title -->
+  <header class="page-header">
+    <h1>Privacy Policy</h1>
+    <p class="subtitle">
+      <a href="https://www.agentadda.in">agentadda.in</a> &middot;
+      NSE Equities &amp; Derivatives Research Platform
+    </p>
+  </header>
+
+  <!-- Lead paragraph -->
+  <div class="lead">
+    Agent Adda is a <strong>research and education tool</strong> for Indian equity markets.
+    This policy explains, in plain language, what data we handle, how conversations
+    are stored, and what we never do. There are no dark patterns here.
+  </div>
+
+  <!-- 1. What is Agent Adda -->
+  <section class="section">
+    <h2>What Agent Adda is</h2>
+    <p>
+      Agent Adda (including Talk&nbsp;2&nbsp;Stocks, the web chat interface) is a
+      market research assistant for the National Stock Exchange of India (NSE).
+      It aggregates publicly available price data, earnings filings, and
+      technical indicators to help you do your own research.
+    </p>
+    <p>
+      <strong>It does not provide investment advice.</strong> All outputs are
+      educational and informational. No analysis constitutes a recommendation
+      to buy, sell, or hold any security.
+    </p>
+  </section>
+
+  <!-- 2. What we collect -->
+  <section class="section">
+    <h2>What we collect</h2>
+    <ul class="plain">
+      <li>
+        <strong>Session identifiers</strong> — a random ID generated in your
+        browser when you open Talk&nbsp;2&nbsp;Stocks. It is not linked to your
+        name, email, or device fingerprint.
+      </li>
+      <li>
+        <strong>Conversation turns</strong> — your questions and the answers
+        returned within a session are held in server memory only for the
+        duration of that session (up to 1&nbsp;hour of inactivity). They are
+        not written to a persistent database or log file.
+      </li>
+      <li>
+        <strong>Watchlist symbols</strong> — stored only in your browser's
+        <code>localStorage</code>. They never leave your device unless you
+        include them in a question.
+      </li>
+    </ul>
+    <p style="margin-top:0.8rem;">
+      We do <em>not</em> collect your name, email address, phone number,
+      financial positions, brokerage account details, or any other
+      personally identifying information.
+    </p>
+  </section>
+
+  <!-- 3. Conversations -->
+  <section class="section">
+    <h2>How conversations are handled</h2>
+    <p>
+      Each browser session gets its own isolated conversation context.
+      Sessions are evicted from memory after 1&nbsp;hour of inactivity —
+      after which no record of the conversation is retained on our servers.
+    </p>
+    <p>
+      When you send a question that requires AI synthesis, the question text
+      and relevant market data are sent to OpenAI's API to generate a
+      response. See the <em>Third-party services</em> section below for details.
+    </p>
+    <p>
+      Market data requests (prices, filings, breadth) go directly to NSE's
+      public APIs and Screener.in. Your question text is not forwarded to
+      those sources.
+    </p>
+  </section>
+
+  <!-- 4. What we don't do -->
+  <section class="section">
+    <h2>What we don't do</h2>
+    <div class="dont-box">
+      <ul class="plain">
+        <li>We do not sell, rent, or share your conversation data with third parties</li>
+        <li>We do not build a profile of your investment interests or behaviour</li>
+        <li>We do not use your data to train AI models</li>
+        <li>We do not place advertising or tracking cookies</li>
+        <li>We do not require account registration or collect credentials</li>
+        <li>We do not retain conversation history after your session expires</li>
+        <li>We do not provide personalised investment advice or act as a SEBI-registered advisor</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- 5. Third-party services -->
+  <section class="section">
+    <h2>Third-party services</h2>
+    <p>Agent Adda depends on the following external services:</p>
+    <div class="service-grid">
+      <div class="service-row">
+        <div class="service-name">OpenAI</div>
+        <div class="service-desc">
+          AI synthesis for research answers (GPT-4o / GPT-5).
+          Your question text is sent to OpenAI when AI generation is used.
+          OpenAI's data handling is governed by their
+          <a href="https://openai.com/policies/privacy-policy" target="_blank" rel="noopener">privacy policy ↗</a>
+        </div>
+      </div>
+      <div class="service-row">
+        <div class="service-name">NSE India</div>
+        <div class="service-desc">
+          Live and end-of-day price data, index data, and market breadth
+          via NSE's public APIs. No personal data is transmitted.
+        </div>
+      </div>
+      <div class="service-row">
+        <div class="service-name">Screener.in</div>
+        <div class="service-desc">
+          Fundamental data and quarterly results for NSE-listed companies.
+          Data is fetched server-side; your identity is not shared.
+        </div>
+      </div>
+      <div class="service-row">
+        <div class="service-name">Yahoo Finance</div>
+        <div class="service-desc">
+          Historical OHLCV data via the <code>yfinance</code> library for
+          back-fill and extended price history. No personal data is transmitted.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6. Browser storage -->
+  <section class="section">
+    <h2>Browser storage</h2>
+    <p>
+      Talk&nbsp;2&nbsp;Stocks uses <code>localStorage</code> to remember your
+      watchlist and UI preferences (e.g. collapsed sidebar) between visits.
+      This data stays in your browser. You can clear it at any time via your
+      browser's "Clear site data" setting — it has no effect on our servers.
+    </p>
+    <p>
+      We do not use tracking cookies, analytics pixels, or cross-site
+      identifiers of any kind.
+    </p>
+  </section>
+
+  <!-- 7. Data retention -->
+  <section class="section">
+    <h2>Data retention</h2>
+    <p>
+      <strong>Conversation sessions</strong> — evicted from server memory
+      after 1&nbsp;hour of inactivity. No persistent copy is made.
+    </p>
+    <p>
+      <strong>Market data caches</strong> — price, earnings, and breadth
+      data are cached server-side for 18–24&nbsp;hours to reduce API load.
+      These caches contain only publicly available market data — no user
+      information.
+    </p>
+    <p>
+      <strong>Server logs</strong> — our web server may log standard HTTP
+      request metadata (timestamp, endpoint, response code, approximate
+      request size). IP addresses, if logged, are not linked to conversation
+      content and are rotated within 7&nbsp;days.
+    </p>
+  </section>
+
+  <!-- 8. Your choices -->
+  <section class="section">
+    <h2>Your choices</h2>
+    <ul class="plain">
+      <li>
+        <strong>Clear your session</strong> — close the browser tab. The
+        session expires within 1&nbsp;hour and is purged from server memory.
+      </li>
+      <li>
+        <strong>Clear local data</strong> — use your browser's site data
+        settings to remove <code>localStorage</code> entries for agentadda.in.
+      </li>
+      <li>
+        <strong>Opt out of AI synthesis</strong> — if you prefer answers
+        from deterministic rules only (no OpenAI calls), set the environment
+        variable <code>T2S_USE_AGENT_BRIDGE=0</code> when running a
+        self-hosted instance.
+      </li>
+    </ul>
+  </section>
+
+  <hr class="divider" />
+
+  <!-- 9. Changes -->
+  <section class="section">
+    <h2>Changes to this policy</h2>
+    <p>
+      If we make material changes to how we handle data, we will update the
+      date at the top of this page. For significant changes we will post a
+      notice on the Agent Adda platform home page.
+    </p>
+  </section>
+
+  <!-- 10. Contact -->
+  <section class="section" style="border-left-color: transparent; padding-left: 0;">
+    <h2 style="font-size:1.1rem; margin-bottom:0.8rem; color: var(--muted); letter-spacing:0.04em; text-transform:uppercase; font-family:'Inter',sans-serif; font-weight:600;">Contact</h2>
+    <div class="contact-card">
+      <div class="contact-name">Agent Adda</div>
+      <div class="contact-row">
+        Website: <a href="https://www.agentadda.in">www.agentadda.in</a>
+      </div>
+      <div class="contact-row">
+        For privacy questions, reach us via
+        <a href="https://www.linkedin.com/company/agentadda/">LinkedIn</a>.
+      </div>
+      <div class="contact-row" style="margin-top:0.4rem; font-size:0.8rem;">
+        This platform is strictly educational and does not constitute
+        SEBI-registered investment advisory services.
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  &copy; 2026 Agent Adda &middot;
+  <a href="https://www.agentadda.in">agentadda.in</a> &middot;
+  Strictly educational — not investment advice &middot;
+  Not affiliated with NSE India or SEBI
+</footer>
