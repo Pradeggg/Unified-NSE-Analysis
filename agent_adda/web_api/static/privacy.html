@@ -295,49 +295,59 @@
   <section class="section">
     <h2>What Agent Adda is</h2>
     <p>
-      Agent Adda is a research-grade equities and derivatives analysis platform
-      built for the National Stock Exchange of India (NSE). It is designed for
-      retail investors, traders, and students who want to do serious market
-      research without needing a Bloomberg terminal or a team of analysts.
+      Agent Adda is a research-grade equities and derivatives intelligence
+      platform built for the National Stock Exchange of India (NSE). Its
+      editorial principle is simple: <em>Hold. Think. Then act.</em> Genuine
+      research requires investigation — understanding market context, selecting
+      appropriate data, gathering evidence, and conducting comparative analysis
+      before forming any conclusion.
     </p>
     <p>
-      The platform has two interfaces:
+      The platform processes <strong>137 indices</strong>, evaluates
+      <strong>48 investment prospects</strong> across <strong>12 analytical
+      dimensions</strong> per holding, and routes every question through a
+      five-layer architecture: intent parsing → data retrieval (local-first,
+      with public API fallbacks) → evidence gathering via specialised tools →
+      LLM synthesis → persistent report generation.
+    </p>
+    <p>
+      Talk&nbsp;2&nbsp;Stocks is the conversational web interface to this
+      engine. You ask questions in plain English or use slash commands; the
+      system selects the appropriate data window, runs the relevant tools, and
+      returns structured, sourced research — not ephemeral chat responses.
+      The Agent Adda CLI offers the same engine with additional depth for
+      backtesting, voice briefings, sector rotation tracking, and PDF reports.
+    </p>
+    <p>
+      The platform surfaces <strong>12 intelligence types</strong>:
     </p>
     <ul class="plain" style="margin-bottom: 0.8rem;">
-      <li>
-        <strong>Talk&nbsp;2&nbsp;Stocks</strong> — a conversational web interface
-        where you ask questions in plain English and receive structured market
-        analysis: stock stage classification, technical scores, fundamental
-        sub-scores, options data, screener results, and market breadth.
-      </li>
-      <li>
-        <strong>Agent Adda CLI</strong> — a terminal REPL for deeper research,
-        running the same analysis engine with additional commands for backtesting,
-        voice briefings, PDF reports, and sector rotation tracking.
-      </li>
+      <li>Natural-language queries with explicit data-mode control (live / EOD / auto)</li>
+      <li>Intraday scanner — nine scanning approaches on 15-minute charts</li>
+      <li>EOD screeners — ten end-of-day filtering strategies across ~1,500 NSE stocks</li>
+      <li>Background monitors — fourteen continuously-running detection mechanisms</li>
+      <li>Watchlist alerts — price and momentum triggers on NSE symbols</li>
+      <li>Deep search — parallel investigation across 11 information categories</li>
+      <li>Document analysis — PDF and spreadsheet reading with 360° stock evaluation</li>
+      <li>Forensic accounting — three financial health screening models</li>
+      <li>CANSLIM evaluation — William O'Neil's growth quality methodology</li>
+      <li>Options and F&amp;O — live chains with strategy builders</li>
+      <li>RIC investigations — eight named multi-step research templates (<em>Sherlock, Breakout Hunter, Earnings Playbook, Sector X-Ray,</em> and more)</li>
+      <li>Report generation — HTML, PDF, and Markdown output formats</li>
     </ul>
     <p>
-      Under the hood, Agent Adda runs a daily data pipeline that ingests NSE
-      bhavcopy (end-of-day price files), F&amp;O (futures &amp; options) data,
-      corporate events, FII/DII flows, and company fundamentals from public
-      sources. This data is scored using a rules-based engine covering
-      Weinstein stage analysis, technical momentum, and five fundamental
-      sub-scores (earnings quality, sales growth, financial strength,
-      institutional backing, and a composite enhanced score). An LLM layer
-      synthesises these signals into readable research summaries.
+      The scoring engine synthesises three investment frameworks: Stan
+      Weinstein's four-stage cycle, William O'Neil's CANSLIM criteria, and
+      Mark Minervini's trend templates — implementing a top-down flow from
+      macro regime detection through sector rotation to individual stock
+      stage classification and execution timing.
     </p>
     <p>
-      Agent Adda covers approximately 1,500 NSE-listed stocks and indices
-      including NIFTY&nbsp;50, NIFTY&nbsp;BANK, NIFTY&nbsp;MIDCAP, and
-      NIFTY&nbsp;500 constituents, along with ~40 built-in screeners
-      (Stage&nbsp;2 leaders, VCP setups, high relative-strength movers,
-      quality breakouts, and more).
-    </p>
-    <p>
-      <strong>It does not provide investment advice.</strong> All outputs are
-      educational and informational. No analysis constitutes a recommendation
-      to buy, sell, or hold any security. Agent Adda is not registered with
-      SEBI as an investment advisor.
+      <strong>Agent Adda is a research and learning tool, not a trading
+      recommendation engine.</strong> All outputs are educational and
+      informational. No analysis constitutes a recommendation to buy, sell,
+      or hold any security. Agent Adda is not registered with SEBI as an
+      investment advisor.
     </p>
   </section>
 
