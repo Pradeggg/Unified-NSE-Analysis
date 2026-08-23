@@ -232,6 +232,32 @@ _CONTEXTUAL_PATTERNS = (
     "deep dive",
     "deep-dive",
     "details on",
+    # Natural follow-up phrases — these must never be parsed as tickers.
+    # Without this guard "add more details" → ADD symbol, "elaborate on" → entity search.
+    "add more",
+    "more details",
+    "more info",
+    "more information",
+    "more on",
+    "elaborate",
+    "expand on",
+    "dig deeper",
+    "drill down",
+    "break it down",
+    "break that down",
+    "explain further",
+    "give me more",
+    "tell me more",
+    "say more",
+    "go further",
+    "go deeper",
+    "go on",
+    "continue from",
+    "can you add",
+    "can you elaborate",
+    "can you expand",
+    "what else",
+    "anything else",
     # Collective references to a prior result list ("top gainers",
     # "intraday scan", etc). These let situation_assessment claim the
     # turn so keyword_intent doesn't extract "the above stocks" as a
@@ -263,6 +289,12 @@ _AFFIRMATIVE_FOLLOWUPS = {
     "sure",
     "ok",
     "okay",
+    # Bare continuation words — never parse as tickers.
+    "continue",
+    "proceed",
+    "go on",
+    "go",
+    "next",
 }
 
 _ENTITY_TOPIC_COMMANDS = {

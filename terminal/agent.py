@@ -2070,7 +2070,7 @@ def _validate_required_tools(query: str, intent: str, tool_results: list[dict]) 
     # still require resolve_symbol even if snapshot data was gathered.
     if (
         "resolve_symbol" in required
-        and _is_contextual_synthesis_query(query)
+        and (_is_contextual_synthesis_query(query) or intent == "contextual_tool_plan")
         and _context_symbol_resolved(tool_results)
     ):
         return None
@@ -6389,8 +6389,10 @@ class Agent:
                 + "\n\n"
                 + _synthesize_and_narrate(synthesis_intent, ctx.clean_input, tool_results, self.backend)
             )
+            # Pass "contextual_tool_plan" so _validate_required_tools waives
+            # resolve_symbol — the symbol was already bound from prior-turn context.
             answer_body = _apply_response_guardrails(
-                ctx.clean_input, synthesis_intent, tool_results, answer_body,
+                ctx.clean_input, "contextual_tool_plan", tool_results, answer_body,
             )
             answer_body = self._apply_agentic_next_action_block(
                 answer_body, ctx.clean_input, synthesis_intent, tool_results,

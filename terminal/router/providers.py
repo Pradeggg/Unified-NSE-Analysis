@@ -596,7 +596,19 @@ class ContextualFollowupProvider:
         workflow = context_pack.active_workflow
         if not (symbols or workflow or context_pack.recent_turns):
             return []
-        matched_phrase = next((p for p in _FOLLOWUP_PHRASES if p in text), None)
+        # Multi-word phrases: substring match.
+        # Single-word phrases: exact full-input match only (prevents single
+        # words like "continue" or "elaborate" from matching as ticker substrings).
+        matched_phrase = next(
+            (
+                p for p in _FOLLOWUP_PHRASES
+                if (
+                    (" " in p and p in text)           # multi-word: substring OK
+                    or (" " not in p and text.strip() == p)  # single-word: exact match
+                )
+            ),
+            None,
+        )
         if not matched_phrase:
             return []
 
