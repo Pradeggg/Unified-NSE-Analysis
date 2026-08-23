@@ -1258,7 +1258,7 @@ def _llm_synthesis(
         return fallback, "fallback_template", 0, 0, 0.0, "disabled", "TALK2STOCKS_LLM_SYNTHESIS disabled"
 
     api_key = os.getenv("OPENAI_API_KEY")
-    model = os.getenv("LLM_DEFAULT_MODEL", "gpt-4o-mini")
+    model = os.getenv("LLM_DEFAULT_MODEL", "gpt-5-nano")
     if not api_key:
         return fallback, "fallback_template", 0, 0, 0.0, "missing_api_key", "OPENAI_API_KEY not configured"
 
@@ -1409,7 +1409,7 @@ async def defaults():
         "product": "Talk 2 Stocks",
         "watchlist": _DEFAULT_WATCHLIST,
         "router_model": os.getenv("LLM_ROUTER_MODEL", "gpt-5-nano"),
-        "default_model": os.getenv("LLM_DEFAULT_MODEL", "gpt-4o-mini"),
+        "default_model": os.getenv("LLM_DEFAULT_MODEL", "gpt-5-nano"),
         "synthesis_policy": "llm_preferred" if _env_flag("TALK2STOCKS_LLM_SYNTHESIS", "1") else "local_only",
         "mode": "permissive",
     }
