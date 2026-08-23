@@ -6,6 +6,17 @@ T2S web routes can call the same 7-stage pipeline that the CLI uses, including
 UnifiedRouter, _synthesize_and_narrate, render plans, guardrails, and full
 multi-turn pronoun/context resolution.
 
+Context isolation
+-----------------
+Each T2S browser session gets its own ``Agent`` instance with its own
+``ConversationMemory``.  The memory ``session_id`` is set to the T2S
+``session_id`` so ``_build_context_pack()`` returns the correct
+``recent_turns`` and ``active_symbols`` for *that* session — not a shared
+global default.
+
+PG writes are disabled for T2S agents (``AGENT_ADDA_MEMORY_PG=0``) so
+T2S conversations don't pollute the CLI's persistent Postgres memory.
+
 Usage (inside an async FastAPI handler)::
 
     from agent_adda.web_api.bridge import agent_query
@@ -50,14 +61,45 @@ def _evict_stale() -> None:
         del _pool[sid]
 
 
+def _make_agent(session_id: str) -> Any:
+    """Create an Agent isolated to *session_id*.
+
+    Key isolation steps:
+    1. Set AGENT_ADDA_MEMORY_SESSION_ID to the T2S session_id so
+       ConversationMemory.build_context_pack() returns turns for THIS session
+       (not the global CLI default).
+    2. Disable Postgres writes (AGENT_ADDA_MEMORY_PG=0) so T2S turns don't
+       pollute the CLI's persistent memory store.
+    3. Restore both env vars after construction so other threads are unaffected.
+    """
+    from terminal.agent import Agent  # imported lazily — heavy module
+
+    old_session = os.environ.get("AGENT_ADDA_MEMORY_SESSION_ID")
+    old_pg      = os.environ.get("AGENT_ADDA_MEMORY_PG")
+    try:
+        os.environ["AGENT_ADDA_MEMORY_SESSION_ID"] = f"t2s_{session_id}"
+        os.environ["AGENT_ADDA_MEMORY_PG"]         = "0"
+        agent = Agent()
+    finally:
+        # Restore exactly — don't leave stale values for other threads.
+        if old_session is None:
+            os.environ.pop("AGENT_ADDA_MEMORY_SESSION_ID", None)
+        else:
+            os.environ["AGENT_ADDA_MEMORY_SESSION_ID"] = old_session
+        if old_pg is None:
+            os.environ.pop("AGENT_ADDA_MEMORY_PG", None)
+        else:
+            os.environ["AGENT_ADDA_MEMORY_PG"] = old_pg
+    return agent
+
+
 def _get_agent(session_id: str) -> Any:
     """Return the Agent for *session_id*, creating one if needed."""
     with _lock:
         _evict_stale()
         entry = _pool.get(session_id)
         if entry is None:
-            from terminal.agent import Agent  # imported lazily — heavy module
-            entry = (Agent(), time.monotonic())
+            entry = (_make_agent(session_id), time.monotonic())
             _pool[session_id] = entry
         else:
             agent, _ = entry
