@@ -51,6 +51,10 @@
       font: inherit;
     }
 
+    input, textarea, select {
+      max-width: 100%;
+    }
+
     button {
       border: 1px solid var(--line);
       background: var(--panel);
@@ -200,12 +204,17 @@
     }
 
     .chat-log {
+      min-width: 0;
+      width: 100%;
       min-height: 0;
-      overflow: auto;
+      overflow-y: auto;
+      overflow-x: hidden;
       padding: 24px;
     }
 
     .message {
+      min-width: 0;
+      width: 100%;
       max-width: 980px;
       margin: 0 auto 16px;
       display: grid;
@@ -224,6 +233,9 @@
     }
 
     .bubble {
+      min-width: 0;
+      width: 100%;
+      max-width: 100%;
       background: var(--panel);
       border: 1px solid var(--line);
       border-radius: 12px;
@@ -262,6 +274,11 @@
       margin: 4px 0;
     }
 
+    .bubble .table-wrap {
+      margin: 10px 0 12px;
+      max-width: 100%;
+    }
+
     .message.user .bubble {
       border-color: #BAE6FD;
       background: #F0F9FF;
@@ -269,6 +286,7 @@
     }
 
     .composer {
+      min-width: 0;
       padding: 14px 20px 18px;
       border-top: 1px solid var(--line);
       background: rgba(248, 250, 255, 0.94);
@@ -319,11 +337,12 @@
       min-width: 0;
       background: var(--panel);
       display: grid;
-      grid-template-rows: auto auto auto 1fr auto;
+      grid-template-rows: auto auto 1fr auto;
       min-height: calc(100vh - 110px);
     }
 
     .side-section {
+      min-width: 0;
       padding: 14px;
       border-bottom: 1px solid var(--line);
     }
@@ -341,6 +360,7 @@
       display: flex;
       flex-wrap: wrap;
       gap: 6px;
+      min-width: 0;
     }
 
     .chip {
@@ -351,6 +371,8 @@
       background: var(--panel-2);
       border-color: transparent;
       font-weight: 650;
+      max-width: 100%;
+      overflow-wrap: anywhere;
     }
 
     .chip.active {
@@ -370,9 +392,12 @@
       background: #FAFAF9;
       color: #44403C;
       font-weight: 650;
+      min-width: 0;
+      white-space: normal;
     }
 
     .evidence {
+      min-width: 0;
       min-height: 0;
       overflow: auto;
       padding: 14px;
@@ -405,7 +430,11 @@
     }
 
     .table-wrap {
+      min-width: 0;
+      width: 100%;
       overflow: auto;
+      max-width: 100%;
+      -webkit-overflow-scrolling: touch;
       border: 1px solid var(--line);
       border-radius: 12px;
       background: var(--panel);
@@ -415,7 +444,7 @@
       width: 100%;
       border-collapse: collapse;
       font-size: 12px;
-      min-width: 640px;
+      min-width: 480px;
     }
 
     th, td {
@@ -424,6 +453,10 @@
       border-bottom: 1px solid var(--line);
       vertical-align: top;
       white-space: nowrap;
+    }
+
+    td {
+      overflow-wrap: anywhere;
     }
 
     th {
@@ -461,77 +494,421 @@
       font-size: 12px;
     }
 
-    /* ── Prompt library ─────────────────────────────────────────── */
-    .prompt-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      cursor: pointer;
-      user-select: none;
+    /* ── Prompt bar (above composer textarea) ───────────────────── */
+    .prompt-bar {
+      max-width: 980px;
+      margin: 0 auto 8px;
+      display: none;
     }
 
-    .prompt-toggle {
-      font-size: 10px;
-      color: var(--muted);
-      transition: transform 0.18s ease;
-      display: inline-block;
-    }
+    .prompt-bar.visible { display: block; }
 
-    .prompt-body {
-      margin-top: 10px;
-      overflow: hidden;
-    }
-
-    .prompt-cats {
+    .prompt-bar-cats {
       display: flex;
       gap: 4px;
       flex-wrap: wrap;
-      margin-bottom: 8px;
+      margin-bottom: 6px;
     }
 
-    .prompt-cat {
-      padding: 0 8px;
-      height: 24px;
+    .prompt-bar-cat {
+      height: 22px;
+      padding: 0 9px;
       font-size: 11px;
       font-weight: 650;
       border-radius: 999px;
       border-color: transparent;
       background: var(--panel-2);
       color: var(--muted);
-    }
-
-    .prompt-cat.active {
-      background: var(--accent);
-      color: #fff;
-      border-color: var(--accent);
-    }
-
-    .prompt-list {
-      display: flex;
-      flex-direction: column;
-      gap: 5px;
-    }
-
-    .prompt-item {
-      width: 100%;
-      text-align: left;
-      font-size: 11.5px;
-      font-weight: 500;
-      line-height: 1.4;
-      padding: 6px 10px;
-      border-radius: 8px;
-      background: var(--panel-3);
-      border-color: transparent;
-      color: var(--text);
-      white-space: normal;
-      height: auto;
       min-height: 0;
     }
 
-    .prompt-item:hover {
+    .prompt-bar-cat.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+    .prompt-bar-items {
+      display: flex;
+      gap: 5px;
+      flex-wrap: wrap;
+    }
+
+    .prompt-bar-item {
+      font-size: 11px;
+      font-weight: 500;
+      padding: 4px 10px;
+      border-radius: 7px;
+      background: var(--panel-3);
+      border-color: transparent;
+      color: var(--text);
+      min-height: 0;
+      height: auto;
+      white-space: normal;
+      text-align: left;
+      line-height: 1.35;
+    }
+
+    .prompt-bar-item:hover { background: var(--accent-pale); border-color: var(--accent-2); color: #0C4A6E; }
+
+    /* ── RIC view ────────────────────────────────────────────────── */
+    .ric-view {
+      flex: 1;
+      min-height: 0;
+      overflow: auto;
+      padding: 20px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+
+    .ric-input-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+
+    .ric-input-bar input {
+      min-width: 0;
+      height: 38px;
+      border-radius: 10px;
+      border: 1px solid var(--line);
+      padding: 0 12px;
+      font-size: 13px;
+      font-family: var(--font-sans);
+      background: var(--panel);
+      color: var(--text);
+      outline: none;
+    }
+
+    .ric-input-bar input:focus { border-color: var(--accent-2); box-shadow: 0 0 0 3px rgba(14,165,233,0.14); }
+
+    .ric-tf-group {
+      display: flex;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      overflow: hidden;
+      background: var(--panel);
+    }
+
+    .ric-tf {
+      height: 38px;
+      padding: 0 11px;
+      border: none;
+      border-right: 1px solid var(--line);
+      border-radius: 0;
+      font-size: 12px;
+      font-weight: 650;
+      background: transparent;
+      color: var(--muted);
+      min-height: 0;
+    }
+
+    .ric-tf:last-child { border-right: none; }
+    .ric-tf.active { background: var(--accent); color: #fff; }
+    .ric-tf:hover:not(.active) { background: var(--panel-2); color: var(--accent); }
+
+    .ric-go {
+      height: 38px;
+      padding: 0 18px;
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+      border-radius: 10px;
+      font-weight: 650;
+      font-size: 13px;
+      min-height: 0;
+    }
+
+    .ric-go:hover { background: #0369A1; border-color: #0369A1; }
+
+    /* ── Symbol autocomplete dropdown ───────────────────────────── */
+    .ac-wrap {
+      position: relative;
+      flex: 1;
+      min-width: 130px;
+    }
+
+    .ac-wrap input {
+      width: 100%;
+    }
+
+    .ac-dropdown {
+      position: absolute;
+      top: calc(100% + 4px);
+      left: 0;
+      min-width: 220px;
+      max-width: 340px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      box-shadow: var(--shadow-md);
+      z-index: 100;
+      overflow: hidden;
+      display: none;
+    }
+
+    .ac-dropdown.open { display: block; }
+
+    /* Composer-anchored chat dropdown — opens upward above the textarea */
+    .composer-ac-wrap {
+      position: relative;
+    }
+
+    .ac-dropdown--up {
+      top: auto;
+      bottom: calc(100% + 4px);
+      left: 0;
+      right: 0;
+      max-width: none;
+      min-width: 0;
+    }
+
+    /* Remove the fixed-position popover style since we no longer use it */
+    .ac-popover { display: none !important; }
+
+    .ac-item {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      padding: 7px 14px;
+      cursor: pointer;
+      transition: background 0.1s;
+    }
+
+    .ac-item:hover, .ac-item.active {
       background: var(--accent-pale);
-      border-color: var(--accent-2);
-      color: #0C4A6E;
+    }
+
+    .ac-item-sym {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--accent);
+      letter-spacing: 0.03em;
+      white-space: nowrap;
+    }
+
+    .ac-item-name {
+      font-size: 11px;
+      color: var(--muted);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    /* Chat textarea autocomplete popover */
+    .ac-popover {
+      position: fixed;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      box-shadow: var(--shadow-md);
+      z-index: 200;
+      overflow: hidden;
+      display: none;
+      min-width: 180px;
+    }
+
+    .ac-popover.open { display: block; }
+
+    .ric-sym-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      margin-bottom: 16px;
+    }
+
+    .ric-sym-chip {
+      height: 26px;
+      padding: 0 10px;
+      font-size: 11px;
+      font-weight: 700;
+      background: var(--panel-2);
+      border-color: transparent;
+      border-radius: 999px;
+      color: var(--muted);
+      min-height: 0;
+      letter-spacing: 0.02em;
+    }
+
+    .ric-sym-chip:hover { background: var(--accent-pale); border-color: var(--accent-2); color: #0C4A6E; }
+
+    .ric-result {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(min(268px, 100%), 1fr));
+      gap: 12px;
+      align-items: start;
+    }
+
+    .ric-card {
+      min-width: 0;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      overflow: hidden;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+    }
+
+    .ric-card-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 9px 13px;
+      border-bottom: 1px solid var(--line);
+      background: #F8FAFF;
+    }
+
+    .ric-card-title {
+      font-size: 10px;
+      font-weight: 750;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+
+    .ric-card-badge {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 999px;
+    }
+
+    .ric-card-body {
+      padding: 12px 13px;
+      display: grid;
+      gap: 7px;
+    }
+
+    .ric-kv {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 8px;
+    }
+
+    .ric-kv-label { color: var(--muted); font-size: 11px; white-space: nowrap; }
+
+    .ric-kv-val {
+      min-width: 0;
+      font-weight: 650;
+      font-size: 12px;
+      color: var(--text);
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+      overflow-wrap: anywhere;
+    }
+
+    .ric-kv-val.up   { color: var(--good); }
+    .ric-kv-val.down { color: var(--danger); }
+    .ric-kv-val.warn { color: var(--warn); }
+
+    .ric-safety-gauge {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .ric-score-circle {
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      flex-shrink: 0;
+      font-size: 18px;
+      font-weight: 800;
+      border: 3px solid;
+    }
+
+    .ric-score-details { flex: 1; min-width: 0; }
+    .ric-score-rating { font-size: 12px; font-weight: 750; margin-bottom: 3px; }
+    .ric-score-reasons { font-size: 11px; color: var(--muted); line-height: 1.5; }
+
+    .ric-trade-trigger {
+      font-size: 15px;
+      font-weight: 800;
+      color: var(--accent);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .ric-levels-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin-top: 2px;
+    }
+
+    .ric-level-pill {
+      font-size: 10px;
+      font-weight: 650;
+      padding: 2px 7px;
+      border-radius: 5px;
+      font-variant-numeric: tabular-nums;
+      border: 1px solid transparent;
+    }
+
+    .ric-level-pill.support    { background: #DCFCE7; color: #15803D; border-color: #BBF7D0; }
+    .ric-level-pill.resistance { background: #FEE2E2; color: #B91C1C; border-color: #FECACA; }
+    .ric-level-pill.ema        { background: #EFF6FF; color: #1D4ED8; border-color: #BFDBFE; }
+    .ric-level-pill.pivot      { background: #FEF9C3; color: #A16207; border-color: #FDE68A; }
+
+    .ric-reco { grid-column: 1 / -1; }
+
+    .ric-reco-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: grid;
+      gap: 7px;
+    }
+
+    .ric-reco-list li {
+      font-size: 12px;
+      color: #374151;
+      line-height: 1.55;
+      padding-left: 18px;
+      position: relative;
+    }
+
+    .ric-reco-list li::before {
+      content: "•";
+      position: absolute;
+      left: 5px;
+      color: var(--accent);
+      font-weight: 900;
+    }
+
+    .ric-empty, .ric-loading {
+      grid-column: 1 / -1;
+      text-align: center;
+      padding: 48px 20px;
+      color: var(--muted);
+      font-size: 13px;
+      border: 1px dashed var(--line);
+      border-radius: 14px;
+    }
+
+    .ric-divider {
+      border-top: 1px solid var(--line);
+      margin: 5px 0;
+      padding-top: 7px;
+    }
+
+    @media (max-width: 1120px) {
+      .workspace {
+        grid-template-columns: 1fr;
+      }
+
+      .main {
+        border-right: 0;
+      }
+
+      .side {
+        min-height: auto;
+        border-top: 1px solid var(--line);
+      }
+
+      .evidence {
+        max-height: none;
+      }
     }
 
     @media (max-width: 900px) {
@@ -541,13 +918,28 @@
         padding: 10px 12px;
       }
 
-      .brand { min-width: 100%; }
-      .tabs { order: 3; width: 100%; overflow: auto; padding-bottom: 2px; }
+      .brand {
+        min-width: 0;
+        flex: 1 1 220px;
+      }
+
+      .tabs {
+        order: 3;
+        width: 100%;
+        overflow: auto;
+        padding-bottom: 2px;
+        scrollbar-width: thin;
+      }
+
       .tab { height: 38px; min-width: 86px; }
-      .status { margin-left: 0; }
+
+      .status {
+        margin-left: 0;
+        flex: 0 1 auto;
+        justify-content: flex-end;
+      }
 
       .workspace {
-        grid-template-columns: 1fr;
         width: min(100vw - 20px, 1480px);
         margin: 10px auto;
         border-radius: 12px;
@@ -580,6 +972,246 @@
       .send {
         width: 100%;
       }
+
+      .ric-view {
+        padding: 16px;
+      }
+
+      .ric-input-bar {
+        align-items: stretch;
+      }
+
+      .ric-input-bar .ac-wrap {
+        flex-basis: 100%;
+      }
+
+      .ric-tf-group {
+        flex: 1 1 auto;
+      }
+
+      .ric-tf {
+        flex: 1 1 0;
+      }
+
+      .ric-go {
+        flex: 1 1 120px;
+      }
+    }
+
+    @media (max-width: 640px) {
+      html, body {
+        height: auto;
+        min-height: 100%;
+      }
+
+      body {
+        background-image: none;
+      }
+
+      .topbar {
+        position: sticky;
+        gap: 10px;
+        padding: 10px;
+      }
+
+      .brand {
+        flex-basis: 100%;
+      }
+
+      .brand-mark {
+        width: 32px;
+        height: 32px;
+      }
+
+      .brand strong {
+        font-size: 16px;
+      }
+
+      .brand span {
+        font-size: 10px;
+      }
+
+      .status {
+        order: 2;
+        width: 100%;
+        justify-content: space-between;
+        white-space: normal;
+        gap: 8px;
+      }
+
+      .tabs {
+        order: 1;
+        gap: 5px;
+        margin: 0 -2px;
+      }
+
+      .tab {
+        min-width: auto;
+        flex: 0 0 auto;
+        height: 34px;
+        padding: 0 12px;
+      }
+
+      .workspace {
+        width: 100%;
+        margin: 0;
+        border-left: 0;
+        border-right: 0;
+        border-radius: 0;
+        box-shadow: none;
+      }
+
+      .main {
+        min-height: calc(100svh - 128px);
+      }
+
+      .chat-log {
+        padding: 14px 10px;
+      }
+
+      .message {
+        margin-bottom: 12px;
+      }
+
+      .role {
+        font-size: 10px;
+      }
+
+      .bubble {
+        padding: 12px;
+        border-radius: 10px;
+      }
+
+      .composer {
+        padding: 10px;
+      }
+
+      textarea {
+        min-height: 50px;
+        border-radius: 10px;
+      }
+
+      .send {
+        min-height: 46px;
+        border-radius: 10px;
+      }
+
+      .prompt-bar-cats,
+      .prompt-bar-items {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        padding-bottom: 3px;
+        scrollbar-width: thin;
+      }
+
+      .prompt-bar-cat,
+      .prompt-bar-item {
+        flex: 0 0 auto;
+        max-width: min(280px, 82vw);
+      }
+
+      .side-section,
+      .evidence {
+        padding: 12px 10px;
+      }
+
+      .actions {
+        gap: 7px;
+      }
+
+      .action {
+        min-height: 42px;
+      }
+
+      .footer-note {
+        padding: 10px;
+      }
+
+      table {
+        min-width: 560px;
+      }
+
+      th, td {
+        padding: 8px;
+      }
+
+      .ric-view {
+        padding: 12px 10px;
+      }
+
+      .ric-input-bar {
+        gap: 7px;
+      }
+
+      .ric-tf-group,
+      .ric-go {
+        width: 100%;
+      }
+
+      .ric-sym-chips {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        padding-bottom: 3px;
+      }
+
+      .ric-sym-chip {
+        flex: 0 0 auto;
+      }
+
+      .ric-kv {
+        align-items: flex-start;
+      }
+    }
+
+    @media (max-width: 420px) {
+      .topbar {
+        padding: 8px;
+      }
+
+      .tabs {
+        margin-right: -8px;
+        padding-right: 8px;
+      }
+
+      .tab {
+        height: 32px;
+        padding: 0 10px;
+        font-size: 12px;
+      }
+
+      .status {
+        font-size: 11px;
+      }
+
+      .brand-copy {
+        min-width: 0;
+      }
+
+      .chat-log {
+        padding: 12px 8px;
+      }
+
+      .composer,
+      .side-section,
+      .evidence,
+      .ric-view {
+        padding-left: 8px;
+        padding-right: 8px;
+      }
+
+      .bubble {
+        padding: 11px;
+      }
+
+      .kv {
+        border-radius: 10px;
+      }
+
+      .ric-card-head,
+      .ric-card-body {
+        padding-left: 10px;
+        padding-right: 10px;
+      }
     }
   </style>
 </head>
@@ -596,7 +1228,9 @@
       <nav class="tabs" aria-label="Primary">
         <button class="tab active" data-tab="chat">Chat</button>
         <button class="tab" data-tab="compare">Compare</button>
+        <button class="tab" data-tab="screener">Screener</button>
         <button class="tab" data-tab="watchlist">Watchlist</button>
+        <button class="tab" data-tab="ric">RIC</button>
       </nav>
       <div class="status">
         <span><span id="api-dot" class="dot"></span> <span id="api-status">checking API</span></span>
@@ -607,10 +1241,48 @@
     <div class="workspace">
       <main class="main">
         <section id="chat-log" class="chat-log" aria-live="polite"></section>
+
+        <!-- RIC view — shown when RIC tab is active -->
+        <section id="ric-view" class="ric-view" style="display:none">
+          <div class="ric-input-bar">
+            <div class="ac-wrap">
+              <input id="ric-symbol" type="text" placeholder="Symbol — e.g. BANKNIFTY" autocomplete="off" spellcheck="false"/>
+              <div id="ric-ac" class="ac-dropdown" role="listbox"></div>
+            </div>
+            <div class="ric-tf-group">
+              <button class="ric-tf active" data-tf="15m">15m</button>
+              <button class="ric-tf" data-tf="5m">5m</button>
+              <button class="ric-tf" data-tf="1h">1h</button>
+            </div>
+            <button id="ric-go" class="ric-go">Analyze</button>
+          </div>
+          <div class="ric-sym-chips">
+            <button class="ric-sym-chip" data-sym="BANKNIFTY">BANKNIFTY</button>
+            <button class="ric-sym-chip" data-sym="NIFTY">NIFTY</button>
+            <button class="ric-sym-chip" data-sym="FINNIFTY">FINNIFTY</button>
+            <button class="ric-sym-chip" data-sym="RELIANCE">RELIANCE</button>
+            <button class="ric-sym-chip" data-sym="HDFCBANK">HDFCBANK</button>
+            <button class="ric-sym-chip" data-sym="TCS">TCS</button>
+            <button class="ric-sym-chip" data-sym="ICICIBANK">ICICIBANK</button>
+            <button class="ric-sym-chip" data-sym="INFY">INFY</button>
+          </div>
+          <div id="ric-result" class="ric-result">
+            <div class="ric-empty">Enter a symbol above and click <strong>Analyze</strong> to run a Recursive Insights Composite.</div>
+          </div>
+        </section>
+
         <section class="composer">
-          <div class="composer-inner">
-            <textarea id="question" placeholder="Ask about a stock, sector, index, watchlist, or comparison"></textarea>
-            <button id="send" class="send">Ask</button>
+          <!-- Prompt bar — hidden on RIC tab -->
+          <div class="prompt-bar" id="prompt-bar">
+            <div class="prompt-bar-cats" id="prompt-bar-cats"></div>
+            <div class="prompt-bar-items" id="prompt-bar-items"></div>
+          </div>
+          <div class="composer-ac-wrap">
+            <div id="chat-ac" class="ac-dropdown ac-dropdown--up" role="listbox"></div>
+            <div class="composer-inner">
+              <textarea id="question" placeholder="Ask about a stock, sector, index, watchlist, or comparison"></textarea>
+              <button id="send" class="send">Ask</button>
+            </div>
           </div>
         </section>
       </main>
@@ -624,16 +1296,6 @@
           <div class="side-title">Next Actions</div>
           <div id="actions" class="actions">
             <div class="empty">Run a question to bind actions.</div>
-          </div>
-        </section>
-        <section class="side-section" id="prompt-section">
-          <div class="prompt-header" id="prompt-toggle-row">
-            <div class="side-title" style="margin-bottom:0">Prompt Library</div>
-            <span class="prompt-toggle" id="prompt-chevron">▾</span>
-          </div>
-          <div class="prompt-body" id="prompt-body">
-            <div class="prompt-cats" id="prompt-cats"></div>
-            <div class="prompt-list" id="prompt-list"></div>
           </div>
         </section>
         <section class="evidence">
@@ -654,13 +1316,15 @@
       sessionId: localStorage.getItem("t2s_session_id") || crypto.randomUUID(),
       watchlist: JSON.parse(localStorage.getItem("t2s_watchlist") || "[]"),
       lastResponse: null,
-      busy: false
+      busy: false,
+      ricTf: "15m",
     };
     localStorage.setItem("t2s_session_id", state.sessionId);
 
     const examples = {
       chat: "How is HDFCBANK looking fundamentally and technically?",
       compare: "Compare TCS vs INFY vs HCLTECH",
+      screener: "Show high RS leaders",
       watchlist: "Review my watchlist and show the strongest names"
     };
 
@@ -693,6 +1357,23 @@
         ]
       },
       {
+        cat: "Screeners", tab: "screener", prompts: [
+          "Show Stage 2 stocks",
+          "Show new highs",
+          "Show high RS leaders",
+          "Show quality breakout screener",
+          "Show tight range VCP-like setups",
+          "Validate my watchlist strength",
+        ]
+      },
+      {
+        cat: "Intraday", tab: "chat", prompts: [
+          "Check intraday source health",
+          "Is live quote data fresh enough?",
+          "Can we run intraday scanner today?",
+        ]
+      },
+      {
         cat: "Fundamentals", tab: "chat", prompts: [
           "Show TCS latest quarterly results and earnings quality",
           "What are INFY financials — revenue, PAT, OPM trend?",
@@ -711,31 +1392,29 @@
     ];
 
     let promptCatIdx = 0;
-    let promptOpen = true;
 
-    function renderPromptLibrary() {
-      const cats = document.getElementById("prompt-cats");
-      const list = document.getElementById("prompt-list");
-      const body = document.getElementById("prompt-body");
-      const chevron = document.getElementById("prompt-chevron");
+    function renderPromptBar() {
+      const cats  = document.getElementById("prompt-bar-cats");
+      const items = document.getElementById("prompt-bar-items");
+      const bar   = document.getElementById("prompt-bar");
+      if (!cats || !items || !bar) return;
 
-      // Category tabs
+      // Hide on RIC tab — it has its own input UI
+      if (state.tab === "ric") { bar.classList.remove("visible"); return; }
+      bar.classList.add("visible");
+
       cats.innerHTML = PROMPT_LIBRARY.map((c, i) =>
-        `<button class="prompt-cat${i === promptCatIdx ? " active" : ""}" data-idx="${i}">${c.cat}</button>`
+        `<button class="prompt-bar-cat${i === promptCatIdx ? " active" : ""}" data-idx="${i}">${escapeHtml(c.cat)}</button>`
       ).join("");
-      cats.querySelectorAll(".prompt-cat").forEach(btn => {
-        btn.addEventListener("click", () => {
-          promptCatIdx = Number(btn.dataset.idx);
-          renderPromptLibrary();
-        });
+      cats.querySelectorAll(".prompt-bar-cat").forEach(btn => {
+        btn.addEventListener("click", () => { promptCatIdx = Number(btn.dataset.idx); renderPromptBar(); });
       });
 
-      // Prompt list
       const current = PROMPT_LIBRARY[promptCatIdx];
-      list.innerHTML = current.prompts.map(p =>
-        `<button class="prompt-item" data-prompt="${escapeHtml(p)}" data-tab="${escapeHtml(current.tab)}">${escapeHtml(p)}</button>`
+      items.innerHTML = current.prompts.map(p =>
+        `<button class="prompt-bar-item" data-prompt="${escapeHtml(p)}" data-tab="${escapeHtml(current.tab)}">${escapeHtml(p)}</button>`
       ).join("");
-      list.querySelectorAll(".prompt-item").forEach(btn => {
+      items.querySelectorAll(".prompt-bar-item").forEach(btn => {
         btn.addEventListener("click", () => {
           const targetTab = btn.dataset.tab;
           if (targetTab && targetTab !== state.tab) {
@@ -745,18 +1424,492 @@
           el.question.focus();
         });
       });
-
-      // Toggle visibility
-      body.style.display = promptOpen ? "block" : "none";
-      chevron.style.transform = promptOpen ? "rotate(0deg)" : "rotate(-90deg)";
     }
 
-    function initPromptLibrary() {
-      renderPromptLibrary();
-      document.getElementById("prompt-toggle-row").addEventListener("click", () => {
-        promptOpen = !promptOpen;
-        renderPromptLibrary();
+    // ── Symbol universe autocomplete ─────────────────────────────────
+    let _universe = null;
+    let _universeLoading = false;
+
+    async function loadUniverse() {
+      if (_universe) return _universe;
+      if (_universeLoading) return null;
+      _universeLoading = true;
+      try {
+        const resp = await fetch("/api/symbols/universe?limit=1500");
+        if (!resp.ok) throw new Error("universe fetch failed");
+        const data = await resp.json();
+        _universe = (data.results || []).map(r => ({
+          symbol: (r.symbol || "").toUpperCase(),
+          name:   r.name || "",
+        }));
+      } catch (e) {
+        _universe = [];
+      }
+      return _universe;
+    }
+
+    function filterUniverse(query) {
+      if (!_universe || !query) return [];
+      const q = query.toUpperCase();
+      // Prefix-first, then contains
+      const prefix   = _universe.filter(r => r.symbol.startsWith(q));
+      const contains = _universe.filter(r => !r.symbol.startsWith(q) && r.symbol.includes(q));
+      return [...prefix, ...contains].slice(0, 8);
+    }
+
+    /**
+     * Attach autocomplete to a plain text <input>.
+     * dropdown: the .ac-dropdown div to populate.
+     * onSelect(symbol): called when user picks a result.
+     */
+    function attachInputAc(input, dropdown, onSelect) {
+      let acIdx   = -1;
+      let acItems = [];
+
+      function renderDropdown(results) {
+        acItems = results;
+        acIdx   = -1;
+        if (!results.length) { dropdown.classList.remove("open"); dropdown.innerHTML = ""; return; }
+        dropdown.innerHTML = results.map((r, i) =>
+          `<div class="ac-item" role="option" data-i="${i}">
+            <span class="ac-item-sym">${escapeHtml(r.symbol)}</span>
+            ${r.name ? `<span class="ac-item-name">${escapeHtml(r.name)}</span>` : ""}
+          </div>`
+        ).join("");
+        dropdown.querySelectorAll(".ac-item").forEach(item => {
+          item.addEventListener("mousedown", e => {
+            e.preventDefault();
+            const idx = Number(item.dataset.i);
+            pick(acItems[idx]);
+          });
+          item.addEventListener("mouseover", () => {
+            acIdx = Number(item.dataset.i);
+            highlightItem(dropdown, acIdx);
+          });
+        });
+        dropdown.classList.add("open");
+      }
+
+      function highlightItem(dd, idx) {
+        dd.querySelectorAll(".ac-item").forEach((el, i) => el.classList.toggle("active", i === idx));
+      }
+
+      function pick(result) {
+        if (!result) return;
+        input.value = result.symbol;
+        dropdown.classList.remove("open");
+        dropdown.innerHTML = "";
+        acItems = [];
+        acIdx   = -1;
+        onSelect(result.symbol);
+      }
+
+      function closeDropdown() {
+        dropdown.classList.remove("open");
+        dropdown.innerHTML = "";
+        acItems = [];
+        acIdx   = -1;
+      }
+
+      let debounceTimer = null;
+      input.addEventListener("input", () => {
+        clearTimeout(debounceTimer);
+        const q = input.value.trim();
+        if (q.length < 1) { closeDropdown(); return; }
+        debounceTimer = setTimeout(async () => {
+          await loadUniverse();
+          renderDropdown(filterUniverse(q));
+        }, 120);
       });
+
+      input.addEventListener("keydown", e => {
+        if (!dropdown.classList.contains("open")) return;
+        if (e.key === "ArrowDown") {
+          e.preventDefault();
+          acIdx = Math.min(acIdx + 1, acItems.length - 1);
+          highlightItem(dropdown, acIdx);
+        } else if (e.key === "ArrowUp") {
+          e.preventDefault();
+          acIdx = Math.max(acIdx - 1, 0);
+          highlightItem(dropdown, acIdx);
+        } else if (e.key === "Enter" && acIdx >= 0) {
+          e.preventDefault();
+          pick(acItems[acIdx]);
+        } else if (e.key === "Escape") {
+          closeDropdown();
+        }
+      });
+
+      document.addEventListener("click", e => {
+        if (!dropdown.contains(e.target) && e.target !== input) closeDropdown();
+      });
+    }
+
+    /**
+     * Attach autocomplete to a <textarea>.
+     * Monitors the last token before the caret; triggers on any 2+ character
+     * sequence (case-insensitive) that matches a universe symbol prefix.
+     * Uses the #chat-ac dropdown div anchored above the composer.
+     */
+    function attachTextareaAc(textarea, dropdown) {
+      let acIdx   = -1;
+      let acItems = [];
+      let acToken = "";
+
+      function renderDropdown(results, token) {
+        acItems = results;
+        acToken = token;
+        acIdx   = -1;
+        if (!results.length) { close(); return; }
+        dropdown.innerHTML = results.map((r, i) =>
+          `<div class="ac-item" role="option" data-i="${i}">
+            <span class="ac-item-sym">${escapeHtml(r.symbol)}</span>
+            ${r.name ? `<span class="ac-item-name">${escapeHtml(r.name)}</span>` : ""}
+          </div>`
+        ).join("");
+        dropdown.querySelectorAll(".ac-item").forEach(item => {
+          item.addEventListener("mousedown", e => {
+            e.preventDefault();
+            pick(acItems[Number(item.dataset.i)]);
+          });
+          item.addEventListener("mouseover", () => {
+            acIdx = Number(item.dataset.i);
+            highlight(acIdx);
+          });
+        });
+        dropdown.classList.add("open");
+      }
+
+      function highlight(idx) {
+        dropdown.querySelectorAll(".ac-item").forEach((el, i) => el.classList.toggle("active", i === idx));
+      }
+
+      function close() {
+        dropdown.classList.remove("open");
+        dropdown.innerHTML = "";
+        acItems = [];
+        acIdx   = -1;
+        acToken = "";
+      }
+
+      function pick(result) {
+        if (!result) return;
+        const val    = textarea.value;
+        const caret  = textarea.selectionEnd;
+        const before = val.slice(0, caret);
+        const after  = val.slice(caret);
+        const replaced = before.slice(0, before.length - acToken.length) + result.symbol;
+        textarea.value = replaced + after;
+        const newPos = replaced.length;
+        textarea.setSelectionRange(newPos, newPos);
+        close();
+        textarea.focus();
+      }
+
+      let debounceTimer = null;
+      textarea.addEventListener("input", () => {
+        clearTimeout(debounceTimer);
+        const val    = textarea.value;
+        const caret  = textarea.selectionEnd;
+        const before = val.slice(0, caret);
+        // Last non-space token before caret
+        const m = before.match(/(\S+)$/);
+        const token = m ? m[1] : "";
+        // Trigger on 2+ letters/digits — case-insensitive, not just uppercase
+        if (token.length < 2 || !/^[A-Za-z][A-Za-z0-9&-]*$/.test(token)) {
+          close(); return;
+        }
+        debounceTimer = setTimeout(async () => {
+          await loadUniverse();
+          renderDropdown(filterUniverse(token), token);
+        }, 150);
+      });
+
+      textarea.addEventListener("keydown", e => {
+        if (!dropdown.classList.contains("open")) return;
+        if (e.key === "ArrowDown") {
+          e.preventDefault();
+          acIdx = Math.min(acIdx + 1, acItems.length - 1);
+          highlight(acIdx);
+        } else if (e.key === "ArrowUp") {
+          e.preventDefault();
+          acIdx = Math.max(acIdx - 1, 0);
+          highlight(acIdx);
+        } else if (e.key === "Tab") {
+          e.preventDefault();
+          pick(acIdx >= 0 ? acItems[acIdx] : acItems[0]);
+        } else if (e.key === "Enter" && acIdx >= 0) {
+          // Only intercept Enter when an item is actively highlighted
+          e.preventDefault();
+          pick(acItems[acIdx]);
+        } else if (e.key === "Escape") {
+          close();
+        }
+      });
+
+      document.addEventListener("click", e => {
+        if (!dropdown.contains(e.target) && e.target !== textarea) close();
+      });
+    }
+
+    function initAutocomplete() {
+      // RIC symbol input
+      const ricInput    = document.getElementById("ric-symbol");
+      const ricDropdown = document.getElementById("ric-ac");
+      if (ricInput && ricDropdown) {
+        attachInputAc(ricInput, ricDropdown, sym => {
+          // Auto-focus Analyze button after selection
+          document.getElementById("ric-go")?.focus();
+        });
+      }
+      // Preload universe silently so first keypress is instant
+      loadUniverse();
+
+      // Chat textarea — uses the #chat-ac dropdown anchored above the composer
+      const chatInput    = document.getElementById("question");
+      const chatDropdown = document.getElementById("chat-ac");
+      if (chatInput && chatDropdown) attachTextareaAc(chatInput, chatDropdown);
+    }
+
+    // ── RIC ──────────────────────────────────────────────────────────
+    function initRic() {
+      const ricInput = document.getElementById("ric-symbol");
+      const ricGo    = document.getElementById("ric-go");
+      const ricResult = document.getElementById("ric-result");
+
+      document.querySelectorAll(".ric-tf").forEach(btn => {
+        btn.addEventListener("click", () => {
+          document.querySelectorAll(".ric-tf").forEach(b => b.classList.remove("active"));
+          btn.classList.add("active");
+          state.ricTf = btn.dataset.tf;
+        });
+      });
+
+      document.querySelectorAll(".ric-sym-chip").forEach(btn => {
+        btn.addEventListener("click", () => { ricInput.value = btn.dataset.sym; ricInput.focus(); });
+      });
+
+      ricInput.addEventListener("keydown", e => { if (e.key === "Enter") ricGo.click(); });
+
+      ricGo.addEventListener("click", async () => {
+        const sym = ricInput.value.trim().toUpperCase();
+        if (!sym) { ricInput.focus(); return; }
+        ricResult.innerHTML = `<div class="ric-loading">Fetching RIC for <strong>${escapeHtml(sym)}</strong>…</div>`;
+        ricGo.disabled = true;
+        try {
+          const resp = await fetch(`/api/ric/analyze?symbol=${encodeURIComponent(sym)}&timeframe=${encodeURIComponent(state.ricTf)}`);
+          if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+          renderRic(await resp.json());
+        } catch (err) {
+          ricResult.innerHTML = `<div class="ric-empty">Error: ${escapeHtml(String(err))}</div>`;
+        } finally {
+          ricGo.disabled = false;
+        }
+      });
+    }
+
+    function renderRic(d) {
+      const el2 = document.getElementById("ric-result");
+      const f2  = v => v != null ? Number(v).toLocaleString("en-IN", {maximumFractionDigits: 2}) : "—";
+      const fPct = v => v != null ? (v > 0 ? "+" : "") + Number(v).toFixed(2) + "%" : "—";
+      const biasClass = b => b === "BULLISH" ? "up" : b === "BEARISH" ? "down" : "";
+      const tradeBadge = (ok, lbl) => ok
+        ? `<span class="ric-card-badge" style="background:#DCFCE7;color:#15803D">${escapeHtml(lbl)}</span>`
+        : `<span class="ric-card-badge" style="background:#FEF9C3;color:#92400E">Watch Only</span>`;
+
+      const safety  = d.safety || {};
+      const intra   = d.intraday || {};
+      const swing   = d.swing || {};
+      const fno     = d.fno || {};
+      const kl      = d.key_levels || {};
+      const mkt     = d.market || {};
+      const sc      = safety.color || "#888";
+
+      const intraOk = intra.actionable !== false;
+      const swingOk = swing.actionable !== false;
+
+      const recoLines = (d.recommendation || "").split("\n")
+        .filter(l => l.trim().startsWith("•"))
+        .map(l => `<li>${escapeHtml(l.replace(/^•\s*/, "").trim())}</li>`).join("");
+
+      el2.innerHTML = `
+        <!-- Safety -->
+        <div class="ric-card">
+          <div class="ric-card-head">
+            <div class="ric-card-title">Safety Score</div>
+            <span class="ric-card-badge" style="background:${sc}22;color:${sc};border:1px solid ${sc}55">${escapeHtml(safety.rating || "—")}</span>
+          </div>
+          <div class="ric-card-body">
+            <div class="ric-safety-gauge">
+              <div class="ric-score-circle" style="color:${sc};border-color:${sc}">${safety.score ?? "—"}</div>
+              <div class="ric-score-details">
+                <div class="ric-score-rating" style="color:${sc}">${escapeHtml(safety.rating || "—")}</div>
+                <div class="ric-score-reasons">${(safety.reasons || []).map(r => `<div>${escapeHtml(r)}</div>`).join("")}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Intraday -->
+        <div class="ric-card">
+          <div class="ric-card-head">
+            <div class="ric-card-title">Intraday</div>
+            ${tradeBadge(intraOk, intra.quality_label || "Tradeable")}
+          </div>
+          <div class="ric-card-body">
+            ${intraOk ? `
+              <div class="ric-kv"><span class="ric-kv-label">Bias</span><span class="ric-kv-val ${biasClass(intra.bias)}">${escapeHtml(intra.bias || "—")}</span></div>
+              <div><div class="ric-kv-label" style="margin-bottom:3px">Trigger</div><div class="ric-trade-trigger">₹${f2(intra.trigger)}</div></div>
+              <div class="ric-kv"><span class="ric-kv-label">Stop</span><span class="ric-kv-val down">₹${f2(intra.stop)}</span></div>
+              <div class="ric-kv"><span class="ric-kv-label">Targets</span><span class="ric-kv-val">₹${(intra.targets || []).map(f2).join(" / ")}</span></div>
+              <div class="ric-kv"><span class="ric-kv-label">R:R · Upside</span><span class="ric-kv-val">${intra.rr ?? "—"}× · +${intra.potential_pct ?? "—"}%</span></div>
+              <div class="ric-kv"><span class="ric-kv-label">Holding</span><span class="ric-kv-val" style="font-size:11px">${escapeHtml(intra.holding || "—")}</span></div>
+            ` : `<div style="font-size:11.5px;color:var(--warn)">${escapeHtml((intra.quality_reasons || []).join("; ") || "Quality gate failed")}</div>`}
+            <div style="font-size:10.5px;color:var(--muted)">${escapeHtml(intra.strategy || "")}</div>
+          </div>
+        </div>
+
+        <!-- Swing -->
+        <div class="ric-card">
+          <div class="ric-card-head">
+            <div class="ric-card-title">Swing</div>
+            ${tradeBadge(swingOk, swing.quality_label || "Tradeable")}
+          </div>
+          <div class="ric-card-body">
+            ${swingOk ? `
+              <div class="ric-kv"><span class="ric-kv-label">Bias</span><span class="ric-kv-val ${biasClass(swing.bias)}">${escapeHtml(swing.bias || "—")}</span></div>
+              <div><div class="ric-kv-label" style="margin-bottom:3px">Trigger</div><div class="ric-trade-trigger">₹${f2(swing.trigger)}</div></div>
+              <div class="ric-kv"><span class="ric-kv-label">Stop</span><span class="ric-kv-val down">₹${f2(swing.stop)}</span></div>
+              <div class="ric-kv"><span class="ric-kv-label">Targets</span><span class="ric-kv-val">₹${(swing.targets || []).map(f2).join(" / ")}</span></div>
+              <div class="ric-kv"><span class="ric-kv-label">R:R · Upside</span><span class="ric-kv-val">${swing.rr ?? "—"}× · +${swing.potential_pct ?? "—"}%</span></div>
+              <div class="ric-kv"><span class="ric-kv-label">Period</span><span class="ric-kv-val" style="font-size:11px">${escapeHtml(swing.holding || "—")}</span></div>
+            ` : `<div style="font-size:11.5px;color:var(--warn)">${escapeHtml((swing.quality_reasons || []).join("; ") || "Quality gate failed")}</div>`}
+            <div style="font-size:10.5px;color:var(--muted)">${escapeHtml(swing.strategy || "")}</div>
+          </div>
+        </div>
+
+        <!-- F&O -->
+        <div class="ric-card">
+          <div class="ric-card-head">
+            <div class="ric-card-title">F&amp;O</div>
+            <span class="ric-card-badge" style="background:var(--panel-2);color:var(--muted)">${escapeHtml(fno.fno_signal || "—")}</span>
+          </div>
+          <div class="ric-card-body">
+            <div class="ric-kv"><span class="ric-kv-label">PCR</span><span class="ric-kv-val">${f2(fno.pcr)}</span></div>
+            <div class="ric-kv"><span class="ric-kv-label">Max Pain</span><span class="ric-kv-val">₹${f2(fno.max_pain)}</span></div>
+            <div class="ric-kv"><span class="ric-kv-label">ATM</span><span class="ric-kv-val">₹${f2(fno.atm)}</span></div>
+            <div class="ric-kv"><span class="ric-kv-label">CE Resistance</span><span class="ric-kv-val down">${(fno.ce_resistance || []).slice(0,2).map(v => "₹"+f2(v)).join(" / ") || "—"}</span></div>
+            <div class="ric-kv"><span class="ric-kv-label">PE Support</span><span class="ric-kv-val up">${(fno.pe_support || []).slice(0,2).map(v => "₹"+f2(v)).join(" / ") || "—"}</span></div>
+            <div class="ric-kv"><span class="ric-kv-label">Basis</span><span class="ric-kv-val">${fno.basis_pct != null ? fPct(fno.basis_pct) : "—"}</span></div>
+            <div class="ric-kv"><span class="ric-kv-label">Expiry</span><span class="ric-kv-val" style="font-size:11px">${escapeHtml(fno.expiry || "—")}</span></div>
+          </div>
+        </div>
+
+        <!-- Key Levels -->
+        <div class="ric-card">
+          <div class="ric-card-head">
+            <div class="ric-card-title">Key Levels</div>
+            <span class="ric-card-badge" style="background:var(--panel-2);color:var(--text)">₹${f2(kl.price)}</span>
+          </div>
+          <div class="ric-card-body">
+            <div class="ric-kv"><span class="ric-kv-label">Pivot</span><span class="ric-level-pill pivot">₹${f2(kl.pivot)}</span></div>
+            <div>
+              <div class="ric-kv-label" style="margin-bottom:4px">Support</div>
+              <div class="ric-levels-row">${(kl.supports || []).slice(0,3).map(v => `<span class="ric-level-pill support">₹${f2(v)}</span>`).join("") || "—"}</div>
+            </div>
+            <div>
+              <div class="ric-kv-label" style="margin-bottom:4px">Resistance</div>
+              <div class="ric-levels-row">${(kl.resistances || []).slice(0,3).map(v => `<span class="ric-level-pill resistance">₹${f2(v)}</span>`).join("") || "—"}</div>
+            </div>
+            <div>
+              <div class="ric-kv-label" style="margin-bottom:4px">EMAs</div>
+              <div class="ric-levels-row">
+                ${kl.ema9   != null ? `<span class="ric-level-pill ema">9 ₹${f2(kl.ema9)}</span>` : ""}
+                ${kl.ema21  != null ? `<span class="ric-level-pill ema">21 ₹${f2(kl.ema21)}</span>` : ""}
+                ${kl.ema50  != null ? `<span class="ric-level-pill ema">50 ₹${f2(kl.ema50)}</span>` : ""}
+                ${kl.ema200 != null ? `<span class="ric-level-pill ema">200 ₹${f2(kl.ema200)}</span>` : ""}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Market -->
+        <div class="ric-card">
+          <div class="ric-card-head">
+            <div class="ric-card-title">Market</div>
+            <span class="ric-card-badge" style="background:var(--panel-2);color:var(--muted)">${escapeHtml(mkt.nifty_trend || "—")}</span>
+          </div>
+          <div class="ric-card-body">
+            <div class="ric-kv"><span class="ric-kv-label">NIFTY 50</span><span class="ric-kv-val">₹${f2(mkt.nifty_close)}</span></div>
+            <div class="ric-kv"><span class="ric-kv-label">Change</span><span class="ric-kv-val ${mkt.nifty_chg_pct > 0 ? "up" : mkt.nifty_chg_pct < 0 ? "down" : ""}">${fPct(mkt.nifty_chg_pct)}</span></div>
+            <div class="ric-kv"><span class="ric-kv-label">Up days (10d)</span><span class="ric-kv-val">${mkt.nifty_up_days ?? "—"} / 10</span></div>
+            <div class="ric-kv"><span class="ric-kv-label">52W High</span><span class="ric-kv-val">₹${f2(mkt.nifty_52w_high)}</span></div>
+            <div class="ric-kv"><span class="ric-kv-label">52W Low</span><span class="ric-kv-val">₹${f2(mkt.nifty_52w_low)}</span></div>
+            ${mkt.is_index ? `
+              <div class="ric-divider">
+                <div class="ric-kv"><span class="ric-kv-label">${escapeHtml(d.symbol)} Close</span><span class="ric-kv-val">₹${f2(mkt.symbol_close)}</span></div>
+                <div class="ric-kv"><span class="ric-kv-label">Change</span><span class="ric-kv-val ${mkt.symbol_chg_pct > 0 ? "up" : mkt.symbol_chg_pct < 0 ? "down" : ""}">${fPct(mkt.symbol_chg_pct)}</span></div>
+                <div class="ric-kv"><span class="ric-kv-label">Trend</span><span class="ric-kv-val">${escapeHtml(mkt.symbol_trend || "—")}</span></div>
+              </div>
+            ` : ""}
+          </div>
+        </div>
+
+        <!-- AI Recommendation — spans full width -->
+        ${recoLines ? `
+        <div class="ric-card ric-reco">
+          <div class="ric-card-head">
+            <div class="ric-card-title">AI Recommendation</div>
+            <span style="font-size:10px;color:var(--muted)">Research only · Not investment advice</span>
+          </div>
+          <div class="ric-card-body">
+            <ul class="ric-reco-list">${recoLines}</ul>
+          </div>
+        </div>
+        ` : ""}
+      `;
+
+      // ── Update evidence panel with RIC provenance ────────────────
+      const asOf = (d.as_of || "").replace("T", " ").slice(0, 16);
+      const sources = [
+        { label: "Intraday levels",      note: "get_intraday_levels · pivot / S/R / EMAs" },
+        { label: "Options chain",         note: "get_options_chain · PCR / max pain / CE-PE" },
+        { label: "NIFTY 50 snapshot",     note: "get_index_snapshot · market bias / up-days" },
+        { label: "Futures analysis",      note: "get_futures_analysis · basis / OI change" },
+        { label: "F&O signals",           note: "quick_analysis_fno · historical PCR / buildup" },
+      ];
+      if (mkt.is_index) {
+        sources.push({ label: `${escapeHtml(d.symbol)} index snapshot`, note: "get_index_snapshot · symbol own bias" });
+      }
+      el.evidence.innerHTML = `
+        <div class="kv">
+          <div class="kv-head">RIC · ${escapeHtml(d.symbol)} (${escapeHtml(d.timeframe)})</div>
+          <div class="kv-body">
+            <div>Safety: <strong style="color:${sc}">${escapeHtml(safety.rating||"—")} ${safety.score ?? "—"}/10</strong></div>
+            <div>Intraday: <strong>${intraOk ? "Actionable" : "Watch Only"}</strong></div>
+            <div>Swing: <strong>${swingOk ? "Actionable" : "Watch Only"}</strong></div>
+            <div style="margin-top:4px;color:var(--muted)">As of ${escapeHtml(asOf)}</div>
+          </div>
+        </div>
+        <div class="kv">
+          <div class="kv-head">Data Sources</div>
+          <div class="kv-body">
+            ${sources.map(s => `<div><strong>${escapeHtml(s.label)}</strong><br/><span style="color:var(--muted);font-size:10.5px">${escapeHtml(s.note)}</span></div>`).join("")}
+          </div>
+        </div>
+        <div class="kv">
+          <div class="kv-head">Gaps</div>
+          <div class="kv-body" style="color:var(--warn);font-size:11.5px">
+            ${intraOk && swingOk
+              ? `<div style="color:var(--good)">No quality gates failed</div>`
+              : [
+                  !intraOk ? `<div>Intraday: ${escapeHtml((intra.quality_reasons||[]).join("; ") || "quality gate failed")}</div>` : "",
+                  !swingOk ? `<div>Swing: ${escapeHtml((swing.quality_reasons||[]).join("; ") || "quality gate failed")}</div>` : "",
+                ].join("")
+            }
+          </div>
+        </div>
+      `;
     }
 
     const el = {
@@ -796,8 +1949,15 @@
     }
 
     function renderInlineMarkdown(text) {
+      // Escape HTML first, then apply inline patterns on the escaped string.
+      // Order matters: links before bold so URLs inside link hrefs aren't mangled.
       return escapeHtml(text)
+        // [label](url) → <a>
+        .replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g,
+          '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>')
+        // **bold**
         .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+        // `code`
         .replace(/`([^`]+)`/g, "<code>$1</code>");
     }
 
@@ -805,54 +1965,101 @@
       const lines = String(text || "").split(/\n/);
       const out = [];
       let list = null;
-      // Track numbered-item count across all <ol> elements so that each new
-      // <ol start="N"> continues from where the previous one left off — even
-      // when bullet-point sub-lists interrupt the numbered sequence.
       let numberedCount = 0;
+
+      // Pipe-table buffer — we collect rows until a non-table line breaks the run.
+      let tableRows = [];   // raw row strings (with leading/trailing |)
+      let tableHead = null; // first row (becomes <thead>)
+      let tableSep  = false;// true once we've seen the |---|---| row
+
       const closeList = () => {
-        if (list) {
-          out.push(`</${list}>`);
-          list = null;
-        }
+        if (list) { out.push(`</${list}>`); list = null; }
       };
+
+      const flushTable = () => {
+        if (!tableRows.length) return;
+        const parse = row => row.replace(/^\||\|$/g, "")
+          .split("|").map(c => c.trim());
+
+        let html = `<div class="table-wrap"><table>`;
+        let bodyStarted = false;
+
+        tableRows.forEach((row, i) => {
+          const cells = parse(row);
+          if (i === 0) {
+            // Header row
+            html += `<thead><tr>${cells.map(c => `<th>${renderInlineMarkdown(c)}</th>`).join("")}</tr></thead>`;
+          } else if (/^[\s|:-]+$/.test(row)) {
+            // Separator row — skip, but mark body open
+            if (!bodyStarted) { html += "<tbody>"; bodyStarted = true; }
+          } else {
+            if (!bodyStarted) { html += "<tbody>"; bodyStarted = true; }
+            html += `<tr>${cells.map(c => `<td>${renderInlineMarkdown(c)}</td>`).join("")}</tr>`;
+          }
+        });
+        if (bodyStarted) html += "</tbody>";
+        html += `</table></div>`;
+        out.push(html);
+        tableRows = [];
+        tableHead = null;
+        tableSep  = false;
+      };
+
+      const isPipeRow = line => line.startsWith("|") && line.endsWith("|") && line.length > 2;
+
       for (const raw of lines) {
         const line = raw.trim();
-        if (!line) {
+
+        // Pipe-table row?
+        if (isPipeRow(line)) {
           closeList();
+          tableRows.push(line);
           continue;
         }
-        const heading = line.match(/^(#{3,4})\s+(.+)$/);
+
+        // Non-table line — flush any buffered table first
+        flushTable();
+
+        if (!line) { closeList(); continue; }
+
+        const heading = line.match(/^(#{1,4})\s+(.+)$/);
         if (heading) {
           closeList();
-          out.push(`<${heading[1].length === 3 ? "h3" : "h4"}>${renderInlineMarkdown(heading[2])}</${heading[1].length === 3 ? "h3" : "h4"}>`);
+          const tag = heading[1].length <= 2 ? "h3" : (heading[1].length === 3 ? "h3" : "h4");
+          out.push(`<${tag}>${renderInlineMarkdown(heading[2])}</${tag}>`);
           continue;
         }
-        const bullet = line.match(/^[-*]\s+(.+)$/);
+
+        // Horizontal rules (━━━ or --- or ***)
+        if (/^(━{3,}|—{3,}|-{3,}|\*{3,}|={3,})/.test(line)) {
+          closeList();
+          out.push(`<hr>`);
+          continue;
+        }
+
+        const bullet = line.match(/^[-*•]\s+(.+)$/);
         if (bullet) {
-          if (list !== "ul") {
-            closeList();
-            list = "ul";
-            out.push("<ul>");
-          }
+          if (list !== "ul") { closeList(); list = "ul"; out.push("<ul>"); }
           out.push(`<li>${renderInlineMarkdown(bullet[1])}</li>`);
           continue;
         }
+
         const numbered = line.match(/^\d+\.\s+(.+)$/);
         if (numbered) {
           numberedCount++;
           if (list !== "ol") {
-            closeList();
-            list = "ol";
-            // Use start= so this <ol> picks up from the global counter,
-            // not from 1, even when bullet sub-lists interrupted it.
+            closeList(); list = "ol";
             out.push(`<ol start="${numberedCount}">`);
           }
           out.push(`<li>${renderInlineMarkdown(numbered[1])}</li>`);
           continue;
         }
+
         closeList();
         out.push(`<p>${renderInlineMarkdown(line)}</p>`);
       }
+
+      flushTable();
       closeList();
       return out.join("");
     }
@@ -893,6 +2100,11 @@
             el.question.value = "Compare " + action.payload.symbols.join(" vs ");
           } else if (action.action === "deep_dive" && action.payload.symbol) {
             el.question.value = "Deep dive " + action.payload.symbol;
+          } else if (action.action === "screener") {
+            const type = (action.payload.screen_type || "stage2").replaceAll("_", " ");
+            el.question.value = "Show " + type;
+          } else if (action.action === "intraday_health") {
+            el.question.value = "Check intraday source health";
           } else if (action.action === "save_watchlist" && action.payload.symbols) {
             const merged = Array.from(new Set([...state.watchlist, ...action.payload.symbols]));
             state.watchlist = merged.slice(0, 20);
@@ -932,6 +2144,70 @@
               <tbody>${body}</tbody>
             </table>
           </div>
+        </div>
+      `;
+    }
+
+    function renderScreeners(rows) {
+      if (!rows || !rows.length) return "";
+      const body = rows.map(row => {
+        const score = row.composite_score ?? row.strength_score ?? row.investment_score ?? row.technical_score;
+        const tags = Array.isArray(row.setup_tags) ? row.setup_tags.slice(0, 3).join(", ") : "";
+        return `
+          <tr>
+            <td>${escapeHtml(row.symbol)}</td>
+            <td>${escapeHtml(row.company || "")}</td>
+            <td>${escapeHtml(row.sector || "n/a")}</td>
+            <td>${fmt(row.price)}</td>
+            <td>${escapeHtml(row.stage || "n/a")}</td>
+            <td>${fmt(row.rsi)}</td>
+            <td>${fmt(row.rs_pct ?? row.relative_strength, row.rs_pct != null ? "%" : "")}</td>
+            <td>${fmt(score)}</td>
+            <td>${escapeHtml(row.trading_signal || row.verdict || "n/a")}</td>
+            <td>${escapeHtml(tags || "n/a")}</td>
+          </tr>
+        `;
+      }).join("");
+      return `
+        <div class="kv">
+          <div class="kv-head">Screener Results</div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Symbol</th><th>Company</th><th>Sector</th><th>Price</th><th>Stage</th><th>RSI</th><th>RS</th><th>Score</th><th>Signal</th><th>Tags</th></tr></thead>
+              <tbody>${body}</tbody>
+            </table>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderIntraday(context) {
+      if (!context || !Object.keys(context).length) return "";
+      const tables = context.tables && typeof context.tables === "object" ? context.tables : {};
+      const tableRows = Object.entries(tables).slice(0, 6).map(([name, row]) => `
+        <tr>
+          <td>${escapeHtml(name)}</td>
+          <td>${escapeHtml(row.status || "n/a")}</td>
+          <td>${escapeHtml(row.rows ?? "n/a")}</td>
+          <td>${escapeHtml(row.latest_ts || row.latest_date || "n/a")}</td>
+        </tr>
+      `).join("");
+      return `
+        <div class="kv">
+          <div class="kv-head">Intraday Source Health</div>
+          <div class="kv-body">
+            <div>Status: ${escapeHtml(context.overall_status || "UNKNOWN")}</div>
+            <div>Mode: ${escapeHtml(context.data_mode || "intraday")}</div>
+            ${context.error ? `<div>Error: ${escapeHtml(context.error)}</div>` : ""}
+          </div>
+          ${tableRows ? `
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Source</th><th>Status</th><th>Rows</th><th>Latest</th></tr></thead>
+                <tbody>${tableRows}</tbody>
+              </table>
+            </div>
+          ` : ""}
         </div>
       `;
     }
@@ -984,12 +2260,24 @@
       const evidence = response.evidence || [];
       let html = "";
       html += renderComparison(response.comparison);
+      html += renderScreeners(response.screener_results);
       html += renderMarket(response.market_context);
-      if (gaps.length) {
+      html += renderIntraday(response.intraday_context);
+      // Filter gaps: drop internal resolver noise (no matching NSE symbol, screener keywords
+      // mistaken for tickers, verbose "Call run_screener_query instead" suggestions).
+      const meaningfulGaps = gaps.filter(g => {
+        const s = String(g);
+        // Drop if it mentions "No exact NSE symbol found" or "screener concept" or "Call run_"
+        if (/no exact nse symbol|screener concept|call run_|not an nse ticker/i.test(s)) return false;
+        // Drop very long internal suggestion strings (>120 chars)
+        if (s.length > 120) return false;
+        return true;
+      });
+      if (meaningfulGaps.length) {
         html += `
           <div class="kv">
             <div class="kv-head">Gaps</div>
-            <div class="kv-body"><ul class="gap-list">${gaps.slice(0, 8).map(g => `<li>${escapeHtml(g)}</li>`).join("")}</ul></div>
+            <div class="kv-body"><ul class="gap-list">${meaningfulGaps.slice(0, 6).map(g => `<li>${escapeHtml(g)}</li>`).join("")}</ul></div>
           </div>
         `;
       }
@@ -1069,8 +2357,18 @@
         document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
         tab.classList.add("active");
         state.tab = tab.dataset.tab;
-        el.question.value = examples[state.tab];
-        el.question.focus();
+        const isRic = state.tab === "ric";
+        document.getElementById("chat-log").style.display    = isRic ? "none" : "";
+        document.querySelector(".composer").style.display    = isRic ? "none" : "";
+        document.getElementById("ric-view").style.display   = isRic ? "flex"  : "none";
+        renderPromptBar();
+        if (isRic) {
+          // Clear stale chat evidence when entering RIC tab
+          el.evidence.innerHTML = `<div class="empty">Run an analysis to see RIC data sources.</div>`;
+        } else {
+          el.question.value = examples[state.tab] || "";
+          el.question.focus();
+        }
       });
     });
 
@@ -1091,7 +2389,9 @@
 
     renderWatchlist();
     renderWelcome();
-    initPromptLibrary();
+    renderPromptBar();
+    initRic();
+    initAutocomplete();
     checkApi();
     setInterval(checkApi, 15000);
   </script>

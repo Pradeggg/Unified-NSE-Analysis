@@ -24,6 +24,7 @@ from ..schemas import (
     TalkChatResponse,
     TalkCompareRequest,
     TalkEvidenceItem,
+    TalkScreenerRequest,
 )
 
 router = APIRouter()
@@ -37,6 +38,17 @@ _STOPWORDS = {
     "FOR", "FROM", "GOOD", "HOW", "IN", "INDEX", "IS", "IT", "LOOKING", "ME", "MY",
     "OF", "ON", "OR", "SECTOR", "SELL", "SHOW", "STOCK", "STOCKS", "THE", "THIS",
     "TODAY", "TRACK", "VS", "WATCH", "WATCHLIST", "WHAT", "WITH",
+}
+_TASK_WORDS = {
+    "CURRENT",
+    "ANALYSE", "ANALYZE", "ANALYSIS", "BRIEF", "BRIEFLY", "DEEP", "DIVE",
+    "FINANCIAL", "FINANCIALS", "FUNDAMENTAL", "FUNDAMENTALS", "LATEST",
+    "QUICK", "QUICKLY", "RECENT", "RESEARCH", "RESULT", "RESULTS",
+    "TECHNICAL", "TECHNICALS",
+}
+_AMBIGUOUS_SINGLE_TOKEN_PREFIXES = {
+    "ADANI", "ASIAN", "AXIS", "BAJAJ", "BHARAT", "HDFC", "HINDUSTAN", "KOTAK",
+    "LARSEN", "MAHINDRA", "PREMIER", "STATE", "SUN", "TATA",
 }
 
 _PRICE_FIELDS = ("price", "live_price", "db_price", "current_price", "latest_close")
@@ -53,6 +65,7 @@ _INDEX_ALIASES = {
     "MIDCAP NIFTY": "NIFTY MID SELECT",
 }
 _LOCAL_SYMBOLS: set[str] | None = None
+_LOCAL_NAME_ALIASES: dict[str, str] | None = None
 _SESSION_MEMORY: dict[str, dict[str, Any]] = {}
 _CONTEXT_RE = re.compile(r"\b(it|its|this|that|these|those|them|same|above|previous|earlier)\b", re.IGNORECASE)
 _EVIDENCE_RE = re.compile(r"\b(gaps?|evidence|sources?|freshness|stale|missing|used)\b", re.IGNORECASE)
@@ -65,6 +78,46 @@ _FINANCIAL_RE = re.compile(
     r")\b",
     re.IGNORECASE,
 )
+_INTRADAY_RE = re.compile(r"\b(intraday|live\s+quote|live\s+price|quote|snapshot|5m|15m|30m|1h|orb|vwap)\b", re.IGNORECASE)
+
+_SCREENERS: dict[str, dict[str, Any]] = {
+    "stage2": {"label": "Stage 2 stocks", "tool": "run_screener_query", "screen_type": "stage2"},
+    "new_highs": {"label": "New highs", "tool": "run_screener_query", "screen_type": "new_highs"},
+    "high_rs": {"label": "High RS leaders", "tool": "run_screener_query", "screen_type": "high_rs"},
+    "momentum_52w": {"label": "Momentum 52-week leaders", "tool": "run_screener_query", "screen_type": "momentum_52w"},
+    "turnaround": {"label": "Turnaround setups", "tool": "run_screener_query", "screen_type": "turnaround"},
+    "stage1_base": {"label": "Stage 1 bases", "tool": "run_screener_query", "screen_type": "stage1_base"},
+    "tight_range": {"label": "Tight range / VCP-like setups", "tool": "run_screener_query", "screen_type": "tight_range"},
+    "oversold_bounce": {"label": "Oversold bounce", "tool": "run_screener_query", "screen_type": "oversold_bounce"},
+    "supertrend_buy": {"label": "Supertrend buy", "tool": "run_screener_query", "screen_type": "supertrend_buy"},
+    "strong_buy": {"label": "Strong buy signals", "tool": "run_screener_query", "screen_type": "strong_buy"},
+    "new_entrants": {"label": "New Stage 2 entrants", "tool": "run_screener_query", "screen_type": "new_entrants"},
+    "quality_breakouts": {"label": "Quality breakout screener", "tool": "run_quality_breakout_screener", "mode": "balanced"},
+    "long_term_growth": {"label": "Long-term growth candidates", "tool": "get_long_term_growth_candidates", "index_scope": "MIDCAP"},
+    "watchlist_strength": {"label": "Strength watchlist validation", "tool": "validate_strength_watchlist"},
+}
+
+_SCREENER_ALIASES: tuple[tuple[str, tuple[str, ...]], ...] = (
+    ("watchlist_strength", ("watchlist strength", "validate watchlist", "strength validation", "validate my watchlist")),
+    ("quality_breakouts", ("quality breakout", "quality breakouts", "quality screener")),
+    ("long_term_growth", ("long term growth", "long-term growth", "growth candidates", "compounder candidates")),
+    ("new_entrants", ("new stage 2", "new stage2", "stage 2 entrants", "stage2 entrants", "new entrants")),
+    ("stage1_base", ("stage 1 base", "stage1 base", "stage 1 bases", "stage1 bases", "basing stocks")),
+    ("tight_range", ("tight range", "vcp-like", "vcp like", "vcp setup", "vcp setups", "consolidation setup")),
+    ("momentum_52w", ("momentum 52", "52-week momentum", "52 week momentum", "momentum leaders")),
+    ("new_highs", ("new highs", "52-week high", "52 week high", "near 52w high")),
+    ("high_rs", ("high rs", "relative strength leaders", "rs leaders", "strong rs")),
+    ("oversold_bounce", ("oversold bounce", "oversold stage 2", "rsi below 40")),
+    ("supertrend_buy", ("supertrend buy", "supertrend bullish")),
+    ("strong_buy", ("strong buy", "strong_buy")),
+    ("turnaround", ("turnaround", "recovery setup", "recovery setups")),
+    ("stage2", ("stage 2", "stage2")),
+)
+
+_MANUAL_COMPANY_ALIASES = {
+    "AXIS BANK": "AXISBANK",
+    "KOTAK MAHINDRA BANK": "KOTAKBANK",
+}
 
 
 def _tools():
@@ -95,6 +148,35 @@ def _fmt(value: Any, suffix: str = "") -> str:
     else:
         out = f"{num:.1f}"
     return f"{out}{suffix}"
+
+
+def _md_cell(value: Any) -> str:
+    return str(value if value not in (None, "") else "n/a").replace("|", "\\|")
+
+
+def _md_table(headers: list[str], rows: list[list[Any]]) -> list[str]:
+    if not rows:
+        return []
+    lines = [
+        "| " + " | ".join(_md_cell(header) for header in headers) + " |",
+        "| " + " | ".join("---" for _header in headers) + " |",
+    ]
+    lines.extend("| " + " | ".join(_md_cell(cell) for cell in row) + " |" for row in rows)
+    return lines
+
+
+def _fmt_crore(value: Any) -> str:
+    num = _coerce_float(value)
+    if num is None:
+        return "n/a"
+    return f"{num:,.0f}"
+
+
+def _fmt_eps(value: Any) -> str:
+    num = _coerce_float(value)
+    if num is None:
+        return "n/a"
+    return f"{num:.2f}".rstrip("0").rstrip(".")
 
 
 def _score_label(value: Any) -> str:
@@ -158,15 +240,107 @@ def _canonical_index(value: str) -> str | None:
     return None
 
 
-def _resolve_query_symbols(question: str, watchlist: list[str]) -> list[str]:
-    t = _tools()
-    symbols: list[str] = []
+def _trusted_symbol_resolution(result: dict[str, Any] | None) -> bool:
+    if not isinstance(result, dict) or not result.get("symbol"):
+        return False
+    band = str(result.get("confidence_band") or "").lower()
+    if band in {"exact", "high"}:
+        return True
+    try:
+        return float(result.get("score") or 0.0) >= 0.85
+    except Exception:
+        return False
 
-    raw_tokens = re.findall(r"\b[A-Za-z][A-Za-z0-9&-]{1,15}\b", question.upper())
+
+def _resolution_gap(candidate: str, result: dict[str, Any] | None) -> str:
+    if isinstance(result, dict):
+        sym = str(result.get("symbol") or "").strip().upper()
+        candidates = [str(c).strip().upper() for c in (result.get("candidates") or []) if str(c).strip()]
+        band = str(result.get("confidence_band") or result.get("confidence") or "none")
+        if sym:
+            candidates = list(dict.fromkeys([sym, *candidates]))[:5]
+            return f"{candidate}: unresolved; weak/ambiguous match ({band}) candidates: {', '.join(candidates)}"
+        if candidates:
+            return f"{candidate}: unresolved; candidates: {', '.join(list(dict.fromkeys(candidates))[:5])}"
+        error = str(result.get("error") or "").strip()
+        if error:
+            return f"{candidate}: {error}"
+    return f"{candidate}: unresolved symbol"
+
+
+def _resolve_stock_candidate(candidate: str) -> tuple[str | None, str]:
+    text = (candidate or "").strip()
+    if not text or _canonical_index(text):
+        return None, ""
+    alias_symbol = _local_company_alias(text)
+    if alias_symbol:
+        return alias_symbol, ""
+    weak_suffix_symbol = _weak_company_suffix_symbol(text)
+    if weak_suffix_symbol:
+        return None, f"{text}: unresolved; weak/ambiguous match (local_suffix) candidates: {weak_suffix_symbol}"
+    if (
+        text.upper() in _AMBIGUOUS_SINGLE_TOKEN_PREFIXES
+        and not _is_local_symbol(text)
+    ):
+        return None, f"{text}: ambiguous company prefix; use the full company name"
+    t = _tools()
+    resolvers = []
+    if hasattr(t, "_resolve_local_symbol"):
+        resolvers.append(t._resolve_local_symbol)
+    resolvers.append(t.resolve_symbol)
+    last_result: dict[str, Any] | None = None
+    for resolver in resolvers:
+        try:
+            result = resolver(text)
+        except Exception:
+            continue
+        last_result = result
+        sym = str(result.get("symbol") or "").strip().upper()
+        if sym and _trusted_symbol_resolution(result):
+            return sym, ""
+    if re.fullmatch(r"[A-Z0-9&-]{2,16}", text.upper()) and _is_local_symbol(text):
+        return text.upper(), ""
+    return None, _resolution_gap(text, last_result)
+
+
+def _question_tokens(question: str) -> list[tuple[str, str]]:
+    return [(match.group(0), match.group(0).upper()) for match in re.finditer(r"\b[A-Za-z][A-Za-z0-9&-]{1,20}\b", question)]
+
+
+def _resolve_query_symbols_with_gaps(question: str, watchlist: list[str]) -> tuple[list[str], list[str]]:
+    symbols: list[str] = []
+    gaps: list[str] = []
+    token_pairs = _question_tokens(question)
+    raw_tokens = [upper for _raw, upper in token_pairs]
+    consumed: set[int] = set()
+
+    max_window = min(5, len(raw_tokens))
+    for size in range(max_window, 1, -1):
+        for start in range(0, len(raw_tokens) - size + 1):
+            positions = set(range(start, start + size))
+            if consumed & positions:
+                continue
+            phrase_tokens = raw_tokens[start:start + size]
+            if all(token in _STOPWORDS for token in phrase_tokens):
+                continue
+            if any(token in _TASK_WORDS for token in phrase_tokens):
+                continue
+            phrase = " ".join(phrase_tokens)
+            sym, gap = _resolve_stock_candidate(phrase)
+            if sym and sym not in symbols:
+                symbols.append(sym)
+                consumed.update(positions)
+            elif gap and not any(token in _STOPWORDS for token in phrase_tokens):
+                gaps.append(gap)
+                if "ambiguous company prefix" in gap or "weak/ambiguous" in gap:
+                    consumed.update(positions)
+
     watch = {s.strip().upper() for s in watchlist if s.strip()}
     candidates = []
-    for token in raw_tokens:
-        if token in _STOPWORDS:
+    for idx, token in enumerate(raw_tokens):
+        if idx in consumed:
+            continue
+        if token in _STOPWORDS or token in _TASK_WORDS:
             continue
         if token in {"NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY", "SENSEX"} or token in watch:
             candidates.append(token)
@@ -174,18 +348,17 @@ def _resolve_query_symbols(question: str, watchlist: list[str]) -> list[str]:
             candidates.append(token)
 
     for token in candidates:
-        try:
-            result = t.resolve_symbol(token)
-            sym = str(result.get("symbol") or "").strip().upper()
-            confidence = str(result.get("confidence") or result.get("confidence_band") or "")
-            if sym and confidence not in {"none", "low"} and sym not in symbols:
-                symbols.append(sym)
-            elif _is_local_symbol(token) and token not in symbols:
-                symbols.append(token)
-        except Exception:
-            if _is_local_symbol(token) and token not in symbols:
-                symbols.append(token)
-    return symbols[:10]
+        sym, gap = _resolve_stock_candidate(token)
+        if sym and sym not in symbols:
+            symbols.append(sym)
+        elif gap:
+            gaps.append(gap)
+    return symbols[:10], list(dict.fromkeys(gaps))
+
+
+def _resolve_query_symbols(question: str, watchlist: list[str]) -> list[str]:
+    symbols, _gaps = _resolve_query_symbols_with_gaps(question, watchlist)
+    return symbols
 
 
 def _resolve_query_indices(question: str, watchlist: list[str]) -> list[str]:
@@ -243,6 +416,49 @@ def _is_local_symbol(symbol: str) -> bool:
     return sym in _LOCAL_SYMBOLS
 
 
+def _normalise_company_key(value: str) -> str:
+    raw = re.sub(r"[^A-Z0-9& ]+", " ", (value or "").upper())
+    raw = re.sub(r"\b(LIMITED|LTD|PVT|PRIVATE)\b", " ", raw)
+    return re.sub(r"\s+", " ", raw).strip()
+
+
+def _local_company_alias(query: str) -> str | None:
+    global _LOCAL_NAME_ALIASES
+    key = _normalise_company_key(query)
+    if not key:
+        return None
+    if _LOCAL_NAME_ALIASES is None:
+        aliases: dict[str, str] = dict(_MANUAL_COMPANY_ALIASES)
+        csv_paths = [
+            _REPO_ROOT / "data" / "signal_log.csv",
+        ]
+        for path in csv_paths:
+            if not path.exists():
+                continue
+            try:
+                with path.open(newline="", encoding="utf-8") as handle:
+                    reader = csv.DictReader(handle)
+                    for row in reader:
+                        symbol = str(row.get("symbol") or row.get("SYMBOL") or "").strip().upper()
+                        company = str(row.get("company") or row.get("company_name") or "").strip()
+                        if symbol and company:
+                            aliases.setdefault(_normalise_company_key(company), symbol)
+            except Exception:
+                continue
+        _LOCAL_NAME_ALIASES = aliases
+    return _LOCAL_NAME_ALIASES.get(key)
+
+
+def _weak_company_suffix_symbol(query: str) -> str | None:
+    key = _normalise_company_key(query)
+    if not key.endswith(" COMPANY"):
+        return None
+    base = key.removesuffix(" COMPANY").strip()
+    if base and _is_local_symbol(base):
+        return base
+    return None
+
+
 def _session_context(session_id: str | None) -> dict[str, Any] | None:
     if not session_id:
         return None
@@ -277,6 +493,10 @@ def _infer_intent(
 ) -> str:
     q = question.lower()
     indices = indices or []
+    if _detect_screener_key(question):
+        return "screener"
+    if _INTRADAY_RE.search(question):
+        return "intraday_health"
     if context and _EVIDENCE_RE.search(q) and not symbols:
         return "evidence_review"
     if indices:
@@ -484,6 +704,158 @@ def _financial_evidence(symbol: str) -> tuple[dict[str, Any], list[TalkEvidenceI
     return compact, evidence, list(dict.fromkeys(gaps))
 
 
+def _extract_top_n(question: str, default: int = 10) -> int:
+    match = re.search(r"\b(?:top|show|give)\s+(\d{1,2})\b", question or "", re.IGNORECASE)
+    if not match:
+        return default
+    try:
+        return max(1, min(int(match.group(1)), 30))
+    except Exception:
+        return default
+
+
+def _detect_screener_key(question: str) -> str | None:
+    q = " ".join((question or "").lower().replace("_", " ").split())
+    for key, aliases in _SCREENER_ALIASES:
+        if any(alias in q for alias in aliases):
+            return key
+    if "screener" in q or "screen " in q or q.startswith("screen"):
+        return "stage2"
+    return None
+
+
+def _safe_screener_row(row: dict[str, Any], *, screen_key: str) -> dict[str, Any]:
+    symbol = str(row.get("symbol") or "").strip().upper()
+    return {
+        "symbol": symbol,
+        "company": row.get("company_name") or row.get("company") or symbol,
+        "sector": row.get("sector"),
+        "price": row.get("price") or row.get("latest_close"),
+        "stage": row.get("stage"),
+        "rsi": row.get("rsi"),
+        "relative_strength": row.get("relative_strength") or row.get("rs"),
+        "rs_pct": row.get("rs_pct"),
+        "change_1d_pct": row.get("change_1d_pct"),
+        "change_1m_pct": row.get("change_1m_pct") or row.get("change"),
+        "technical_score": row.get("technical_score"),
+        "investment_score": row.get("investment_score"),
+        "enhanced_fund_score": row.get("enhanced_fund_score"),
+        "financial_strength": row.get("financial_strength"),
+        "can_slim_score": row.get("can_slim_score"),
+        "piotroski_score": row.get("piotroski_score"),
+        "strength_score": row.get("strength_score"),
+        "composite_score": row.get("composite_score"),
+        "trading_signal": row.get("trading_signal"),
+        "setup_tags": row.get("setup_tags") or row.get("reason_tags") or [],
+        "risk_flags": row.get("risk_flags") or [],
+        "verdict": row.get("verdict"),
+        "missing_evidence": row.get("missing_evidence") or [],
+        "screen_type": screen_key,
+    }
+
+
+def _screener_context(
+    screen_key: str,
+    *,
+    top_n: int = 10,
+    watchlist: list[str] | None = None,
+) -> tuple[list[dict[str, Any]], list[TalkEvidenceItem], list[str], dict[str, Any]]:
+    t = _tools()
+    spec = _SCREENERS.get(screen_key)
+    if not spec:
+        available = ", ".join(sorted(_SCREENERS))
+        return [], [], [f"Unknown screener '{screen_key}'. Available: {available}"], {"screen_type": screen_key}
+
+    limit = max(1, min(int(top_n or 10), 30))
+    tool_name = str(spec["tool"])
+    payload: dict[str, Any]
+    gaps: list[str] = []
+    try:
+        if tool_name == "run_screener_query":
+            payload = t.run_screener_query(str(spec["screen_type"]), top_n=limit)
+        elif tool_name == "run_quality_breakout_screener":
+            runner = t.TOOL_REGISTRY["run_quality_breakout_screener"][0]
+            payload = runner(top_n=limit, mode=str(spec.get("mode") or "balanced"))
+        elif tool_name == "get_long_term_growth_candidates":
+            payload = t.get_long_term_growth_candidates(
+                index_scope=str(spec.get("index_scope") or "MIDCAP"),
+                top_n=limit,
+                include_research=False,
+            )
+        elif tool_name == "validate_strength_watchlist":
+            symbols = [s.strip().upper() for s in (watchlist or []) if s.strip()]
+            symbols = _strip_index_symbols(symbols, list(_INDEX_ALIASES.values()))
+            payload = t.validate_strength_watchlist(symbols, top_n=limit)
+        else:
+            return [], [], [f"Screener tool '{tool_name}' is not wired in T2S"], {"screen_type": screen_key}
+    except Exception as exc:
+        return [], [], [f"{screen_key}: screener unavailable ({exc})"], {"screen_type": screen_key, "tool": tool_name}
+
+    if payload.get("error"):
+        gaps.append(f"{screen_key}: {payload['error']}")
+    gaps.extend(str(x) for x in (payload.get("missing_evidence") or []))
+    rows_source = payload.get("results") or payload.get("candidates") or []
+    rows = [_safe_screener_row(row, screen_key=screen_key) for row in rows_source if isinstance(row, dict)]
+    snapshot_date = (
+        payload.get("snapshot_date")
+        or payload.get("as_of")
+        or (rows[0].get("snapshot_date") if rows else None)
+        or date.today().isoformat()
+    )
+    meta = {
+        "screen_type": screen_key,
+        "label": spec["label"],
+        "tool": tool_name,
+        "description": payload.get("description") or spec["label"],
+        "snapshot_date": str(snapshot_date),
+        "count": payload.get("count", len(rows)),
+        "source_counts": payload.get("source_counts"),
+        "merged_count": payload.get("merged_count"),
+        "passed_count": payload.get("passed_count"),
+        "input_symbols": payload.get("input_symbols"),
+        "validation_rule": payload.get("validation_rule"),
+        "warnings": payload.get("warnings") or [],
+    }
+    evidence = [
+        TalkEvidenceItem(
+            label=str(spec["label"]),
+            value={**meta, "results": rows[:limit]},
+            source=tool_name,
+            as_of=str(snapshot_date),
+        )
+    ]
+    return rows[:limit], evidence, list(dict.fromkeys(gaps)), meta
+
+
+def _intraday_health_context(max_age_minutes: int = 30) -> tuple[dict[str, Any], list[TalkEvidenceItem], list[str]]:
+    t = _tools()
+    try:
+        health = t.get_intraday_source_health(max_age_minutes=max_age_minutes)
+    except Exception as exc:
+        health = {
+            "data_mode": "intraday",
+            "overall_status": "MISSING",
+            "error": f"intraday health unavailable ({exc})",
+            "tables": {},
+        }
+    gaps: list[str] = []
+    status = str(health.get("overall_status") or "UNKNOWN").upper()
+    if status not in {"FRESH", "PRESENT"}:
+        gaps.append(f"Intraday source health is {status}; live/intraday setup output is gated.")
+    if health.get("error"):
+        gaps.append(str(health["error"]))
+    evidence = [
+        TalkEvidenceItem(
+            label="Intraday source health",
+            value=health,
+            source="get_intraday_source_health",
+            as_of=date.today().isoformat(),
+            freshness="fresh" if status == "FRESH" else "unknown",
+        )
+    ]
+    return health, evidence, list(dict.fromkeys(gaps))
+
+
 def _market_context() -> tuple[list[dict[str, Any]], list[TalkEvidenceItem], list[str]]:
     path = _REPO_ROOT / "data" / "sector_breadth.csv"
     gaps: list[str] = []
@@ -577,7 +949,65 @@ def _index_context(indices: list[str]) -> tuple[list[dict[str, Any]], list[TalkE
     return rows, evidence, list(dict.fromkeys(gaps))
 
 
-def _fallback_answer(intent: str, question: str, symbols: list[str], comparison: list[dict[str, Any]], market: list[dict[str, Any]], gaps: list[str]) -> str:
+def _fallback_answer(
+    intent: str,
+    question: str,
+    symbols: list[str],
+    comparison: list[dict[str, Any]],
+    market: list[dict[str, Any]],
+    gaps: list[str],
+    *,
+    screener_results: list[dict[str, Any]] | None = None,
+    intraday_context: dict[str, Any] | None = None,
+) -> str:
+    screener_results = screener_results or []
+    intraday_context = intraday_context or {}
+
+    if intent == "screener":
+        if screener_results:
+            lines = ["Screener shortlist from available Agent Adda evidence:", ""]
+            for row in screener_results[:10]:
+                score = (
+                    row.get("composite_score")
+                    or row.get("strength_score")
+                    or row.get("investment_score")
+                    or row.get("technical_score")
+                )
+                tags = row.get("setup_tags") or []
+                tag_text = f", tags {', '.join(str(t) for t in tags[:3])}" if tags else ""
+                lines.append(
+                    f"- {row.get('symbol')}: {row.get('company') or row.get('symbol')}; "
+                    f"price {_fmt(row.get('price'))}, stage {row.get('stage') or 'n/a'}, "
+                    f"RSI {_fmt(row.get('rsi'))}, RS {_fmt(row.get('rs_pct') or row.get('relative_strength'), '%')}, "
+                    f"score {_fmt(score)}, signal {row.get('trading_signal') or row.get('verdict') or 'n/a'}{tag_text}."
+                )
+            lines.append("")
+            lines.append("Use this as a research shortlist, not a buy/sell recommendation.")
+            if gaps:
+                lines.append("Gaps: " + "; ".join(gaps[:5]))
+            return "\n".join(lines)
+        gap_text = "; ".join(gaps[:5]) if gaps else "No rows matched the screener."
+        return f"The screener did not return usable rows. Gap: {gap_text}"
+
+    if intent == "intraday_health":
+        status = str(intraday_context.get("overall_status") or "UNKNOWN").upper()
+        mode = intraday_context.get("data_mode") or "intraday"
+        lines = [
+            f"Intraday source health is {status} for {mode} data.",
+            "",
+            "T2S is gating live quote, intraday bars, ORB, VWAP, MACD, RSI divergence, Bollinger squeeze, VCP, and momentum scanner output until the source health is fresh enough.",
+        ]
+        tables = intraday_context.get("tables") if isinstance(intraday_context.get("tables"), dict) else {}
+        for name, table in list(tables.items())[:5]:
+            if isinstance(table, dict):
+                lines.append(
+                    f"- {name}: rows {table.get('rows') or 'n/a'}, latest {table.get('latest_ts') or table.get('latest_date') or 'n/a'}, status {table.get('status') or 'n/a'}."
+                )
+        if gaps:
+            lines.append("")
+            lines.append("Gaps: " + "; ".join(gaps[:5]))
+        return "\n".join(lines)
+
     if intent == "advice_boundary" and comparison:
         row = comparison[0]
         return "\n".join(
@@ -603,32 +1033,63 @@ def _fallback_answer(intent: str, question: str, symbols: list[str], comparison:
         lines = ["Financial evidence from cached fundamentals:", ""]
         for row in comparison:
             if row.get("latest_quarter"):
-                lines.append(
-                    f"- {row['symbol']} {row.get('latest_quarter')}: "
-                    f"revenue {_fmt(row.get('revenue'))} {row.get('financial_unit') or 'INR crore'}, "
-                    f"PAT {_fmt(row.get('pat'))} {row.get('financial_unit') or 'INR crore'}, "
-                    f"EPS {_fmt(row.get('eps'))}, OPM {_fmt(row.get('opm_pct'), '%')}."
+                unit = row.get("financial_unit") or "INR crore"
+                lines.append(f"**{row['symbol']} Latest Financial Results**")
+                lines.append("")
+                lines.append("**Quarterly Results**")
+                lines.extend(
+                    _md_table(
+                        ["Period", f"Revenue ({unit})", f"PAT ({unit})", "EPS", "OPM"],
+                        [[row.get("latest_quarter"), _fmt_crore(row.get("revenue")), _fmt_crore(row.get("pat")), _fmt_eps(row.get("eps")), _fmt(row.get("opm_pct"), "%")]],
+                    )
                 )
                 annual_row = row.get("latest_annual") or {}
                 if annual_row:
-                    lines.append(
-                        f"  Latest annual {annual_row.get('period_label')}: "
-                        f"revenue {_fmt(annual_row.get('revenue'))} INR crore, "
-                        f"PAT {_fmt(annual_row.get('pat'))} INR crore, "
-                        f"OPM {_fmt(annual_row.get('opm_pct'), '%')}, EPS {_fmt(annual_row.get('eps'))}."
+                    lines.append("")
+                    lines.append("**Annual Results**")
+                    lines.extend(
+                        _md_table(
+                            ["Period", "Revenue (INR crore)", "PAT (INR crore)", "EPS", "OPM"],
+                            [[
+                                annual_row.get("period_label"),
+                                _fmt_crore(annual_row.get("revenue")),
+                                _fmt_crore(annual_row.get("pat")),
+                                _fmt_eps(annual_row.get("eps")),
+                                _fmt(annual_row.get("opm_pct"), "%"),
+                            ]],
+                        )
                     )
                 bs = row.get("latest_balance_sheet") or {}
                 if bs:
-                    lines.append(
-                        f"  Balance sheet {bs.get('period_label')}: net debt {_fmt(bs.get('net_debt'))} INR crore, "
-                        f"borrowings {_fmt(bs.get('borrowings'))} INR crore, reserves {_fmt(bs.get('reserves'))} INR crore."
+                    lines.append("")
+                    lines.append(f"**Balance Sheet ({_md_cell(bs.get('period_label'))})**")
+                    lines.extend(
+                        _md_table(
+                            ["Metric", "Value (INR crore)"],
+                            [
+                                ["Net debt", _fmt_crore(bs.get("net_debt"))],
+                                ["Borrowings", _fmt_crore(bs.get("borrowings"))],
+                                ["Reserves", _fmt_crore(bs.get("reserves"))],
+                            ],
+                        )
                     )
                 cf = row.get("latest_cash_flow") or {}
                 if cf:
-                    lines.append(
-                        f"  Cash flow {cf.get('period_label')}: CFO {_fmt(cf.get('operating_cf'))} INR crore, "
-                        f"net cash flow {_fmt(cf.get('net_cf'))} INR crore."
+                    lines.append("")
+                    lines.append(f"**Cash Flow ({_md_cell(cf.get('period_label'))})**")
+                    lines.extend(
+                        _md_table(
+                            ["Metric", "Value (INR crore)"],
+                            [
+                                ["Operating cash flow", _fmt_crore(cf.get("operating_cf"))],
+                                ["Net cash flow", _fmt_crore(cf.get("net_cf"))],
+                            ],
+                        )
                     )
+                if row.get("financial_source_url"):
+                    lines.append("")
+                    lines.append(f"Source: [{row.get('financial_source') or 'financial source'}]({row['financial_source_url']}).")
+                lines.append("")
             else:
                 lines.append(f"- {row['symbol']}: quarterly financials were not available in cached evidence.")
         if gaps:
@@ -741,6 +1202,7 @@ def _llm_synthesis(
 
         client = OpenAI(api_key=api_key)
         evidence_block = "\n".join(f"- {item.label}: {item.value}"[:1800] for item in evidence[:8])
+        has_structured_gaps = bool(gaps)
         gap_block = "\n".join(f"- {gap}" for gap in gaps[:8]) or "- none"
         context_block = ""
         if context:
@@ -768,6 +1230,7 @@ def _llm_synthesis(
         elif intent == "financials_review":
             task_instruction = (
                 "\nCurrent task: financial evidence answer. Use cached financials evidence when present. "
+                "Format quarter, annual, balance sheet, and cash-flow figures as compact Markdown tables. "
                 "Financial revenue/PAT amounts from cached Screener financials are in INR crore unless the evidence says otherwise. "
                 "Never call these amounts millions. If revenue/PAT/EPS is missing from evidence, say it is missing; "
                 "do not infer it from price or technical data.\n"
@@ -778,10 +1241,25 @@ def _llm_synthesis(
                 "Use index snapshot and market breadth evidence. Do not claim stock-specific fields such as company fundamentals, "
                 "stage snapshot, or stock price-history gaps for an index.\n"
             )
+        elif intent == "screener":
+            task_instruction = (
+                "\nCurrent task: screener shortlist. Use only the screener evidence rows. "
+                "Call them research candidates or shortlist entries, not recommendations. "
+                "Mention the screener source and any explicit gaps; do not invent rank reasons not in evidence.\n"
+            )
+        elif intent == "intraday_health":
+            task_instruction = (
+                "\nCurrent task: intraday source health. Report only health/freshness/readiness from the evidence. "
+                "Do not produce live levels, setups, ORB, VWAP, scanner output, or trade guidance when the health gate is not fresh.\n"
+            )
         prompt = (
             "You are Talk 2 Stocks by Agent Adda. Write a concise Indian stock research answer.\n"
             "Rules: research only; no buy/sell advice; cite evidence labels; include gaps if present; "
-            "do not invent missing numbers; when the user uses pronouns, rely only on the conversation context provided.\n\n"
+            "do not invent missing numbers; when the user uses pronouns, rely only on the conversation context provided. "
+            "Only call something an evidence gap if it appears in the Gaps block. "
+            "Null optional fields in Evidence are unavailable fields, not gaps.\n"
+            f"Structured gaps present: {'yes' if has_structured_gaps else 'no'}. "
+            "If structured gaps present is no, do not include a gaps/note/missing-evidence sentence.\n\n"
             f"Question: {question}{context_block}{task_instruction}\n\nEvidence:\n{evidence_block}\n\nGaps:\n{gap_block}\n\n"
             f"Deterministic draft:\n{fallback}"
         )
@@ -798,7 +1276,27 @@ def _llm_synthesis(
         return f"{fallback}\n\nLLM synthesis unavailable: {exc}", "fallback_template", 0, 0, 0.0, "failed", str(exc)
 
 
-def _next_actions(intent: str, symbols: list[str]) -> list[TalkAction]:
+def _next_actions(
+    intent: str,
+    symbols: list[str],
+    *,
+    screener_results: list[dict[str, Any]] | None = None,
+) -> list[TalkAction]:
+    screener_results = screener_results or []
+    if intent == "screener":
+        top_symbols = [str(row.get("symbol")).strip().upper() for row in screener_results if row.get("symbol")]
+        top_symbols = list(dict.fromkeys(top_symbols))[:5]
+        return [
+            TalkAction(label="Compare top names", action="compare", payload={"symbols": top_symbols[:3]}),
+            TalkAction(label="Save shortlist", action="save_watchlist", payload={"symbols": top_symbols}),
+            TalkAction(label="Validate watchlist", action="screener", payload={"screen_type": "watchlist_strength"}),
+        ][:3]
+    if intent == "intraday_health":
+        return [
+            TalkAction(label="Check health again", action="intraday_health", payload={}),
+            TalkAction(label="Show Stage 2 stocks", action="screener", payload={"screen_type": "stage2"}),
+            TalkAction(label="Show market breadth", action="market_context", payload={}),
+        ]
     actions = [
         TalkAction(label="Compare", action="compare", payload={"symbols": symbols[:3]}),
         TalkAction(label="Save watchlist", action="save_watchlist", payload={"symbols": symbols}),
@@ -821,6 +1319,8 @@ def _remember_turn(
     comparison: list[dict[str, Any]],
     market: list[dict[str, Any]],
     answer: str,
+    screener_results: list[dict[str, Any]] | None = None,
+    intraday_context: dict[str, Any] | None = None,
 ) -> None:
     _SESSION_MEMORY[session_id] = {
         "intent": intent,
@@ -830,7 +1330,9 @@ def _remember_turn(
         "evidence": [item.model_dump() for item in evidence],
         "gaps": gaps,
         "comparison": comparison,
+        "screener_results": screener_results or [],
         "market_context": market,
+        "intraday_context": intraday_context or {},
         "answer": answer[:4000],
     }
 
@@ -848,31 +1350,144 @@ async def defaults():
     }
 
 
-@router.post("/chat", response_model=TalkChatResponse)
-async def chat(req: TalkChatRequest):
+def _env_use_agent_bridge() -> bool:
+    """Feature flag — set T2S_USE_AGENT_BRIDGE=0 to fall back to the legacy pipeline."""
+    return os.getenv("T2S_USE_AGENT_BRIDGE", "1").strip().lower() not in {"0", "false", "no", "off"}
+
+
+async def _chat_via_bridge(req: TalkChatRequest, session_id: str) -> TalkChatResponse:
+    """Route through the CLI Agent pipeline (UnifiedRouter + full 7-stage waterfall).
+
+    Falls back to the legacy deterministic pipeline on any import/runtime error
+    so T2S stays operational even when the Agent cannot be instantiated.
+    """
+    from ..bridge import agent_query
+    from ..trace_extract import (
+        extract_comparison,
+        extract_evidence,
+        extract_intent,
+        extract_market_context,
+        extract_screener_results,
+        extract_symbols,
+        extract_usage,
+    )
+
+    result = await agent_query(session_id, req.question.strip())
+
+    trace      = result.get("trace") or []
+    answer     = result.get("answer") or ""
+    backend    = result.get("backend") or "unknown"
+    intent     = extract_intent(result)
+
+    comparison      = extract_comparison(trace)
+    market          = extract_market_context(trace)
+    screener_results = extract_screener_results(trace)
+    evidence        = extract_evidence(trace)
+    symbols         = extract_symbols(trace, comparison)
+    in_tok, out_tok, cost = extract_usage(result)
+
+    # Collect gaps from the trace (any tool result with an "error" field)
+    gaps: list[str] = []
+    for item in trace:
+        if isinstance(item, dict):
+            res = item.get("result") or {}
+            if isinstance(res, dict) and res.get("error"):
+                tool = item.get("tool") or "tool"
+                sym = res.get("symbol") or ""
+                prefix = f"{sym}: " if sym else ""
+                gaps.append(f"{prefix}{tool}: {res['error']}")
+
+    # Persist a lightweight session snapshot so /compare and /screener
+    # endpoints can still read context if needed.
+    _remember_turn(
+        session_id, intent, req.question.strip(),
+        symbols, [], evidence, gaps,
+        comparison, market, answer,
+        screener_results, {},
+    )
+
+    return TalkChatResponse(
+        session_id=session_id,
+        intent=intent,
+        answer=answer,
+        symbols=symbols,
+        comparison=comparison,
+        screener_results=screener_results,
+        market_context=market,
+        intraday_context={},
+        evidence=evidence,
+        gaps=gaps,
+        next_actions=_next_actions(intent, symbols, screener_results=screener_results),
+        model_route={
+            "router": "UnifiedRouter",
+            "synthesis": backend,
+            "synthesis_policy": "agent_pipeline",
+            "synthesis_status": "succeeded" if answer and result.get("intent") != "error" else "failed",
+            "synthesis_error": "" if result.get("intent") != "error" else answer,
+            "mode": req.mode,
+            "provider": backend,
+        },
+        input_tokens=in_tok,
+        output_tokens=out_tok,
+        cost_usd=cost,
+    )
+
+
+async def _chat_legacy(req: TalkChatRequest, session_id: str) -> TalkChatResponse:
+    """Original deterministic-first pipeline (regex intent → tool calls → gpt-4o-mini)."""
     question = req.question.strip()
-    session_id = req.session_id or str(uuid.uuid4())
     watchlist = [s.strip().upper() for s in (req.watchlist or []) if s.strip()]
     context = _session_context(session_id)
-    indices = _resolve_query_indices(question, watchlist)
-    indices = _bind_context_indices(question, indices, context)
-    symbols = _resolve_query_symbols(question, watchlist)
-    symbols = _strip_index_symbols(symbols, indices)
-    symbols = _bind_context_symbols(question, symbols, context)
-    intent = _infer_intent(question, symbols, context, indices)
+    screener_key = _detect_screener_key(question)
+    intraday_requested = bool(_INTRADAY_RE.search(question))
+    if screener_key:
+        indices: list[str] = []
+        symbols: list[str] = []
+        resolution_gaps: list[str] = []
+        intent = "screener"
+    elif intraday_requested:
+        indices = []
+        symbols = []
+        resolution_gaps = []
+        intent = "intraday_health"
+    else:
+        indices = _resolve_query_indices(question, watchlist)
+        indices = _bind_context_indices(question, indices, context)
+        symbols, resolution_gaps = _resolve_query_symbols_with_gaps(question, watchlist)
+        symbols = _strip_index_symbols(symbols, indices)
+        symbols = _bind_context_symbols(question, symbols, context)
+        intent = _infer_intent(question, symbols, context, indices)
 
     comparison: list[dict[str, Any]] = []
     evidence: list[TalkEvidenceItem] = []
     gaps: list[str] = []
     market: list[dict[str, Any]] = []
+    screener_results: list[dict[str, Any]] = []
+    intraday_context: dict[str, Any] = {}
+    gaps.extend(resolution_gaps)
 
     if intent == "evidence_review" and context:
         evidence.extend(_context_evidence(context))
         gaps.extend(str(gap) for gap in (context.get("gaps") or []))
         comparison.extend(dict(row) for row in (context.get("comparison") or []) if isinstance(row, dict))
+        screener_results.extend(dict(row) for row in (context.get("screener_results") or []) if isinstance(row, dict))
         market.extend(dict(row) for row in (context.get("market_context") or []) if isinstance(row, dict))
+        intraday_context.update(dict(context.get("intraday_context") or {}))
         symbols = [str(s) for s in (context.get("symbols") or symbols)]
         indices = [str(s) for s in (context.get("indices") or indices)]
+    elif intent == "screener" and screener_key:
+        screener_results, screener_evidence, screener_gaps, _screener_meta = _screener_context(
+            screener_key,
+            top_n=_extract_top_n(question),
+            watchlist=watchlist,
+        )
+        evidence.extend(screener_evidence)
+        gaps.extend(screener_gaps)
+        symbols = [str(row.get("symbol")).strip().upper() for row in screener_results if row.get("symbol")][:10]
+    elif intent == "intraday_health":
+        intraday_context, intraday_evidence, intraday_gaps = _intraday_health_context()
+        evidence.extend(intraday_evidence)
+        gaps.extend(intraday_gaps)
     elif intent == "index_context":
         market, index_evidence, index_gaps = _index_context(indices)
         evidence.extend(index_evidence)
@@ -901,17 +1516,20 @@ async def chat(req: TalkChatRequest):
     if req.mode == "strict" and gaps:
         fallback = "Strict evidence mode blocked the answer because required evidence is missing."
     else:
-        fallback = _fallback_answer(intent, question, symbols, comparison, market, gaps)
+        fallback = _fallback_answer(
+            intent, question, symbols, comparison, market, gaps,
+            screener_results=screener_results,
+            intraday_context=intraday_context,
+        )
 
     answer, model, in_tok, out_tok, cost, synthesis_status, synthesis_error = _llm_synthesis(
-        question,
-        fallback,
-        evidence,
-        gaps,
-        context,
-        intent,
+        question, fallback, evidence, gaps, context, intent,
     )
-    _remember_turn(session_id, intent, question, symbols, indices, evidence, gaps, comparison, market, answer)
+    _remember_turn(
+        session_id, intent, question, symbols, indices,
+        evidence, gaps, comparison, market, answer,
+        screener_results, intraday_context,
+    )
 
     return TalkChatResponse(
         session_id=session_id,
@@ -919,10 +1537,12 @@ async def chat(req: TalkChatRequest):
         answer=answer,
         symbols=symbols,
         comparison=comparison,
+        screener_results=screener_results,
         market_context=market,
+        intraday_context=intraday_context,
         evidence=evidence,
         gaps=gaps,
-        next_actions=_next_actions(intent, symbols),
+        next_actions=_next_actions(intent, symbols, screener_results=screener_results),
         model_route={
             "router": os.getenv("LLM_ROUTER_MODEL", "gpt-5-nano"),
             "synthesis": model,
@@ -938,6 +1558,19 @@ async def chat(req: TalkChatRequest):
     )
 
 
+@router.post("/chat", response_model=TalkChatResponse)
+async def chat(req: TalkChatRequest):
+    session_id = req.session_id or str(uuid.uuid4())
+    if _env_use_agent_bridge():
+        try:
+            return await _chat_via_bridge(req, session_id)
+        except Exception:
+            # Bridge unavailable (Agent import failed, DB offline, etc.) —
+            # transparently fall through to the legacy pipeline.
+            pass
+    return await _chat_legacy(req, session_id)
+
+
 @router.post("/compare", response_model=TalkChatResponse)
 async def compare(req: TalkCompareRequest):
     question = req.question or "Compare " + " vs ".join(req.symbols)
@@ -945,3 +1578,57 @@ async def compare(req: TalkCompareRequest):
     if "compare" not in chat_req.question.lower():
         chat_req.question = "Compare " + " vs ".join(req.symbols) + ". " + chat_req.question
     return await chat(chat_req)
+
+
+@router.post("/screener", response_model=TalkChatResponse)
+async def screener(req: TalkScreenerRequest):
+    screen_key = _detect_screener_key(req.screen_type) or req.screen_type.strip().lower().replace("-", "_").replace(" ", "_")
+    question = req.question or f"Show top {req.top_n} {screen_key.replace('_', ' ')} screener results"
+    session_id = str(uuid.uuid4())
+    watchlist = [s.strip().upper() for s in (req.symbols or []) if s.strip()]
+    screener_results, evidence, gaps, _meta = _screener_context(screen_key, top_n=req.top_n, watchlist=watchlist)
+    symbols = [str(row.get("symbol")).strip().upper() for row in screener_results if row.get("symbol")][:10]
+
+    if req.mode == "strict" and gaps:
+        fallback = "Strict evidence mode blocked the screener answer because required evidence is missing."
+    else:
+        fallback = _fallback_answer(
+            "screener",
+            question,
+            symbols,
+            [],
+            [],
+            gaps,
+            screener_results=screener_results,
+        )
+    answer, model, in_tok, out_tok, cost, synthesis_status, synthesis_error = _llm_synthesis(
+        question,
+        fallback,
+        evidence,
+        gaps,
+        None,
+        "screener",
+    )
+    _remember_turn(session_id, "screener", question, symbols, [], evidence, gaps, [], [], answer, screener_results, {})
+    return TalkChatResponse(
+        session_id=session_id,
+        intent="screener",
+        answer=answer,
+        symbols=symbols,
+        screener_results=screener_results,
+        evidence=evidence,
+        gaps=gaps,
+        next_actions=_next_actions("screener", symbols, screener_results=screener_results),
+        model_route={
+            "router": os.getenv("LLM_ROUTER_MODEL", "gpt-5-nano"),
+            "synthesis": model,
+            "synthesis_policy": "llm_preferred" if _env_flag("TALK2STOCKS_LLM_SYNTHESIS", "1") else "local_only",
+            "synthesis_status": synthesis_status,
+            "synthesis_error": synthesis_error,
+            "mode": req.mode,
+            "provider": "openai" if model != "fallback_template" else "local",
+        },
+        input_tokens=in_tok,
+        output_tokens=out_tok,
+        cost_usd=cost,
+    )

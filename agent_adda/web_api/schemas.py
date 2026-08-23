@@ -119,7 +119,9 @@ class TalkChatResponse(BaseModel):
     answer: str
     symbols: list[str] = Field(default_factory=list)
     comparison: list[dict[str, Any]] = Field(default_factory=list)
+    screener_results: list[dict[str, Any]] = Field(default_factory=list)
     market_context: list[dict[str, Any]] = Field(default_factory=list)
+    intraday_context: dict[str, Any] = Field(default_factory=dict)
     evidence: list[TalkEvidenceItem] = Field(default_factory=list)
     gaps: list[str] = Field(default_factory=list)
     next_actions: list[TalkAction] = Field(default_factory=list)
@@ -131,5 +133,13 @@ class TalkChatResponse(BaseModel):
 
 class TalkCompareRequest(BaseModel):
     symbols: list[str] = Field(..., min_length=2, max_length=10)
+    question: str = ""
+    mode: Literal["permissive", "strict"] = "permissive"
+
+
+class TalkScreenerRequest(BaseModel):
+    screen_type: str = Field(..., min_length=1)
+    top_n: int = Field(default=10, ge=1, le=30)
+    symbols: list[str] = Field(default_factory=list)
     question: str = ""
     mode: Literal["permissive", "strict"] = "permissive"
