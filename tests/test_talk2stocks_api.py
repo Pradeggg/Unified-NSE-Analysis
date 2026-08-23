@@ -207,3 +207,56 @@ def test_talk_banknifty_routes_as_index_not_stock(monkeypatch):
     assert any(item["source"] == "get_index_snapshot" for item in body["evidence"])
     assert any(item["source"] == "get_market_breadth" for item in body["evidence"])
     assert not any("price history" in gap.lower() for gap in body["gaps"])
+
+
+def test_talk_index_partial_score_coverage_is_warning_not_gap(monkeypatch):
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+
+    def fake_index_snapshot(index_name):
+        return {
+            "index": index_name,
+            "as_of": "2026-08-21",
+            "close": 57761.95,
+            "chg_pct": 0.46,
+            "trend_10d": {"chg_pct": 1.2, "up_days": 6},
+        }
+
+    def fake_market_breadth(index):
+        return {
+            "scope": "index",
+            "index": index,
+            "snapshot_date": "2026-08-21",
+            "total_stocks": 11,
+            "advances": 8,
+            "declines": 3,
+            "ad_ratio": 2.67,
+            "avg_rs_pct": 52.4,
+            "stage_distribution": {"STAGE_2": 5, "STAGE_1": 4, "STAGE_4": 2},
+            "composition_count": 12,
+            "matched_count": 11,
+            "coverage_pct": 91.67,
+            "warnings": ["constituent_score_coverage:11/12"],
+            "missing_evidence": ["complete_index_score_coverage"],
+        }
+
+    monkeypatch.setattr("terminal.tools.get_index_snapshot", fake_index_snapshot)
+    monkeypatch.setattr("terminal.tools.get_market_breadth", fake_market_breadth)
+
+    client = TestClient(app)
+    res = client.post(
+        "/api/talk/chat",
+        json={
+            "question": "Analyze BANKNIFTY",
+            "watchlist": ["BANKNIFTY"],
+            "mode": "permissive",
+        },
+    )
+    assert res.status_code == 200
+    body = res.json()
+    assert body["intent"] == "index_context"
+    assert not any("complete_index_score_coverage" in gap for gap in body["gaps"])
+    row = body["market_context"][0]
+    assert row["matched_count"] == 11
+    assert row["composition_count"] == 12
+    assert row["coverage_pct"] == 91.67
+    assert row["warnings"] == ["constituent_score_coverage:11/12"]

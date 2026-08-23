@@ -538,7 +538,10 @@ def _index_context(indices: list[str]) -> tuple[list[dict[str, Any]], list[TalkE
             breadth = t.get_market_breadth(index)
             if breadth.get("error"):
                 gaps.append(f"{index}: {breadth['error']}")
-            gaps.extend(f"{index}: missing {x}" for x in (breadth.get("missing_evidence") or []))
+            for missing in breadth.get("missing_evidence") or []:
+                if missing == "complete_index_score_coverage" and breadth.get("matched_count"):
+                    continue
+                gaps.append(f"{index}: missing {missing}")
         except Exception as exc:
             gaps.append(f"{index}: market breadth unavailable ({exc})")
 
@@ -560,6 +563,10 @@ def _index_context(indices: list[str]) -> tuple[list[dict[str, Any]], list[TalkE
             "ad_ratio": breadth.get("ad_ratio"),
             "avg_rs_pct": breadth.get("avg_rs_pct"),
             "stage_distribution": breadth.get("stage_distribution"),
+            "composition_count": breadth.get("composition_count"),
+            "matched_count": breadth.get("matched_count"),
+            "coverage_pct": breadth.get("coverage_pct"),
+            "warnings": breadth.get("warnings") or [],
             "data_source": breadth.get("data_source") or "index snapshot + market breadth",
             "as_of": as_of,
         }
