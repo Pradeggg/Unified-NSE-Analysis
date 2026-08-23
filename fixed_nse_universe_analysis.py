@@ -59,7 +59,7 @@ PG_DSN = (
 )
 
 STOCK_RESULT_COLUMNS = [
-    'SYMBOL', 'COMPANY_NAME', 'MARKET_CAP_CATEGORY', 'CURRENT_PRICE',
+    'SYMBOL', 'COMPANY_NAME', 'SECTOR', 'MARKET_CAP_CATEGORY', 'CURRENT_PRICE',
     'CHANGE_1D', 'CHANGE_1W', 'CHANGE_1M', 'TECHNICAL_SCORE', 'RSI',
     'RELATIVE_STRENGTH', 'CAN_SLIM_SCORE', 'MINERVINI_SCORE',
     'ENHANCED_FUND_SCORE', 'TREND_SIGNAL', 'TRADING_SIGNAL',
@@ -149,7 +149,13 @@ def initialize_database(db_path):
 # =============================================================================
 
 def _load_postgres_stock_history():
-    """Load full EOD stock history from PostgreSQL when the CSV is only a daily bhavcopy."""
+    """Load full EOD stock history from PostgreSQL.
+
+    IMPORTANT: turnover_cr is NULL for pre-March 2026 rows, so we compute
+    TOTTRDVAL = close * volume (rupee turnover) instead. Using
+    COALESCE(turnover_cr,0) would silently drop ~954K historical rows and
+    cap history at ~99 trading days — the same as the CSV.
+    """
     try:
         import psycopg2
     except ImportError:
@@ -165,11 +171,17 @@ def _load_postgres_stock_history():
                        high AS "HIGH",
                        low AS "LOW",
                        close AS "CLOSE",
-                       volume AS "TOTTRDQTY",
-                       COALESCE(turnover_cr, 0) * 10000000 AS "TOTTRDVAL"
+                       COALESCE(volume, 0) AS "TOTTRDQTY",
+                       -- TOTTRDVAL = rupee turnover; use close*volume so
+                       -- pre-March 2026 rows (turnover_cr=NULL) are not dropped.
+                       COALESCE(turnover_cr * 10000000,
+                                close * NULLIF(volume, 0),
+                                0) AS "TOTTRDVAL"
                 FROM market.equity_eod
                 WHERE close IS NOT NULL
                   AND close > 0
+                  AND volume IS NOT NULL
+                  AND volume > 0
                   AND trade_date IS NOT NULL
                 ORDER BY trade_date, symbol
             """
@@ -191,12 +203,12 @@ def _load_postgres_stock_history():
         & df["TIMESTAMP"].notna()
         & df["CLOSE"].notna()
         & (df["CLOSE"] > 0)
-        & (df["TOTTRDVAL"] > 0)
+        & (df["TOTTRDQTY"] > 0)   # volume-based filter (always populated)
     ].copy()
     df = df.sort_values(["SYMBOL", "TIMESTAMP", "TOTTRDVAL"], ascending=[True, True, False])
     df = df.drop_duplicates(subset=["SYMBOL", "TIMESTAMP"], keep="first")
     df = df.sort_values(["TIMESTAMP", "SYMBOL"])
-    print(f"Loaded {len(df)} PostgreSQL EOD history records")
+    print(f"Loaded {len(df):,} PostgreSQL EOD history records")
     return df
 
 
@@ -257,55 +269,61 @@ def _load_postgres_index_history():
 
 
 def load_stock_data():
-    """Load NSE stock data, preferring PostgreSQL history when the local CSV has only one day."""
-    print("Loading NSE stock data with enhanced error handling...")
-    
+    """Load NSE stock EOD history.
+
+    Primary source: PostgreSQL market.equity_eod (500+ trading days, full universe).
+    Fallback: local CSV nse_sec_full_data.csv (used only when PG is unavailable).
+
+    This order ensures recently-listed stocks (e.g. QPOWER, LEAPIND) that are
+    sparse or absent in the 99-day rolling CSV are scored correctly using their
+    full PG history.
+    """
+    print("Loading NSE stock data (primary: PostgreSQL) …")
+
+    # ── 1. Try PostgreSQL first ────────────────────────────────────────────────
+    pg_df = _load_postgres_stock_history()
+    if pg_df is not None and not pg_df.empty:
+        max_pg = int(pg_df.groupby("SYMBOL")["TIMESTAMP"].nunique().max()) if not pg_df.empty else 0
+        print(f"PostgreSQL: {len(pg_df):,} rows, {pg_df['SYMBOL'].nunique()} symbols, "
+              f"max {max_pg} bars/symbol")
+        return pg_df
+
+    # ── 2. Fallback: CSV (only if PG is down / cold start) ────────────────────
+    print("PostgreSQL unavailable — falling back to CSV …")
     stock_file = DATA_DIR / 'nse_sec_full_data.csv'
     if not stock_file.exists():
-        # Try alternative location
         stock_file = NSE_DATA_DIR / 'nse_sec_full_data.csv'
         if not stock_file.exists():
-            raise FileNotFoundError(f"Stock data file not found: {stock_file}")
-    
+            raise FileNotFoundError(
+                f"PostgreSQL unavailable AND CSV not found at {stock_file}. "
+                "Start PG with: ./postgres/start_pg.sh start"
+            )
+
     try:
-        # Read CSV
         df = pd.read_csv(stock_file, encoding='utf-8', low_memory=False)
-        
-        # Validate required columns
+
         required_cols = ['SYMBOL', 'TIMESTAMP', 'CLOSE', 'OPEN', 'HIGH', 'LOW', 'TOTTRDQTY', 'TOTTRDVAL']
         missing_cols = [col for col in required_cols if col not in df.columns]
         if missing_cols:
-            raise ValueError(f"Missing required columns: {', '.join(missing_cols)}")
-        
-        # Clean and convert data types
+            raise ValueError(f"Missing required columns in CSV: {', '.join(missing_cols)}")
+
         df = df[df['SYMBOL'].notna() & (df['SYMBOL'] != '') & df['TIMESTAMP'].notna()].copy()
         df['TIMESTAMP'] = pd.to_datetime(df['TIMESTAMP']).dt.date
-        df['CLOSE'] = pd.to_numeric(df['CLOSE'], errors='coerce')
-        df['OPEN'] = pd.to_numeric(df['OPEN'], errors='coerce')
-        df['HIGH'] = pd.to_numeric(df['HIGH'], errors='coerce')
-        df['LOW'] = pd.to_numeric(df['LOW'], errors='coerce')
-        df['TOTTRDQTY'] = pd.to_numeric(df['TOTTRDQTY'], errors='coerce')
-        df['TOTTRDVAL'] = pd.to_numeric(df['TOTTRDVAL'], errors='coerce')
-        
-        # Filter valid data
+        for col in ['CLOSE', 'OPEN', 'HIGH', 'LOW', 'TOTTRDQTY', 'TOTTRDVAL']:
+            df[col] = pd.to_numeric(df[col], errors='coerce')
+
         df = df[df['CLOSE'].notna() & df['TIMESTAMP'].notna() & (df['CLOSE'] > 0) & (df['TOTTRDVAL'] > 0)]
-        
-        # Remove duplicates - keep highest trading value
-        print(f"Before deduplication: {len(df)} records")
+
+        print(f"CSV: before dedup {len(df)} records")
         df = df.sort_values(['SYMBOL', 'TIMESTAMP', 'TOTTRDVAL'], ascending=[True, True, False])
         df = df.drop_duplicates(subset=['SYMBOL', 'TIMESTAMP'], keep='first')
         df = df.sort_values(['TIMESTAMP', 'SYMBOL'])
-        
-        print(f"After deduplication: {len(df)} clean records")
-        max_history = int(df.groupby("SYMBOL")["TIMESTAMP"].nunique().max()) if not df.empty else 0
-        if max_history < 50:
-            pg_df = _load_postgres_stock_history()
-            if pg_df is not None and not pg_df.empty:
-                return pg_df
+        print(f"CSV: after dedup {len(df):,} records, {df['SYMBOL'].nunique()} symbols")
+
         return df
-        
+
     except Exception as e:
-        print(f"Error loading stock data: {e}")
+        print(f"Error loading CSV fallback: {e}")
         raise
 
 def load_index_data():
@@ -762,7 +780,27 @@ def analyze_stocks(stock_data, index_data, fundamental_data, company_names, late
     
     # Get NIFTY500 index data for relative strength calculation
     nifty500_data = index_data[index_data['SYMBOL'].str.upper() == 'NIFTY 500'].copy() if 'SYMBOL' in index_data.columns else None
-    
+
+    # Build a symbol→sector lookup from ref.instruments (PG) to enrich results.
+    # Many recent listings have sector=NULL in the CSV-sourced company_names;
+    # this gives them the correct sector for cohort normalisation and display.
+    _sector_map: dict = {}
+    try:
+        import psycopg2 as _psycopg2
+        _conn = _psycopg2.connect(PG_DSN)
+        try:
+            with _conn.cursor() as _cur:
+                _cur.execute(
+                    "SELECT symbol, COALESCE(sector, industry, 'Unknown') AS sector "
+                    "FROM ref.instruments WHERE status = 'ACTIVE'"
+                )
+                _sector_map = {r[0]: r[1] for r in _cur.fetchall()}
+        finally:
+            _conn.close()
+        print(f"Loaded sector map for {len(_sector_map)} symbols from ref.instruments")
+    except Exception as _e:
+        print(f"Sector map unavailable ({_e}); sector will default to 'Unknown'")
+
     for idx, stock_row in filtered_stocks.iterrows():
         symbol = stock_row['SYMBOL']
         try:
@@ -826,6 +864,7 @@ def analyze_stocks(stock_data, index_data, fundamental_data, company_names, late
             result = {
                 'SYMBOL': symbol,
                 'COMPANY_NAME': company_name,
+                'SECTOR': _sector_map.get(symbol, 'Unknown'),
                 'MARKET_CAP_CATEGORY': market_cap,
                 'CURRENT_PRICE': round(current_price, 2),
                 'CHANGE_1D': round(change_1d, 2) if change_1d is not None else None,
@@ -1234,6 +1273,102 @@ def _pg_safe_text(v):
     return text or None
 
 
+def _load_nifty500_syms() -> list:
+    """Load current Nifty 500 constituents from ref.index_compositions."""
+    if not PSYCOPG2_AVAILABLE:
+        return []
+    try:
+        import psycopg2
+        conn = psycopg2.connect(PG_DSN)
+        try:
+            cur = conn.cursor()
+            cur.execute("""
+                SELECT DISTINCT symbol FROM ref.index_compositions
+                WHERE index_symbol = 'NIFTY 500'
+                ORDER BY symbol
+            """)
+            return [r[0].upper() for r in cur.fetchall()]
+        finally:
+            conn.close()
+    except Exception as e:
+        print(f"  [RS] Could not load Nifty 500 symbols: {e}")
+        return []
+
+
+def compute_rs_nifty500(results: pd.DataFrame, stock_data: pd.DataFrame) -> pd.DataFrame:
+    """
+    Replace RELATIVE_STRENGTH with percentile rank (0–100) within the Nifty 500 universe.
+
+    Composite momentum: 40% × 3m + 20% × 6m + 20% × 9m + 20% × 12m
+    (approx trading days: 63, 126, 189, 252).
+    Stocks not in Nifty 500 are still ranked against the Nifty 500 distribution.
+    The raw excess-return RS used inside calculate_technical_score is unchanged.
+    """
+    n500_syms = set(_load_nifty500_syms())
+    if not n500_syms:
+        print("  [RS] No Nifty 500 symbols found; RELATIVE_STRENGTH unchanged")
+        return results
+
+    print(f"  [RS] Computing Nifty-500-relative RS percentile ({len(n500_syms)} index members) …")
+
+    def _momentum(sym_hist: pd.DataFrame):
+        prices = sym_hist.sort_values("TIMESTAMP")["CLOSE"].values.astype(float)
+        n = len(prices)
+        if n < 50 or prices[-1] <= 0:
+            return None
+        cur = prices[-1]
+        def _ret(days):
+            idx = max(0, n - days)
+            base = prices[idx]
+            return (cur / base - 1.0) if base > 0 else None
+        pairs = [(0.40, _ret(63)), (0.20, _ret(126)), (0.20, _ret(189)), (0.20, _ret(252))]
+        valid = [(w, v) for w, v in pairs if v is not None]
+        if not valid:
+            return None
+        total_w = sum(w for w, _ in valid)
+        return sum(w * v for w, v in valid) / total_w
+
+    # Compute momentum for every Nifty 500 stock present in stock_data
+    n500_momentum: dict = {}
+    for sym, grp in stock_data.groupby("SYMBOL"):
+        if sym.upper() in n500_syms:
+            m = _momentum(grp)
+            if m is not None:
+                n500_momentum[sym.upper()] = m
+
+    if len(n500_momentum) < 50:
+        print(f"  [RS] Only {len(n500_momentum)} Nifty 500 stocks have sufficient history; skipping rerank")
+        return results
+
+    n500_values = np.array(list(n500_momentum.values()))
+    print(f"  [RS] Benchmark: {len(n500_values)} Nifty 500 stocks  "
+          f"median_momentum={np.median(n500_values):.3f}")
+
+    def _percentile(val):
+        """Percentile-of-score within n500_values (numpy, no scipy needed)."""
+        n_less  = int(np.sum(n500_values < val))
+        n_equal = int(np.sum(n500_values == val))
+        return round(100.0 * (n_less + 0.5 * n_equal) / len(n500_values), 1)
+
+    # Rank every stock in results against the Nifty 500 distribution
+    new_rs = []
+    sym_hist_map = {sym: grp for sym, grp in stock_data.groupby("SYMBOL")}
+    for _, row in results.iterrows():
+        sym = str(row.get("SYMBOL", ""))
+        grp = sym_hist_map.get(sym)
+        if grp is None:
+            new_rs.append(None)
+            continue
+        m = _momentum(grp)
+        new_rs.append(_percentile(m) if m is not None else None)
+
+    results = results.copy()
+    results["RELATIVE_STRENGTH"] = new_rs
+    n_valid = sum(1 for v in new_rs if v is not None)
+    print(f"  [RS] Percentile RS assigned to {n_valid}/{len(results)} stocks (0=weakest, 100=strongest)")
+    return results
+
+
 def save_daily_scores_to_postgres(results, latest_date):
     """Persist comprehensive analysis directly to PostgreSQL scores.daily_scores."""
     if not PSYCOPG2_AVAILABLE:
@@ -1417,6 +1552,7 @@ if __name__ == "__main__":
         
         # Analyze stocks
         results = analyze_stocks(stock_data, index_data, fundamental_data, company_names, latest_date)
+        results = compute_rs_nifty500(results, stock_data)
         if results.empty:
             max_stock_history = int(stock_data.groupby("SYMBOL")["TIMESTAMP"].nunique().max()) if not stock_data.empty else 0
             print("\n❌ No stocks could be analyzed.")
