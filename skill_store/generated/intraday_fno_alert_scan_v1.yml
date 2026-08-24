@@ -1,0 +1,156 @@
+id: intraday_fno_alert_scan_v1
+version: 1
+status: generated
+created_at: "2026-08-24T00:00:00"
+created_by: hand_crafted
+generation_model: null
+domain: market_analysis
+
+title: Intraday F&O Alert Scan
+
+description: >
+  Scans the live F&O universe on 15-minute candles for active and near-trigger
+  intraday setups. Scores each candidate across six breakout strategies
+  (supertrend_breakout, near_breakout_volume, vcp, volume, darvas, orb_vwap),
+  applies trade-timing and decision scores, and surfaces candidates with R:R >= 2
+  as email alerts. Covers NIFTY, BANKNIFTY, FINNIFTY, MIDCPNIFTY, and the top
+  liquid F&O names. Runs via terminal.live_intraday_alerts.
+
+tags:
+  - intraday
+  - fno
+  - alerts
+  - breakout
+  - orb
+  - vwap
+  - vcp
+  - supertrend
+  - darvas
+  - live
+  - scan
+  - email_alert
+  - f_and_o
+
+input_patterns:
+  - intraday alerts
+  - show intraday setups
+  - live F&O scan
+  - what is triggering right now
+  - active intraday breakouts
+  - near trigger setups
+  - which F&O stocks are breaking out
+  - run intraday scan
+  - show live alerts
+  - intraday alert scan
+  - any active alerts today
+  - F&O breakout scan
+  - live breakout candidates
+  - what is setting up intraday
+  - show near trigger F&O
+  - orb vwap scan
+  - supertrend breakout today
+  - vcp intraday scan
+
+evidence_required:
+  description: >
+    Live intraday data fetched via terminal.live_intraday_alerts using NSE
+    real-time APIs. The module owns its own data fetch and scoring pipeline.
+    PostgreSQL tables are used only for EOD stage and volume context.
+  tables:
+    - market.equity_eod
+    - scores.stage_snapshots
+  python_module: terminal.live_intraday_alerts
+  live_data: true
+  market_hours_only: true
+
+tool_plan_template:
+  - tool_id: check_market_session
+    description: Verify the market session is active (09:15-15:30 IST) and warn if outside hours.
+    notes: "from terminal.market_calendar import market_session_status; return market_session_status()"
+
+  - tool_id: run_intraday_scan
+    description: >
+      Execute one scan cycle across the F&O universe. Fetches live 15m candles, scores
+      six breakout strategies, applies decision scores, and returns AlertCandidate objects
+      with rr >= 2.0.
+    notes: "IntradayAlertConfig(candle_interval='15m', min_rr=2.0, trigger='active_or_near', cycles=1)"
+
+  - tool_id: fetch_stage_context
+    description: Pull the latest Weinstein stage and trading signal for each candidate symbol.
+    template: >
+      SELECT s.symbol, s.stage, s.trading_signal, s.technical_score, s.rsi, s.snapshot_date
+      FROM scores.stage_snapshots s
+      WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)
+      AND s.symbol = ANY(%(symbols)s)
+      ORDER BY s.technical_score DESC;
+
+  - tool_id: fetch_volume_baseline
+    description: 20-day average volume for each candidate to confirm volume expansion at trigger.
+    template: >
+      SELECT symbol, ROUND(AVG(volume)) AS avg_volume_20d, MAX(trade_date) AS latest_date
+      FROM market.equity_eod
+      WHERE symbol = ANY(%(symbols)s)
+      AND trade_date >= CURRENT_DATE - INTERVAL '30 days'
+      GROUP BY symbol ORDER BY symbol;
+
+output_contract:
+  - symbol
+  - side
+  - status
+  - strategy
+  - last_price
+  - trigger
+  - stop
+  - target
+  - rr
+  - decision_score
+  - final_action
+  - stage
+  - technical_score
+  - avg_volume_20d
+  - note
+
+validation_rules:
+  - rr must be >= 2.0 for any candidate surfaced in an email alert
+  - status must be one of active trigger, near trigger, t1 hit, invalidated
+  - strategy must be one of supertrend_breakout, near_breakout_volume, vcp, volume, darvas, orb_vwap
+  - decision_score must be between 0 and 100
+  - final_action must not be AVOID or NO TRADE for active trigger candidates with decision_score >= 65
+  - stage context must be fetched from scores.stage_snapshots using latest snapshot_date
+  - Tool must not run outside 09:15-15:30 IST without an explicit force flag
+  - Output is research-only and must not be framed as a trade instruction or investment advice
+
+synthesis_guidance:
+  - Lead with active trigger candidates sorted by decision_score descending
+  - Show near-trigger candidates as a secondary watchlist
+  - For each candidate include symbol, strategy, side, rr, decision_score, final_action, and stage
+  - Flag candidates where intraday strategy conflicts with Weinstein stage (e.g. LONG on Stage 3/4)
+  - Include volume expansion check and note if volume is below 1.4x 20-day average
+  - Close with market session status and timestamp of last scan
+  - Remind the user this is research output not a trade instruction
+
+email_alert_config:
+  module: terminal.live_intraday_alerts
+  cli_one_shot: "python -m terminal.live_intraday_alerts --cycles 1 --send"
+  cli_continuous: "python -m terminal.live_intraday_alerts --cycles 0 --interval 60 --send"
+  recipients_config: config/report_recipients.yml
+  recipients_key: intraday_alerts
+  min_rr: 2.0
+  candle_interval: 15m
+  trigger_filter: active_or_near
+  strategies:
+    - supertrend_breakout
+    - near_breakout_volume
+    - vcp
+    - volume
+    - darvas
+    - orb_vwap
+
+review:
+  status: pending
+  attempts: 0
+  findings: null
+  rationale: >
+    Hand-crafted card. Requires static schema audit and Python dry-run before
+    promotion to review_pending. Python tool references terminal.live_intraday_alerts
+    which must be importable in the test harness.
