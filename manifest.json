@@ -1,0 +1,131 @@
+{
+  "generated_at": "2026-08-26T19:00:40",
+  "source_repository": "/Users/pradeepgorai/Documents/Projects/finance/Unified-NSE-Analysis",
+  "source_commit": "822d5fc50df0784087eb7f31bcb6b514069f4482",
+  "reports": [
+    {
+      "category": "daily/eod-market",
+      "name": "EOD Market Report HTML",
+      "source": "reports/latest/eod_market_report.html",
+      "path": "daily/eod-market/eod_market_report.html",
+      "bytes": 90312,
+      "sha256": "692571e6cb98b9f1e2f03d0405abc07cccf423c330287b2ebf39cc494d50bdae",
+      "modified_at": "2026-08-26T18:40:33"
+    },
+    {
+      "category": "daily/eod-market",
+      "name": "EOD Market Report Markdown",
+      "source": "reports/latest/eod_market_report.md",
+      "path": "daily/eod-market/eod_market_report.md",
+      "bytes": 3215,
+      "sha256": "362175fe5bc078c719b6aca53adf8898089701f531ec7f481dc58299d5cd04e1",
+      "modified_at": "2026-08-26T18:40:33"
+    },
+    {
+      "category": "daily/sector-rotation",
+      "name": "Sector Rotation HTML",
+      "source": "reports/latest/sector_rotation.html",
+      "path": "daily/sector-rotation/sector_rotation.html",
+      "bytes": 631967,
+      "sha256": "dffb474c05baae6dca2ea43039f2d202decefe17537386f2a478c605fa258320",
+      "modified_at": "2026-08-26T18:57:22"
+    },
+    {
+      "category": "daily/sector-rotation",
+      "name": "Sector Rotation Markdown",
+      "source": "reports/latest/sector_rotation.md",
+      "path": "daily/sector-rotation/sector_rotation.md",
+      "bytes": 23054,
+      "sha256": "0d0ce34dddc9a4acd91d9d71e1d1f651a990090ac750aca3006adf58310669dd",
+      "modified_at": "2026-08-26T18:57:22"
+    },
+    {
+      "category": "daily/sector-rotation",
+      "name": "Sector Rotation PDF",
+      "source": "reports/latest/sector_rotation.pdf",
+      "path": "daily/sector-rotation/sector_rotation.pdf",
+      "bytes": 4380884,
+      "sha256": "99a56a9a87be80f22bf00bb8756e610d60221d53c563dc53ae829c273903f276",
+      "modified_at": "2026-08-26T18:57:27"
+    },
+    {
+      "category": "daily/top-picks",
+      "name": "Top Investment Picks HTML",
+      "source": "reports/latest/top_picks.html",
+      "path": "daily/top-picks/top_picks.html",
+      "bytes": 1733061,
+      "sha256": "c93d095d515b93886c753056ebb5502e3a2152c0ee8c3c7b99d48ded210abb43",
+      "modified_at": "2026-08-26T18:11:24"
+    },
+    {
+      "category": "daily/top-picks",
+      "name": "Top Investment Picks Markdown",
+      "source": "reports/latest/top_picks.md",
+      "path": "daily/top-picks/top_picks.md",
+      "bytes": 46686,
+      "sha256": "856f1d7dbc5c31f73136fd691ad0ded4794003f19681f8e2676958af227b8c62",
+      "modified_at": "2026-08-26T18:11:24"
+    },
+    {
+      "category": "daily/stage2",
+      "name": "Stage 2 Tracker HTML",
+      "source": "reports/latest/stage2_tracker.html",
+      "path": "daily/stage2/stage2_tracker.html",
+      "bytes": 3023754,
+      "sha256": "c7c75c3b3acde7432bbbd6408bcc04527c51791f74133952ad20676ae01ab77a",
+      "modified_at": "2026-08-26T18:08:24"
+    },
+    {
+      "category": "daily/strategy-lab",
+      "name": "Portfolio Strategy Lab HTML",
+      "source": "reports/latest/portfolio_strategy_lab.html",
+      "path": "daily/strategy-lab/portfolio_strategy_lab.html",
+      "bytes": 2558452,
+      "sha256": "79f0424dd8e3ea3bd437f0825fb5bce243ca42564efa1b4f3db9ae68866dd95c",
+      "modified_at": "2026-08-26T18:35:55"
+    },
+    {
+      "category": "daily/portfolio",
+      "name": "Portfolio Analysis HTML",
+      "source": "reports/latest/portfolio_analysis.html",
+      "path": "daily/portfolio/portfolio_analysis.html",
+      "bytes": 2616574,
+      "sha256": "cb7fa3042d5fa1efeec494abfb19ac64df8e13a2768c9e3f77899d118de45e8e",
+      "modified_at": "2026-08-26T18:11:52"
+    },
+    {
+      "category": "daily/results",
+      "name": "Results Analysis HTML",
+      "source": "reports/latest/results_analysis.html",
+      "path": "daily/results/results_analysis.html",
+      "bytes": 3823,
+      "sha256": "961b75de618dad52c4498b7a77903ac3a11f0b154e5078f92ee5b75dcb8fb016",
+      "modified_at": "2026-08-26T18:16:49"
+    },
+    {
+      "category": "daily/global",
+      "name": "US / Global Market Report HTML",
+      "source": "reports/latest/us_market_report.html",
+      "path": "daily/global/us_market_report.html",
+      "bytes": 9907,
+      "sha256": "f6b15d816e1356d449bca613a7d9c475ad949fd984821a0a0b29f756d653aa9b",
+      "modified_at": "2026-08-16T10:10:06"
+    },
+    {
+      "category": "intraday/alerts",
+      "name": "Intraday F&O Alert Latest",
+      "source": "logs/intraday_alerts_latest.md",
+      "path": "intraday/alerts/intraday_alerts_latest.md",
+      "bytes": 2603,
+      "sha256": "f90014985d765d2d55965b704387cb9e995ac3a491a70030faab8d7b35d2ca7f",
+      "modified_at": "2026-08-26T19:00:14"
+    }
+  ],
+  "missing_optional": [
+    "reports/latest/stage2_buy_tradingview.txt (Stage 2 TradingView Export)",
+    "reports/latest/paper_trading_performance.html (Paper Trading Performance HTML)",
+    "reports/latest/paper_trading_performance.md (Paper Trading Performance Markdown)",
+    "logs/intraday_monitor_3min_latest.md (3-Minute Intraday Monitor Latest)",
+    "logs/intraday_pattern_monitor_latest.md (VCP / Breakout / Retest Monitor Latest)"
+  ]
+}
