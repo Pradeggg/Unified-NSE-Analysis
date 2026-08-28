@@ -14,47 +14,78 @@
 # - gmail/icloud/smtp: sends through SMTP when --send/send_immediately is used.
 # -----------------------------------------------------------------------------
 
+_bcc_list: &bcc_list
+  - hitesh86@gmail.com
+  - ai@agentadda.in
+  - agentadda.in@gmail.com
+  - hinamanit@gmail.com
+  - gorai.sandeep@gmail.com
+  - mbinjola@deloitte.com
+  - avirup.sen@gmail.com
+  - vitangirala@deloitte.com
+  - kapilsingh143@gmail.com
+  - aumahale@gmail.com
+  - pikcool@gmail.com
+  - tvphani@gmail.com
+  - mdbhatia52@gmail.com
+
 eod_market:
   to:
     - pgorai@icloud.com
-  bcc:
-    - hitesh86@gmail.com
-    - hinamanit@gmail.com
-    - gorai.sandeep@gmail.com
-    - mbinjola@deloitte.com
-    - avirup.sen@gmail.com
-    - vitangirala@deloitte.com
-    - kapilsingh143@gmail.com
-    - aumahale@gmail.com
-    - pikcool@gmail.com
-    - tvphani@gmail.com
+  bcc: *bcc_list
 
 top_picks:
   to:
     - pgorai@icloud.com
-  bcc:
-    - hitesh86@gmail.com
-    - hinamanit@gmail.com
-    - gorai.sandeep@gmail.com
-    - mbinjola@deloitte.com
-    - avirup.sen@gmail.com
-    - vitangirala@deloitte.com
-    - kapilsingh143@gmail.com
-    - aumahale@gmail.com
-    - pikcool@gmail.com
-    - tvphani@gmail.com
+  bcc: *bcc_list
+
+sector_rotation:
+  to:
+    - pgorai@icloud.com
+  bcc: *bcc_list
+
+stage2_tracker:
+  to:
+    - pgorai@icloud.com
+  bcc: *bcc_list
+
+strategy_lab:
+  to:
+    - pgorai@icloud.com
+  bcc: *bcc_list
+
+rrg:
+  to:
+    - pgorai@icloud.com
+  bcc: *bcc_list
+
+swing_playbook:
+  to:
+    - pgorai@icloud.com
+  bcc: *bcc_list
+
+results_analysis:
+  to:
+    - pgorai@icloud.com
+  bcc: *bcc_list
 
 intraday_alerts:
   to:
     - pgorai@icloud.com
+  bcc: *bcc_list
+
+morning_market:
+  to:
+    - pgorai@icloud.com
   bcc:
     - hitesh86@gmail.com
-    - hinamanit@gmail.com
-    - gorai.sandeep@gmail.com
-    - mbinjola@deloitte.com
-    - avirup.sen@gmail.com
-    - vitangirala@deloitte.com
-    - kapilsingh143@gmail.com
-    - aumahale@gmail.com
-    - pikcool@gmail.com
-    - tvphani@gmail.com
+    - ai@agentadda.in
+    - agentadda.in@gmail.com
+
+midday_market:
+  to:
+    - pgorai@icloud.com
+  bcc:
+    - hitesh86@gmail.com
+    - ai@agentadda.in
+    - agentadda.in@gmail.com

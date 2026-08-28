@@ -1,0 +1,86 @@
+{
+  "symbol": "LEGACY_TATAMOTORS_DVR",
+  "portfolio": {
+    "symbol": "LEGACY_TATAMOTORS_DVR",
+    "inputs": "TMLDVR",
+    "company_name": "TATA MOTORS LTD - DVR",
+    "isin": "IN9155A01020",
+    "qty": "10",
+    "avg_cost": "774.00",
+    "broker_price": "768.65",
+    "cost_value": "7740.00",
+    "market_value": "7686.50",
+    "realized_pnl": "11872.87",
+    "unrealized_pnl": "-53.50",
+    "unrealized_pct": "-0.69",
+    "mapping_status": "LEGACY_OR_UNMAPPED"
+  },
+  "collected_at": "2026-08-18T08:56:43",
+  "source_trail": [
+    "get_symbol_snapshot",
+    "get_technical_setup",
+    "scrape_screener_in",
+    "explain_intraday_setup"
+  ],
+  "errors": [],
+  "snapshot": {
+    "symbol": "LEGACY_TATAMOTORS_DVR",
+    "data_source": "PostgreSQL scores.stage_snapshots",
+    "error": "LEGACY_TATAMOTORS_DVR not found in DB snapshot",
+    "missing_evidence": [
+      "stage_snapshot"
+    ],
+    "evidence_coverage": "missing",
+    "snapshot_date": "2026-08-17"
+  },
+  "technical": {
+    "symbol": "LEGACY_TATAMOTORS_DVR",
+    "error": "No price history available; on-demand fetch returned no usable EOD bars",
+    "missing_evidence": [
+      "price_history"
+    ],
+    "data_source": "missing"
+  },
+  "fundamentals": {
+    "symbol": "LEGACY_TATAMOTORS_DVR",
+    "error": "404 Client Error: Not Found for url: https://www.screener.in/company/LEGACY_TATAMOTORS_DVR/",
+    "source_url": "https://www.screener.in/company/LEGACY_TATAMOTORS_DVR/"
+  },
+  "cached_financials": {
+    "symbol": "LEGACY_TATAMOTORS_DVR",
+    "data_source": "PostgreSQL financial statement cache",
+    "pg_sources": [
+      "scores.quarterly_results",
+      "scores.annual_results",
+      "scores.balance_sheet",
+      "scores.cash_flow"
+    ],
+    "quarterly": [],
+    "annual": [],
+    "balance_sheet": [],
+    "cash_flow": [],
+    "section_counts": {
+      "quarterly": 0,
+      "annual": 0,
+      "balance_sheet": 0,
+      "cash_flow": 0
+    },
+    "error": "No cached PostgreSQL financial statement rows found for LEGACY_TATAMOTORS_DVR",
+    "missing_evidence": [
+      "cached_financials"
+    ]
+  },
+  "trade_setup": {
+    "symbol": "LEGACY_TATAMOTORS_DVR",
+    "timeframe": "15m",
+    "data_mode": "intraday",
+    "source": "PostgreSQL intraday.ohlcv_bars",
+    "error": "No PostgreSQL intraday.ohlcv_bars for LEGACY_TATAMOTORS_DVR at 15m; No yfinance candles available to seed PostgreSQL intraday.ohlcv_bars"
+  },
+  "verdict": "Cautious / Review",
+  "chart_history": {
+    "symbol": "LEGACY_TATAMOTORS_DVR",
+    "error": "no EOD price history available",
+    "bars": []
+  }
+}

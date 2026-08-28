@@ -105,7 +105,7 @@ CREATE TABLE market.equity_eod (
     change_abs          NUMERIC(12,4),
     change_pct          NUMERIC(8,4),
     volume              BIGINT,
-    turnover_cr         NUMERIC(16,4),
+    turnover_cr         NUMERIC(20,4),
     total_trades        INTEGER,
     delivery_qty        BIGINT,
     delivery_pct        NUMERIC(6,2),
@@ -126,7 +126,7 @@ CREATE TABLE market.index_eod (
     prev_close          NUMERIC(12,2),
     change_pct          NUMERIC(8,4),
     volume              BIGINT,
-    turnover_cr         NUMERIC(16,4),
+    turnover_cr         NUMERIC(20,4),
     total_trades        INTEGER,
     week52_high         NUMERIC(12,2),
     week52_low          NUMERIC(12,2),
@@ -227,7 +227,7 @@ CREATE TABLE derivatives.fno_eod (
     open_interest       BIGINT,
     oi_change           BIGINT,
     volume              BIGINT,
-    turnover_cr         NUMERIC(16,4),
+    turnover_cr         NUMERIC(20,4),
     total_trades        INTEGER,
     lot_size            INTEGER,
     strike_key          NUMERIC(12,2) GENERATED ALWAYS AS (COALESCE(strike, 0)) STORED,
@@ -679,6 +679,7 @@ CREATE TABLE IF NOT EXISTS scores.cash_flow (
     investing_cf    NUMERIC(20,4),
     financing_cf    NUMERIC(20,4),
     net_cf          NUMERIC(20,4),
+    free_cash_flow  NUMERIC(20,4),
     source          TEXT        NOT NULL DEFAULT 'screener',
     source_url      TEXT,
     raw_json        JSONB,
@@ -1730,3 +1731,24 @@ CREATE INDEX IF NOT EXISTS idx_agent_learning_validation_runs_proposal
     ON agent_learning.proposal_validation_runs(proposal_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_agent_learning_promotion_runs_proposal
     ON agent_learning.promotion_runs(proposal_id, created_at DESC);
+
+-- =============================================================================
+-- INTRADAY — 15-minute OHLCV bars (populated by intraday monitor scripts)
+-- =============================================================================
+CREATE SCHEMA IF NOT EXISTS intraday;
+
+CREATE TABLE IF NOT EXISTS intraday.ohlcv_bars (
+    id          BIGSERIAL       PRIMARY KEY,
+    symbol      TEXT            NOT NULL,
+    timestamp   TIMESTAMPTZ     NOT NULL,
+    timeframe   TEXT            NOT NULL DEFAULT '15m',
+    open        NUMERIC(14,4),
+    high        NUMERIC(14,4),
+    low         NUMERIC(14,4),
+    close       NUMERIC(14,4),
+    volume      BIGINT,
+    UNIQUE (symbol, timestamp, timeframe)
+);
+
+CREATE INDEX IF NOT EXISTS idx_ohlcv_bars_ts     ON intraday.ohlcv_bars (timestamp DESC, symbol);
+CREATE INDEX IF NOT EXISTS idx_ohlcv_bars_symbol ON intraday.ohlcv_bars (symbol, timestamp DESC);

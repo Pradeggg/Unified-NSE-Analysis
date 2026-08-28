@@ -22,6 +22,12 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+try:
+    from knowledge_base.episode_store import EpisodeHandle, EpisodeStore  # type: ignore
+except Exception:  # pragma: no cover
+    EpisodeHandle = None  # type: ignore
+    EpisodeStore = None  # type: ignore
+
 
 ROOT = Path(__file__).resolve().parent
 MAIN_WORKTREE_BASE = ROOT.parent.parent if ROOT.parent.name == ".worktrees" else ROOT
@@ -33,7 +39,7 @@ DEFAULT_MODEL = os.environ.get("REPORT_VALIDATION_MODEL") or os.environ.get("OPE
 PG_DSN = (
     os.environ.get("AGENT_ADDA_PG_DSN")
     or os.environ.get("PG_DSN")
-    or "dbname=nse_market user=nse_admin host=/tmp"
+    or "dbname=nse_market user=nse_admin host=127.0.0.1 port=5432"
 )
 
 
@@ -101,6 +107,22 @@ class ValidationResult:
 
 
 REPORT_SPECS: dict[str, ReportSpec] = {
+    "morning_market": ReportSpec(
+        key="morning_market",
+        title="Morning Market Dashboard",
+        paths=(LATEST_DIR / "morning_market.html",),
+        min_bytes=20_000,
+        required_terms=("Agent Adda Morning Market", "Domestic Index Pulse", "Evidence And Freshness"),
+        fix_command=(PYTHON, "scripts/build_morning_market_report.py", "--variant", "morning"),
+    ),
+    "midday_market": ReportSpec(
+        key="midday_market",
+        title="Midday Market Report",
+        paths=(LATEST_DIR / "midday_market.html",),
+        min_bytes=20_000,
+        required_terms=("Midday Market", "Domestic Index Pulse", "Market Movers", "Evidence And Freshness"),
+        fix_command=(PYTHON, "scripts/build_morning_market_report.py", "--variant", "midday"),
+    ),
     "portfolio_strategy_lab": ReportSpec(
         key="portfolio_strategy_lab",
         title="Portfolio Strategy Lab",
@@ -152,6 +174,8 @@ REPORT_SPECS: dict[str, ReportSpec] = {
 }
 
 CHECKPOINT_REPORTS: dict[str, tuple[str, ...]] = {
+    "morning_market": ("morning_market",),
+    "midday_market": ("midday_market",),
     "portfolio_strategy_lab": ("portfolio_strategy_lab",),
     "sector_rotation": ("portfolio_strategy_lab", "sector_rotation"),
     "stage2_tracker": ("portfolio_strategy_lab", "sector_rotation", "stage2_tracker"),
@@ -288,12 +312,12 @@ def _validate_top_picks(result: ValidationResult) -> None:
     if not md.exists():
         return
     text = _read_text(md, max_chars=30_000)
-    if "OPENAI_API_KEY not set" in text or "rule-based narrative" in text:
+    if "OPENAI_API_KEY not set" in text or "AgentAdda Insights — rule-based" in text:
         result.findings.append(Finding(
             "top_picks",
             "medium",
-            "Top Picks report appears to have skipped LLM narration.",
-            "OPENAI_API_KEY/rule-based marker present",
+            "Top Picks report is using AgentAdda Insights (rule-based) — regenerate for full insights.",
+            "AgentAdda Insights rule-based marker present",
             "pending",
         ))
     actual = _extract_top_pick_symbols()
@@ -509,6 +533,7 @@ def _deterministic_validate(checkpoint: str, dry_run: bool) -> ValidationResult:
 def _collect_report_context(report_keys: tuple[str, ...]) -> dict[str, Any]:
     context: dict[str, Any] = {}
     context["report_purposes"] = {
+        "midday_market": "Midday market dashboard for second-half context; not an investment recommendation.",
         "portfolio_strategy_lab": "Paper strategy replay and strategy ranking; not a current holdings recommendation report.",
         "sector_rotation": "Market/sector breadth and sector candidate report.",
         "stage2_tracker": "Weinstein Stage 2 universe tracker and VCP/watchlist surface.",
@@ -955,10 +980,64 @@ def main() -> int:
     parser.add_argument("--fail-on-high", action="store_true", help="Exit non-zero when high severity findings remain")
     args = parser.parse_args()
 
+    store = EpisodeStore() if EpisodeStore else None
+    handle = None
+    owns = False
+    if store and EpisodeHandle:
+        handle = EpisodeHandle.from_env()
+        if handle:
+            # Child process context: log into parent episode.
+            store.log_step(
+                handle,
+                step="report_validation start (child)",
+                tool_name="report_validation.py",
+                tool_args={"checkpoint": args.checkpoint, "skip_llm": args.skip_llm, "dry_run": args.dry_run},
+            )
+        else:
+            handle = store.start_episode(
+                goal=f"report_validation checkpoint={args.checkpoint}",
+                caller="report_validation",
+                tags=["report_validation", args.checkpoint],
+                metadata={"checkpoint": args.checkpoint, "skip_llm": args.skip_llm, "dry_run": args.dry_run},
+            )
+            owns = True
+
     result = _deterministic_validate(args.checkpoint, dry_run=args.dry_run)
     _run_llm_review(result, model=args.model, skip_llm=args.skip_llm)
     jsonl_path, md_path = _write_outputs(result)
     high = sum(1 for f in result.findings if f.severity == "high")
+
+    if store and handle:
+        # Artifacts
+        store.log_artifact(handle, artifact_type="report_validation_md", locator=str(md_path))
+        store.log_artifact(handle, artifact_type="report_validation_audit_jsonl", locator=str(jsonl_path))
+        # Add produced report paths for this checkpoint (even if missing).
+        for key in CHECKPOINT_REPORTS.get(result.checkpoint, (result.checkpoint,)):
+            spec = REPORT_SPECS.get(key)
+            if not spec:
+                continue
+            for path in spec.paths:
+                store.log_artifact(
+                    handle,
+                    artifact_type="report_artifact",
+                    locator=str(path),
+                    meta={"report_key": key, "exists": path.exists()},
+                )
+
+        store.log_validator(
+            handle,
+            name=f"report_validation:{args.checkpoint}",
+            ok=(high == 0),
+            details={"findings": len(result.findings), "high": high, "checkpoint": args.checkpoint},
+        )
+        if owns:
+            store.end_episode(
+                handle,
+                status="SUCCESS" if (not args.fail_on_high or high == 0) else "FAILED",
+                summary=f"checkpoint={args.checkpoint} findings={len(result.findings)} high={high}",
+                metadata={"checkpoint": args.checkpoint, "high": high, "findings": len(result.findings)},
+            )
+
     print(f"Report validation checkpoint={args.checkpoint} findings={len(result.findings)} high={high}")
     print(f"Review report: {md_path}")
     print(f"Audit log: {jsonl_path}")

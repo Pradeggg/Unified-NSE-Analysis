@@ -1,0 +1,54 @@
+Agent Adda
+      Tue, 25 Aug 2026 · 19:51 IST
+
+        Report · eod_market_report.html · mode: both
+
+  EOD Market Report — 25 Aug 2026
+
+  Cover note and summary for the attached report file: eod_market_report.html. Also available in Agent Adda Market Intelligence.
+
+  Market read: Range-bound session — NIFTY 24,166.95 (-0.07%), BANKNIFTY 57,358.55 (0.00%); breadth swung 35.1% → 68.4% with a midday volume peak.
+
+  Key takeaways
+
+    Indices steady-to-mixed: NIFTY closed at 24,166.95 (-0.07%); BANKNIFTY at 57,358.55 (0.00%). Intraday ranges: NIFTY 24,115.55–24,198.10; BANKNIFTY 57,231.65–57,653.85.
+
+    Breadth volatility: trough at 10:00 with 35.1% advancers; rebound by 11:00 to 68.4%; late session breadth near-balanced (22 advancers / 23 decliners).
+
+    Participation: volume peak at 12:00 with 18,463,590 shares across the stored universe; follow-through was mixed, reinforcing an indecisive tone.
+
+    Leadership: IT - Services led (+6.28%; AMAGI), with support from Leisure Services (+4.20%; ADVENTHTL) and Metals & Minerals Trading (+2.57%; ADANIENT).
+
+    Pressure: Minerals & Mining (-3.02%) and Chemicals & Petrochemicals weakness (ACI -3.40%) weighed on breadth during downswings.
+
+    Most active counters (day): ADANIPOWER 96.7L (+0.98%), HDFCBANK 88.3L (-0.63%), SBIN 63.1L (+0.29%), INFY 51.1L (-0.66%).
+
+  What to watch
+
+    Sustainability of leadership in IT and Leisure Services; signs of stabilization within Chemicals & Petrochemicals (e.g., ACI) after drawdowns.
+
+    Breadth consistency versus intraday swings; whether the NIFTY/BANKNIFTY divergence persists.
+
+    Volume behavior around the midday window to help distinguish accumulation from distribution.
+
+  How to use this
+
+    Leverage Sector Rotation and Stage trackers in the attached report to refine watchlists; examples of Stage 2 BUY screens include ADANIENT, AEGISLOG, and ABCAPITAL.
+
+    Consult the Most Active panel for liquidity and potential risk-transfer cues.
+
+    Use the Hour-by-Hour Tape and breadth pivot times (10:00 trough, 11:00 expansion) to frame intraday risk windows.
+
+    Note coverage: analysis is based on the stored intraday 15m universe and may not represent full NSE-wide breadth.
+
+  This communication is for research and learning only and is not investment advice.
+
+  Source: Agent Adda Market Intelligence (intraday 15m bars; PostgreSQL). Generated 25 Aug 2026, 19:42 IST.
+
+  Regards,
+
+  Agent Adda
+
+  ShunyaAI · NSE Market Intelligence
+
+Not investment advice. For research and learning only. NSE EOD + live snapshot data.

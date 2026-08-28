@@ -466,7 +466,17 @@ def _upsert_snapshot_rows(cur: Any, rows: list[dict[str, Any]], *, replace_exist
     columns = list(rows[0])
     conflict = "DO NOTHING"
     if replace_existing:
-        assignments = ", ".join(f"{column}=EXCLUDED.{column}" for column in columns if column not in {"snapshot_date", "symbol"})
+        # Never overwrite supertrend_state / supertrend_value with NULL from this
+        # backfill — tracker --snapshot writes those separately from live prices;
+        # clobbering them forces a re-run of the snapshot to restore them.
+        _PRESERVE_IF_SET = {"supertrend_state", "supertrend_value"}
+        assignments = ", ".join(
+            f"{col}=COALESCE(scores.stage_snapshots.{col}, EXCLUDED.{col})"
+            if col in _PRESERVE_IF_SET
+            else f"{col}=EXCLUDED.{col}"
+            for col in columns
+            if col not in {"snapshot_date", "symbol"}
+        )
         conflict = f"DO UPDATE SET {assignments}"
     sql = f"""
         INSERT INTO scores.stage_snapshots ({", ".join(columns)})

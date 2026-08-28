@@ -17,10 +17,14 @@ from __future__ import annotations
 import os
 import re
 import shlex
+import sys
+import imaplib
 import mimetypes
 import smtplib
 import subprocess
 import textwrap
+import time
+from html import escape as html_escape
 from html import unescape
 from email.message import EmailMessage as MimeEmailMessage
 from email.utils import formataddr
@@ -71,6 +75,15 @@ REPORT_ALIASES: dict[str, str] = {
     "market-eod":       "latest/eod_market_report.html",
     "market_eod":       "latest/eod_market_report.html",
     "eod-market-report": "latest/eod_market_report.html",
+    "morning":           "latest/morning_market.html",
+    "morning-market":    "latest/morning_market.html",
+    "morning_market":    "latest/morning_market.html",
+    "midday":            "latest/midday_market.html",
+    "midday-market":     "latest/midday_market.html",
+    "midday_market":     "latest/midday_market.html",
+    "swing":             "latest/swing_playbook.html",
+    "swing-playbook":    "latest/swing_playbook.html",
+    "swing_playbook":    "latest/swing_playbook.html",
     "rrg":               "latest/market_breadth_rrg.html",
     "breadth":           "latest/market_breadth_rrg.html",
     "market-breadth":    "latest/market_breadth_rrg.html",
@@ -460,6 +473,109 @@ def _fallback_subject_body(report_name: str, report_text: str, reason: str = "")
     return subject, body
 
 
+def _extract_urls(text: str) -> list[str]:
+    seen: set[str] = set()
+    urls: list[str] = []
+    for raw in re.findall(r"https?://[^\s<>\"]+", str(text or "")):
+        url = raw.rstrip(").,;")
+        if url and url not in seen:
+            seen.add(url)
+            urls.append(url)
+    return urls[:6]
+
+
+def _extract_title_asof_from_html(report_path: Path) -> tuple[str, str]:
+    try:
+        raw = report_path.read_text(encoding="utf-8", errors="replace")
+    except Exception:
+        return report_path.name, ""
+    title = report_path.name
+    match = re.search(r"<title>([^<]{3,120})</title>", raw, flags=re.IGNORECASE)
+    if match:
+        title = unescape(match.group(1)).strip()
+    as_of = ""
+    match = re.search(r"\bAs of\s+(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}\s+IST)\b", raw, flags=re.IGNORECASE)
+    if match:
+        as_of = match.group(1).strip()
+    return title, as_of
+
+
+def _fallback_subject_body_v2(
+    report_path: Path,
+    *,
+    mode: str,
+    note: str = "",
+    reason: str = "",
+) -> tuple[str, str]:
+    now = datetime.now().strftime("%a, %d %b %Y · %H:%M IST")
+    title, as_of = _extract_title_asof_from_html(report_path)
+    urls = _extract_urls(note)
+
+    subject_base = title
+    # Keep subject compact for inbox scanning.
+    if "morning market" in title.lower():
+        subject_base = "Agent Adda Morning Market"
+    if as_of:
+        subject = f"{subject_base} — {as_of.split(' ')[0]}"
+    else:
+        subject = f"{subject_base} — {datetime.now():%d %b %Y}"
+
+    links_html = ""
+    if urls:
+        items = "".join(
+            f"<li style=\"margin:0 0 4px;\"><a href=\"{html_escape(u)}\" style=\"color:#1d4ed8;\">{html_escape(u)}</a></li>"
+            for u in urls
+        )
+        links_html = (
+            "<div style=\"margin:12px 0 0;\">"
+            "<div style=\"font-weight:700;margin:0 0 6px;\">Links</div>"
+            f"<ul style=\"margin:0;padding-left:18px;\">{items}</ul>"
+            "</div>"
+        )
+
+    attachment_line = ""
+    if mode in {"attachment", "both"}:
+        attachment_line = (
+            f"<p style=\"margin:10px 0 0;font-size:13px;color:#334155;\">"
+            f"Attachment: <b>{html_escape(report_path.name)}</b></p>"
+        )
+
+    reason_html = (
+        f"<div style=\"margin-top:8px;color:#64748b;font-size:11px;\">"
+        f"Composer note: {html_escape(reason)}</div>"
+        if reason
+        else ""
+    )
+
+    note_html = ""
+    note_text = str(note or "").strip()
+    if note_text:
+        # Keep the user-provided note visible and readable.
+        note_html = (
+            "<div style=\"margin:10px 0 0;padding:10px 12px;border:1px solid #e5e7eb;"
+            "border-left:4px solid #2563eb;border-radius:8px;background:#f8fafc;\">"
+            f"<div style=\"font-size:12px;color:#334155;line-height:1.45;\">{html_escape(note_text)}</div>"
+            "</div>"
+        )
+
+    body = textwrap.dedent(f"""
+        <div style="font-family:Arial,Helvetica,sans-serif;color:#0f172a;">
+          <div style="font-size:14px;line-height:1.45;">
+            <div style="font-size:16px;font-weight:800;margin:0 0 6px;">{html_escape(title)}</div>
+            <div style="color:#475569;font-size:12px;">Sent: {html_escape(now)}{(' · As of: ' + html_escape(as_of)) if as_of else ''}</div>
+            {attachment_line}
+            {note_html}
+            {links_html}
+            {reason_html}
+            <div style="margin-top:12px;font-size:11px;color:#64748b;">
+              Research-only market intelligence; not investment advice.
+            </div>
+          </div>
+        </div>
+    """).strip()
+    return subject[:160], body
+
+
 def _top_picks_explainer_html() -> str:
     """Deterministic explainer appended to Top Picks emails.
 
@@ -670,6 +786,22 @@ def _smtp_setting(*names: str, default: str = "") -> str:
     return default
 
 
+def _keychain_password(service: str, account: str) -> str:
+    """Read an SMTP app password from macOS Keychain, if configured."""
+    if sys.platform != "darwin" or not service or not account:
+        return ""
+    try:
+        result = subprocess.run(
+            ["security", "find-generic-password", "-s", service, "-a", account, "-w"],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+    except Exception:
+        return ""
+    return result.stdout.strip() if result.returncode == 0 else ""
+
+
 def _smtp_config() -> dict[str, str | int | bool]:
     provider = _email_provider()
     gmail_mode = provider == "gmail"
@@ -690,6 +822,11 @@ def _smtp_config() -> dict[str, str | int | bool]:
         "EMAIL_APP_PASSWORD",
         "GMAIL_APP_PASSWORD",
     )
+    if not password:
+        password = _keychain_password(
+            _smtp_setting("SMTP_KEYCHAIN_SERVICE", default="agent-adda-icloud-smtp"),
+            user,
+        )
     from_addr = _smtp_setting("SMTP_FROM", "EMAIL_FROM", default=user)
     from_name = _smtp_setting("EMAIL_FROM_NAME", default="Agent Adda")
     use_tls_raw = _smtp_setting("SMTP_USE_TLS", default="1").lower()
@@ -784,7 +921,77 @@ def send_via_smtp(
             server.starttls()
         server.login(user, password)
         server.send_message(msg, from_addr=from_addr, to_addrs=recipients)
-    return f"sent via SMTP as {from_addr}"
+
+    status = f"sent via SMTP as {from_addr}"
+    if str(cfg["provider"]) == "icloud":
+        try:
+            folder = _archive_icloud_sent_copy(msg, cfg)
+            status += f"; archived to {folder}"
+        except Exception as exc:
+            # SMTP acceptance is authoritative: a Sent-copy failure must not
+            # turn an already-delivered message into an apparent send failure.
+            status += f"; Sent archive failed: {exc}"
+    return status
+
+
+def _archive_icloud_sent_copy(
+    msg: MimeEmailMessage,
+    cfg: dict[str, str | int | bool],
+) -> str:
+    """Append an SMTP-delivered message to iCloud's IMAP Sent mailbox."""
+    host = _smtp_setting("IMAP_HOST", default="imap.mail.me.com")
+    port_raw = _smtp_setting("IMAP_PORT", default="993")
+    try:
+        port = int(port_raw)
+    except ValueError:
+        port = 993
+    user = str(cfg.get("user") or "")
+    password = str(cfg.get("password") or "")
+    if not user or not password:
+        raise RuntimeError("missing iCloud IMAP credentials")
+
+    client = imaplib.IMAP4_SSL(host, port, timeout=45)
+    try:
+        client.login(user, password)
+        status, rows = client.list()
+        if status != "OK":
+            raise RuntimeError("unable to list iCloud mailboxes")
+
+        sent_folder = ""
+        fallback_names: list[str] = []
+        for raw in rows or []:
+            line = raw.decode("utf-8", errors="replace") if isinstance(raw, bytes) else str(raw)
+            match = re.search(r'(?:"([^"]+)"|(\S+))\s*$', line)
+            if not match:
+                continue
+            name = match.group(1) or match.group(2) or ""
+            if "\\Sent" in line:
+                sent_folder = name
+                break
+            if name.lower() in {"sent messages", "sent"}:
+                fallback_names.append(name)
+        if not sent_folder and fallback_names:
+            sent_folder = fallback_names[0]
+        if not sent_folder:
+            raise RuntimeError("iCloud Sent mailbox not found")
+
+        # imaplib does not quote mailbox arguments for APPEND; iCloud's
+        # special-use folder contains a space ("Sent Messages").
+        mailbox_arg = f'"{sent_folder}"' if " " in sent_folder else sent_folder
+        status, _ = client.append(
+            mailbox_arg,
+            r"(\Seen)",
+            imaplib.Time2Internaldate(time.time()),
+            msg.as_bytes(),
+        )
+        if status != "OK":
+            raise RuntimeError(f"iCloud rejected Sent append ({status})")
+        return sent_folder
+    finally:
+        try:
+            client.logout()
+        except Exception:
+            pass
 
 
 def _build_outlook_applescript(
@@ -1002,7 +1209,12 @@ def run_email_command(text: str, agent: Any) -> dict:
     report_text = extract_report_text(cmd.report_path)
     backend = getattr(agent, "backend", None)
     if backend is None:
-        subject, body_html = _fallback_subject_body(cmd.report_path.name, report_text, reason="no LLM backend")
+        subject, body_html = _fallback_subject_body_v2(
+            cmd.report_path,
+            mode=cmd.mode,
+            note=cmd.note,
+            reason="no LLM backend",
+        )
     else:
         subject, body_html = _llm_generate(
             backend,
@@ -1192,16 +1404,22 @@ def send_report_email(
     is_top_picks = _is_top_picks_key(report_key)
     if is_top_picks and not note:
         note = (
-            "This is the daily Top Investment Picks Analysis. The email body must: "
-            "(a) open with a 1-line market read and the snapshot date, "
-            "(b) list each top pick (symbol · sector · entry · 2M/4M/6M targets · stop-loss · R:R · risk tier) "
-            "in a compact <table> with bold headers, "
-            "(c) include a 'Why these picks' bulleted rationale tying back to sector rotation + stage-2 + fundamentals, "
-            "(d) a 'Risks & what could go wrong' bullet block, "
+            "This is the daily Top Investment Picks Research Scan. The email body must: "
+            "(a) open with a 1-line market context and the snapshot date, "
+            "(b) list each shortlisted symbol with sector, Weinstein stage, and the key technical/fundamental "
+            "reason it appeared in the scan — do NOT include specific entry prices, price targets, stop-loss "
+            "levels, or risk-reward ratios, "
+            "(c) include a 'Why these stocks appeared in the scan' bulleted rationale tying back to "
+            "sector rotation + stage-2 + fundamentals — framed as research observations, not recommendations, "
+            "(d) a 'Key risks and what to watch' bullet block, "
             "(e) a 'How to use this report' closing block instructing the reader to open the attached HTML "
-            "for full TradingView-style charts, pattern annotations, RSI, volume profile, support/resistance, "
-            "fundamental scores (Piotroski/Altman/Beneish/CANSLIM), valuation, and the LLM chart narrative. "
-            "Keep tone factual, no hype. Do NOT invent numbers — only use values present in the report text."
+            "for full charts, scores, and their own analysis. "
+            "Keep tone factual and objective. Do NOT invent numbers — only use values present in the report text. "
+            "(f) Close with this exact disclaimer paragraph: 'This scan is produced by Agent Adda for research "
+            "and educational purposes only. It does not constitute investment advice, a buy or sell "
+            "recommendation, or a research report under the SEBI (Research Analysts) Regulations, 2014. "
+            "Agent Adda is not a SEBI-registered research analyst or investment adviser. Consult a "
+            "SEBI-registered intermediary before acting on any information.'"
         )
     agent_shim = _BackendShim(backend if backend is not None else _build_default_backend())
     if agent_shim.backend is None:

@@ -1,0 +1,54 @@
+Agent Adda
+      Fri, 28 Aug 2026 · 22:39 IST
+
+        Report · eod_market_report.html · mode: both
+
+    Market read: Recovery after midday shakeout — NIFTY +0.35% to 24,175.65; breadth rebounded 21.8% → 67.3%; Industrial Products led while IT - Services lagged.
+
+  EOD Market Report — NSE (28 Aug 2026)
+
+  Published to Agent Adda Market Intelligence. Summary below; full analytical pack available within the platform. Research-only; not investment advice.
+
+  Key takeaways
+
+    Indices: NIFTY +0.35% to 24,175.65 (24,076.85–24,188.30); BANKNIFTY -0.02% to 57,496.30 (57,264.00–57,596.40).
+
+    Breadth swing: trough at 11:00 with +21.8% advancers, strong 12:00 rebound to +67.3%; final hour saw NIFTY +0.20% with breadth 23/21.
+
+    Sector leadership: Industrial Products +3.80% (100% advancing) and IT - Software +3.77% led; pressure in IT - Services (-1.32%) and parts of Power.
+
+    Participation: Opening volume peak at 09:00 of 21,950,235 shares (219.5L); assess whether this signaled distribution or accumulation.
+
+    Notables: Advancers—3BBLACKBIO +6.73%, ADOR +6.08%, TCS +4.16%, INFY +2.99%; Decliners—ALEMBICLTD -2.66%, ADANIENSOL -2.20%, ICICIBANK -1.40%, ITC -1.12%.
+
+    Most active by volume: ADANIPOWER 122.6L (-1.10%), HDFCBANK 87.1L (+1.31%), INFY 54.8L (+2.99%), ITC 48.1L (-1.12%), ICICIBANK 44.1L (-1.40%).
+
+  What to watch
+
+    Whether breadth sustains above ~60% early next session after the 11:00 → 12:00 reversal pattern.
+
+    Follow-through in leaders (Industrial Products, IT - Software) vs. stabilization in pressured groups (IT - Services, Power).
+
+    Bank leadership dispersion: HDFCBANK strength vs. ICICIBANK softness and implications for BANKNIFTY’s relative trend.
+
+    High-turnover names (e.g., ADANIPOWER, ITC) for confirmation of accumulation/distribution on subsequent prints.
+
+  How to use this
+
+    Map exposures to sector leadership/pressure noted above; adjust risk only within your pre-defined framework.
+
+    Incorporate the hourly breadth and volume context (11:00 trough, 12:00 expansion) into intraday timing and risk checks.
+
+    Cross-reference movers with Stage/Signal markers in the platform for research validation; no trade recommendations are implied.
+
+    Methodology note: Intraday 15-minute bars; commentary grounded in computed facts from the stored universe (66 stocks). Coverage may not represent full NSE-wide breadth.
+
+    Disclosure: For research and learning only; this is not investment advice.
+
+  Regards,
+
+  Agent Adda
+
+  ShunyaAI · NSE Market Intelligence
+
+Not investment advice. For research and learning only. NSE EOD + live snapshot data.

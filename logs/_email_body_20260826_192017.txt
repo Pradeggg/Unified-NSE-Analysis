@@ -1,0 +1,56 @@
+Agent Adda
+      Wed, 26 Aug 2026 · 19:20 IST
+
+        Report · stage2_tracker.html · mode: both
+
+  Stage 2 Breakout Tracker — 26 Aug 2026
+
+  EOD Wednesday, 26 Aug 2026 · Coverage: 2,632 NSE names · Methodology: stage2-fund-ready-v2
+
+    Market read: Stage 2 cohort closed at 380 (−2 d/d) amid mixed rotations; overbought readings remain elevated across several leaders.
+
+  Key takeaways
+
+    Breadth: Stage 2 at 380 (−2 vs 25 Aug). Recent daily changes: +79 (24 Aug), −74 (25 Aug), −2 (26 Aug) — net +3 over three sessions, signaling momentum cooling post 24 Aug spike.
+
+    Daily transitions (vs 25 Aug): S1→S2: 6, S3→S2: 12, S2→S3: 19, S3→S4: 14; new entrants: 19, exits: 21; total stage changes: 71.
+
+    Stage distribution: S1: 767 (−6), S2: 380 (−2), S3: 1,019 (−7), S4: 466 (+14) — downtrend cohort rose, while advancing cohort was broadly stable.
+
+    Fund‑ready screen (fundamental gate ≥65): 15 names; 13 rated ADD and 2 ACCUMULATE (MONARCH, GLENMARK), spanning Pharma, Consumer Durables, Capital Markets/Services, IT Services, and Energy-related names.
+
+    Risk/entry quality: Multiple leaders flagged NO CHASE on high RSI (e.g., SETL 83, RUBICON 72, SHILPAMED 81, QUESS 82, COMSYN 86, RATNAVEER 87) — lower‑risk entries preferred.
+
+  What to watch
+
+    If S2→S3 outflows continue to exceed inflows to S2 (today: 19 vs 18), which would pressure uptrend breadth.
+
+    RSI normalization for extended names; monitor pullbacks toward 20–50 DMA for risk‑managed entries.
+
+    Fundamental data gaps on RESEARCH REQUIRED names (e.g., MOREPENLAB, PREMIERPOL) before any inclusion in model portfolios.
+
+    Sector leadership durability in Pharma & Biotech, Consumer Durables, Capital Markets/Services, and select IT/Industrial names.
+
+  Action items
+
+    Prioritize diligence on the 13 ADD‑rated fund‑ready candidates (e.g., QPOWER, CUPID, CGCL, NAM‑INDIA, VADILALIND, AJANTPHARM, LAURUSLABS, RADICO, SJS, TBZ, DEEPINDS, BLSE, GANDHAR).
+
+    Maintain an ACCUMULATE watch on MONARCH and GLENMARK; reassess on constructive pullbacks.
+
+    Avoid chasing high‑RSI breakouts; set alerts near rising 20/50‑DMA for staged adds.
+
+    Track daily S1→S2 and S2→S3 counts and weekly new entrants (47 this week) for confirmation of breadth.
+
+    Use the report’s VCP setups and Weekly View to refine timing and watchlists.
+
+  Sources: PostgreSQL/scores.stage_snapshots + market.equity_eod; SQLite stage_changes (generated 2026‑08‑26 19:07 IST).
+
+  Attachment: Stage 2 Breakout Tracker — 26 Aug 2026 (full details). This is research-only and does not constitute investment advice.
+
+  Regards,
+
+  Agent Adda
+
+  ShunyaAI · NSE Market Intelligence
+
+Not investment advice. For research and learning only. NSE EOD + live snapshot data.

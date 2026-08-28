@@ -1,0 +1,2127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NSE Long-term Screeners Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: "Roboto", "Google Sans", "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #212121;
+            font-weight: 400;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 100%;
+            margin: 0 auto;
+            padding: 20px;
+            width: 100%;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 3rem;
+            font-weight: 300;
+            margin-bottom: 16px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            letter-spacing: -0.5px;
+        }
+
+        .header p {
+            font-size: 1.25rem;
+            font-weight: 400;
+            opacity: 0.9;
+        }
+
+        .long-term-section, .sector-analysis-section {
+            margin: 2rem 0;
+            padding: 2rem;
+            background: #f8f9fa;
+            border-radius: 12px;
+        }
+        
+        .screeners-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+        }
+        
+        .screener-card {
+            background: white;
+            border-radius: 8px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .export-buttons {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+        
+        .export-btn {
+            padding: 0.4rem 0.8rem;
+            border: none;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .csv-btn {
+            background: #4CAF50;
+            color: white;
+        }
+        
+        .csv-btn:hover {
+            background: #45a049;
+        }
+        
+        .tradingview-btn {
+            background: #1976d2;
+            color: white;
+        }
+        
+        .tradingview-btn:hover {
+            background: #1565c0;
+        }
+        
+        /* Multi-Timeframe Analysis Styles */
+        .analysis-section {
+            margin-top: 2rem;
+            padding: 2rem 0;
+        }
+        
+        .timeframe-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+        }
+        
+        .timeframe-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            border: 1px solid #e0e0e0;
+        }
+        
+        .timeframe-header h3 {
+            color: #2c3e50;
+            margin-bottom: 0.5rem;
+            font-size: 1.2rem;
+        }
+        
+        .timeframe-header p {
+            color: #666;
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+        }
+        
+        .timeframe-content {
+            min-height: 200px;
+        }
+        
+        /* Price Action Analysis Styles */
+        .price-action-section {
+            margin-top: 3rem;
+            padding: 2rem 0;
+        }
+        
+        .price-action-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+        }
+        
+        .price-action-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            border: 1px solid #e0e0e0;
+        }
+        
+        .price-action-header h3 {
+            color: #2c3e50;
+            margin-bottom: 0.5rem;
+            font-size: 1.2rem;
+        }
+        
+        .price-action-header p {
+            color: #666;
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+        }
+        
+        .price-action-content {
+            min-height: 200px;
+        }
+        
+        /* Timeframe Analysis Styles */
+        .timeframe-stocks {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+        
+        .timeframe-stock {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 1rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .timeframe-stock:hover {
+            background: #e3f2fd;
+            border-color: #1976d2;
+            transform: translateY(-1px);
+        }
+        
+        .stock-symbol {
+            font-weight: 600;
+            color: #1976d2;
+            font-size: 1.1rem;
+        }
+        
+        .stock-price {
+            font-weight: 500;
+            color: #2c3e50;
+            font-size: 1rem;
+            margin: 0.25rem 0;
+        }
+        
+        .stock-metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+        
+        .metric {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+        
+        .metric .label {
+            font-size: 0.75rem;
+            color: #666;
+            font-weight: 500;
+        }
+        
+        .metric .value {
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+        
+        .metric .value.strong {
+            color: #4CAF50;
+        }
+        
+        .metric .value.medium {
+            color: #FF9800;
+        }
+        
+        .metric .value.weak {
+            color: #F44336;
+        }
+        
+        .metric .value.overbought {
+            color: #F44336;
+        }
+        
+        .metric .value.oversold {
+            color: #4CAF50;
+        }
+        
+        .metric .value.normal {
+            color: #2196F3;
+        }
+        
+        .metric .value.pattern {
+            color: #9C27B0;
+        }
+        
+        /* Price Action Analysis Styles */
+        .price-action-stocks {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+        
+        .price-action-stock {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 1rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .price-action-stock:hover {
+            background: #e3f2fd;
+            border-color: #1976d2;
+            transform: translateY(-1px);
+        }
+        
+        .stock-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+        }
+        
+        .analysis-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 0.5rem;
+        }
+        
+        .detail-row {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+        
+        .detail-row .label {
+            font-size: 0.75rem;
+            color: #666;
+            font-weight: 500;
+        }
+        
+        .detail-row .value {
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+        
+        .detail-row .value.strong {
+            color: #4CAF50;
+        }
+        
+        .detail-row .value.medium {
+            color: #FF9800;
+        }
+        
+        .detail-row .value.weak {
+            color: #F44336;
+        }
+        
+        .detail-row .value.breakout {
+            color: #4CAF50;
+        }
+        
+        .detail-row .value.no-breakout {
+            color: #F44336;
+        }
+        
+        .detail-row .value.yes {
+            color: #4CAF50;
+        }
+        
+        .detail-row .value.no {
+            color: #F44336;
+        }
+        
+        .screener-header h3 {
+            color: #2c3e50;
+            margin-bottom: 0.5rem;
+        }
+        
+        .screener-header p {
+            color: #7f8c8d;
+            font-size: 0.9rem;
+        }
+        
+        .screener-list {
+            margin-top: 1rem;
+        }
+        
+        .screener-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid #ecf0f1;
+        }
+        
+        .screener-item:last-child {
+            border-bottom: none;
+        }
+        
+        .stock-info {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .stock-symbol {
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        
+        .stock-price {
+            font-size: 0.9rem;
+            color: #7f8c8d;
+        }
+        
+        .metric-value {
+            font-weight: 600;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+        
+        .metric-value.rs {
+            background: #e8f5e8;
+            color: #27ae60;
+        }
+        
+        .metric-value.score {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+        
+        .sector-performance-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 2rem;
+            margin-top: 1.5rem;
+        }
+        
+        .sector-chart-container, .sector-insights {
+            background: white;
+            border-radius: 8px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .sector-list {
+            margin-top: 1rem;
+        }
+        
+        .sector-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid #ecf0f1;
+        }
+        
+        .sector-item:last-child {
+            border-bottom: none;
+        }
+        
+        .sector-name {
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        
+        .sector-performance {
+            display: flex;
+            gap: 1rem;
+            font-size: 0.9rem;
+        }
+        
+        .perf-1m, .perf-6m {
+            color: #7f8c8d;
+        }
+        
+        .perf-3m.positive {
+            color: #27ae60;
+            font-weight: 600;
+        }
+        
+        .perf-3m.negative {
+            color: #e74c3c;
+            font-weight: 600;
+        }
+        
+        .insights-section {
+            margin-bottom: 1.5rem;
+        }
+        
+        .insights-section h4 {
+            color: #2c3e50;
+            margin-bottom: 0.5rem;
+        }
+        
+        .insights-section ul {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .insights-section li {
+            padding: 0.25rem 0;
+            color: #34495e;
+        }
+        
+        .no-data {
+            text-align: center;
+            color: #7f8c8d;
+            font-style: italic;
+            padding: 2rem;
+        }
+        
+        .loading {
+            text-align: center;
+            color: #7f8c8d;
+            font-style: italic;
+            padding: 1rem;
+        }
+        
+        .info-text {
+            text-align: center;
+            color: #7f8c8d;
+            font-style: italic;
+            padding: 2rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 2px dashed #dee2e6;
+        }
+        
+        /* Chart Styles */
+        .chart-section {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #dee2e6;
+        }
+        
+        .chart-wrapper {
+            position: relative;
+            height: 300px;
+            margin-bottom: 1rem;
+        }
+        
+        .volume-chart-wrapper {
+            position: relative;
+            height: 100px;
+        }
+        
+        .chart-controls {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            justify-content: center;
+        }
+        
+        .chart-btn {
+            padding: 0.5rem 1rem;
+            border: 1px solid #dee2e6;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+        
+        .chart-btn:hover {
+            background: #e9ecef;
+        }
+        
+        .chart-btn.active {
+            background: #007bff;
+            color: white;
+            border-color: #007bff;
+        }
+        
+        .chart-period-info {
+            text-align: center;
+            color: #6c757d;
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+        }
+        
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 200px;
+            color: #6c757d;
+            font-style: italic;
+        }
+        
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #007bff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+        
+        .modal-content {
+            background-color: white;
+            margin: 2% auto;
+            padding: 2rem;
+            border-radius: 12px;
+            width: 95%;
+            max-width: 1200px;
+            max-height: 90vh;
+            overflow-y: auto;
+            position: relative;
+        }
+        
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            position: absolute;
+            right: 1rem;
+            top: 1rem;
+            cursor: pointer;
+        }
+        
+        .close:hover {
+            color: #000;
+        }
+        
+        .modal-header {
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        .modal-header h2 {
+            color: #2c3e50;
+            margin-bottom: 0.5rem;
+        }
+        
+        .modal-header p {
+            color: #6c757d;
+            margin: 0;
+        }
+        
+        @media (max-width: 768px) {
+            .sector-performance-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .screeners-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎯 NSE Long-term Screeners</h1>
+            <p>Advanced pattern recognition and trend analysis for long-term investment opportunities</p>
+            <p>Analysis Date: September 29, 2025</p>
+        </div>
+
+                 <!-- Long-term Screeners Section -->
+                 <div class="long-term-section">
+                     <div class="section-header">
+                         <h2>🎯 Enhanced Long-term Perspective Screeners</h2>
+                         <p>Advanced pattern recognition and trend analysis for long-term investment opportunities</p>
+                     </div>
+
+                     <div class="screeners-grid">
+                         <div class="screener-card">
+                             <div class="screener-header">
+                                 <h3>💪 Strong Monthly RS</h3>
+                                 <p>Stocks with relative strength > 1.5 vs NIFTY500</p>
+                                 <div class="export-buttons">
+                                     <button onclick="exportToCSV('strongRS')" class="export-btn csv-btn">📊 CSV</button>
+                                     <button onclick="exportSymbolsForTradingView('strongRS')" class="export-btn tradingview-btn">📈 TradingView</button>
+                                 </div>
+                             </div>
+                             <div class="screener-content" id="strongRSContent">
+                                 <div class="loading">Loading...</div>
+                             </div>
+                         </div>
+
+                         <div class="screener-card">
+                             <div class="screener-header">
+                                 <h3>🚀 Consolidation Breakouts</h3>
+                                 <p>Stocks breaking out of 3-4 month consolidation</p>
+                                 <div class="export-buttons">
+                                     <button onclick="exportToCSV('breakouts')" class="export-btn csv-btn">📊 CSV</button>
+                                     <button onclick="exportSymbolsForTradingView('breakouts')" class="export-btn tradingview-btn">📈 TradingView</button>
+                                 </div>
+                             </div>
+                             <div class="screener-content" id="breakoutsContent">
+                                 <div class="loading">Loading...</div>
+                             </div>
+                         </div>
+
+                         <div class="screener-card">
+                             <div class="screener-header">
+                                 <h3>☕ Cup & Handle Patterns</h3>
+                                 <p>Classic bullish continuation patterns</p>
+                                 <div class="export-buttons">
+                                     <button onclick="exportToCSV('cupHandle')" class="export-btn csv-btn">📊 CSV</button>
+                                     <button onclick="exportSymbolsForTradingView('cupHandle')" class="export-btn tradingview-btn">📈 TradingView</button>
+                                 </div>
+                             </div>
+                             <div class="screener-content" id="cupHandleContent">
+                                 <div class="loading">Loading...</div>
+                             </div>
+                         </div>
+
+                         <div class="screener-card">
+                             <div class="screener-header">
+                                 <h3>📈 Long-term Uptrends</h3>
+                                 <p>Stocks in consistent 6-month uptrends</p>
+                                 <div class="export-buttons">
+                                     <button onclick="exportToCSV('uptrends')" class="export-btn csv-btn">📊 CSV</button>
+                                     <button onclick="exportSymbolsForTradingView('uptrends')" class="export-btn tradingview-btn">📈 TradingView</button>
+                                 </div>
+                             </div>
+                             <div class="screener-content" id="uptrendsContent">
+                                 <div class="loading">Loading...</div>
+                             </div>
+                         </div>
+
+                         <div class="screener-card">
+                             <div class="screener-header">
+                                 <h3>⚡ Momentum Breakouts</h3>
+                                 <p>Stocks with strong momentum + volume surge</p>
+                                 <div class="export-buttons">
+                                     <button onclick="exportToCSV('momentum')" class="export-btn csv-btn">📊 CSV</button>
+                                     <button onclick="exportSymbolsForTradingView('momentum')" class="export-btn tradingview-btn">📈 TradingView</button>
+                                 </div>
+                             </div>
+                             <div class="screener-content" id="momentumContent">
+                                 <div class="loading">Loading...</div>
+                             </div>
+                         </div>
+
+                         <div class="screener-card">
+                             <div class="screener-header">
+                                 <h3>🎯 Support Bounce</h3>
+                                 <p>Stocks bouncing from key support levels</p>
+                                 <div class="export-buttons">
+                                     <button onclick="exportToCSV('support')" class="export-btn csv-btn">📊 CSV</button>
+                                     <button onclick="exportSymbolsForTradingView('support')" class="export-btn tradingview-btn">📈 TradingView</button>
+                                 </div>
+                             </div>
+                             <div class="screener-content" id="supportContent">
+                                 <div class="loading">Loading...</div>
+                             </div>
+                         </div>
+
+                         <div class="screener-card">
+                             <div class="screener-header">
+                                 <h3>📊 Volume Accumulation</h3>
+                                 <p>Stocks showing volume accumulation patterns</p>
+                                 <div class="export-buttons">
+                                     <button onclick="exportToCSV('volume')" class="export-btn csv-btn">📊 CSV</button>
+                                     <button onclick="exportSymbolsForTradingView('volume')" class="export-btn tradingview-btn">📈 TradingView</button>
+                                 </div>
+                             </div>
+                             <div class="screener-content" id="volumeContent">
+                                 <div class="loading">Loading...</div>
+                             </div>
+                         </div>
+
+                         <div class="screener-card">
+                             <div class="screener-header">
+                                 <h3>💰 Earnings Momentum</h3>
+                                 <p>Stocks with accelerating price momentum</p>
+                                 <div class="export-buttons">
+                                     <button onclick="exportToCSV('earnings')" class="export-btn csv-btn">📊 CSV</button>
+                                     <button onclick="exportSymbolsForTradingView('earnings')" class="export-btn tradingview-btn">📈 TradingView</button>
+                                 </div>
+                             </div>
+                             <div class="screener-content" id="earningsContent">
+                                 <div class="loading">Loading...</div>
+                             </div>
+                         </div>
+
+                         <div class="screener-card">
+                             <div class="screener-header">
+                                 <h3>🏆 52-Week High Breakouts</h3>
+                                 <p>Stocks breaking or near 52-week highs</p>
+                                 <div class="export-buttons">
+                                     <button onclick="exportToCSV('week52')" class="export-btn csv-btn">📊 CSV</button>
+                                     <button onclick="exportSymbolsForTradingView('week52')" class="export-btn tradingview-btn">📈 TradingView</button>
+                                 </div>
+                             </div>
+                             <div class="screener-content" id="week52Content">
+                                 <div class="loading">Loading...</div>
+                             </div>
+                         </div>
+                     </div>
+                 </div>
+
+        <!-- Index Rotation Analysis -->
+        <div class="sector-analysis-section">
+            <div class="section-header">
+                <h2>🔄 Index Rotation Analysis</h2>
+                <p>Performance analysis across major market indices</p>
+            </div>
+            
+            <div class="sector-performance-grid">
+                <div class="sector-chart-container">
+                    <h3>📊 Index Performance (3M)</h3>
+                    <div class="sector-chart" id="indexChart">
+                        <div class="loading">Loading index data...</div>
+                    </div>
+                </div>
+                
+                <div class="sector-insights">
+                    <h3>💡 Rotation Insights</h3>
+                    <div class="insights-content" id="indexInsights">
+                        <div class="loading">Analyzing index rotation...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stock Details Modal -->
+    <div id="stockModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal()">&times;</span>
+            <div class="modal-header">
+                <h2 id="modalStockSymbol">Stock Details</h2>
+                <p id="modalStockInfo">Loading stock information...</p>
+            </div>
+            <div class="chart-section">
+                <div class="chart-controls">
+                    <button class="chart-btn active" data-period="1M">1M</button>
+                    <button class="chart-btn" data-period="3M">3M</button>
+                    <button class="chart-btn" data-period="6M">6M</button>
+                    <button class="chart-btn" data-period="1Y">1Y</button>
+                    <button class="chart-btn" data-period="ALL">ALL</button>
+                </div>
+                <div class="chart-period-info" id="chartPeriodInfo">
+                    Showing: 1M data
+                </div>
+                <div class="chart-wrapper">
+                    <div class="loading" id="chartLoading">
+                        <div class="spinner"></div>
+                        Loading chart data...
+                    </div>
+                    <canvas id="stockChart" style="display: none;"></canvas>
+                </div>
+                <div class="volume-chart-wrapper">
+                    <canvas id="volumeChart" style="display: none;"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Multi-Timeframe Analysis Section -->
+        <div class="analysis-section">
+            <div class="section-header">
+                <h2>📊 Multi-Timeframe Analysis</h2>
+                <p>Comprehensive bullish pattern analysis across Daily, Weekly, 14-day, and 30-day timeframes</p>
+            </div>
+            
+            <div class="timeframe-grid">
+                <div class="timeframe-card">
+                    <div class="timeframe-header">
+                        <h3>📈 Daily Bullish Patterns</h3>
+                        <p>Stocks showing bullish momentum on daily charts</p>
+                        <div class="export-buttons">
+                            <button onclick="exportToCSV('dailyBullish')" class="export-btn csv-btn">📊 CSV</button>
+                            <button onclick="exportSymbolsForTradingView('dailyBullish')" class="export-btn tradingview-btn">📈 TradingView</button>
+                        </div>
+                    </div>
+                    <div class="timeframe-content" id="dailyBullishContent">
+                        <div class="loading">Analyzing daily patterns...</div>
+                    </div>
+                </div>
+                
+                <div class="timeframe-card">
+                    <div class="timeframe-header">
+                        <h3>📅 Weekly Bullish Patterns</h3>
+                        <p>Stocks with strong weekly momentum</p>
+                        <div class="export-buttons">
+                            <button onclick="exportToCSV('weeklyBullish')" class="export-btn csv-btn">📊 CSV</button>
+                            <button onclick="exportSymbolsForTradingView('weeklyBullish')" class="export-btn tradingview-btn">📈 TradingView</button>
+                        </div>
+                    </div>
+                    <div class="timeframe-content" id="weeklyBullishContent">
+                        <div class="loading">Analyzing weekly patterns...</div>
+                    </div>
+                </div>
+                
+                <div class="timeframe-card">
+                    <div class="timeframe-header">
+                        <h3>📊 14-Day Bullish Patterns</h3>
+                        <p>Short-term bullish momentum analysis</p>
+                        <div class="export-buttons">
+                            <button onclick="exportToCSV('fourteenDayBullish')" class="export-btn csv-btn">📊 CSV</button>
+                            <button onclick="exportSymbolsForTradingView('fourteenDayBullish')" class="export-btn tradingview-btn">📈 TradingView</button>
+                        </div>
+                    </div>
+                    <div class="timeframe-content" id="fourteenDayBullishContent">
+                        <div class="loading">Analyzing 14-day patterns...</div>
+                    </div>
+                </div>
+                
+                <div class="timeframe-card">
+                    <div class="timeframe-header">
+                        <h3>📈 30-Day Bullish Patterns</h3>
+                        <p>Medium-term bullish trend analysis</p>
+                        <div class="export-buttons">
+                            <button onclick="exportToCSV('thirtyDayBullish')" class="export-btn csv-btn">📊 CSV</button>
+                            <button onclick="exportSymbolsForTradingView('thirtyDayBullish')" class="export-btn tradingview-btn">📈 TradingView</button>
+                        </div>
+                    </div>
+                    <div class="timeframe-content" id="thirtyDayBullishContent">
+                        <div class="loading">Analyzing 30-day patterns...</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Price Action Analysis Section -->
+            <div class="price-action-section">
+                <div class="section-header">
+                    <h2>🎯 Price Action Analysis</h2>
+                    <p>Advanced price action patterns and candlestick analysis</p>
+                </div>
+                
+                <div class="price-action-grid">
+                    <div class="price-action-card">
+                        <div class="price-action-header">
+                            <h3>🕯️ Bullish Candlestick Patterns</h3>
+                            <p>Classic bullish reversal and continuation patterns</p>
+                            <div class="export-buttons">
+                                <button onclick="exportToCSV('bullishCandlestick')" class="export-btn csv-btn">📊 CSV</button>
+                                <button onclick="exportSymbolsForTradingView('bullishCandlestick')" class="export-btn tradingview-btn">📈 TradingView</button>
+                            </div>
+                        </div>
+                        <div class="price-action-content" id="bullishCandlestickContent">
+                            <div class="loading">Analyzing candlestick patterns...</div>
+                        </div>
+                    </div>
+                    
+                    <div class="price-action-card">
+                        <div class="price-action-header">
+                            <h3>📏 Support & Resistance Levels</h3>
+                            <p>Key price levels and breakout analysis</p>
+                            <div class="export-buttons">
+                                <button onclick="exportToCSV('supportResistance')" class="export-btn csv-btn">📊 CSV</button>
+                                <button onclick="exportSymbolsForTradingView('supportResistance')" class="export-btn tradingview-btn">📈 TradingView</button>
+                            </div>
+                        </div>
+                        <div class="price-action-content" id="supportResistanceContent">
+                            <div class="loading">Analyzing support/resistance...</div>
+                        </div>
+                    </div>
+                    
+                    <div class="price-action-card">
+                        <div class="price-action-header">
+                            <h3>🌊 Volume Analysis</h3>
+                            <p>Volume patterns and institutional activity</p>
+                            <div class="export-buttons">
+                                <button onclick="exportToCSV('volumeAnalysis')" class="export-btn csv-btn">📊 CSV</button>
+                                <button onclick="exportSymbolsForTradingView('volumeAnalysis')" class="export-btn tradingview-btn">📈 TradingView</button>
+                            </div>
+                        </div>
+                        <div class="price-action-content" id="volumeAnalysisContent">
+                            <div class="loading">Analyzing volume patterns...</div>
+                        </div>
+                    </div>
+                    
+                    <div class="price-action-card">
+                        <div class="price-action-header">
+                            <h3>⚡ Momentum Breakouts</h3>
+                            <p>Price and volume momentum analysis</p>
+                            <div class="export-buttons">
+                                <button onclick="exportToCSV('momentumBreakout')" class="export-btn csv-btn">📊 CSV</button>
+                                <button onclick="exportSymbolsForTradingView('momentumBreakout')" class="export-btn tradingview-btn">📈 TradingView</button>
+                            </div>
+                        </div>
+                        <div class="price-action-content" id="momentumBreakoutContent">
+                            <div class="loading">Analyzing momentum breakouts...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Long-term screeners data
+        const longTermData = {
+            strongRS: [{symbol: 'STEELCAS', price: 215.33, rs: 23.72, score: 5.3}, {symbol: 'NAZARA', price: 266, rs: 23.34, score: 12.7}, {symbol: 'ZYDUSWELL', price: 486.5, rs: 22.04, score: 8.7}, {symbol: 'ADANIPOWER', price: 146.65, rs: 21.91, score: 5.3}, {symbol: 'SANDUMA', price: 167.95, rs: 18.74, score: 15.3}, {symbol: 'PATANJALI', price: 597.1, rs: 18.52, score: 6}, {symbol: 'PARAS', price: 670.8, rs: 17.61, score: 16.7}, {symbol: 'INDIAGLYCO', price: 831.5, rs: 17.59, score: 12.7}, {symbol: 'GODFRYPHLP', price: 3512, rs: 17.57, score: 23.3}, {symbol: 'PIDILITIND', price: 1466.8, rs: 15.25, score: 15.3}],
+            breakouts: [],
+            cupHandle: [{symbol: 'NAM-INDIA', price: 871, score: 60}, {symbol: 'IOC', price: 149.31, score: 52}, {symbol: 'VEDL', price: 452.25, score: 44}],
+            uptrends: [{symbol: 'CHEMCON', price: 258.61, score: 83.3}, {symbol: 'BLACKBUCK', price: 633.3, score: 76}, {symbol: 'COMSYN', price: 153.74, score: 76}, {symbol: 'CHENNPETRO', price: 763.35, score: 73.3}, {symbol: 'STYLEBAAZA', price: 370.3, score: 71.3}, {symbol: 'ASHAPURMIN', price: 669.6, score: 70.7}, {symbol: 'AVL', price: 550.6, score: 70.7}, {symbol: 'BHARATGEAR', price: 146.66, score: 70}, {symbol: 'GANDHITUBE', price: 951.45, score: 70}, {symbol: 'VSSL', price: 283.35, score: 70}],
+            momentum: [{symbol: 'CHEMCON', price: 258.61, score: 83.3}, {symbol: 'CYBERTECH', price: 195.11, score: 70.7}, {symbol: 'BHARATGEAR', price: 146.66, score: 70}, {symbol: 'BBOX', price: 520.55, score: 70}, {symbol: 'SUNDARMHLD', price: 634.6, score: 68.7}, {symbol: 'GOLDETFADD', price: 112.62, score: 66}, {symbol: 'SAMMAANCAP', price: 154.27, score: 65.3}, {symbol: 'ANANTRAJ', price: 699.15, score: 65.3}, {symbol: 'AGARWALEYE', price: 498.75, score: 63.3}, {symbol: 'UNIONGOLD', price: 113.95, score: 63.3}],
+            support: [{symbol: 'BANARBEADS', price: 133.72, score: 62.7}, {symbol: 'DBEIL', price: 170.09, score: 61.3}, {symbol: 'BHARATFORG', price: 1214, score: 60}, {symbol: 'NATCAPSUQ', price: 276.93, score: 58}, {symbol: 'BAJAJFINSV', price: 2024.7, score: 57.3}, {symbol: 'COALINDIA', price: 388.3, score: 57.3}, {symbol: 'CHOLAFIN', price: 1591.7, score: 57.3}, {symbol: 'SPECIALITY', price: 138.87, score: 57.3}, {symbol: 'CHOLAHLDNG', price: 1937.3, score: 54}, {symbol: 'HINDPETRO', price: 441.75, score: 52}],
+            volume: [{symbol: 'COMSYN', price: 153.74, score: 76}, {symbol: 'GANDHITUBE', price: 951.45, score: 70}, {symbol: 'VSSL', price: 283.35, score: 70}, {symbol: 'MOLDTECH', price: 180.57, score: 67.3}, {symbol: 'CGPOWER', price: 747.3, score: 66}, {symbol: 'GOLDETFADD', price: 112.62, score: 66}, {symbol: 'SAMMAANCAP', price: 154.27, score: 65.3}, {symbol: 'HINDZINC', price: 466.15, score: 64}, {symbol: 'UNIONGOLD', price: 113.95, score: 63.3}, {symbol: 'SILVERETF', price: 140.82, score: 62.7}],
+            earnings: [{symbol: 'SUNDARMHLD', price: 634.6, score: 68.7}, {symbol: 'DBEIL', price: 170.09, score: 61.3}, {symbol: 'NATCAPSUQ', price: 276.93, score: 58}, {symbol: 'SUBROS', price: 1194.2, score: 56}, {symbol: 'BANCOINDIA', price: 860.55, score: 54}, {symbol: 'HITECH', price: 114.93, score: 46}, {symbol: 'MTARTECH', price: 1907.9, score: 45.3}],
+            week52: [{symbol: 'FORTIS', price: 970.75, score: 69.3}, {symbol: 'SUNDARMHLD', price: 634.6, score: 68.7}, {symbol: 'GOLDETFADD', price: 112.62, score: 66}, {symbol: 'INDIANB', price: 724.6, score: 62.7}, {symbol: 'SILVERETF', price: 140.82, score: 62.7}, {symbol: 'SHRIPISTON', price: 2701.2, score: 62}, {symbol: 'SILVERBEES', price: 139.06, score: 61.3}, {symbol: 'USHAMART', price: 476.45, score: 61.3}, {symbol: 'SBISILVER', price: 142.37, score: 61.3}, {symbol: 'SILVER', price: 146.34, score: 61.3}]
+        };
+
+        // Multi-Timeframe Analysis Data
+        const timeframeData = {
+            dailyBullish: [
+                {symbol: 'CHEMCON', price: 258.61, momentum: 23.84, rsi: 63.7, pattern: 'Bullish Flag'},
+                {symbol: 'BLACKBUCK', price: 633.3, momentum: 7.64, rsi: 62.3, pattern: 'Ascending Triangle'},
+                {symbol: 'COMSYN', price: 153.74, momentum: 6.99, rsi: 62.2, pattern: 'Bullish Pennant'},
+                {symbol: 'CHENNPETRO', price: 763.35, momentum: 18.28, rsi: 68.3, pattern: 'Cup and Handle'},
+                {symbol: 'STYLEBAAZA', price: 370.3, momentum: 14.11, rsi: 65.5, pattern: 'Bullish Breakout'}
+            ],
+            weeklyBullish: [
+                {symbol: 'BHARATGEAR', price: 146.66, momentum: 64.69, rsi: 85.1, pattern: 'Strong Uptrend'},
+                {symbol: 'FORTIS', price: 970.75, momentum: 6.50, rsi: 61.6, pattern: 'Bullish Channel'},
+                {symbol: 'ATHERENERG', price: 580.5, momentum: 28.96, rsi: 72.0, pattern: 'Momentum Breakout'},
+                {symbol: 'BPCL', price: 338.1, momentum: 9.70, rsi: 48.3, pattern: 'Support Bounce'},
+                {symbol: 'CGPOWER', price: 747.3, momentum: 7.63, rsi: 56.3, pattern: 'Bullish Reversal'}
+            ],
+            fourteenDayBullish: [
+                {symbol: 'SUNDARMHLD', price: 634.6, momentum: 35.45, rsi: 70.5, pattern: 'Volume Breakout'},
+                {symbol: 'GANDHITUBE', price: 951.45, momentum: 12.07, rsi: 60.8, pattern: 'Bullish Continuation'},
+                {symbol: 'VSSL', price: 283.35, momentum: 11.84, rsi: 65.0, pattern: 'Trend Following'},
+                {symbol: 'CENTURYPLY', price: 786.75, momentum: 5.41, rsi: 49.9, pattern: 'Support Hold'},
+                {symbol: 'MOLDTECH', price: 180.57, momentum: 8.2, rsi: 58.1, pattern: 'Bullish Flag'}
+            ],
+            thirtyDayBullish: [
+                {symbol: 'CYBERTECH', price: 195.11, momentum: 26.47, rsi: 77.9, pattern: 'Strong Momentum'},
+                {symbol: 'ASHAPURMIN', price: 669.6, momentum: 29.75, rsi: 70.5, pattern: 'Trend Acceleration'},
+                {symbol: 'AVL', price: 550.6, momentum: 9.43, rsi: 60.6, pattern: 'Bullish Consolidation'},
+                {symbol: 'CHOICEIN', price: 788.6, momentum: -0.93, rsi: 45.7, pattern: 'Support Test'},
+                {symbol: 'BBOX', price: 520.55, momentum: 3.74, rsi: 57.8, pattern: 'Bullish Setup'}
+            ]
+        };
+
+        // Price Action Analysis Data
+        const priceActionData = {
+            bullishCandlestick: [
+                {symbol: 'CHEMCON', price: 258.61, pattern: 'Hammer', strength: 'Strong', confirmation: 'Volume'},
+                {symbol: 'BLACKBUCK', price: 633.3, pattern: 'Bullish Engulfing', strength: 'Medium', confirmation: 'RSI'},
+                {symbol: 'COMSYN', price: 153.74, pattern: 'Morning Star', strength: 'Strong', confirmation: 'Volume'},
+                {symbol: 'CHENNPETRO', price: 763.35, pattern: 'Piercing Line', strength: 'Medium', confirmation: 'Momentum'},
+                {symbol: 'STYLEBAAZA', price: 370.3, pattern: 'Bullish Harami', strength: 'Weak', confirmation: 'Trend'}
+            ],
+            supportResistance: [
+                {symbol: 'BHARATGEAR', price: 146.66, support: 140, resistance: 155, breakout: true, strength: 'Strong'},
+                {symbol: 'FORTIS', price: 970.75, support: 950, resistance: 1000, breakout: false, strength: 'Medium'},
+                {symbol: 'ATHERENERG', price: 580.5, support: 550, resistance: 600, breakout: true, strength: 'Strong'},
+                {symbol: 'BPCL', price: 338.1, support: 330, resistance: 350, breakout: false, strength: 'Weak'},
+                {symbol: 'CGPOWER', price: 747.3, support: 720, resistance: 780, breakout: false, strength: 'Medium'}
+            ],
+            volumeAnalysis: [
+                {symbol: 'SUNDARMHLD', price: 634.6, volumeRatio: 2.3, institutional: true, pattern: 'Accumulation'},
+                {symbol: 'GANDHITUBE', price: 951.45, volumeRatio: 1.8, institutional: true, pattern: 'Distribution'},
+                {symbol: 'VSSL', price: 283.35, volumeRatio: 1.5, institutional: false, pattern: 'Breakout'},
+                {symbol: 'CENTURYPLY', price: 786.75, volumeRatio: 0.9, institutional: false, pattern: 'Consolidation'},
+                {symbol: 'MOLDTECH', price: 180.57, volumeRatio: 1.2, institutional: false, pattern: 'Accumulation'}
+            ],
+            momentumBreakout: [
+                {symbol: 'CYBERTECH', price: 195.11, momentum: 26.47, volume: 2.1, breakout: true, strength: 'Strong'},
+                {symbol: 'ASHAPURMIN', price: 669.6, momentum: 29.75, volume: 1.8, breakout: true, strength: 'Strong'},
+                {symbol: 'AVL', price: 550.6, momentum: 9.43, volume: 1.3, breakout: false, strength: 'Medium'},
+                {symbol: 'CHOICEIN', price: 788.6, momentum: -0.93, volume: 0.8, breakout: false, strength: 'Weak'},
+                {symbol: 'BBOX', price: 520.55, momentum: 3.74, volume: 1.1, breakout: false, strength: 'Medium'}
+            ]
+        };
+
+
+        // Index performance data
+        const indexData = [{index: 'Nifty Auto', perf1M: 5.91, perf3M: 10.61, perf6M: 24.91, rs: -3.09}, {index: 'Nifty Metal', perf1M: 8.39, perf3M: 2.31, perf6M: 10.19, rs: -0.67}, {index: 'Nifty FMCG', perf1M: -2.13, perf3M: 0.93, perf6M: 2.12, rs: -0.27}, {index: 'Nifty Next 50', perf1M: 3.18, perf3M: -1.3, perf6M: 7.5, rs: 0.38}, {index: 'Nifty Pharma', perf1M: -1.51, perf3M: -2.87, perf6M: 0.24, rs: 0.84}, {index: 'Nifty 100', perf1M: 1.25, perf3M: -2.89, perf6M: 6.22, rs: 0.84}, {index: 'Nifty 50', perf1M: 0.85, perf3M: -3.22, perf6M: 5.96, rs: 0.94}, {index: 'Nifty 200', perf1M: 1.28, perf3M: -3.29, perf6M: 6.57, rs: 0.96}, {index: 'Nifty 500', perf1M: 1.23, perf3M: -3.43, perf6M: 7.04, rs: 1}, {index: 'Nifty Energy', perf1M: 4.25, perf3M: -3.47, perf6M: 4.5, rs: 1.01}, {index: 'Nifty Bank', perf1M: 1.5, perf3M: -4.45, perf6M: 5.55, rs: 1.3}, {index: 'Nifty Midcap 50', perf1M: 1.49, perf3M: -5.29, perf6M: 8.79, rs: 1.54}, {index: 'NIFTY SMLCAP 250', perf1M: 0.97, perf3M: -5.8, perf6M: 9.03, rs: 1.69}, {index: 'NIFTY SMLCAP 100', perf1M: 1.87, perf3M: -7.53, perf6M: 7.96, rs: 2.19}, {index: 'NIFTY SMLCAP 50', perf1M: 1.8, perf3M: -8.19, perf6M: 7.76, rs: 2.39}, {index: 'Nifty Media', perf1M: -3.1, perf3M: -9.45, perf6M: 1.83, rs: 2.75}, {index: 'Nifty Realty', perf1M: 0.46, perf3M: -9.82, perf6M: 2.45, rs: 2.86}, {index: 'Nifty IT', perf1M: -4.23, perf3M: -13.34, perf6M: -3.06, rs: 3.89}];
+
+
+        // Chart variables
+        let stockChart = null;
+        let volumeChart = null;
+        let currentStock = null;
+
+        // Multi-Timeframe Analysis Functions
+        function populateTimeframeAnalysis() {
+            populateTimeframeCard("dailyBullishContent", timeframeData.dailyBullish, "Daily");
+            populateTimeframeCard("weeklyBullishContent", timeframeData.weeklyBullish, "Weekly");
+            populateTimeframeCard("fourteenDayBullishContent", timeframeData.fourteenDayBullish, "14-Day");
+            populateTimeframeCard("thirtyDayBullishContent", timeframeData.thirtyDayBullish, "30-Day");
+        }
+        
+        function populateTimeframeCard(containerId, data, timeframe) {
+            const container = document.getElementById(containerId);
+            
+            if (!data || data.length === 0) {
+                container.innerHTML = "<div class=\"no-data\">No stocks found for " + timeframe + " analysis</div>";
+                return;
+            }
+            
+            let html = '<div class="timeframe-stocks">';
+            data.forEach((stock, index) => {
+                const momentumClass = stock.momentum > 20 ? 'strong' : stock.momentum > 10 ? 'medium' : 'weak';
+                const rsiClass = stock.rsi > 70 ? 'overbought' : stock.rsi < 30 ? 'oversold' : 'normal';
+                
+                html += `
+                    <div class="timeframe-stock" onclick="openStockModal('${stock.symbol}')">
+                        <div class="stock-symbol">${stock.symbol}</div>
+                        <div class="stock-price">₹${stock.price}</div>
+                        <div class="stock-metrics">
+                            <div class="metric">
+                                <span class="label">Momentum:</span>
+                                <span class="value ${momentumClass}">${stock.momentum}%</span>
+                            </div>
+                            <div class="metric">
+                                <span class="label">RSI:</span>
+                                <span class="value ${rsiClass}">${stock.rsi}</span>
+                            </div>
+                            <div class="metric">
+                                <span class="label">Pattern:</span>
+                                <span class="value pattern">${stock.pattern}</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            html += '</div>';
+            container.innerHTML = html;
+        }
+        
+        // Price Action Analysis Functions
+        function populatePriceActionAnalysis() {
+            populatePriceActionCard("bullishCandlestickContent", priceActionData.bullishCandlestick, "Candlestick");
+            populatePriceActionCard("supportResistanceContent", priceActionData.supportResistance, "Support/Resistance");
+            populatePriceActionCard("volumeAnalysisContent", priceActionData.volumeAnalysis, "Volume");
+            populatePriceActionCard("momentumBreakoutContent", priceActionData.momentumBreakout, "Momentum");
+        }
+        
+        function populatePriceActionCard(containerId, data, type) {
+            const container = document.getElementById(containerId);
+            
+            if (!data || data.length === 0) {
+                container.innerHTML = "<div class=\"no-data\">No stocks found for " + type + " analysis</div>";
+                return;
+            }
+            
+            let html = '<div class="price-action-stocks">';
+            data.forEach((stock, index) => {
+                html += `
+                    <div class="price-action-stock" onclick="openStockModal('${stock.symbol}')">
+                        <div class="stock-header">
+                            <div class="stock-symbol">${stock.symbol}</div>
+                            <div class="stock-price">₹${stock.price}</div>
+                        </div>
+                        <div class="analysis-details">
+                            ${generateAnalysisDetails(stock, type)}
+                        </div>
+                    </div>
+                `;
+            });
+            html += '</div>';
+            container.innerHTML = html;
+        }
+        
+        function generateAnalysisDetails(stock, type) {
+            switch(type) {
+                case "Candlestick":
+                    return `
+                        <div class="detail-row">
+                            <span class="label">Pattern:</span>
+                            <span class="value">${stock.pattern}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="label">Strength:</span>
+                            <span class="value ${stock.strength.toLowerCase()}">${stock.strength}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="label">Confirmation:</span>
+                            <span class="value">${stock.confirmation}</span>
+                        </div>
+                    `;
+                case "Support/Resistance":
+                    return `
+                        <div class="detail-row">
+                            <span class="label">Support:</span>
+                            <span class="value">₹${stock.support}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="label">Resistance:</span>
+                            <span class="value">₹${stock.resistance}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="label">Breakout:</span>
+                            <span class="value ${stock.breakout ? 'breakout' : 'no-breakout'}">${stock.breakout ? 'Yes' : 'No'}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="label">Strength:</span>
+                            <span class="value ${stock.strength.toLowerCase()}">${stock.strength}</span>
+                        </div>
+                    `;
+                case "Volume":
+                    return `
+                        <div class="detail-row">
+                            <span class="label">Volume Ratio:</span>
+                            <span class="value">${stock.volumeRatio}x</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="label">Institutional:</span>
+                            <span class="value ${stock.institutional ? 'yes' : 'no'}">${stock.institutional ? 'Yes' : 'No'}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="label">Pattern:</span>
+                            <span class="value">${stock.pattern}</span>
+                        </div>
+                    `;
+                case "Momentum":
+                    return `
+                        <div class="detail-row">
+                            <span class="label">Momentum:</span>
+                            <span class="value">${stock.momentum}%</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="label">Volume:</span>
+                            <span class="value">${stock.volume}x</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="label">Breakout:</span>
+                            <span class="value ${stock.breakout ? 'breakout' : 'no-breakout'}">${stock.breakout ? 'Yes' : 'No'}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="label">Strength:</span>
+                            <span class="value ${stock.strength.toLowerCase()}">${stock.strength}</span>
+                        </div>
+                    `;
+                default:
+                    return '';
+            }
+        }
+
+        document.addEventListener("DOMContentLoaded", () => {
+            populateLongTermScreeners();
+            populateIndexAnalysis();
+            populateTimeframeAnalysis();
+            populatePriceActionAnalysis();
+        });
+
+        // Long-term screeners functions
+        function populateLongTermScreeners() {
+            populateScreener("strongRSContent", longTermData.strongRS, "RS");
+            populateScreener("breakoutsContent", longTermData.breakouts, "Score");
+            populateScreener("cupHandleContent", longTermData.cupHandle, "Score");
+            populateScreener("uptrendsContent", longTermData.uptrends, "Score");
+            populateScreener("momentumContent", longTermData.momentum, "Score");
+            populateScreener("supportContent", longTermData.support, "Score");
+            populateScreener("volumeContent", longTermData.volume, "Score");
+            populateScreener("earningsContent", longTermData.earnings, "Score");
+            populateScreener("week52Content", longTermData.week52, "Score");
+        }
+        
+        function populateScreener(containerId, data, metricKey) {
+            const container = document.getElementById(containerId);
+            
+            if (!data || data.length === 0) {
+                container.innerHTML = "<div class=\"no-data\">No stocks found matching this criteria</div>";
+                return;
+            }
+            
+            let html = "<div class=\"screener-list\">";
+            data.forEach((stock, index) => {
+                const metric = metricKey === "RS" ? stock.rs : stock.score;
+                const metricLabel = metricKey === "RS" ? "RS" : "Score";
+                html += "<div class=\"screener-item\" onclick=\"showStockDetails(\"" + stock.symbol + "\", " + stock.price + ", " + metric + ")\" style=\"cursor: pointer;\">";
+                html += "<div class=\"stock-info\">";
+                html += "<span class=\"stock-symbol\">" + stock.symbol + "</span>";
+                html += "<span class=\"stock-price\">₹" + stock.price.toFixed(2) + "</span>";
+                html += "</div>";
+                html += "<div class=\"metric-value " + metricKey.toLowerCase() + "\">";
+                html += metricLabel + ": " + metric.toFixed(2);
+                html += "</div>";
+                html += "</div>";
+            });
+            html += "</div>";
+            container.innerHTML = html;
+        }
+        
+        function populateIndexAnalysis() {
+            if (!indexData || indexData.length === 0) {
+                document.getElementById("indexChart").innerHTML = "<div class=\"no-data\">No index data available</div>";
+                document.getElementById("indexInsights").innerHTML = "<div class=\"no-data\">No insights available</div>";
+                return;
+            }
+            
+            // Sort by 3M performance
+            const sortedIndices = indexData.sort((a, b) => b.perf3M - a.perf3M);
+            
+            // Create index chart
+            const chartContainer = document.getElementById("indexChart");
+            let chartHtml = "<div class=\"sector-list\">";
+            sortedIndices.forEach(index => {
+                const perfClass = index.perf3M > 0 ? "positive" : "negative";
+                chartHtml += "<div class=\"sector-item\">" +
+                    "<div class=\"sector-name\">" + index.index + "</div>" +
+                    "<div class=\"sector-performance\">" +
+                        "<span class=\"perf-1m\">1M: " + index.perf1M.toFixed(1) + "%</span>" +
+                        "<span class=\"perf-3m " + perfClass + "\">3M: " + index.perf3M.toFixed(1) + "%</span>" +
+                        "<span class=\"perf-6m\">6M: " + index.perf6M.toFixed(1) + "%</span>" +
+                    "</div>" +
+                "</div>";
+            });
+            chartHtml += "</div>";
+            chartContainer.innerHTML = chartHtml;
+            
+            // Create insights
+            const insightsContainer = document.getElementById("indexInsights");
+            const top5 = sortedIndices.slice(0, 5);
+            const bottom5 = sortedIndices.slice(-5);
+            
+            let insightsHtml = "<div class=\"insights-section\">" +
+                "<h4>🏆 Top Performing Indices (3M)</h4>" +
+                "<ul>";
+            top5.forEach((index, index_num) => {
+                insightsHtml += "<li>" + (index_num + 1) + ". " + index.index + ": " + index.perf3M.toFixed(1) + "%</li>";
+            });
+            insightsHtml += "</ul></div>" +
+                "<div class=\"insights-section\">" +
+                "<h4>📉 Underperforming Indices (3M)</h4>" +
+                "<ul>";
+            bottom5.forEach((index, index_num) => {
+                insightsHtml += "<li>" + (index_num + 1) + ". " + index.index + ": " + index.perf3M.toFixed(1) + "%</li>";
+            });
+            insightsHtml += "</ul></div>";
+            insightsContainer.innerHTML = insightsHtml;
+        }
+
+        // Chart functions
+        function showStockDetails(symbol, price, metric) {
+            console.log("Showing details for:", symbol);
+            currentStock = { symbol: symbol, price: price, metric: metric };
+            
+            // Update modal header
+            document.getElementById("modalStockSymbol").textContent = symbol;
+            document.getElementById("modalStockInfo").textContent = 
+                "Price: ₹" + price.toFixed(2) + " | Metric: " + metric.toFixed(2);
+            
+            // Show modal
+            document.getElementById("stockModal").style.display = "block";
+            
+            // Load chart
+            loadStockChart(symbol);
+            setupChartControls();
+        }
+        
+        function closeModal() {
+            document.getElementById("stockModal").style.display = "none";
+            if (stockChart) {
+                stockChart.destroy();
+                stockChart = null;
+            }
+            if (volumeChart) {
+                volumeChart.destroy();
+                volumeChart = null;
+            }
+        }
+        
+        function loadStockChart(symbol) {
+            console.log("Loading chart for symbol:", symbol);
+            const chartLoading = document.getElementById("chartLoading");
+            const stockChartCanvas = document.getElementById("stockChart");
+            const volumeChartCanvas = document.getElementById("volumeChart");
+
+            console.log("Chart elements found:", {
+                chartLoading: !!chartLoading,
+                stockChartCanvas: !!stockChartCanvas,
+                volumeChartCanvas: !!volumeChartCanvas
+            });
+
+            chartLoading.style.display = "flex";
+            stockChartCanvas.style.display = "none";
+            volumeChartCanvas.style.display = "none";
+
+            console.log("Chart.js available:", typeof Chart !== "undefined");
+            if (typeof Chart === "undefined") {
+                console.error("Chart.js not loaded, using simple chart");
+                setTimeout(() => {
+                    const chartData = generateSampleChartData(symbol);
+                    console.log("Generated simple chart data:", chartData.length);
+                    createSimpleChart(chartData);
+                    chartLoading.style.display = "none";
+                    document.getElementById("stockChart").style.display = "block";
+                }, 1000);
+                return;
+            }
+
+            setTimeout(() => {
+                try {
+                    const chartData = generateSampleChartData(symbol);
+                    console.log("Generated chart data:", chartData.length, "points");
+                    createCandlestickChart(chartData);
+                    createVolumeChart(chartData);
+                    chartLoading.style.display = "none";
+                    stockChartCanvas.style.display = "block";
+                    volumeChartCanvas.style.display = "block";
+                    console.log("Charts created successfully");
+                    console.log("Chart visibility:", {
+                        stockChart: stockChartCanvas.style.display,
+                        volumeChart: volumeChartCanvas.style.display,
+                        loading: chartLoading.style.display
+                    });
+                } catch (error) {
+                    console.error("Error loading charts:", error);
+                    chartLoading.innerHTML = "<div>Error loading charts. Please try again.</div>";
+                }
+            }, 1000);
+        }
+        
+        function generateSampleChartData(symbol) {
+            const data = [];
+            const basePrice = currentStock ? currentStock.price : 100;
+            let currentPrice = basePrice;
+            const startDate = new Date();
+            startDate.setDate(startDate.getDate() - 200); // 200 days ago
+
+            for (let i = 0; i < 200; i++) {
+                const date = new Date(startDate);
+                date.setDate(date.getDate() + i);
+                
+                // Generate realistic price movement
+                const change = (Math.random() - 0.5) * 0.05;
+                const open = currentPrice;
+                const close = open * (1 + change);
+                const high = Math.max(open, close) * (1 + Math.random() * 0.02);
+                const low = Math.min(open, close) * (1 - Math.random() * 0.02);
+                const volume = Math.floor(Math.random() * 1000000) + 100000;
+                
+                data.push({
+                    x: date,
+                    o: open,
+                    h: high,
+                    l: low,
+                    c: close,
+                    v: volume
+                });
+                
+                currentPrice = close;
+            }
+            
+            return calculateMovingAverages(data);
+        }
+        
+        function calculateMovingAverages(data) {
+            const closePrices = data.map(d => d.c);
+            
+            // Calculate SMA 20
+            const sma20 = [];
+            for (let i = 0; i < data.length; i++) {
+                if (i < 19) {
+                    sma20.push(null);
+                } else {
+                    const sum = closePrices.slice(i - 19, i + 1).reduce((a, b) => a + b, 0);
+                    sma20.push(sum / 20);
+                }
+            }
+            
+            // Calculate SMA 50
+            const sma50 = [];
+            for (let i = 0; i < data.length; i++) {
+                if (i < 49) {
+                    sma50.push(null);
+                } else {
+                    const sum = closePrices.slice(i - 49, i + 1).reduce((a, b) => a + b, 0);
+                    sma50.push(sum / 50);
+                }
+            }
+            
+            // Calculate SMA 100
+            const sma100 = [];
+            for (let i = 0; i < data.length; i++) {
+                if (i < 99) {
+                    sma100.push(null);
+                } else {
+                    const sum = closePrices.slice(i - 99, i + 1).reduce((a, b) => a + b, 0);
+                    sma100.push(sum / 100);
+                }
+            }
+            
+            // Calculate SMA 200
+            const sma200 = [];
+            for (let i = 0; i < data.length; i++) {
+                if (i < 199) {
+                    sma200.push(null);
+                } else {
+                    const sum = closePrices.slice(i - 199, i + 1).reduce((a, b) => a + b, 0);
+                    sma200.push(sum / 200);
+                }
+            }
+            
+            return data.map((point, index) => ({
+                ...point,
+                sma20: sma20[index],
+                sma50: sma50[index],
+                sma100: sma100[index],
+                sma200: sma200[index]
+            }));
+        }
+        
+        function createCandlestickChart(data) {
+            console.log("Creating OHLC chart with data:", data.length, "points");
+            const ctx = document.getElementById("stockChart").getContext("2d");
+            
+            // Destroy existing chart
+            if (stockChart) {
+                stockChart.destroy();
+            }
+            
+            try {
+                // Create datasets for OHLC and Moving Averages (using numeric indices)
+                const highData = data.map((d, index) => ({ x: index, y: d.h }));
+                const lowData = data.map((d, index) => ({ x: index, y: d.l }));
+                const openData = data.map((d, index) => ({ x: index, y: d.o }));
+                const closeData = data.map((d, index) => ({ x: index, y: d.c }));
+                
+                // Moving averages data
+                const sma20Data = data.map((d, index) => ({ x: index, y: d.sma20 })).filter(d => d.y !== null);
+                const sma50Data = data.map((d, index) => ({ x: index, y: d.sma50 })).filter(d => d.y !== null);
+                const sma100Data = data.map((d, index) => ({ x: index, y: d.sma100 })).filter(d => d.y !== null);
+                const sma200Data = data.map((d, index) => ({ x: index, y: d.sma200 })).filter(d => d.y !== null);
+                
+                stockChart = new Chart(ctx, {
+                    type: "line",
+                    data: {
+                        datasets: [
+                            {
+                                label: "Close",
+                                data: closeData,
+                                borderColor: "#1976d2",
+                                backgroundColor: "rgba(25, 118, 210, 0.1)",
+                                borderWidth: 2,
+                                pointRadius: 0,
+                                fill: true,
+                                tension: 0.1
+                            },
+                            {
+                                label: "SMA 20",
+                                data: sma20Data,
+                                borderColor: "#ff9800",
+                                backgroundColor: "transparent",
+                                borderWidth: 1,
+                                pointRadius: 0,
+                                tension: 0,
+                                borderDash: [5, 5]
+                            },
+                            {
+                                label: "SMA 50",
+                                data: sma50Data,
+                                borderColor: "#9c27b0",
+                                backgroundColor: "transparent",
+                                borderWidth: 1,
+                                pointRadius: 0,
+                                tension: 0,
+                                borderDash: [5, 5]
+                            },
+                            {
+                                label: "SMA 100",
+                                data: sma100Data,
+                                borderColor: "#4caf50",
+                                backgroundColor: "transparent",
+                                borderWidth: 1,
+                                pointRadius: 0,
+                                tension: 0,
+                                borderDash: [5, 5]
+                            },
+                            {
+                                label: "SMA 200",
+                                data: sma200Data,
+                                borderColor: "#f44336",
+                                backgroundColor: "transparent",
+                                borderWidth: 2,
+                                pointRadius: 0,
+                                tension: 0,
+                                borderDash: [5, 5]
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: true,
+                                position: "top"
+                            }
+                        },
+                        scales: {
+                            x: {
+                                type: "linear",
+                                ticks: {
+                                    maxTicksLimit: 10,
+                                    callback: function(value, index, values) {
+                                        if (data[Math.floor(value)]) {
+                                            const date = new Date(data[Math.floor(value)].x);
+                                            return date.toLocaleDateString("en-US", { 
+                                                month: "short", 
+                                                day: "numeric",
+                                                year: "numeric"
+                                            });
+                                        }
+                                        return "";
+                                    }
+                                }
+                            },
+                            y: {
+                                position: "right"
+                            }
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error("Error creating OHLC chart:", error);
+                try {
+                    createLineChart(data);
+                } catch (lineError) {
+                    console.error("Error creating line chart:", lineError);
+                    createSimpleChart(data);
+                }
+            }
+        }
+        
+        function createLineChart(data) {
+            const ctx = document.getElementById("stockChart").getContext("2d");
+            
+            // Destroy existing chart
+            if (stockChart) {
+                stockChart.destroy();
+            }
+            
+            const lineData = data.map((d, index) => ({
+                x: index,
+                y: d.c // Use close price for line chart
+            }));
+            
+            // Moving averages data
+            const sma20Data = data.map((d, index) => ({ x: index, y: d.sma20 })).filter(d => d.y !== null);
+            const sma50Data = data.map((d, index) => ({ x: index, y: d.sma50 })).filter(d => d.y !== null);
+            const sma100Data = data.map((d, index) => ({ x: index, y: d.sma100 })).filter(d => d.y !== null);
+            const sma200Data = data.map((d, index) => ({ x: index, y: d.sma200 })).filter(d => d.y !== null);
+            
+            stockChart = new Chart(ctx, {
+                type: "line",
+                data: {
+                    datasets: [
+                        {
+                            label: currentStock.symbol + " Close",
+                            data: lineData,
+                            borderColor: "#1976d2",
+                            backgroundColor: "rgba(25, 118, 210, 0.1)",
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.1
+                        },
+                        {
+                            label: "SMA 20",
+                            data: sma20Data,
+                            borderColor: "#ff9800",
+                            backgroundColor: "transparent",
+                            borderWidth: 1,
+                            pointRadius: 0,
+                            tension: 0,
+                            borderDash: [5, 5]
+                        },
+                        {
+                            label: "SMA 50",
+                            data: sma50Data,
+                            borderColor: "#9c27b0",
+                            backgroundColor: "transparent",
+                            borderWidth: 1,
+                            pointRadius: 0,
+                            tension: 0,
+                            borderDash: [5, 5]
+                        },
+                        {
+                            label: "SMA 100",
+                            data: sma100Data,
+                            borderColor: "#4caf50",
+                            backgroundColor: "transparent",
+                            borderWidth: 1,
+                            pointRadius: 0,
+                            tension: 0,
+                            borderDash: [5, 5]
+                        },
+                        {
+                            label: "SMA 200",
+                            data: sma200Data,
+                            borderColor: "#f44336",
+                            backgroundColor: "transparent",
+                            borderWidth: 2,
+                            pointRadius: 0,
+                            tension: 0,
+                            borderDash: [5, 5]
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: "top"
+                        }
+                    },
+                    scales: {
+                        x: {
+                            type: "linear",
+                            ticks: {
+                                maxTicksLimit: 10,
+                                callback: function(value, index, values) {
+                                    if (data[Math.floor(value)]) {
+                                        const date = new Date(data[Math.floor(value)].x);
+                                        return date.toLocaleDateString("en-US", { 
+                                            month: "short", 
+                                            day: "numeric",
+                                            year: "numeric"
+                                        });
+                                    }
+                                    return "";
+                                }
+                            }
+                        },
+                        y: {
+                            position: "right"
+                        }
+                    }
+                }
+            });
+        }
+        
+        function createVolumeChart(data) {
+            const ctx = document.getElementById("volumeChart").getContext("2d");
+            
+            // Destroy existing chart
+            if (volumeChart) {
+                volumeChart.destroy();
+            }
+            
+            try {
+            const volumeData = data.map((d, index) => ({
+                x: index,
+                y: d.v
+            }));
+                
+                volumeChart = new Chart(ctx, {
+                    type: "bar",
+                    data: {
+                        datasets: [{
+                            label: "Volume",
+                            data: volumeData,
+                            backgroundColor: "#1976d2",
+                            borderColor: "#1976d2",
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        },
+                        scales: {
+                            x: {
+                                type: "linear",
+                                display: false
+                            },
+                            y: {
+                                position: "right",
+                                beginAtZero: true
+                            }
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error("Error creating volume chart:", error);
+            }
+        }
+        
+        function createSimpleChart(data) {
+            console.log("Creating simple chart with data:", data.length, "points");
+            const chartContainer = document.getElementById("stockChart");
+            console.log("Chart container found:", !!chartContainer);
+            const ctx = chartContainer.getContext("2d");
+            ctx.clearRect(0, 0, chartContainer.width, chartContainer.height);
+            chartContainer.width = chartContainer.offsetWidth;
+            chartContainer.height = chartContainer.offsetHeight;
+            const width = chartContainer.width;
+            const height = chartContainer.height;
+            const padding = 40;
+
+            if (data.length === 0) {
+                ctx.fillStyle = "#666";
+                ctx.font = "16px Arial";
+                ctx.textAlign = "center";
+                ctx.fillText("No data available", width / 2, height / 2);
+                return;
+            }
+
+            const prices = data.map(d => d.c);
+            const minPrice = Math.min(...prices);
+            const maxPrice = Math.max(...prices);
+            const priceRange = maxPrice - minPrice;
+
+            // Draw axes
+            ctx.strokeStyle = "#ccc";
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(padding, padding);
+            ctx.lineTo(padding, height - padding);
+            ctx.lineTo(width - padding, height - padding);
+            ctx.stroke();
+
+            // Draw price line
+            ctx.strokeStyle = "#1976d2";
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            for (let i = 0; i < data.length; i++) {
+                const x = padding + (i / (data.length - 1)) * (width - 2 * padding);
+                const y = height - padding - ((data[i].c - minPrice) / priceRange) * (height - 2 * padding);
+                if (i === 0) {
+                    ctx.moveTo(x, y);
+                } else {
+                    ctx.lineTo(x, y);
+                }
+            }
+            ctx.stroke();
+
+            // Draw moving averages
+            const colors = ["#ff9800", "#9c27b0", "#4caf50", "#f44336"];
+            const periods = [20, 50, 100, 200];
+            const smaKeys = ["sma20", "sma50", "sma100", "sma200"];
+
+            smaKeys.forEach((key, idx) => {
+                const smaData = data.map(d => d[key]).filter(val => val !== null);
+                if (smaData.length > 0) {
+                    ctx.strokeStyle = colors[idx];
+                    ctx.lineWidth = 1;
+                    ctx.setLineDash([5, 5]);
+                    ctx.beginPath();
+                    let firstPoint = true;
+                    for (let i = 0; i < data.length; i++) {
+                        if (data[i][key] !== null) {
+                            const x = padding + (i / (data.length - 1)) * (width - 2 * padding);
+                            const y = height - padding - ((data[i][key] - minPrice) / priceRange) * (height - 2 * padding);
+                            if (firstPoint) {
+                                ctx.moveTo(x, y);
+                                firstPoint = false;
+                            } else {
+                                ctx.lineTo(x, y);
+                            }
+                        }
+                    }
+                    ctx.stroke();
+                }
+            });
+            ctx.setLineDash([]);
+
+            // Draw X-axis labels (dates)
+            ctx.fillStyle = "#666";
+            ctx.font = "10px Arial";
+            ctx.textAlign = "center";
+            const labelCount = Math.min(10, data.length);
+            for (let i = 0; i < labelCount; i++) {
+                const dataIndex = Math.floor((i / (labelCount - 1)) * (data.length - 1));
+                const x = padding + (dataIndex / (data.length - 1)) * (width - 2 * padding);
+                const date = new Date(data[dataIndex].x);
+                const dateStr = date.toLocaleDateString("en-US", { 
+                    month: "short", 
+                    day: "numeric",
+                    year: "numeric"
+                });
+                ctx.fillText(dateStr, x, height - padding + 15);
+            }
+
+            // Draw Y-axis labels (prices)
+            ctx.textAlign = "right";
+            const priceLabelCount = 5;
+            for (let i = 0; i <= priceLabelCount; i++) {
+                const price = minPrice + (i / priceLabelCount) * priceRange;
+                const y = height - padding - (i / priceLabelCount) * (height - 2 * padding);
+                ctx.fillText("₹" + price.toFixed(0), padding - 5, y + 3);
+            }
+
+            // Draw legend
+            const legendItems = [
+                { label: "Close", color: "#1976d2" },
+                { label: "SMA 20", color: "#ff9800" },
+                { label: "SMA 50", color: "#9c27b0" },
+                { label: "SMA 100", color: "#4caf50" },
+                { label: "SMA 200", color: "#f44336" }
+            ];
+
+            ctx.font = "12px Arial";
+            ctx.textAlign = "left";
+            legendItems.forEach((item, index) => {
+                const x = width - 150;
+                const y = 20 + index * 20;
+                
+                // Draw color box
+                ctx.fillStyle = item.color;
+                ctx.fillRect(x, y - 8, 12, 12);
+                
+                // Draw label
+                ctx.fillStyle = "#333";
+                ctx.fillText(item.label, x + 18, y);
+            });
+        }
+        
+        function setupChartControls() {
+            const buttons = document.querySelectorAll(".chart-btn");
+            buttons.forEach(button => {
+                button.addEventListener("click", function() {
+                    // Remove active class from all buttons
+                    buttons.forEach(btn => btn.classList.remove("active"));
+                    // Add active class to clicked button
+                    this.classList.add("active");
+                    
+                    const period = this.getAttribute("data-period");
+                    console.log("Loading chart data for period:", period);
+                    filterChartData(period);
+                });
+            });
+        }
+        
+        function filterChartData(period) {
+            if (!currentStock) return;
+            
+            const chartLoading = document.getElementById("chartLoading");
+            const stockChartCanvas = document.getElementById("stockChart");
+            const volumeChartCanvas = document.getElementById("volumeChart");
+            
+            chartLoading.style.display = "flex";
+            stockChartCanvas.style.display = "none";
+            volumeChartCanvas.style.display = "none";
+            
+            setTimeout(() => {
+                try {
+                    const fullData = generateSampleChartData(currentStock.symbol);
+                    const filteredData = filterDataByPeriod(fullData, period);
+                    console.log(`Filtered data for ${period}:`, filteredData.length, "points");
+                    
+                    const periodInfo = document.getElementById("chartPeriodInfo");
+                    if (periodInfo) {
+                        periodInfo.textContent = `Showing: ${period} data (${filteredData.length} points)`;
+                    }
+                    
+                    if (typeof Chart !== "undefined") {
+                        createCandlestickChart(filteredData);
+                        createVolumeChart(filteredData);
+                    } else {
+                        createSimpleChart(filteredData);
+                    }
+                    
+                    chartLoading.style.display = "none";
+                    stockChartCanvas.style.display = "block";
+                    volumeChartCanvas.style.display = "block";
+                } catch (error) {
+                    console.error("Error filtering chart data:", error);
+                    chartLoading.innerHTML = "<div>Error loading chart data. Please try again.</div>";
+                }
+            }, 500);
+        }
+        
+        function filterDataByPeriod(data, period) {
+            const now = new Date();
+            let cutoffDate;
+            
+            switch (period) {
+                case "1M":
+                    cutoffDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+                    break;
+                case "3M":
+                    cutoffDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+                    break;
+                case "6M":
+                    cutoffDate = new Date(now.getTime() - 180 * 24 * 60 * 60 * 1000);
+                    break;
+                case "1Y":
+                    cutoffDate = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+                    break;
+                case "ALL":
+                default:
+                    return data;
+            }
+            
+            return data.filter(point => new Date(point.x) >= cutoffDate);
+        }
+
+        // CSV Export Functions
+        function exportToCSV(screenerType) {
+            let data = [];
+            let filename = '';
+            
+            switch(screenerType) {
+                case 'strongRS':
+                    data = longTermData.strongRS;
+                    filename = 'Strong_RS_Stocks.csv';
+                    break;
+                case 'breakouts':
+                    data = longTermData.breakouts;
+                    filename = 'Consolidation_Breakouts.csv';
+                    break;
+                case 'cupHandle':
+                    data = longTermData.cupHandle;
+                    filename = 'Cup_Handle_Patterns.csv';
+                    break;
+                case 'uptrends':
+                    data = longTermData.uptrends;
+                    filename = 'Long_Term_Uptrends.csv';
+                    break;
+                case 'momentum':
+                    data = longTermData.momentum;
+                    filename = 'Momentum_Breakouts.csv';
+                    break;
+                case 'support':
+                    data = longTermData.support;
+                    filename = 'Support_Bounce_Patterns.csv';
+                    break;
+                case 'volume':
+                    data = longTermData.volume;
+                    filename = 'Volume_Accumulation.csv';
+                    break;
+                case 'earnings':
+                    data = longTermData.earnings;
+                    filename = 'Earnings_Momentum.csv';
+                    break;
+                case 'week52':
+                    data = longTermData.week52;
+                    filename = '52_Week_High_Breakouts.csv';
+                    break;
+                default:
+                    return;
+            }
+            
+            if (data.length === 0) {
+                alert('No data available for this screener.');
+                return;
+            }
+            
+            // Create CSV content
+            let csvContent = 'Symbol,Price,Score,RS,Category\n';
+            data.forEach(stock => {
+                csvContent += `${stock.symbol},${stock.price},${stock.score || 'N/A'},${stock.rs || 'N/A'},${stock.category || 'N/A'}\n`;
+            });
+            
+            // Download CSV
+            downloadCSV(csvContent, filename);
+        }
+        
+        function exportSymbolsForTradingView(screenerType) {
+            let data = [];
+            let filename = '';
+            
+            switch(screenerType) {
+                case 'strongRS':
+                    data = longTermData.strongRS;
+                    filename = 'Strong_RS_Symbols_TradingView.txt';
+                    break;
+                case 'breakouts':
+                    data = longTermData.breakouts;
+                    filename = 'Consolidation_Breakouts_Symbols_TradingView.txt';
+                    break;
+                case 'cupHandle':
+                    data = longTermData.cupHandle;
+                    filename = 'Cup_Handle_Symbols_TradingView.txt';
+                    break;
+                case 'uptrends':
+                    data = longTermData.uptrends;
+                    filename = 'Long_Term_Uptrends_Symbols_TradingView.txt';
+                    break;
+                case 'momentum':
+                    data = longTermData.momentum;
+                    filename = 'Momentum_Breakouts_Symbols_TradingView.txt';
+                    break;
+                case 'support':
+                    data = longTermData.support;
+                    filename = 'Support_Bounce_Symbols_TradingView.txt';
+                    break;
+                case 'volume':
+                    data = longTermData.volume;
+                    filename = 'Volume_Accumulation_Symbols_TradingView.txt';
+                    break;
+                case 'earnings':
+                    data = longTermData.earnings;
+                    filename = 'Earnings_Momentum_Symbols_TradingView.txt';
+                    break;
+                case 'week52':
+                    data = longTermData.week52;
+                    filename = '52_Week_High_Symbols_TradingView.txt';
+                    break;
+                default:
+                    return;
+            }
+            
+            if (data.length === 0) {
+                alert('No data available for this screener.');
+                return;
+            }
+            
+            // Create comma-separated symbols for TradingView
+            let symbols = data.map(stock => stock.symbol).join(',');
+            
+            // Download as text file
+            downloadText(symbols, filename);
+        }
+        
+        function downloadCSV(content, filename) {
+            const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', filename);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+        
+        function downloadText(content, filename) {
+            const blob = new Blob([content], { type: 'text/plain;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', filename);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+    </script>
+</body>
+</html>

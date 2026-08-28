@@ -3,7 +3,7 @@ import unittest
 from tempfile import TemporaryDirectory
 from pathlib import Path
 
-from company_intelligence_db import (
+from company_intelligence.company_intelligence_db import (
     add_company_alias,
     get_company_aliases,
     init_company_intelligence_db,

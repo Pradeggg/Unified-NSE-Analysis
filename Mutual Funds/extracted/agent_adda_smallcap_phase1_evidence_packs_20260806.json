@@ -1,0 +1,4080 @@
+{
+  "run_date": "20260806",
+  "generated_at": "2026-08-24T19:08:08.863843+05:30",
+  "policy": "docs/fund_policies/2026-08-06-smallcap-super-performers-fund-policy.md",
+  "policy_gate_input": "Mutual Funds/extracted/agent_adda_smallcap_policy_gate_20260806.csv",
+  "nav": 500000.0,
+  "phase1_exposure_cap": 200000.0,
+  "open_risk_cap": 30000.0,
+  "business_case": {
+    "objective": "Build an internal, paper-only smallcap portfolio process that can identify asymmetric opportunities while proving that selection, sizing, risk control, and review discipline work before any live-capital discussion.",
+    "why_now": "The current smallcap research stack has three useful inputs at the same time: local Agent Adda stage/technical evidence, refreshed company fundamentals, and mutual-fund holding overlap. The business case is to convert that research into a repeatable portfolio operating system.",
+    "edge_hypothesis": "The edge is not one model. It is the combination of theme confirmation, fundamental acceleration, relative-strength momentum, liquidity discipline, and stop-risk sizing.",
+    "constraints": "This is an internal paper/model portfolio only. It is long-only, no leverage, no derivatives, no forced deployment, and no automatic order from narrative research or LLM output.",
+    "success_definition": "Success means a controlled process: documented evidence packs, pre-defined triggers, realistic paper execution, measurable expectancy, drawdown control, and benchmark-relative review."
+  },
+  "operating_approach": [
+    {
+      "title": "1. Source The Universe",
+      "detail": "Start from Agent Adda smallcap screens, stage snapshots, index/sector evidence, mutual-fund overlap files, and current company fundamentals."
+    },
+    {
+      "title": "2. Score And Gate",
+      "detail": "Apply the 100-point scorecard across theme, fundamentals, technicals, liquidity, governance, and valuation/reward-risk. Scores create research priority, not orders."
+    },
+    {
+      "title": "3. Build Evidence Packs",
+      "detail": "For each active candidate, attach financials, ratios, shareholding, source links, technical levels, theme thesis, risks, and invalidation rules."
+    },
+    {
+      "title": "4. Map Triggers",
+      "detail": "Convert eligible names into pre-defined breakout, retest, or pullback triggers with stop, 2R target, no-chase rule, and paper quantity."
+    },
+    {
+      "title": "5. Portfolio-Risk Check",
+      "detail": "Before a paper order, check NAV, available cash, sector cap, single-stock cap, liquidity cap, risk to stop, total open risk, and event gap risk."
+    },
+    {
+      "title": "6. Journal And Review",
+      "detail": "Every paper order, skip, add, trim, and exit must create a journal entry with thesis, result, R multiple, postmortem, and policy lesson."
+    }
+  ],
+  "governance_model": [
+    {
+      "role": "Research engine",
+      "responsibility": "Finds themes, screens stocks, gathers company/technical/source evidence, and drafts scorecards."
+    },
+    {
+      "role": "Strategy engine",
+      "responsibility": "Turns approved candidates into deterministic entry, stop, sizing, exit, and backtest rules."
+    },
+    {
+      "role": "Portfolio manager",
+      "responsibility": "Allocates paper capital, enforces caps, approves skips/orders, and manages adds/trims/exits."
+    },
+    {
+      "role": "Reviewer",
+      "responsibility": "Challenges assumptions, reviews postmortems, and approves policy changes only with evidence."
+    }
+  ],
+  "roadmap": [
+    [
+      "Phase A",
+      "Policy and business case",
+      "Complete"
+    ],
+    [
+      "Phase B",
+      "Candidate evidence packs and trigger map",
+      "Current artifact"
+    ],
+    [
+      "Phase C",
+      "Portfolio Lab integration with managed paper orders",
+      "Next"
+    ],
+    [
+      "Phase D",
+      "Backtest, liquidity stress, gap/slippage sensitivity",
+      "Pending"
+    ],
+    [
+      "Phase E",
+      "Daily paper operations, journal, weekly/monthly review",
+      "Pending"
+    ]
+  ],
+  "operating_metrics": [
+    "NAV, cash, gross exposure, and benchmark-relative return.",
+    "Open positions, stock weights, sector exposure, and cash drag.",
+    "Stop level, rupee risk to stop, total open risk, and gap-risk flags.",
+    "Closed trade count, hit rate, average win/loss, expectancy, profit factor, and max drawdown.",
+    "Rule adherence: entries skipped for no-chase, liquidity, stale data, governance, or event risk."
+  ],
+  "packs": [
+    {
+      "rank": 1,
+      "bucket": "Clean trigger map",
+      "symbol": "SYRMA",
+      "company": "Syrma SGS Technology Ltd",
+      "sector": "Industrial Manufacturing",
+      "policy": {
+        "symbol": "SYRMA",
+        "company": "Syrma SGS Technology Ltd",
+        "sector": "Industrial Manufacturing",
+        "policy_theme_bucket": "Capital goods / industrial manufacturing",
+        "theme_status": "CONFIRMED",
+        "policy_score_100": "77.9",
+        "policy_rating": "Core Candidate",
+        "phase1_status": "PHASE1_TRIGGER_MAP_GOVERNANCE_PENDING",
+        "preselection_score_100": "66.9",
+        "preselection_decision": "Watch - Retest / Verify",
+        "theme_fit_15": "13.0",
+        "fundamental_25": "18.7",
+        "technical_25": "19.2",
+        "relative_strength_score_10": "8.5",
+        "momentum_score_10": "6.8",
+        "setup_quality_score_10": "7.7",
+        "liquidity_tradeability_15": "13",
+        "governance_management_10": "6.0",
+        "valuation_reward_risk_10": "8",
+        "current_price": "1439.3",
+        "current_stage": "STAGE_2",
+        "current_signal": "HOLD",
+        "current_rsi": "57.6",
+        "current_relative_strength": "31.24",
+        "technical_setup_score": "70.0",
+        "sma20": "1426.62",
+        "sma50": "1397.63",
+        "distance_from_sma20_pct": "0.888814120088055",
+        "distance_from_sma50_pct": "2.9814757840057604",
+        "pct_from_52w_high": "-6.7",
+        "vol_avg_20d": "1733016.0",
+        "avg_turnover_20d_cr": "249.43299287999997",
+        "vol_ratio": "0.35",
+        "liquidity_gate": "PASS",
+        "financial_gate": "PASS",
+        "governance_gate": "PENDING_OFFICIAL_REVIEW",
+        "stop_distance_gate": "PASS",
+        "reward_risk_gate": "PASS_2R_MODELLED",
+        "no_chase_gate": "PASS",
+        "entry_trigger": "Break above 1558.43 with volume, or retest-hold near 1426.62; skip if >5% above planned trigger.",
+        "reference_entry_price": "1439.3",
+        "initial_stop_price": "1295.37",
+        "initial_stop_distance_pct": "10.0",
+        "stop_method": "10% policy default stop",
+        "target_2r_price": "1727.16",
+        "policy_initial_slot_value": "20000.0",
+        "paper_quantity_by_policy": "13",
+        "paper_position_value": "18710.9",
+        "paper_risk_to_stop": "1871.09",
+        "max_position_qty_by_value": "13",
+        "max_position_qty_by_risk": "26",
+        "max_position_qty_by_liquidity": "34660",
+        "latest_quarter": "Jun 2026",
+        "financial_freshness": "fresh result: Jun 2026; fetched 2026-08-06T19:27:33.612251+05:30",
+        "key_strengths": "overlaps one sampled small-cap fund; high relative strength; current Stage 2 trend; profit growth evidence",
+        "key_risks": "setup backtest sample provisional",
+        "evidence_blockers": "GOVERNANCE_REVIEW_PENDING",
+        "next_action": "Complete governance/filing review, then wait for breakout-retest or pullback trigger."
+      },
+      "assessment": {
+        "stance": "Best clean candidate, but valuation/governance must clear before order.",
+        "fundamental_view": "EMS growth is strong and fresh Q1 data is available. The main offset is valuation, promoter reduction, and working-capital stretch.",
+        "technical_view": "Stage 2 with good relative strength and a non-extended RSI. Breakout or 20DMA retest can be mapped, but the order is not executable until volume confirms.",
+        "sector_view": "Industrial manufacturing/EMS remains a high-growth manufacturing theme.",
+        "kill_switches": [
+          "Failure below the structure stop.",
+          "Official Q1 filing or transcript contradicts cached growth numbers.",
+          "Receivable or working-capital deterioration accelerates."
+        ]
+      },
+      "theme": {
+        "theme_lens": "India EMS and manufacturing scale-up",
+        "theme_thesis": "The theme is domestic electronics manufacturing, outsourcing, and import substitution. It stays attractive only if revenue growth converts into cash and margins without excess inventory or receivable stretch.",
+        "stock_expression": "Syrma is the EMS expression in the basket: high growth, Stage 2 price behavior, and mutual-fund overlap, but not a valuation bargain.",
+        "theme_confirmation": "Fresh Jun 2026 result in local cache, high relative strength, Stage 2 trend, and policy theme fit through industrial manufacturing.",
+        "theme_risk": "Expensive EMS expectations, working-capital deterioration, customer/product execution risk, and promoter holding reduction.",
+        "theme_invalidation": "Growth quality weakens, cash conversion deteriorates, or the stock fails the mapped retest/breakout with volume.",
+        "priority_implication": "Highest clean-candidate priority, but only after governance review and trigger confirmation."
+      },
+      "financials": {
+        "latest_quarter": {
+          "symbol": "SYRMA",
+          "period_label": "Jun 2026",
+          "period_end": "2026-06-30",
+          "period_type": "quarter",
+          "revenue": 1589.0,
+          "expenses": 1427.0,
+          "operating_profit": 162.0,
+          "opm_pct": 10.0,
+          "other_income": 15.0,
+          "interest": 13.0,
+          "depreciation": 22.0,
+          "pbt": 141.0,
+          "tax_pct": 25.0,
+          "pat": 106.0,
+          "eps": 5.19,
+          "source": "screener",
+          "source_url": "https://www.screener.in/company/SYRMA/consolidated/",
+          "raw_json": {
+            "headers": [
+              "Mar 2025",
+              "Jun 2025",
+              "Sep 2025",
+              "Dec 2025",
+              "Mar 2026",
+              "Jun 2026"
+            ],
+            "table_keys": [
+              "Sales+",
+              "Expenses+",
+              "Operating Profit",
+              "OPM %",
+              "Other Income+",
+              "Interest",
+              "Depreciation",
+              "Profit before tax",
+              "Tax %",
+              "Net Profit+",
+              "EPS in Rs",
+              "Raw PDF",
+              "_headers"
+            ]
+          },
+          "fetched_at": "2026-08-16T13:03:29.710313+05:30"
+        },
+        "previous_quarter": {
+          "symbol": "SYRMA",
+          "period_label": "Mar 2026",
+          "period_end": "2026-03-31",
+          "period_type": "quarter",
+          "revenue": 1465.0,
+          "expenses": 1291.0,
+          "operating_profit": 174.0,
+          "opm_pct": 12.0,
+          "other_income": 11.0,
+          "interest": 13.0,
+          "depreciation": 21.0,
+          "pbt": 150.0,
+          "tax_pct": 21.0,
+          "pat": 119.0,
+          "eps": 5.25,
+          "source": "screener",
+          "source_url": "https://www.screener.in/company/SYRMA/consolidated/",
+          "raw_json": {
+            "headers": [
+              "Mar 2025",
+              "Jun 2025",
+              "Sep 2025",
+              "Dec 2025",
+              "Mar 2026",
+              "Jun 2026"
+            ],
+            "table_keys": [
+              "Sales+",
+              "Expenses+",
+              "Operating Profit",
+              "OPM %",
+              "Other Income+",
+              "Interest",
+              "Depreciation",
+              "Profit before tax",
+              "Tax %",
+              "Net Profit+",
+              "EPS in Rs",
+              "Raw PDF",
+              "_headers"
+            ]
+          },
+          "fetched_at": "2026-08-16T13:03:29.710309+05:30"
+        },
+        "year_ago_quarter": {
+          "symbol": "SYRMA",
+          "period_label": "Jun 2025",
+          "period_end": "2025-06-30",
+          "period_type": "quarter",
+          "revenue": 944.0,
+          "expenses": 857.0,
+          "operating_profit": 87.0,
+          "opm_pct": 9.0,
+          "other_income": 16.0,
+          "interest": 15.0,
+          "depreciation": 21.0,
+          "pbt": 67.0,
+          "tax_pct": 26.0,
+          "pat": 50.0,
+          "eps": 2.79,
+          "source": "screener",
+          "source_url": "https://www.screener.in/company/SYRMA/consolidated/",
+          "raw_json": {
+            "headers": [
+              "Mar 2025",
+              "Jun 2025",
+              "Sep 2025",
+              "Dec 2025",
+              "Mar 2026",
+              "Jun 2026"
+            ],
+            "table_keys": [
+              "Sales+",
+              "Expenses+",
+              "Operating Profit",
+              "OPM %",
+              "Other Income+",
+              "Interest",
+              "Depreciation",
+              "Profit before tax",
+              "Tax %",
+              "Net Profit+",
+              "EPS in Rs",
+              "Raw PDF",
+              "_headers"
+            ]
+          },
+          "fetched_at": "2026-08-16T13:03:29.710293+05:30"
+        },
+        "latest_annual": {
+          "symbol": "SYRMA",
+          "period_label": "Mar 2026",
+          "period_end": "2026-03-31",
+          "period_type": "annual",
+          "revenue": 4819.0,
+          "expenses": 4273.0,
+          "operating_profit": 546.0,
+          "opm_pct": 11.0,
+          "other_income": 31.0,
+          "interest": 48.0,
+          "depreciation": 84.0,
+          "pbt": 445.0,
+          "tax_pct": 22.0,
+          "pat": 346.0,
+          "eps": 16.48,
+          "dividend_payout_pct": 9.0,
+          "source": "screener",
+          "source_url": "https://www.screener.in/company/SYRMA/consolidated/",
+          "raw_json": {
+            "headers": [
+              "Mar 2023",
+              "Mar 2024",
+              "Mar 2025",
+              "Mar 2026",
+              "TTM"
+            ],
+            "table_keys": [
+              "Sales+",
+              "Expenses+",
+              "Operating Profit",
+              "OPM %",
+              "Other Income+",
+              "Interest",
+              "Depreciation",
+              "Profit before tax",
+              "Tax %",
+              "Net Profit+",
+              "EPS in Rs",
+              "Dividend Payout %",
+              "_headers"
+            ]
+          },
+          "fetched_at": "2026-08-16T13:03:29.710445+05:30"
+        },
+        "previous_annual": {
+          "symbol": "SYRMA",
+          "period_label": "Mar 2025",
+          "period_end": "2025-03-31",
+          "period_type": "annual",
+          "revenue": 3787.0,
+          "expenses": 3463.0,
+          "operating_profit": 323.0,
+          "opm_pct": 9.0,
+          "other_income": 47.0,
+          "interest": 58.0,
+          "depreciation": 75.0,
+          "pbt": 237.0,
+          "tax_pct": 22.0,
+          "pat": 184.0,
+          "eps": 9.53,
+          "dividend_payout_pct": 16.0,
+          "source": "screener",
+          "source_url": "https://www.screener.in/company/SYRMA/consolidated/",
+          "raw_json": {
+            "headers": [
+              "Mar 2023",
+              "Mar 2024",
+              "Mar 2025",
+              "Mar 2026",
+              "TTM"
+            ],
+            "table_keys": [
+              "Sales+",
+              "Expenses+",
+              "Operating Profit",
+              "OPM %",
+              "Other Income+",
+              "Interest",
+              "Depreciation",
+              "Profit before tax",
+              "Tax %",
+              "Net Profit+",
+              "EPS in Rs",
+              "Dividend Payout %",
+              "_headers"
+            ]
+          },
+          "fetched_at": "2026-08-16T13:03:29.710441+05:30"
+        },
+        "latest_balance_sheet": {
+          "symbol": "SYRMA",
+          "period_label": "Mar 2026",
+          "period_end": "2026-03-31",
+          "period_type": "annual",
+          "equity_capital": 193.0,
+          "reserves": 2670.0,
+          "borrowings": 400.0,
+          "other_liabilities": 2504.0,
+          "total_liabilities": 5767.0,
+          "fixed_assets": 1458.0,
+          "cwip": 72.0,
+          "investments": 547.0,
+          "other_assets": 3690.0,
+          "total_assets": 5767.0,
+          "net_debt": -147.0,
+          "source": "screener",
+          "source_url": "https://www.screener.in/company/SYRMA/consolidated/",
+          "raw_json": {
+            "headers": [
+              "Mar 2022",
+              "Mar 2023",
+              "Mar 2024",
+              "Mar 2025",
+              "Mar 2026"
+            ],
+            "table_keys": [
+              "Equity Capital",
+              "Reserves",
+              "Borrowings+",
+              "Other Liabilities+",
+              "Total Liabilities",
+              "Fixed Assets+",
+              "CWIP",
+              "Investments",
+              "Other Assets+",
+              "Total Assets",
+              "_headers"
+            ]
+          },
+          "fetched_at": "2026-08-16T13:03:29.710554+05:30"
+        },
+        "latest_cash_flow": {
+          "symbol": "SYRMA",
+          "period_label": "Mar 2026",
+          "period_end": "2026-03-31",
+          "period_type": "annual",
+          "operating_cf": 290.0,
+          "investing_cf": -736.0,
+          "financing_cf": 558.0,
+          "net_cf": 111.0,
+          "source": "screener",
+          "source_url": "https://www.screener.in/company/SYRMA/consolidated/",
+          "raw_json": {
+            "headers": [
+              "Mar 2022",
+              "Mar 2023",
+              "Mar 2024",
+              "Mar 2025",
+              "Mar 2026"
+            ],
+            "table_keys": [
+              "Cash from Operating Activity+",
+              "Cash from Investing Activity+",
+              "Cash from Financing Activity+",
+              "Net Cash Flow",
+              "Free Cash Flow",
+              "CFO/OP",
+              "_headers"
+            ]
+          },
+          "fetched_at": "2026-08-16T13:03:29.710605+05:30"
+        },
+        "revenue_yoy_pct": 68.32627118644068,
+        "pat_yoy_pct": 112.00000000000001,
+        "eps_yoy_pct": 86.0215053763441,
+        "revenue_qoq_pct": 8.464163822525595,
+        "pat_qoq_pct": -10.924369747899155,
+        "annual_revenue_yoy_pct": 27.25112226036441,
+        "annual_pat_yoy_pct": 88.04347826086956,
+        "financial_source": "screener",
+        "financial_source_url": "https://www.screener.in/company/SYRMA/consolidated/",
+        "financial_fetched_at": "2026-08-16T13:03:29.710313+05:30"
+      },
+      "screener": {
+        "source_url": "https://www.screener.in/company/SYRMA/consolidated/",
+        "ratios": {
+          "Market Cap": "28,144",
+          "Current Price": "1,460",
+          "High / Low": "1,543",
+          "Stock P/E": "75.8",
+          "Book Value": "148",
+          "Dividend Yield": "0.10",
+          "ROCE": "16.8",
+          "ROE": "14.0",
+          "Face Value": "10.0"
+        },
+        "pros": [
+          "Company has reduced debt.",
+          "Company is expected to give good quarter",
+          "Company has delivered good profit growth of 36.3% CAGR over last 5 years"
+        ],
+        "cons": [
+          "Stock is trading at 9.84 times its book value",
+          "Company has a low return on equity of 10.4% over last 3 years.",
+          "Promoter holding has decreased over last 3 years: -4.99%",
+          "Working capital days have increased from 46.9 days to 68.2 days"
+        ],
+        "shareholding": {
+          "_quarters": [
+            "Sep 2023",
+            "Dec 2023",
+            "Mar 2024",
+            "Jun 2024",
+            "Sep 2024",
+            "Dec 2024",
+            "Mar 2025",
+            "Jun 2025",
+            "Sep 2025",
+            "Dec 2025",
+            "Mar 2026",
+            "Jun 2026"
+          ],
+          "Promoters": "42.28%",
+          "Promoters_trend": [
+            "47.22%",
+            "46.89%",
+            "46.89%",
+            "46.89%",
+            "46.89%",
+            "46.58%",
+            "46.53%",
+            "46.43%",
+            "42.98%",
+            "42.72%",
+            "42.28%",
+            "42.28%"
+          ],
+          "FIIs": "7.51%",
+          "FIIs_trend": [
+            "10.14%",
+            "11.13%",
+            "12.95%",
+            "10.44%",
+            "10.32%",
+            "8.49%",
+            "6.20%",
+            "6.34%",
+            "7.02%",
+            "6.47%",
+            "6.60%",
+            "7.51%"
+          ],
+          "DIIs": "15.90%",
+          "DIIs_trend": [
+            "9.63%",
+            "8.21%",
+            "5.80%",
+            "6.45%",
+            "6.44%",
+            "7.46%",
+            "7.74%",
+            "9.15%",
+            "16.38%",
+            "15.89%",
+            "16.59%",
+            "15.90%"
+          ],
+          "Government": "0.01%",
+          "Government_trend": [
+            "0.00%",
+            "0.00%",
+            "0.00%",
+            "0.00%",
+            "0.00%",
+            "0.00%",
+            "0.00%",
+            "0.00%",
+            "0.00%",
+            "0.00%",
+            "0.01%",
+            "0.01%"
+          ],
+          "Public": "34.17%",
+          "Public_trend": [
+            "33.02%",
+            "33.78%",
+            "34.36%",
+            "36.22%",
+            "36.35%",
+            "37.38%",
+            "39.49%",
+            "38.04%",
+            "33.53%",
+            "34.80%",
+            "34.41%",
+            "34.17%"
+          ]
+        },
+        "announcements": [
+          {
+            "title": "All",
+            "url": "https://www.bseindia.com/stock-share-price/syrma-sgs-technology-ltd/SYRMA/543573/corp-announcements/"
+          },
+          {
+            "title": "Announcement under Regulation 30 (LODR)-Acquisition18 Aug- Syrma SGS formed 60:40 subsidiary SYRMA KAGA ELECTRONICS PRIV",
+            "url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=15687408-17c0-4bf0-a89f-a778d17231fc.pdf"
+          },
+          {
+            "title": "Announcement under Regulation 30 (LODR)-Analyst / Investor Meet - Intimation14 Aug",
+            "url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=a95dfece-80d1-48ea-8cf9-07b1e7333c00.pdf"
+          },
+          {
+            "title": "Announcement under Regulation 30 (LODR)-Analyst / Investor Meet - Intimation10 Aug- Management will participate in Equir",
+            "url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=e2c879f9-7a03-4d1b-8247-01a64d09cfd1.pdf"
+          },
+          {
+            "title": "Announcement under Regulation 30 (LODR)-Earnings Call Transcript4 Aug- Earning Call Transcript of the Investors Conferen",
+            "url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=13ead359-db88-472c-948c-9941361e182e.pdf"
+          },
+          {
+            "title": "Announcement under Regulation 30 (LODR)-Newspaper Publication4 Aug- Post dispatch Newspaper Advertisement - Notice for 2",
+            "url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=b79ef4ab-e509-4d36-8caf-e08968659034.pdf"
+          }
+        ],
+        "annual_reports": [],
+        "concalls": [
+          {
+            "period": "Aug 2026",
+            "transcript_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=13ead359-db88-472c-948c-9941361e182e.pdf",
+            "transcript_label": "Aug 2026 Earnings Call Transcript",
+            "ppt_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=ea4a3bc4-ee61-49fe-be89-3f1ec2e0ebf9.pdf",
+            "recording_url": "https://www.syrmasgs.com/investor-relations/wp-content/uploads/2026/07/10045696.mp3",
+            "ai_summary_title": "Concall Summary - Aug 2026"
+          },
+          {
+            "period": "Jun 2026",
+            "transcript_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=35f78458-fda9-4486-b457-33d418a9eca5.pdf",
+            "transcript_label": "Jun 2026 Earnings Call Transcript",
+            "ppt_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=5d8fbf36-7a03-4037-b2a5-024adb2cb2e5.pdf",
+            "ai_summary_title": "Concall Summary - May 2026"
+          },
+          {
+            "period": "May 2026",
+            "ppt_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=6cf89dd4-5cde-439e-b3a0-4f8664a80b12.pdf"
+          },
+          {
+            "period": "Feb 2026",
+            "transcript_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=dc41d98a-6b79-42bb-b344-2870bbf678fa.pdf",
+            "transcript_label": "Feb 2026 Earnings Call Transcript",
+            "ppt_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=b053ab81-3f97-4159-b56b-cc9dfafa40d9.pdf",
+            "ai_summary_title": "Concall Summary - Feb 2026"
+          },
+          {
+            "period": "Nov 2025",
+            "transcript_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=7aeea305-47d8-4ac9-bd46-8bc135150f8a.pdf",
+            "transcript_label": "Nov 2025 Earnings Call Transcript",
+            "ppt_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=635e8aac-fac0-441c-bc08-ededa2f97c46.pdf",
+            "recording_url": "https://youtu.be/VZ6aTHwZBms",
+            "ai_summary_title": "Concall Summary - Nov 2025"
+          },
+          {
+            "period": "Jul 2025",
+            "transcript_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=41128919-7647-4aed-9c4d-0ce57ceed79c.pdf",
+            "transcript_label": "Jul 2025 Earnings Call Transcript",
+            "ppt_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=83fe1a21-b660-42a2-9c65-c7dfceb1675c.pdf",
+            "recording_url": "https://youtu.be/e-FdoEjLfeY?si=6ch7jk5BwyE8RG8V",
+            "ai_summary_title": "Concall Summary - Jul 2025"
+          },
+          {
+            "period": "May 2025",
+            "transcript_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=f5ead5e0-7d02-4bd6-8c5f-b69ba6fd0940.pdf",
+            "transcript_label": "May 2025 Earnings Call Transcript",
+            "ppt_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=bf5bd0f9-5e4f-4f3f-b1b6-7fe03fd87946.pdf",
+            "recording_url": "https://www.syrmasgs.com/investor-relations/wp-content/uploads/2025/05/10031794.mp3",
+            "ai_summary_title": "Concall Summary - May 2025"
+          },
+          {
+            "period": "Feb 2025",
+            "transcript_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=f10d62fc-7352-468c-a2c4-35b2f32ef0b9.pdf",
+            "transcript_label": "Feb 2025 Earnings Call Transcript",
+            "ppt_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=6ac63018-5f99-4d40-8f78-e5444818257c.pdf",
+            "recording_url": "https://www.syrmasgs.com/investor-relations/wp-content/uploads/2025/01/10029466.mp3",
+            "ai_summary_title": "Concall Summary - Feb 2025"
+          }
+        ],
+        "error": ""
+      },
+      "technical": {
+        "symbol": "SYRMA",
+        "price": 1439.3,
+        "open": 1445.0,
+        "high": 1449.0,
+        "low": 1421.1,
+        "chg_pct": -0.3,
+        "rsi": 52.6,
+        "adx": 31.4,
+        "macd": "bearish",
+        "supertrend": "SELL",
+        "sma20": 1426.62,
+        "sma50": 1397.63,
+        "sma200": 996.45,
+        "above_sma20": true,
+        "above_sma50": true,
+        "above_sma200": true,
+        "52w_high": 1543.0,
+        "52w_low": 634.5,
+        "pct_from_52h": -6.7,
+        "vol_last": 603250,
+        "vol_avg_20d": 1733016,
+        "vol_ratio": 0.35,
+        "technical_score": 70,
+        "score_method": "derived from EOD MA alignment, RSI, MACD, Supertrend, and ADX",
+        "data_bars": 273,
+        "as_of": "2026-08-21",
+        "data_source": "PostgreSQL market.equity_eod",
+        "postgres_persist": null
+      },
+      "sources": [
+        {
+          "label": "Company IR: Q1 FY2027 results and earnings materials",
+          "url": "https://www.syrmasgs.com/investor-relations/"
+        },
+        {
+          "label": "Screener structured fundamentals",
+          "url": "https://www.screener.in/company/SYRMA/consolidated/"
+        },
+        {
+          "label": "NSE quote page",
+          "url": "https://www.nseindia.com/get-quotes/equity?symbol=SYRMA"
+        },
+        {
+          "label": "BSE company page",
+          "url": "https://www.bseindia.com/stock-share-price/syrma-sgs-technology-ltd/SYRMA/543573/"
+        },
+        {
+          "label": "BSE announcement: All",
+          "url": "https://www.bseindia.com/stock-share-price/syrma-sgs-technology-ltd/SYRMA/543573/corp-announcements/"
+        },
+        {
+          "label": "BSE announcement: Announcement under Regulation 30 (LODR)-Acquisition18 Aug- Syrma SGS formed 60:40 subsidia",
+          "url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=15687408-17c0-4bf0-a89f-a778d17231fc.pdf"
+        },
+        {
+          "label": "BSE announcement: Announcement under Regulation 30 (LODR)-Analyst / Investor Meet - Intimation14 Aug",
+          "url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=a95dfece-80d1-48ea-8cf9-07b1e7333c00.pdf"
+        },
+        {
+          "label": "Concall transcript: Aug 2026",
+          "url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=13ead359-db88-472c-948c-9941361e182e.pdf"
+        },
+        {
+          "label": "Concall transcript: Jun 2026",
+          "url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=35f78458-fda9-4486-b457-33d418a9eca5.pdf"
+        }
+      ],
+      "source_domains": [
+        "bseindia.com",
+        "nseindia.com",
+        "screener.in",
+        "syrmasgs.com"
+      ],
+      "csv": {
+        "rank": 1,
+        "bucket": "Clean trigger map",
+        "symbol": "SYRMA",
+        "company": "Syrma SGS Technology Ltd",
+        "sector": "Industrial Manufacturing",
+        "policy_score_100": "77.9",
+        "policy_rating": "Core Candidate",
+        "phase1_status": "PHASE1_TRIGGER_MAP_GOVERNANCE_PENDING",
+        "stance": "Best clean candidate, but valuation/governance must clear before order.",
+        "current_price": "1439.3",
+        "current_stage": "STAGE_2",
+        "current_rsi": "57.6",
+        "current_relative_strength": "31.24",
+        "relative_strength_score_10": "8.5",
+        "momentum_score_10": "6.8",
+        "setup_quality_score_10": "7.7",
+        "technical_25": "19.2",
+        "fundamental_25": "18.7",
+        "liquidity_tradeability_15": "13",
+        "governance_management_10": "6.0",
+        "valuation_reward_risk_10": "8",
+        "entry_trigger": "Break above 1558.43 with volume, or retest-hold near 1426.62; skip if >5% above planned trigger.",
+        "initial_stop_price": "1295.37",
+        "target_2r_price": "1727.16",
+        "paper_quantity_by_policy": "13",
+        "paper_position_value": "18710.9",
+        "paper_risk_to_stop": "1871.09",
+        "latest_quarter": "Jun 2026",
+        "latest_revenue_cr": 1589.0,
+        "latest_pat_cr": 106.0,
+        "latest_opm_pct": 10.0,
+        "revenue_yoy_pct": 68.32627118644068,
+        "pat_yoy_pct": 112.00000000000001,
+        "annual_revenue_cr": 4819.0,
+        "annual_pat_cr": 346.0,
+        "market_cap": "28,144",
+        "stock_pe": "75.8",
+        "price_to_book": "148",
+        "roe": "14.0",
+        "roce": "16.8",
+        "promoters": "42.28%",
+        "fiis": "7.51%",
+        "diis": "15.90%",
+        "public": "34.17%",
+        "key_strengths": "overlaps one sampled small-cap fund; high relative strength; current Stage 2 trend; profit growth evidence",
+        "key_risks": "setup backtest sample provisional",
+        "evidence_blockers": "GOVERNANCE_REVIEW_PENDING",
+        "next_action": "Complete governance/filing review, then wait for breakout-retest or pullback trigger.",
+        "source_domains": "bseindia.com; nseindia.com; screener.in; syrmasgs.com",
+        "theme_lens": "India EMS and manufacturing scale-up",
+        "theme_thesis": "The theme is domestic electronics manufacturing, outsourcing, and import substitution. It stays attractive only if revenue growth converts into cash and margins without excess inventory or receivable stretch.",
+        "stock_expression": "Syrma is the EMS expression in the basket: high growth, Stage 2 price behavior, and mutual-fund overlap, but not a valuation bargain.",
+        "theme_confirmation": "Fresh Jun 2026 result in local cache, high relative strength, Stage 2 trend, and policy theme fit through industrial manufacturing.",
+        "theme_risk": "Expensive EMS expectations, working-capital deterioration, customer/product execution risk, and promoter holding reduction.",
+        "theme_invalidation": "Growth quality weakens, cash conversion deteriorates, or the stock fails the mapped retest/breakout with volume.",
+        "priority_implication": "Highest clean-candidate priority, but only after governance review and trigger confirmation."
+      }
+    },
+    {
+      "rank": 2,
+      "bucket": "Clean trigger map",
+      "symbol": "KARURVYSYA",
+      "company": "Karur Vysya Bank Limited",
+      "sector": "Banks",
+      "policy": {
+        "symbol": "KARURVYSYA",
+        "company": "Karur Vysya Bank Limited",
+        "sector": "Banks",
+        "policy_theme_bucket": "Financial services",
+        "theme_status": "BUILDING",
+        "policy_score_100": "70.3",
+        "policy_rating": "Active Watch",
+        "phase1_status": "PHASE1_TRIGGER_MAP_GOVERNANCE_PENDING",
+        "preselection_score_100": "71.5",
+        "preselection_decision": "Selection Review - Phased Candidate",
+        "theme_fit_15": "12.0",
+        "fundamental_25": "17.3",
+        "technical_25": "14.0",
+        "relative_strength_score_10": "4.0",
+        "momentum_score_10": "4.7",
+        "setup_quality_score_10": "7.8",
+        "liquidity_tradeability_15": "13",
+        "governance_management_10": "6.0",
+        "valuation_reward_risk_10": "8",
+        "current_price": "335.5",
+        "current_stage": "STAGE_2",
+        "current_signal": "HOLD",
+        "current_rsi": "68.3",
+        "current_relative_strength": "11.46",
+        "technical_setup_score": "55.0",
+        "sma20": "337.08",
+        "sma50": "316.91",
+        "distance_from_sma20_pct": "-0.46873145840748975",
+        "distance_from_sma50_pct": "5.866018743491841",
+        "pct_from_52w_high": "-4.6",
+        "vol_avg_20d": "1691910.0",
+        "avg_turnover_20d_cr": "56.7635805",
+        "vol_ratio": "0.46",
+        "liquidity_gate": "PASS",
+        "financial_gate": "PASS",
+        "governance_gate": "PENDING_OFFICIAL_REVIEW",
+        "stop_distance_gate": "PASS",
+        "reward_risk_gate": "PASS_2R_MODELLED",
+        "no_chase_gate": "PASS",
+        "entry_trigger": "Break above 355.32 with volume, or retest-hold near 337.08; skip if >5% above planned trigger.",
+        "reference_entry_price": "335.5",
+        "initial_stop_price": "313.74",
+        "initial_stop_distance_pct": "6.5",
+        "stop_method": "50DMA structure stop",
+        "target_2r_price": "379.02",
+        "policy_initial_slot_value": "15000.0",
+        "paper_quantity_by_policy": "44",
+        "paper_position_value": "14762.0",
+        "paper_risk_to_stop": "957.44",
+        "max_position_qty_by_value": "44",
+        "max_position_qty_by_risk": "172",
+        "max_position_qty_by_liquidity": "33838",
+        "latest_quarter": "Jun 2026",
+        "financial_freshness": "fresh result: Jun 2026; fetched 2026-08-06T19:28:11.737169+05:30",
+        "key_strengths": "owned by two sampled small-cap funds; current Stage 2 trend; profit growth evidence",
+        "key_risks": "nan",
+        "evidence_blockers": "GOVERNANCE_REVIEW_PENDING",
+        "next_action": "Complete governance/filing review, then wait for breakout-retest or pullback trigger."
+      },
+      "assessment": {
+        "stance": "Best valuation/liquidity balance among the clean five, but technical leadership is lower.",
+        "fundamental_view": "Fresh bank result evidence and institutional ownership are positives. The analysis needs NPA, CASA, NIM, credit-cost, and capital adequacy checks before capital deployment.",
+        "technical_view": "Stage 2 with high RSI but weaker relative strength than the leaders. Current volume ratio is thin, so the trigger needs stronger participation.",
+        "sector_view": "Private bank exposure is cyclical and rate/credit-cost sensitive.",
+        "kill_switches": [
+          "Asset-quality or credit-cost trend worsens.",
+          "Relative strength fails versus Bank/Nifty benchmarks.",
+          "Price closes below mapped stop or 50DMA structure."
+        ]
+      },
+      "theme": {
+        "theme_lens": "Private-bank credit cycle and regional lending franchise",
+        "theme_thesis": "The theme is mid-sized private bank credit growth with profitability, asset-quality, and deposit-franchise discipline.",
+        "stock_expression": "Karur Vysya is the valuation-and-liquidity counterweight in the clean list. It is less thematic momentum and more compounding-through-credit-cycle evidence.",
+        "theme_confirmation": "Fresh Jun 2026 result cache, strong institutional holding, Stage 2 price trend, and very high traded value.",
+        "theme_risk": "Lower relative strength than the leaders, thin current volume ratio in the policy scan, and bank-specific NPA/NIM/CASA/credit-cost evidence still needing review.",
+        "theme_invalidation": "Asset quality, NIM, or credit-cost commentary deteriorates, or relative strength fails against bank benchmarks.",
+        "priority_implication": "Useful diversifier if the trigger arrives with participation, not the first momentum buy."
+      },
+      "financials": {
+        "latest_quarter": {
+          "symbol": "KARURVYSYA",
+          "period_label": "Jun 2026",
+          "period_end": "2026-06-30",
+          "period_type": "quarter",
+          "revenue": 1864.54,
+          "expenses": null,
+          "operating_profit": null,
+          "opm_pct": null,
+          "other_income": null,
+          "interest": null,
+          "depreciation": null,
+          "pbt": null,
+          "tax_pct": null,
+          "pat": 755.7,
+          "eps": null,
+          "source": "screener_yfinance_fallback_normalized",
+          "source_url": null,
+          "raw_json": null,
+          "fetched_at": "2026-08-16T19:08:33.813003+05:30"
+        },
+        "previous_quarter": {
+          "symbol": "KARURVYSYA",
+          "period_label": "Mar 2026",
+          "period_end": "2026-03-31",
+          "period_type": "quarter",
+          "revenue": 1974.57,
+          "expenses": null,
+          "operating_profit": null,
+          "opm_pct": null,
+          "other_income": null,
+          "interest": null,
+          "depreciation": null,
+          "pbt": null,
+          "tax_pct": null,
+          "pat": 724.96,
+          "eps": null,
+          "source": "screener_yfinance_fallback_normalized",
+          "source_url": null,
+          "raw_json": null,
+          "fetched_at": "2026-08-16T19:08:33.813003+05:30"
+        },
+        "year_ago_quarter": {
+          "symbol": "KARURVYSYA",
+          "period_label": "Jun 2025",
+          "period_end": "2025-06-30",
+          "period_type": "quarter",
+          "revenue": 1526.6,
+          "expenses": null,
+          "operating_profit": null,
+          "opm_pct": null,
+          "other_income": null,
+          "interest": null,
+          "depreciation": null,
+          "pbt": null,
+          "tax_pct": null,
+          "pat": 521.45,
+          "eps": null,
+          "source": "screener_yfinance_fallback_normalized",
+          "source_url": null,
+          "raw_json": null,
+          "fetched_at": "2026-08-16T19:08:33.813003+05:30"
+        },
+        "latest_annual": {
+          "symbol": "KARURVYSYA",
+          "period_label": "Mar 2026",
+          "period_end": "2026-03-31",
+          "period_type": "annual",
+          "revenue": 7022.87,
+          "expenses": null,
+          "operating_profit": null,
+          "opm_pct": null,
+          "other_income": null,
+          "interest": null,
+          "depreciation": null,
+          "pbt": null,
+          "tax_pct": null,
+          "pat": 2510.33,
+          "eps": null,
+          "dividend_payout_pct": null,
+          "source": "screener_yfinance_fallback_normalized",
+          "source_url": null,
+          "raw_json": null,
+          "fetched_at": "2026-08-16T19:08:34.433206+05:30"
+        },
+        "previous_annual": {
+          "symbol": "KARURVYSYA",
+          "period_label": "Mar 2025",
+          "period_end": "2025-03-31",
+          "period_type": "annual",
+          "revenue": 6089.47,
+          "expenses": null,
+          "operating_profit": null,
+          "opm_pct": null,
+          "other_income": null,
+          "interest": null,
+          "depreciation": null,
+          "pbt": null,
+          "tax_pct": null,
+          "pat": 1941.64,
+          "eps": null,
+          "dividend_payout_pct": null,
+          "source": "screener_yfinance_fallback_normalized",
+          "source_url": null,
+          "raw_json": null,
+          "fetched_at": "2026-08-16T19:08:34.433206+05:30"
+        },
+        "latest_balance_sheet": {},
+        "latest_cash_flow": {},
+        "revenue_yoy_pct": 22.136774531638935,
+        "pat_yoy_pct": 44.92281139131269,
+        "eps_yoy_pct": null,
+        "revenue_qoq_pct": -5.572352461548591,
+        "pat_qoq_pct": 4.240233943941729,
+        "annual_revenue_yoy_pct": 15.328099161339148,
+        "annual_pat_yoy_pct": 29.28915761933211,
+        "financial_source": "screener_yfinance_fallback_normalized",
+        "financial_source_url": "",
+        "financial_fetched_at": "2026-08-16T19:08:33.813003+05:30"
+      },
+      "screener": {
+        "source_url": "https://www.screener.in/company/KARURVYSYA/consolidated/",
+        "ratios": {
+          "Market Cap": "\u20b932688 Cr",
+          "Current Price": "\u20b9338.15",
+          "52W High": "\u20b9351.80",
+          "52W Low": "\u20b9201.82",
+          "Stock P/E": "11.92",
+          "Forward P/E": "10.26",
+          "Price to Book": "2.32",
+          "Book Value": "\u20b9145.95",
+          "Dividend Yield": "0.77%",
+          "ROE": "N/A (see financials)",
+          "Gross Margin": "0.00%",
+          "Operating Margin": "56.66%",
+          "Net Margin": "41.31%",
+          "Revenue Growth": "26.00%",
+          "Earnings Growth": "45.00%",
+          "Debt/Equity": "N/A",
+          "EV/EBITDA": "N/A",
+          "Beta": "-0.13",
+          "_source": "yfinance (screener.in values are JS-rendered)"
+        },
+        "pros": [],
+        "cons": [],
+        "shareholding": {
+          "_quarters": [
+            "Sep 2023",
+            "Dec 2023",
+            "Mar 2024",
+            "Jun 2024",
+            "Sep 2024",
+            "Dec 2024",
+            "Mar 2025",
+            "Jun 2025",
+            "Sep 2025",
+            "Dec 2025",
+            "Mar 2026",
+            "Jun 2026"
+          ],
+          "Promoters": "2.07%",
+          "Promoters_trend": [
+            "2.24%",
+            "2.22%",
+            "2.20%",
+            "2.15%",
+            "2.13%",
+            "2.13%",
+            "2.11%",
+            "2.10%",
+            "2.10%",
+            "2.07%",
+            "2.07%",
+            "2.07%"
+          ],
+          "FIIs": "17.92%",
+          "FIIs_trend": [
+            "18.09%",
+            "15.61%",
+            "15.38%",
+            "15.11%",
+            "15.10%",
+            "14.80%",
+            "15.12%",
+            "15.41%",
+            "15.81%",
+            "16.87%",
+            "19.25%",
+            "17.92%"
+          ],
+          "DIIs": "41.22%",
+          "DIIs_trend": [
+            "32.29%",
+            "35.16%",
+            "36.22%",
+            "35.68%",
+            "37.01%",
+            "38.47%",
+            "38.87%",
+            "39.47%",
+            "39.97%",
+            "40.20%",
+            "39.26%",
+            "41.22%"
+          ],
+          "Government": "0.01%",
+          "Government_trend": [
+            "0.01%",
+            "0.02%",
+            "0.02%",
+            "0.00%",
+            "0.00%",
+            "0.00%",
+            "0.02%",
+            "0.02%",
+            "0.01%",
+            "0.02%",
+            "0.02%",
+            "0.01%"
+          ],
+          "Public": "38.78%",
+          "Public_trend": [
+            "47.38%",
+            "47.00%",
+            "46.19%",
+            "47.07%",
+            "45.76%",
+            "44.60%",
+            "43.88%",
+            "43.00%",
+            "42.11%",
+            "40.84%",
+            "39.40%",
+            "38.78%"
+          ]
+        },
+        "announcements": [
+          {
+            "title": "All",
+            "url": "https://www.bseindia.com/stock-share-price/karur-vysya-bank-ltd/KARURVYSYA/590003/corp-announcements/"
+          },
+          {
+            "title": "Revision in Marginal Cost of Funds Based Lending Rates (MCLR)21 Aug- Karur Vysya Bank revises MCLR rates from 22 August ",
+            "url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=185E190D-06A4-4B48-ADDA-5B2AD871CAFD-092252.pdf"
+          },
+          {
+            "title": "Re-organisation of Departments and changes in Senior Management Personnel20 Aug- Board approved departmental reorganisat",
+            "url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=E6BCFC63-5B56-4C92-B55B-1A9666E1638F-153923.pdf"
+          },
+          {
+            "title": "Outcome of the Institutional Investor/Analyst meet17 Aug- Bank\u2019s top management held investor meetings in Hong Kong and ",
+            "url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=6D657DF6-EF8F-4486-BEB0-501C97C0BF5F-081221.pdf"
+          },
+          {
+            "title": "Schedule of Institutional Investors/Analysts meet6 Aug- Karur Vysya Bank schedules Avendus Spark investor meets on 12-14",
+            "url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=E1D5ADDD-11DA-41A8-8964-0E89FD4A5C18-102147.pdf"
+          },
+          {
+            "title": "Proceedings of Annual General Meeting (AGM)6 Aug- 107th AGM held on 5 Aug 2026; approved Rs 2.60 dividend and reappointm",
+            "url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=39E8716B-20FC-4A3B-BF5D-4FA293C242BF-075545.pdf"
+          }
+        ],
+        "annual_reports": [
+          {
+            "label": "[1]",
+            "url": "https://www.bseindia.com/bseplus/AnnualReport/590003/65548590003.pdf#page=168"
+          },
+          {
+            "label": "[2]",
+            "url": "https://www.kvb.co.in/docs/annual-report-for-the-financial-year-2022-2023.pdf#page=244"
+          },
+          {
+            "label": "Annual Report 2023from web",
+            "url": "https://www.kvb.bank.in/docs/annual-report-for-the-financial-year-2022-2023.pdf"
+          },
+          {
+            "label": "Annual Report 2022from bse",
+            "url": "https://www.bseindia.com/bseplus/AnnualReport/590003/73679590003.pdf"
+          },
+          {
+            "label": "Annual Report 2021from bse",
+            "url": "https://www.bseindia.com/bseplus/AnnualReport/590003/69036590003.pdf"
+          },
+          {
+            "label": "Annual Report 2020from bse",
+            "url": "https://www.bseindia.com/bseplus/AnnualReport/590003/65548590003.pdf"
+          }
+        ],
+        "concalls": [
+          {
+            "period": "Jul 2026",
+            "transcript_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=540E6A3D-71D2-4B9C-B386-86F383AA654F-155555.pdf",
+            "transcript_label": "Jul 2026 Earnings Call Transcript",
+            "ppt_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=09347CDE-A818-4BFE-BC0F-9C61A31BBB11-171725.pdf",
+            "recording_url": "https://www.kvb.bank.in/audios/investor-con-call-audio-fy27-1.mp3",
+            "ai_summary_title": "Concall Summary - Jul 2026"
+          },
+          {
+            "period": "May 2026",
+            "transcript_url": "https://www.kvb.bank.in/docs/investor-con-call-transcript-fy26-4.pdf",
+            "transcript_label": "May 2026 Earnings Call Transcript",
+            "ppt_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=3B66AF8F-5FE4-4420-A17B-87268DDA86EE-174706.pdf",
+            "ai_summary_title": "Concall Summary - May 2026"
+          },
+          {
+            "period": "Jan 2026",
+            "transcript_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=FDC126A1-8CF7-48A8-A394-6E7AC87939C0-120702.pdf",
+            "transcript_label": "Jan 2026 Earnings Call Transcript",
+            "ppt_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=8132D0DA-1B6D-48F5-8CB1-44F9AED9AD50-162512.pdf",
+            "recording_url": "https://www.kvb.bank.in/investor-corner/regulation-30-sebi-disclosure/investor-con-call-transcripts-and-recordings/investor-con-call-recordings/",
+            "ai_summary_title": "Concall Summary - Jan 2026"
+          },
+          {
+            "period": "Oct 2025",
+            "transcript_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=60EE9CC1-2175-4D86-9082-84B7660C8F59-083148.pdf",
+            "transcript_label": "Oct 2025 Earnings Call Transcript",
+            "ppt_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=07CFF517-C92D-4938-957F-E0D59B6EC0DA-172541.pdf",
+            "ai_summary_title": "Concall Summary - Oct 2025"
+          },
+          {
+            "period": "Jul 2025",
+            "transcript_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=6D4A9C29-9181-4024-B1E5-7AAE799318AC-083056.pdf",
+            "transcript_label": "Jul 2025 Earnings Call Transcript",
+            "ppt_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=C7816753-83DB-4286-9C56-F3CFBD0B4C0B-165531.pdf",
+            "ai_summary_title": "Concall Summary - Jul 2025"
+          },
+          {
+            "period": "May 2025",
+            "transcript_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=40834DB1-396A-488D-AE98-5292450822A6-191608.pdf",
+            "transcript_label": "May 2025 Earnings Call Transcript",
+            "ppt_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=7004E053-FF87-426E-8630-E482BC4FE74A-172715.pdf",
+            "ai_summary_title": "Concall Summary - May 2025"
+          },
+          {
+            "period": "Jan 2025",
+            "transcript_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=8C59574C-2278-44A4-AC14-EB4EB1C2C483-185407.pdf",
+            "transcript_label": "Jan 2025 Earnings Call Transcript",
+            "ppt_url": "https://www.kvb.co.in/docs/investor-presentation-2025-01-20.pdf",
+            "ai_summary_title": "Concall Summary - Jan 2025"
+          },
+          {
+            "period": "Oct 2024",
+            "transcript_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=ACAA208C-05E3-4329-9BA8-84A1426283E5-122109.pdf",
+            "transcript_label": "Oct 2024 Earnings Call Transcript",
+            "ppt_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=FB5EE7E6-228D-417C-8DBA-65B9DE3A8039-173701.pdf",
+            "ai_summary_title": "Concall Summary - Oct 2024"
+          }
+        ],
+        "error": ""
+      },
+      "technical": {
+        "symbol": "KARURVYSYA",
+        "price": 335.5,
+        "open": 336.9,
+        "high": 336.9,
+        "low": 333.15,
+        "chg_pct": 0.42,
+        "rsi": 56.3,
+        "adx": 17.9,
+        "macd": "bearish",
+        "supertrend": "SELL",
+        "sma20": 337.08,
+        "sma50": 316.91,
+        "sma200": 289.84,
+        "above_sma20": false,
+        "above_sma50": true,
+        "above_sma200": true,
+        "52w_high": 351.8,
+        "52w_low": 201.82,
+        "pct_from_52h": -4.6,
+        "vol_last": 785799,
+        "vol_avg_20d": 1691910,
+        "vol_ratio": 0.46,
+        "technical_score": 55,
+        "score_method": "derived from EOD MA alignment, RSI, MACD, Supertrend, and ADX",
+        "data_bars": 273,
+        "as_of": "2026-08-21",
+        "data_source": "PostgreSQL market.equity_eod",
+        "postgres_persist": null
+      },
+      "sources": [
+        {
+          "label": "Company financial report: quarter ended June 30, 2026",
+          "url": "https://www.kvb.bank.in/about-us/financial-performance/financial-reports-recent-quarter/"
+        },
+        {
+          "label": "Screener structured fundamentals",
+          "url": "https://www.screener.in/company/KARURVYSYA/consolidated/"
+        },
+        {
+          "label": "NSE quote page",
+          "url": "https://www.nseindia.com/get-quotes/equity?symbol=KARURVYSYA"
+        },
+        {
+          "label": "BSE company page",
+          "url": "https://www.bseindia.com/stock-share-price/karur-vysya-bank-ltd/KARURVYSYA/590003/"
+        },
+        {
+          "label": "BSE announcement: All",
+          "url": "https://www.bseindia.com/stock-share-price/karur-vysya-bank-ltd/KARURVYSYA/590003/corp-announcements/"
+        },
+        {
+          "label": "BSE announcement: Revision in Marginal Cost of Funds Based Lending Rates (MCLR)21 Aug- Karur Vysya Bank revi",
+          "url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=185E190D-06A4-4B48-ADDA-5B2AD871CAFD-092252.pdf"
+        },
+        {
+          "label": "BSE announcement: Re-organisation of Departments and changes in Senior Management Personnel20 Aug- Board app",
+          "url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=E6BCFC63-5B56-4C92-B55B-1A9666E1638F-153923.pdf"
+        },
+        {
+          "label": "Concall transcript: Jul 2026",
+          "url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=540E6A3D-71D2-4B9C-B386-86F383AA654F-155555.pdf"
+        },
+        {
+          "label": "Concall transcript: May 2026",
+          "url": "https://www.kvb.bank.in/docs/investor-con-call-transcript-fy26-4.pdf"
+        }
+      ],
+      "source_domains": [
+        "bseindia.com",
+        "kvb.bank.in",
+        "nseindia.com",
+        "screener.in"
+      ],
+      "csv": {
+        "rank": 2,
+        "bucket": "Clean trigger map",
+        "symbol": "KARURVYSYA",
+        "company": "Karur Vysya Bank Limited",
+        "sector": "Banks",
+        "policy_score_100": "70.3",
+        "policy_rating": "Active Watch",
+        "phase1_status": "PHASE1_TRIGGER_MAP_GOVERNANCE_PENDING",
+        "stance": "Best valuation/liquidity balance among the clean five, but technical leadership is lower.",
+        "current_price": "335.5",
+        "current_stage": "STAGE_2",
+        "current_rsi": "68.3",
+        "current_relative_strength": "11.46",
+        "relative_strength_score_10": "4.0",
+        "momentum_score_10": "4.7",
+        "setup_quality_score_10": "7.8",
+        "technical_25": "14.0",
+        "fundamental_25": "17.3",
+        "liquidity_tradeability_15": "13",
+        "governance_management_10": "6.0",
+        "valuation_reward_risk_10": "8",
+        "entry_trigger": "Break above 355.32 with volume, or retest-hold near 337.08; skip if >5% above planned trigger.",
+        "initial_stop_price": "313.74",
+        "target_2r_price": "379.02",
+        "paper_quantity_by_policy": "44",
+        "paper_position_value": "14762.0",
+        "paper_risk_to_stop": "957.44",
+        "latest_quarter": "Jun 2026",
+        "latest_revenue_cr": 1864.54,
+        "latest_pat_cr": 755.7,
+        "latest_opm_pct": null,
+        "revenue_yoy_pct": 22.136774531638935,
+        "pat_yoy_pct": 44.92281139131269,
+        "annual_revenue_cr": 7022.87,
+        "annual_pat_cr": 2510.33,
+        "market_cap": "\u20b932688 Cr",
+        "stock_pe": "11.92",
+        "price_to_book": "2.32",
+        "roe": "N/A (see financials)",
+        "roce": "",
+        "promoters": "2.07%",
+        "fiis": "17.92%",
+        "diis": "41.22%",
+        "public": "38.78%",
+        "key_strengths": "owned by two sampled small-cap funds; current Stage 2 trend; profit growth evidence",
+        "key_risks": "",
+        "evidence_blockers": "GOVERNANCE_REVIEW_PENDING",
+        "next_action": "Complete governance/filing review, then wait for breakout-retest or pullback trigger.",
+        "source_domains": "bseindia.com; kvb.bank.in; nseindia.com; screener.in",
+        "theme_lens": "Private-bank credit cycle and regional lending franchise",
+        "theme_thesis": "The theme is mid-sized private bank credit growth with profitability, asset-quality, and deposit-franchise discipline.",
+        "stock_expression": "Karur Vysya is the valuation-and-liquidity counterweight in the clean list. It is less thematic momentum and more compounding-through-credit-cycle evidence.",
+        "theme_confirmation": "Fresh Jun 2026 result cache, strong institutional holding, Stage 2 price trend, and very high traded value.",
+        "theme_risk": "Lower relative strength than the leaders, thin current volume ratio in the policy scan, and bank-specific NPA/NIM/CASA/credit-cost evidence still needing review.",
+        "theme_invalidation": "Asset quality, NIM, or credit-cost commentary deteriorates, or relative strength fails against bank benchmarks.",
+        "priority_implication": "Useful diversifier if the trigger arrives with participation, not the first momentum buy."
+      }
+    },
+    {
+      "rank": 3,
+      "bucket": "Clean trigger map",
+      "symbol": "AEGISVOPAK",
+      "company": "Aegis Vopak Terminals Limited",
+      "sector": "Oil",
+      "policy": {
+        "symbol": "AEGISVOPAK",
+        "company": "Aegis Vopak Terminals Limited",
+        "sector": "Oil",
+        "policy_theme_bucket": "Infrastructure / terminals",
+        "theme_status": "CONFIRMED",
+        "policy_score_100": "70.0",
+        "policy_rating": "Active Watch",
+        "phase1_status": "PHASE1_TRIGGER_MAP_GOVERNANCE_PENDING",
+        "preselection_score_100": "60.6",
+        "preselection_decision": "Watch - Retest / Verify",
+        "theme_fit_15": "14.0",
+        "fundamental_25": "14.8",
+        "technical_25": "16.7",
+        "relative_strength_score_10": "8.5",
+        "momentum_score_10": "5.4",
+        "setup_quality_score_10": "6.2",
+        "liquidity_tradeability_15": "13",
+        "governance_management_10": "3.5",
+        "valuation_reward_risk_10": "8",
+        "current_price": "276.3",
+        "current_stage": "STAGE_2",
+        "current_signal": "HOLD",
+        "current_rsi": "59.5",
+        "current_relative_strength": "36.99",
+        "technical_setup_score": "60.0",
+        "sma20": "282.91",
+        "sma50": "269.74",
+        "distance_from_sma20_pct": "-2.336432080873785",
+        "distance_from_sma50_pct": "2.4319715281382104",
+        "pct_from_52w_high": "-11.3",
+        "vol_avg_20d": "1126985.0",
+        "avg_turnover_20d_cr": "31.13859555",
+        "vol_ratio": "0.75",
+        "liquidity_gate": "PASS",
+        "financial_gate": "PASS",
+        "governance_gate": "PENDING_OFFICIAL_REVIEW",
+        "stop_distance_gate": "PASS",
+        "reward_risk_gate": "PASS_2R_MODELLED",
+        "no_chase_gate": "PASS",
+        "entry_trigger": "Break above 314.60 with volume, or retest-hold near 282.91; skip if >5% above planned trigger.",
+        "reference_entry_price": "276.3",
+        "initial_stop_price": "248.67",
+        "initial_stop_distance_pct": "10.0",
+        "stop_method": "10% policy default stop",
+        "target_2r_price": "331.56",
+        "policy_initial_slot_value": "15000.0",
+        "paper_quantity_by_policy": "54",
+        "paper_position_value": "14920.2",
+        "paper_risk_to_stop": "1492.02",
+        "max_position_qty_by_value": "54",
+        "max_position_qty_by_risk": "135",
+        "max_position_qty_by_liquidity": "22539",
+        "latest_quarter": "Jun 2026",
+        "financial_freshness": "fresh result: Jun 2026; fetched 2026-08-06T19:27:40.465133+05:30",
+        "key_strengths": "overlaps one sampled small-cap fund; high relative strength; current Stage 2 trend; profit growth evidence",
+        "key_risks": "fundamental score weak; setup backtest sample provisional",
+        "evidence_blockers": "GOVERNANCE_REVIEW_PENDING",
+        "next_action": "Complete governance/filing review, then wait for breakout-retest or pullback trigger."
+      },
+      "assessment": {
+        "stance": "Theme and relative strength are attractive; valuation/leverage history makes this active watch.",
+        "fundamental_view": "Terminal infrastructure has high operating margin, but the stock screens expensive and carries leverage/interest-capitalization concerns.",
+        "technical_view": "Stage 2 and high relative strength, with strong traded value. It needs the mapped trigger rather than a chase after the result move.",
+        "sector_view": "Liquid/gas logistics and storage is infrastructure-linked with long-duration assets.",
+        "kill_switches": [
+          "Debt, security-cover, or interest capitalization review weakens.",
+          "Q1 FY27 official result does not support current margin profile.",
+          "Breakout fails back below 20DMA with volume."
+        ]
+      },
+      "theme": {
+        "theme_lens": "Energy storage, terminals, and logistics infrastructure",
+        "theme_thesis": "The theme is long-duration liquid/gas storage infrastructure with operating leverage. It works when utilization, pricing, and debt-service comfort support the asset base.",
+        "stock_expression": "Aegis Vopak represents terminal infrastructure rather than commodity-price exposure. The market is rewarding the asset theme, visible in relative strength.",
+        "theme_confirmation": "Stage 2 trend, strong relative strength, fresh Jun 2026 result cache, and adequate traded value for a small-cap paper slot.",
+        "theme_risk": "High P/E and P/B, leverage, interest capitalization concerns, short listed history, and asset-heavy capex execution.",
+        "theme_invalidation": "Security-cover/debt review weakens, Q1 margins do not support the thesis, or price loses 20DMA support after a failed breakout.",
+        "priority_implication": "Good theme watch, but valuation and balance-sheet review must be stricter than for SYRMA."
+      },
+      "financials": {
+        "latest_quarter": {
+          "symbol": "AEGISVOPAK",
+          "period_label": "Jun 2026",
+          "period_end": "2026-06-30",
+          "period_type": "quarter",
+          "revenue": 234.0,
+          "expenses": 54.0,
+          "operating_profit": 179.0,
+          "opm_pct": 77.0,
+          "other_income": 4.0,
+          "interest": 39.0,
+          "depreciation": 55.0,
+          "pbt": 89.0,
+          "tax_pct": 22.0,
+          "pat": 69.0,
+          "eps": 0.6,
+          "source": "screener",
+          "source_url": "https://www.screener.in/company/AEGISVOPAK/consolidated/",
+          "raw_json": {
+            "headers": [
+              "Mar 2025",
+              "Jun 2025",
+              "Sep 2025",
+              "Dec 2025",
+              "Mar 2026",
+              "Jun 2026"
+            ],
+            "table_keys": [
+              "Sales+",
+              "Expenses+",
+              "Operating Profit",
+              "OPM %",
+              "Other Income+",
+              "Interest",
+              "Depreciation",
+              "Profit before tax",
+              "Tax %",
+              "Net Profit+",
+              "EPS in Rs",
+              "Raw PDF",
+              "_headers"
+            ]
+          },
+          "fetched_at": "2026-08-16T13:42:42.197239+05:30"
+        },
+        "previous_quarter": {
+          "symbol": "AEGISVOPAK",
+          "period_label": "Mar 2026",
+          "period_end": "2026-03-31",
+          "period_type": "quarter",
+          "revenue": 243.0,
+          "expenses": 64.0,
+          "operating_profit": 179.0,
+          "opm_pct": 74.0,
+          "other_income": 4.0,
+          "interest": 41.0,
+          "depreciation": 55.0,
+          "pbt": 87.0,
+          "tax_pct": 15.0,
+          "pat": 74.0,
+          "eps": 0.62,
+          "source": "screener",
+          "source_url": "https://www.screener.in/company/AEGISVOPAK/consolidated/",
+          "raw_json": {
+            "headers": [
+              "Mar 2025",
+              "Jun 2025",
+              "Sep 2025",
+              "Dec 2025",
+              "Mar 2026",
+              "Jun 2026"
+            ],
+            "table_keys": [
+              "Sales+",
+              "Expenses+",
+              "Operating Profit",
+              "OPM %",
+              "Other Income+",
+              "Interest",
+              "Depreciation",
+              "Profit before tax",
+              "Tax %",
+              "Net Profit+",
+              "EPS in Rs",
+              "Raw PDF",
+              "_headers"
+            ]
+          },
+          "fetched_at": "2026-08-16T13:42:42.197235+05:30"
+        },
+        "year_ago_quarter": {
+          "symbol": "AEGISVOPAK",
+          "period_label": "Jun 2025",
+          "period_end": "2025-06-30",
+          "period_type": "quarter",
+          "revenue": 208.0,
+          "expenses": 53.0,
+          "operating_profit": 155.0,
+          "opm_pct": 75.0,
+          "other_income": 11.0,
+          "interest": 30.0,
+          "depreciation": 42.0,
+          "pbt": 95.0,
+          "tax_pct": 17.0,
+          "pat": 79.0,
+          "eps": 0.64,
+          "source": "screener",
+          "source_url": "https://www.screener.in/company/AEGISVOPAK/consolidated/",
+          "raw_json": {
+            "headers": [
+              "Mar 2025",
+              "Jun 2025",
+              "Sep 2025",
+              "Dec 2025",
+              "Mar 2026",
+              "Jun 2026"
+            ],
+            "table_keys": [
+              "Sales+",
+              "Expenses+",
+              "Operating Profit",
+              "OPM %",
+              "Other Income+",
+              "Interest",
+              "Depreciation",
+              "Profit before tax",
+              "Tax %",
+              "Net Profit+",
+              "EPS in Rs",
+              "Raw PDF",
+              "_headers"
+            ]
+          },
+          "fetched_at": "2026-08-16T13:42:42.197220+05:30"
+        },
+        "latest_annual": {
+          "symbol": "AEGISVOPAK",
+          "period_label": "Mar 2026",
+          "period_end": "2026-03-31",
+          "period_type": "annual",
+          "revenue": 923.0,
+          "expenses": 237.0,
+          "operating_profit": 687.0,
+          "opm_pct": 74.0,
+          "other_income": 37.0,
+          "interest": 110.0,
+          "depreciation": 208.0,
+          "pbt": 406.0,
+          "tax_pct": 16.0,
+          "pat": 342.0,
+          "eps": 2.8,
+          "dividend_payout_pct": 71.0,
+          "source": "screener",
+          "source_url": "https://www.screener.in/company/AEGISVOPAK/consolidated/",
+          "raw_json": {
+            "headers": [
+              "Mar 2023",
+              "Mar 2024",
+              "Mar 2025",
+              "Mar 2026",
+              "TTM"
+            ],
+            "table_keys": [
+              "Sales+",
+              "Expenses+",
+              "Operating Profit",
+              "OPM %",
+              "Other Income+",
+              "Interest",
+              "Depreciation",
+              "Profit before tax",
+              "Tax %",
+              "Net Profit+",
+              "EPS in Rs",
+              "Dividend Payout %",
+              "_headers"
+            ]
+          },
+          "fetched_at": "2026-08-16T13:42:42.197372+05:30"
+        },
+        "previous_annual": {
+          "symbol": "AEGISVOPAK",
+          "period_label": "Mar 2025",
+          "period_end": "2025-03-31",
+          "period_type": "annual",
+          "revenue": 789.0,
+          "expenses": 214.0,
+          "operating_profit": 575.0,
+          "opm_pct": 73.0,
+          "other_income": 32.0,
+          "interest": 193.0,
+          "depreciation": 148.0,
+          "pbt": 265.0,
+          "tax_pct": 15.0,
+          "pat": 225.0,
+          "eps": 2.03,
+          "dividend_payout_pct": 0.0,
+          "source": "screener",
+          "source_url": "https://www.screener.in/company/AEGISVOPAK/consolidated/",
+          "raw_json": {
+            "headers": [
+              "Mar 2023",
+              "Mar 2024",
+              "Mar 2025",
+              "Mar 2026",
+              "TTM"
+            ],
+            "table_keys": [
+              "Sales+",
+              "Expenses+",
+              "Operating Profit",
+              "OPM %",
+              "Other Income+",
+              "Interest",
+              "Depreciation",
+              "Profit before tax",
+              "Tax %",
+              "Net Profit+",
+              "EPS in Rs",
+              "Dividend Payout %",
+              "_headers"
+            ]
+          },
+          "fetched_at": "2026-08-16T13:42:42.197368+05:30"
+        },
+        "latest_balance_sheet": {
+          "symbol": "AEGISVOPAK",
+          "period_label": "Mar 2026",
+          "period_end": "2026-03-31",
+          "period_type": "annual",
+          "equity_capital": 1108.0,
+          "reserves": 3183.0,
+          "borrowings": 3731.0,
+          "other_liabilities": 400.0,
+          "total_liabilities": 8421.0,
+          "fixed_assets": 6650.0,
+          "cwip": 210.0,
+          "investments": 0.0,
+          "other_assets": 1560.0,
+          "total_assets": 8421.0,
+          "net_debt": 3731.0,
+          "source": "screener",
+          "source_url": "https://www.screener.in/company/AEGISVOPAK/consolidated/",
+          "raw_json": {
+            "headers": [
+              "Mar 2022",
+              "Mar 2023",
+              "Mar 2024",
+              "Mar 2025",
+              "Mar 2026"
+            ],
+            "table_keys": [
+              "Equity Capital",
+              "Reserves",
+              "Borrowings+",
+              "Other Liabilities+",
+              "Total Liabilities",
+              "Fixed Assets+",
+              "CWIP",
+              "Investments",
+              "Other Assets+",
+              "Total Assets",
+              "_headers"
+            ]
+          },
+          "fetched_at": "2026-08-16T13:42:42.197482+05:30"
+        },
+        "latest_cash_flow": {
+          "symbol": "AEGISVOPAK",
+          "period_label": "Mar 2026",
+          "period_end": "2026-03-31",
+          "period_type": "annual",
+          "operating_cf": 702.0,
+          "investing_cf": -3077.0,
+          "financing_cf": 1956.0,
+          "net_cf": -419.0,
+          "source": "screener",
+          "source_url": "https://www.screener.in/company/AEGISVOPAK/consolidated/",
+          "raw_json": {
+            "headers": [
+              "Mar 2022",
+              "Mar 2023",
+              "Mar 2024",
+              "Mar 2025",
+              "Mar 2026"
+            ],
+            "table_keys": [
+              "Cash from Operating Activity+",
+              "Cash from Investing Activity+",
+              "Cash from Financing Activity+",
+              "Net Cash Flow",
+              "Free Cash Flow",
+              "CFO/OP",
+              "_headers"
+            ]
+          },
+          "fetched_at": "2026-08-16T13:42:42.197534+05:30"
+        },
+        "revenue_yoy_pct": 12.5,
+        "pat_yoy_pct": -12.658227848101266,
+        "eps_yoy_pct": -6.25,
+        "revenue_qoq_pct": -3.703703703703709,
+        "pat_qoq_pct": -6.756756756756754,
+        "annual_revenue_yoy_pct": 16.983523447401772,
+        "annual_pat_yoy_pct": 52.0,
+        "financial_source": "screener",
+        "financial_source_url": "https://www.screener.in/company/AEGISVOPAK/consolidated/",
+        "financial_fetched_at": "2026-08-16T13:42:42.197239+05:30"
+      },
+      "screener": {
+        "source_url": "https://www.screener.in/company/AEGISVOPAK/consolidated/",
+        "ratios": {
+          "Market Cap": "29,965",
+          "Current Price": "270",
+          "High / Low": "312",
+          "Stock P/E": "111",
+          "Book Value": "38.7",
+          "Dividend Yield": "0.07",
+          "ROCE": "7.56",
+          "ROE": "11.0",
+          "Face Value": "10.0"
+        },
+        "pros": [],
+        "cons": [
+          "Stock is trading at 6.98 times its book value",
+          "Company has a low return on equity of 12.0% over last 3 years.",
+          "Company might be capitalizing the interest cost"
+        ],
+        "shareholding": {
+          "_quarters": [
+            "Jun 2025",
+            "Sep 2025",
+            "Dec 2025",
+            "Mar 2026",
+            "Jun 2026"
+          ],
+          "Promoters": "86.94%",
+          "Promoters_trend": [
+            "86.94%",
+            "86.94%",
+            "86.94%",
+            "86.94%",
+            "86.94%"
+          ],
+          "FIIs": "5.35%",
+          "FIIs_trend": [
+            "5.87%",
+            "6.07%",
+            "6.03%",
+            "5.89%",
+            "5.35%"
+          ],
+          "DIIs": "5.30%",
+          "DIIs_trend": [
+            "5.29%",
+            "5.03%",
+            "4.98%",
+            "4.89%",
+            "5.30%"
+          ],
+          "Public": "2.41%",
+          "Public_trend": [
+            "1.90%",
+            "1.95%",
+            "2.06%",
+            "2.28%",
+            "2.41%"
+          ],
+          "No. of Shareholders": "50,411",
+          "No. of Shareholders_trend": [
+            "57,139",
+            "48,323",
+            "47,170",
+            "48,956",
+            "50,411"
+          ]
+        },
+        "announcements": [
+          {
+            "title": "All",
+            "url": "https://www.bseindia.com/stock-share-price/aegis-vopak-terminals-ltd/AEGISVOPAK/544407/corp-announcements/"
+          },
+          {
+            "title": "Disclosure Under Regulation 30 Of SEBI LODR Regulation 2015 - Capacity Addition At Pipavav In Aegis Terminal (Pipavav) L",
+            "url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=7d07dd65-9815-4a38-8261-1d10f3307c17.pdf"
+          },
+          {
+            "title": "Announcement under Regulation 30 (LODR)-Earnings Call Transcript19 Aug",
+            "url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=2114eb20-f767-45c9-b6e8-40ea4066e753.pdf"
+          },
+          {
+            "title": "Earnings Conference Call With Analysts/Investors On Friday, August 14, 2026, At 03:00 P.M (IST)14 Aug- Audio recording o",
+            "url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=45e9e0ef-6186-4a1a-bf4b-e205f3cf385c.pdf"
+          },
+          {
+            "title": "Earnings Conference Call With Analysts/Investors On Friday, August 14, 2026 At 03:00 P.M (IST)14 Aug- Audio recording of",
+            "url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=1a0e90b3-a7f0-46d5-be39-fc21328756d7.pdf"
+          },
+          {
+            "title": "Shareholder Meeting / Postal Ballot-Scrutinizer''s Report10 Aug",
+            "url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=28bcbd47-31e2-4e1e-9f5a-5d70695d531e.pdf"
+          }
+        ],
+        "annual_reports": [],
+        "concalls": [
+          {
+            "period": "Aug 2026",
+            "transcript_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=2114eb20-f767-45c9-b6e8-40ea4066e753.pdf",
+            "transcript_label": "Aug 2026 Earnings Call Transcript",
+            "ppt_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=1a253599-0dc0-4ffb-87b6-df05270b7298.pdf",
+            "recording_url": "https://cdn.sanity.io/files/gvktr2p5/production/c54d77eb9419c7ef10b7f2ad18750ccadffefaa0.mp3",
+            "ai_summary_title": "Concall Summary - Aug 2026"
+          },
+          {
+            "period": "Aug 2026",
+            "ppt_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=4dccd3ec-147c-4174-8ffa-12297802ca33.pdf"
+          },
+          {
+            "period": "Jun 2026",
+            "transcript_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=53674766-2875-4330-9e54-960fcfc5a869.pdf",
+            "transcript_label": "Jun 2026 Earnings Call Transcript",
+            "ppt_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=65945fff-94c1-4f73-88e5-afebff5b29de.pdf",
+            "recording_url": "https://cdn.sanity.io/files/gvktr2p5/production/4897f9412a04ef472879e3f044b0d8d2b8e51a01.mp3",
+            "ai_summary_title": "Concall Summary - Jun 2026"
+          },
+          {
+            "period": "Feb 2026",
+            "transcript_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=5243a51d-6033-46df-a525-011d334eab57.pdf",
+            "transcript_label": "Feb 2026 Earnings Call Transcript",
+            "ppt_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=0ac1f812-5b2c-4b1d-8024-0c3b483552ae.pdf",
+            "ai_summary_title": "Concall Summary - Feb 2026"
+          },
+          {
+            "period": "Nov 2025",
+            "transcript_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=f821c543-5736-46c9-82de-a187bf5a824b.pdf",
+            "transcript_label": "Nov 2025 Earnings Call Transcript",
+            "ppt_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=ea8c5d63-b2a5-47ea-b7a7-2f01f7415fae.pdf",
+            "ai_summary_title": "Concall Summary - Nov 2025"
+          },
+          {
+            "period": "Nov 2025",
+            "ppt_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=a916415e-4810-437c-8cf5-8f0ef14e3f41.pdf"
+          },
+          {
+            "period": "Aug 2025",
+            "transcript_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=e48b67b5-4ef0-4344-b33f-abe9e66e8993.pdf",
+            "transcript_label": "Aug 2025 Earnings Call Transcript",
+            "ppt_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=5bfd4883-1436-4ef4-90aa-2c5efe0e236a.pdf",
+            "ai_summary_title": "Concall Summary - Aug 2025"
+          },
+          {
+            "period": "Jun 2025",
+            "ppt_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=bf611fa7-e120-4474-bbfa-5e5c11dca9cc.pdf"
+          }
+        ],
+        "error": ""
+      },
+      "technical": {
+        "symbol": "AEGISVOPAK",
+        "price": 276.3,
+        "open": 268.7,
+        "high": 277.85,
+        "low": 266.75,
+        "chg_pct": 3.64,
+        "rsi": 50.3,
+        "adx": 26.5,
+        "macd": "bearish",
+        "supertrend": "SELL",
+        "sma20": 282.91,
+        "sma50": 269.74,
+        "sma200": 231.35,
+        "above_sma20": false,
+        "above_sma50": true,
+        "above_sma200": true,
+        "52w_high": 311.49,
+        "52w_low": 158.0,
+        "pct_from_52h": -11.3,
+        "vol_last": 850492,
+        "vol_avg_20d": 1126985,
+        "vol_ratio": 0.75,
+        "technical_score": 60,
+        "score_method": "derived from EOD MA alignment, RSI, MACD, Supertrend, and ADX",
+        "data_bars": 273,
+        "as_of": "2026-08-21",
+        "data_source": "PostgreSQL market.equity_eod",
+        "postgres_persist": null
+      },
+      "sources": [
+        {
+          "label": "Company IR: investor presentations and exchange communications",
+          "url": "https://www.aegisvopak.com/investors"
+        },
+        {
+          "label": "Screener structured fundamentals",
+          "url": "https://www.screener.in/company/AEGISVOPAK/consolidated/"
+        },
+        {
+          "label": "NSE quote page",
+          "url": "https://www.nseindia.com/get-quotes/equity?symbol=AEGISVOPAK"
+        },
+        {
+          "label": "BSE company page",
+          "url": "https://www.bseindia.com/stock-share-price/aegis-vopak-terminals-ltd/AEGISVOPAK/544407/"
+        },
+        {
+          "label": "BSE announcement: All",
+          "url": "https://www.bseindia.com/stock-share-price/aegis-vopak-terminals-ltd/AEGISVOPAK/544407/corp-announcements/"
+        },
+        {
+          "label": "BSE announcement: Disclosure Under Regulation 30 Of SEBI LODR Regulation 2015 - Capacity Addition At Pipavav",
+          "url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=7d07dd65-9815-4a38-8261-1d10f3307c17.pdf"
+        },
+        {
+          "label": "BSE announcement: Announcement under Regulation 30 (LODR)-Earnings Call Transcript19 Aug",
+          "url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=2114eb20-f767-45c9-b6e8-40ea4066e753.pdf"
+        },
+        {
+          "label": "Concall presentation: Aug 2026",
+          "url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=4dccd3ec-147c-4174-8ffa-12297802ca33.pdf"
+        }
+      ],
+      "source_domains": [
+        "aegisvopak.com",
+        "bseindia.com",
+        "nseindia.com",
+        "screener.in"
+      ],
+      "csv": {
+        "rank": 3,
+        "bucket": "Clean trigger map",
+        "symbol": "AEGISVOPAK",
+        "company": "Aegis Vopak Terminals Limited",
+        "sector": "Oil",
+        "policy_score_100": "70.0",
+        "policy_rating": "Active Watch",
+        "phase1_status": "PHASE1_TRIGGER_MAP_GOVERNANCE_PENDING",
+        "stance": "Theme and relative strength are attractive; valuation/leverage history makes this active watch.",
+        "current_price": "276.3",
+        "current_stage": "STAGE_2",
+        "current_rsi": "59.5",
+        "current_relative_strength": "36.99",
+        "relative_strength_score_10": "8.5",
+        "momentum_score_10": "5.4",
+        "setup_quality_score_10": "6.2",
+        "technical_25": "16.7",
+        "fundamental_25": "14.8",
+        "liquidity_tradeability_15": "13",
+        "governance_management_10": "3.5",
+        "valuation_reward_risk_10": "8",
+        "entry_trigger": "Break above 314.60 with volume, or retest-hold near 282.91; skip if >5% above planned trigger.",
+        "initial_stop_price": "248.67",
+        "target_2r_price": "331.56",
+        "paper_quantity_by_policy": "54",
+        "paper_position_value": "14920.2",
+        "paper_risk_to_stop": "1492.02",
+        "latest_quarter": "Jun 2026",
+        "latest_revenue_cr": 234.0,
+        "latest_pat_cr": 69.0,
+        "latest_opm_pct": 77.0,
+        "revenue_yoy_pct": 12.5,
+        "pat_yoy_pct": -12.658227848101266,
+        "annual_revenue_cr": 923.0,
+        "annual_pat_cr": 342.0,
+        "market_cap": "29,965",
+        "stock_pe": "111",
+        "price_to_book": "38.7",
+        "roe": "11.0",
+        "roce": "7.56",
+        "promoters": "86.94%",
+        "fiis": "5.35%",
+        "diis": "5.30%",
+        "public": "2.41%",
+        "key_strengths": "overlaps one sampled small-cap fund; high relative strength; current Stage 2 trend; profit growth evidence",
+        "key_risks": "fundamental score weak; setup backtest sample provisional",
+        "evidence_blockers": "GOVERNANCE_REVIEW_PENDING",
+        "next_action": "Complete governance/filing review, then wait for breakout-retest or pullback trigger.",
+        "source_domains": "aegisvopak.com; bseindia.com; nseindia.com; screener.in",
+        "theme_lens": "Energy storage, terminals, and logistics infrastructure",
+        "theme_thesis": "The theme is long-duration liquid/gas storage infrastructure with operating leverage. It works when utilization, pricing, and debt-service comfort support the asset base.",
+        "stock_expression": "Aegis Vopak represents terminal infrastructure rather than commodity-price exposure. The market is rewarding the asset theme, visible in relative strength.",
+        "theme_confirmation": "Stage 2 trend, strong relative strength, fresh Jun 2026 result cache, and adequate traded value for a small-cap paper slot.",
+        "theme_risk": "High P/E and P/B, leverage, interest capitalization concerns, short listed history, and asset-heavy capex execution.",
+        "theme_invalidation": "Security-cover/debt review weakens, Q1 margins do not support the thesis, or price loses 20DMA support after a failed breakout.",
+        "priority_implication": "Good theme watch, but valuation and balance-sheet review must be stricter than for SYRMA."
+      }
+    },
+    {
+      "rank": 4,
+      "bucket": "Clean trigger map",
+      "symbol": "VMART",
+      "company": "V-Mart Retail Ltd.",
+      "sector": "Retailing",
+      "policy": {
+        "symbol": "VMART",
+        "company": "V-Mart Retail Ltd.",
+        "sector": "Retailing",
+        "policy_theme_bucket": "Consumer / retail",
+        "theme_status": "BUILDING",
+        "policy_score_100": "68.3",
+        "policy_rating": "Active Watch",
+        "phase1_status": "PHASE1_TRIGGER_MAP_GOVERNANCE_PENDING",
+        "preselection_score_100": "69.5",
+        "preselection_decision": "Watch - Retest / Verify",
+        "theme_fit_15": "12.0",
+        "fundamental_25": "16.5",
+        "technical_25": "17.3",
+        "relative_strength_score_10": "5.5",
+        "momentum_score_10": "9.4",
+        "setup_quality_score_10": "6.0",
+        "liquidity_tradeability_15": "11",
+        "governance_management_10": "3.5",
+        "valuation_reward_risk_10": "8",
+        "current_price": "838.85",
+        "current_stage": "STAGE_2",
+        "current_signal": "HOLD",
+        "current_rsi": "65.6",
+        "current_relative_strength": "19.12",
+        "technical_setup_score": "85.0",
+        "sma20": "789.86",
+        "sma50": "777.49",
+        "distance_from_sma20_pct": "6.202364976071717",
+        "distance_from_sma50_pct": "7.892062920423415",
+        "pct_from_52w_high": "-5.5",
+        "vol_avg_20d": "131593.0",
+        "avg_turnover_20d_cr": "11.038678805",
+        "vol_ratio": "4.66",
+        "liquidity_gate": "PASS",
+        "financial_gate": "PASS",
+        "governance_gate": "PENDING_OFFICIAL_REVIEW",
+        "stop_distance_gate": "PASS",
+        "reward_risk_gate": "PASS_2R_MODELLED",
+        "no_chase_gate": "PASS",
+        "entry_trigger": "Break above 896.88 with volume, or retest-hold near 789.86; skip if >5% above planned trigger.",
+        "reference_entry_price": "838.85",
+        "initial_stop_price": "769.72",
+        "initial_stop_distance_pct": "8.2",
+        "stop_method": "50DMA structure stop",
+        "target_2r_price": "977.11",
+        "policy_initial_slot_value": "15000.0",
+        "paper_quantity_by_policy": "17",
+        "paper_position_value": "14260.45",
+        "paper_risk_to_stop": "1175.21",
+        "max_position_qty_by_value": "17",
+        "max_position_qty_by_risk": "54",
+        "max_position_qty_by_liquidity": "2631",
+        "latest_quarter": "Jun 2026",
+        "financial_freshness": "fresh result: Jun 2026; fetched 2026-08-06T19:28:14.293108+05:30",
+        "key_strengths": "owned by two sampled small-cap funds; current Stage 2 trend; profit growth evidence",
+        "key_risks": "nan",
+        "evidence_blockers": "GOVERNANCE_REVIEW_PENDING",
+        "next_action": "Complete governance/filing review, then wait for breakout-retest or pullback trigger."
+      },
+      "assessment": {
+        "stance": "Consumer recovery watch; still needs valuation and execution comfort.",
+        "fundamental_view": "Fresh Q1 data supports recovery, but operating margin remains modest and valuation is not cheap.",
+        "technical_view": "Stage 2 and improving momentum, but liquidity is weaker than the other clean candidates. Retest quality matters.",
+        "sector_view": "Value retail is discretionary-consumption sensitive and execution-heavy.",
+        "kill_switches": [
+          "Same-store growth or margin recovery stalls.",
+          "Management/finance leadership changes create disclosure risk.",
+          "Low-volume breakout fails near the 52-week high zone."
+        ]
+      },
+      "theme": {
+        "theme_lens": "Value retail and discretionary consumption recovery",
+        "theme_thesis": "The theme is small-town/value retail recovery: revenue growth, store economics, margin normalization, and inventory discipline.",
+        "stock_expression": "V-Mart is the consumer recovery expression. The stock has Stage 2 behavior, but the fundamental thesis depends on execution and margin recovery.",
+        "theme_confirmation": "Fresh Jun 2026 result cache, Stage 2 trend, improving momentum score, and sampled fund ownership overlap.",
+        "theme_risk": "Modest operating margin, not-cheap valuation, weaker liquidity versus the top candidates, and execution/management-transition risk.",
+        "theme_invalidation": "Same-store growth or margin recovery stalls, inventory pressure rises, or breakout near the 52-week zone fails on weak volume.",
+        "priority_implication": "Keep as active watch; require a clean retest or high-quality breakout before slotting."
+      },
+      "financials": {
+        "latest_quarter": {
+          "symbol": "VMART",
+          "period_label": "Jun 2026",
+          "period_end": "2026-06-30",
+          "period_type": "quarter",
+          "revenue": 1088.81,
+          "expenses": null,
+          "operating_profit": 76.69,
+          "opm_pct": 7.04,
+          "other_income": null,
+          "interest": null,
+          "depreciation": null,
+          "pbt": null,
+          "tax_pct": null,
+          "pat": 47.21,
+          "eps": null,
+          "source": "screener_yfinance_fallback_normalized",
+          "source_url": null,
+          "raw_json": null,
+          "fetched_at": "2026-08-16T19:08:33.813003+05:30"
+        },
+        "previous_quarter": {
+          "symbol": "VMART",
+          "period_label": "Mar 2026",
+          "period_end": "2026-03-31",
+          "period_type": "quarter",
+          "revenue": 970.89,
+          "expenses": null,
+          "operating_profit": 26.14,
+          "opm_pct": 2.69,
+          "other_income": null,
+          "interest": null,
+          "depreciation": null,
+          "pbt": null,
+          "tax_pct": null,
+          "pat": 11.28,
+          "eps": null,
+          "source": "screener_yfinance_fallback_normalized",
+          "source_url": null,
+          "raw_json": null,
+          "fetched_at": "2026-08-16T19:08:33.813003+05:30"
+        },
+        "year_ago_quarter": {
+          "symbol": "VMART",
+          "period_label": "Jun 2025",
+          "period_end": "2025-06-30",
+          "period_type": "quarter",
+          "revenue": 885.22,
+          "expenses": null,
+          "operating_profit": 58.25,
+          "opm_pct": 6.58,
+          "other_income": null,
+          "interest": null,
+          "depreciation": null,
+          "pbt": null,
+          "tax_pct": null,
+          "pat": 33.6,
+          "eps": null,
+          "source": "screener_yfinance_fallback_normalized",
+          "source_url": null,
+          "raw_json": null,
+          "fetched_at": "2026-08-16T19:08:33.813003+05:30"
+        },
+        "latest_annual": {
+          "symbol": "VMART",
+          "period_label": "Mar 2026",
+          "period_end": "2026-03-31",
+          "period_type": "annual",
+          "revenue": 3784.34,
+          "expenses": null,
+          "operating_profit": 233.92,
+          "opm_pct": 6.18,
+          "other_income": null,
+          "interest": null,
+          "depreciation": null,
+          "pbt": null,
+          "tax_pct": null,
+          "pat": 124.0,
+          "eps": null,
+          "dividend_payout_pct": null,
+          "source": "screener_yfinance_fallback_normalized",
+          "source_url": null,
+          "raw_json": null,
+          "fetched_at": "2026-08-16T19:08:34.433206+05:30"
+        },
+        "previous_annual": {
+          "symbol": "VMART",
+          "period_label": "Mar 2025",
+          "period_end": "2025-03-31",
+          "period_type": "annual",
+          "revenue": 3247.37,
+          "expenses": null,
+          "operating_profit": 145.19,
+          "opm_pct": 4.47,
+          "other_income": null,
+          "interest": null,
+          "depreciation": null,
+          "pbt": null,
+          "tax_pct": null,
+          "pat": 45.77,
+          "eps": null,
+          "dividend_payout_pct": null,
+          "source": "screener_yfinance_fallback_normalized",
+          "source_url": null,
+          "raw_json": null,
+          "fetched_at": "2026-08-16T19:08:34.433206+05:30"
+        },
+        "latest_balance_sheet": {},
+        "latest_cash_flow": {},
+        "revenue_yoy_pct": 22.99880255755631,
+        "pat_yoy_pct": 40.50595238095238,
+        "eps_yoy_pct": null,
+        "revenue_qoq_pct": 12.145557169195275,
+        "pat_qoq_pct": 318.52836879432624,
+        "annual_revenue_yoy_pct": 16.53553490978854,
+        "annual_pat_yoy_pct": 170.9198164736727,
+        "financial_source": "screener_yfinance_fallback_normalized",
+        "financial_source_url": "",
+        "financial_fetched_at": "2026-08-16T19:08:33.813003+05:30"
+      },
+      "screener": {
+        "source_url": "https://www.screener.in/company/VMART/consolidated/",
+        "ratios": {
+          "Market Cap": "\u20b96816 Cr",
+          "Current Price": "\u20b9856.55",
+          "52W High": "\u20b9888.00",
+          "52W Low": "\u20b9457.90",
+          "Stock P/E": "49.57",
+          "Forward P/E": "33.25",
+          "Price to Book": "7.16",
+          "Book Value": "\u20b9119.70",
+          "Dividend Yield": "0.12%",
+          "ROE": "N/A (see financials)",
+          "Gross Margin": "33.14%",
+          "Operating Margin": "7.04%",
+          "Net Margin": "3.45%",
+          "Revenue Growth": "23.00%",
+          "Earnings Growth": "40.40%",
+          "Debt/Equity": "100.68",
+          "EV/EBITDA": "21.49",
+          "Beta": "0.69",
+          "_source": "yfinance (screener.in values are JS-rendered)"
+        },
+        "pros": [],
+        "cons": [],
+        "shareholding": {
+          "_quarters": [
+            "Sep 2023",
+            "Dec 2023",
+            "Mar 2024",
+            "Jun 2024",
+            "Sep 2024",
+            "Dec 2024",
+            "Mar 2025",
+            "Jun 2025",
+            "Sep 2025",
+            "Dec 2025",
+            "Mar 2026",
+            "Jun 2026"
+          ],
+          "Promoters": "44.15%",
+          "Promoters_trend": [
+            "44.34%",
+            "44.34%",
+            "44.34%",
+            "44.34%",
+            "44.32%",
+            "44.29%",
+            "44.28%",
+            "44.19%",
+            "44.18%",
+            "44.15%",
+            "44.20%",
+            "44.15%"
+          ],
+          "FIIs": "16.47%",
+          "FIIs_trend": [
+            "14.28%",
+            "14.32%",
+            "15.32%",
+            "15.46%",
+            "16.02%",
+            "17.32%",
+            "17.48%",
+            "18.29%",
+            "17.46%",
+            "17.01%",
+            "16.92%",
+            "16.47%"
+          ],
+          "DIIs": "30.90%",
+          "DIIs_trend": [
+            "32.64%",
+            "34.00%",
+            "33.99%",
+            "32.62%",
+            "32.79%",
+            "32.45%",
+            "32.93%",
+            "31.51%",
+            "32.11%",
+            "32.46%",
+            "31.87%",
+            "30.90%"
+          ],
+          "Public": "8.48%",
+          "Public_trend": [
+            "8.75%",
+            "7.35%",
+            "6.37%",
+            "7.59%",
+            "6.89%",
+            "5.94%",
+            "5.33%",
+            "6.02%",
+            "6.26%",
+            "6.38%",
+            "7.02%",
+            "8.48%"
+          ],
+          "No. of Shareholders": "31,182",
+          "No. of Shareholders_trend": [
+            "25,603",
+            "25,268",
+            "22,471",
+            "18,023",
+            "20,674",
+            "29,869",
+            "18,137",
+            "23,901",
+            "26,763",
+            "24,903",
+            "30,027",
+            "31,182"
+          ]
+        },
+        "announcements": [
+          {
+            "title": "All",
+            "url": "https://www.bseindia.com/stock-share-price/v-mart-retail-ltd/VMART/534976/corp-announcements/"
+          },
+          {
+            "title": "Clarification For Increase In Volume24 Aug- V-Mart says volume spike is market-driven and no material information is wit",
+            "url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=48196f75-ebbf-417b-8bc4-becbaff0497e.pdf"
+          },
+          {
+            "title": "Disclosure Under Regulation 30 Of SEBI (LODR) Regulations, 201513 Aug- Crisil ESG Ratings assigned V-Mart Retail ESG sco",
+            "url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=34172427-59cb-443b-8438-01b8c9b40f30.pdf"
+          },
+          {
+            "title": "Announcement under Regulation 30 (LODR)-Press Release / Media Release11 Aug- V-Mart opened its 600th store, adding 100 i",
+            "url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=fc6810ab-1ef6-46bc-8a6c-f3c32d0a5c88.pdf"
+          },
+          {
+            "title": "Announcement under Regulation 30 (LODR)-Analyst / Investor Meet - Intimation7 Aug- Intimation for Analyst/ Investor meet",
+            "url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=e6005dad-029f-43e9-8e07-9c19ff0855c8.pdf"
+          }
+        ],
+        "annual_reports": [
+          {
+            "label": "Annual Report 2022from bse",
+            "url": "https://www.bseindia.com/bseplus/AnnualReport/534976/74215534976.pdf"
+          },
+          {
+            "label": "Annual Report 2021from bse",
+            "url": "https://www.bseindia.com/bseplus/AnnualReport/534976/69260534976.pdf"
+          },
+          {
+            "label": "Annual Report 2020from bse",
+            "url": "https://www.bseindia.com/bseplus/AnnualReport/534976/67020534976.pdf"
+          },
+          {
+            "label": "Annual Report 2019from bse",
+            "url": "https://www.bseindia.com/bseplus/AnnualReport/534976/5349760319.pdf"
+          },
+          {
+            "label": "Annual Report 2018from bse",
+            "url": "https://www.bseindia.com/bseplus/AnnualReport/534976/5349760318.pdf"
+          },
+          {
+            "label": "Annual Report 2017from bse",
+            "url": "https://www.bseindia.com/bseplus/AnnualReport/534976/5349760317.pdf"
+          }
+        ],
+        "concalls": [
+          {
+            "period": "Jul 2026",
+            "transcript_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=7c9d40df-0881-4020-af5a-0d37e19eab17.pdf",
+            "transcript_label": "Jul 2026 Earnings Call Transcript",
+            "ppt_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=f47a17a2-afd1-4346-8f95-488768a36faa.pdf",
+            "ai_summary_title": "Concall Summary - Jul 2026"
+          },
+          {
+            "period": "May 2026",
+            "transcript_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=f448eb8d-4c3e-4775-8bb1-73ca1038f7f5.pdf",
+            "transcript_label": "May 2026 Earnings Call Transcript",
+            "ppt_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=9e0fee5d-c951-4294-885b-c2481d6e4128.pdf",
+            "recording_url": "https://youtu.be/AOMGxXG1TZM",
+            "ai_summary_title": "Concall Summary - May 2026"
+          },
+          {
+            "period": "Jan 2026",
+            "transcript_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=4ec2e40c-dba6-4eed-bbdb-8f41283d8ef5.pdf",
+            "transcript_label": "Jan 2026 Earnings Call Transcript",
+            "ppt_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=acad27af-c044-4483-8433-ed0703014802.pdf",
+            "recording_url": "https://vmart.co.in/wp-content/uploads/10039421.mp3",
+            "ai_summary_title": "Concall Summary - Jan 2026"
+          },
+          {
+            "period": "Jan 2026",
+            "ppt_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=acad27af-c044-4483-8433-ed0703014802.pdf"
+          },
+          {
+            "period": "Nov 2025",
+            "transcript_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=fb145f9d-5222-47be-b613-4680dfaa5183.pdf",
+            "transcript_label": "Nov 2025 Earnings Call Transcript",
+            "ppt_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=1ba9ba7d-46fe-4308-b6b8-babaa76806ad.pdf",
+            "ai_summary_title": "Concall Summary - Nov 2025"
+          },
+          {
+            "period": "Jul 2025",
+            "transcript_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=54fe97d4-0839-4343-b5f3-1000df8438b1.pdf",
+            "transcript_label": "Jul 2025 Earnings Call Transcript",
+            "ppt_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=ec9effd0-fda0-412a-8c40-b96ac2717033.pdf",
+            "recording_url": "https://youtu.be/D9hJXC7jrNA?si=JdQuyIOh2LgbDoLY",
+            "ai_summary_title": "Concall Summary - Jul 2025"
+          },
+          {
+            "period": "May 2025",
+            "transcript_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=48ecd388-63e4-4ef0-b630-d6f80937aa0d.pdf",
+            "transcript_label": "May 2025 Earnings Call Transcript",
+            "ppt_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=3258b7c7-e304-4906-bd4e-84f7f7f0949e.pdf",
+            "ai_summary_title": "Concall Summary - May 2025"
+          },
+          {
+            "period": "Feb 2025",
+            "transcript_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=6886aed0-5b38-4adc-81c0-85e6209f64a7.pdf",
+            "transcript_label": "Feb 2025 Earnings Call Transcript",
+            "ppt_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=634e31d4-d94f-4400-a959-e598895cdbd4.pdf",
+            "recording_url": "https://youtu.be/ZyfLmCRDHF4",
+            "ai_summary_title": "Concall Summary - Feb 2025"
+          }
+        ],
+        "error": ""
+      },
+      "technical": {
+        "symbol": "VMART",
+        "price": 838.85,
+        "open": 810.7,
+        "high": 860.0,
+        "low": 801.7,
+        "chg_pct": 3.99,
+        "rsi": 65.7,
+        "adx": 25.5,
+        "macd": "bullish",
+        "supertrend": "SELL",
+        "sma20": 789.86,
+        "sma50": 777.49,
+        "sma200": 686.05,
+        "above_sma20": true,
+        "above_sma50": true,
+        "above_sma200": true,
+        "52w_high": 888.0,
+        "52w_low": 457.9,
+        "pct_from_52h": -5.5,
+        "vol_last": 612849,
+        "vol_avg_20d": 131593,
+        "vol_ratio": 4.66,
+        "technical_score": 85,
+        "score_method": "derived from EOD MA alignment, RSI, MACD, Supertrend, and ADX",
+        "data_bars": 272,
+        "as_of": "2026-08-21",
+        "data_source": "PostgreSQL market.equity_eod",
+        "postgres_persist": null
+      },
+      "sources": [
+        {
+          "label": "Company IR: earnings-call invitations and presentations",
+          "url": "https://www.vmart.co.in/investor-call-invitation-investor-presentation/"
+        },
+        {
+          "label": "Company IR sections: results, transcripts, governance, annual reports",
+          "url": "https://www.vmart.co.in/press-and-releases/"
+        },
+        {
+          "label": "Screener structured fundamentals",
+          "url": "https://www.screener.in/company/VMART/consolidated/"
+        },
+        {
+          "label": "NSE quote page",
+          "url": "https://www.nseindia.com/get-quotes/equity?symbol=VMART"
+        },
+        {
+          "label": "BSE company page",
+          "url": "https://www.bseindia.com/stock-share-price/v-mart-retail-ltd/VMART/534976/"
+        },
+        {
+          "label": "BSE announcement: All",
+          "url": "https://www.bseindia.com/stock-share-price/v-mart-retail-ltd/VMART/534976/corp-announcements/"
+        },
+        {
+          "label": "BSE announcement: Clarification For Increase In Volume24 Aug- V-Mart says volume spike is market-driven and ",
+          "url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=48196f75-ebbf-417b-8bc4-becbaff0497e.pdf"
+        },
+        {
+          "label": "BSE announcement: Disclosure Under Regulation 30 Of SEBI (LODR) Regulations, 201513 Aug- Crisil ESG Ratings ",
+          "url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=34172427-59cb-443b-8438-01b8c9b40f30.pdf"
+        },
+        {
+          "label": "Concall transcript: Jul 2026",
+          "url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=7c9d40df-0881-4020-af5a-0d37e19eab17.pdf"
+        },
+        {
+          "label": "Concall transcript: May 2026",
+          "url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=f448eb8d-4c3e-4775-8bb1-73ca1038f7f5.pdf"
+        }
+      ],
+      "source_domains": [
+        "bseindia.com",
+        "nseindia.com",
+        "screener.in",
+        "vmart.co.in"
+      ],
+      "csv": {
+        "rank": 4,
+        "bucket": "Clean trigger map",
+        "symbol": "VMART",
+        "company": "V-Mart Retail Ltd.",
+        "sector": "Retailing",
+        "policy_score_100": "68.3",
+        "policy_rating": "Active Watch",
+        "phase1_status": "PHASE1_TRIGGER_MAP_GOVERNANCE_PENDING",
+        "stance": "Consumer recovery watch; still needs valuation and execution comfort.",
+        "current_price": "838.85",
+        "current_stage": "STAGE_2",
+        "current_rsi": "65.6",
+        "current_relative_strength": "19.12",
+        "relative_strength_score_10": "5.5",
+        "momentum_score_10": "9.4",
+        "setup_quality_score_10": "6.0",
+        "technical_25": "17.3",
+        "fundamental_25": "16.5",
+        "liquidity_tradeability_15": "11",
+        "governance_management_10": "3.5",
+        "valuation_reward_risk_10": "8",
+        "entry_trigger": "Break above 896.88 with volume, or retest-hold near 789.86; skip if >5% above planned trigger.",
+        "initial_stop_price": "769.72",
+        "target_2r_price": "977.11",
+        "paper_quantity_by_policy": "17",
+        "paper_position_value": "14260.45",
+        "paper_risk_to_stop": "1175.21",
+        "latest_quarter": "Jun 2026",
+        "latest_revenue_cr": 1088.81,
+        "latest_pat_cr": 47.21,
+        "latest_opm_pct": 7.04,
+        "revenue_yoy_pct": 22.99880255755631,
+        "pat_yoy_pct": 40.50595238095238,
+        "annual_revenue_cr": 3784.34,
+        "annual_pat_cr": 124.0,
+        "market_cap": "\u20b96816 Cr",
+        "stock_pe": "49.57",
+        "price_to_book": "7.16",
+        "roe": "N/A (see financials)",
+        "roce": "",
+        "promoters": "44.15%",
+        "fiis": "16.47%",
+        "diis": "30.90%",
+        "public": "8.48%",
+        "key_strengths": "owned by two sampled small-cap funds; current Stage 2 trend; profit growth evidence",
+        "key_risks": "",
+        "evidence_blockers": "GOVERNANCE_REVIEW_PENDING",
+        "next_action": "Complete governance/filing review, then wait for breakout-retest or pullback trigger.",
+        "source_domains": "bseindia.com; nseindia.com; screener.in; vmart.co.in",
+        "theme_lens": "Value retail and discretionary consumption recovery",
+        "theme_thesis": "The theme is small-town/value retail recovery: revenue growth, store economics, margin normalization, and inventory discipline.",
+        "stock_expression": "V-Mart is the consumer recovery expression. The stock has Stage 2 behavior, but the fundamental thesis depends on execution and margin recovery.",
+        "theme_confirmation": "Fresh Jun 2026 result cache, Stage 2 trend, improving momentum score, and sampled fund ownership overlap.",
+        "theme_risk": "Modest operating margin, not-cheap valuation, weaker liquidity versus the top candidates, and execution/management-transition risk.",
+        "theme_invalidation": "Same-store growth or margin recovery stalls, inventory pressure rises, or breakout near the 52-week zone fails on weak volume.",
+        "priority_implication": "Keep as active watch; require a clean retest or high-quality breakout before slotting."
+      }
+    },
+    {
+      "rank": 5,
+      "bucket": "Retest trigger map",
+      "symbol": "SONACOMS",
+      "company": "Sona BLW Precision Forgings Limited",
+      "sector": "Auto Components",
+      "policy": {
+        "symbol": "SONACOMS",
+        "company": "Sona BLW Precision Forgings Limited",
+        "sector": "Auto Components",
+        "policy_theme_bucket": "Auto components / EV ancillaries",
+        "theme_status": "CROWDED",
+        "policy_score_100": "74.4",
+        "policy_rating": "Active Watch",
+        "phase1_status": "PHASE1_RETEST_TRIGGER_MAP_GOVERNANCE_PENDING",
+        "preselection_score_100": "62.9",
+        "preselection_decision": "Watch - Retest / Verify",
+        "theme_fit_15": "11.0",
+        "fundamental_25": "18.8",
+        "technical_25": "17.1",
+        "relative_strength_score_10": "7.5",
+        "momentum_score_10": "6.5",
+        "setup_quality_score_10": "6.6",
+        "liquidity_tradeability_15": "15",
+        "governance_management_10": "6.0",
+        "valuation_reward_risk_10": "6.5",
+        "current_price": "817.6",
+        "current_stage": "STAGE_2",
+        "current_signal": "HOLD",
+        "current_rsi": "74.5",
+        "current_relative_strength": "24.69",
+        "technical_setup_score": "70.0",
+        "sma20": "789.26",
+        "sma50": "708.52",
+        "distance_from_sma20_pct": "3.5907052175455423",
+        "distance_from_sma50_pct": "15.395472252018294",
+        "pct_from_52w_high": "-3.1",
+        "vol_avg_20d": "2592051.0",
+        "avg_turnover_20d_cr": "211.92608976000002",
+        "vol_ratio": "0.76",
+        "liquidity_gate": "PASS",
+        "financial_gate": "PASS",
+        "governance_gate": "PENDING_OFFICIAL_REVIEW",
+        "stop_distance_gate": "PASS",
+        "reward_risk_gate": "PASS_2R_MODELLED",
+        "no_chase_gate": "WATCH_AGENT_ADDA_EXTENDED",
+        "entry_trigger": "Break above 852.44 with volume, or retest-hold near 789.26; skip if >5% above planned trigger.",
+        "reference_entry_price": "817.6",
+        "initial_stop_price": "735.84",
+        "initial_stop_distance_pct": "10.0",
+        "stop_method": "10% policy default stop",
+        "target_2r_price": "981.12",
+        "policy_initial_slot_value": "15000.0",
+        "paper_quantity_by_policy": "18",
+        "paper_position_value": "14716.8",
+        "paper_risk_to_stop": "1471.68",
+        "max_position_qty_by_value": "18",
+        "max_position_qty_by_risk": "45",
+        "max_position_qty_by_liquidity": "51841",
+        "latest_quarter": "Jun 2026",
+        "financial_freshness": "fresh result: Jun 2026; fetched 2026-08-06T19:27:52.938226+05:30",
+        "key_strengths": "overlaps one sampled small-cap fund; current Stage 2 trend; profit growth evidence; healthy operating margin",
+        "key_risks": "nan",
+        "evidence_blockers": "GOVERNANCE_REVIEW_PENDING; WATCH_AGENT_ADDA_EXTENDED",
+        "next_action": "Complete governance/filing review; retest-only because current setup is extended or flagged no-chase."
+      },
+      "assessment": {},
+      "theme": {
+        "theme_lens": "EV and premium auto-component content",
+        "theme_thesis": "The theme is rising EV and drivetrain content per vehicle. It needs durable order visibility and margin protection.",
+        "stock_expression": "Sona BLW is the EV/auto-component quality proxy, but the policy scan flags no-chase behavior.",
+        "theme_confirmation": "Fresh result cache, Stage 2 trend, and auto-component policy theme fit.",
+        "theme_risk": "Extended setup, valuation risk, export/customer-cycle sensitivity, and EV demand volatility.",
+        "theme_invalidation": "Retest fails or management commentary weakens on order conversion/margins.",
+        "priority_implication": "Retest-only; no fresh allocation at current extension."
+      },
+      "financials": {
+        "latest_quarter": {
+          "symbol": "SONACOMS",
+          "period_label": "Jun 2026",
+          "period_end": "2026-06-30",
+          "period_type": "quarter",
+          "revenue": 1301.0,
+          "expenses": 1008.0,
+          "operating_profit": 293.0,
+          "opm_pct": 23.0,
+          "other_income": 35.0,
+          "interest": 10.0,
+          "depreciation": 77.0,
+          "pbt": 241.0,
+          "tax_pct": 26.0,
+          "pat": 179.0,
+          "eps": 2.9,
+          "source": "screener",
+          "source_url": "https://www.screener.in/company/SONACOMS/consolidated/",
+          "raw_json": {
+            "headers": [
+              "Mar 2025",
+              "Jun 2025",
+              "Sep 2025",
+              "Dec 2025",
+              "Mar 2026",
+              "Jun 2026"
+            ],
+            "table_keys": [
+              "Sales+",
+              "Expenses+",
+              "Operating Profit",
+              "OPM %",
+              "Other Income+",
+              "Interest",
+              "Depreciation",
+              "Profit before tax",
+              "Tax %",
+              "Net Profit+",
+              "EPS in Rs",
+              "Raw PDF",
+              "_headers"
+            ]
+          },
+          "fetched_at": "2026-08-24T18:49:51.723112+05:30"
+        },
+        "previous_quarter": {
+          "symbol": "SONACOMS",
+          "period_label": "Mar 2026",
+          "period_end": "2026-03-31",
+          "period_type": "quarter",
+          "revenue": 1258.0,
+          "expenses": 962.0,
+          "operating_profit": 296.0,
+          "opm_pct": 24.0,
+          "other_income": 33.0,
+          "interest": 8.0,
+          "depreciation": 74.0,
+          "pbt": 247.0,
+          "tax_pct": 24.0,
+          "pat": 187.0,
+          "eps": 3.09,
+          "source": "screener",
+          "source_url": "https://www.screener.in/company/SONACOMS/consolidated/",
+          "raw_json": {
+            "headers": [
+              "Mar 2025",
+              "Jun 2025",
+              "Sep 2025",
+              "Dec 2025",
+              "Mar 2026",
+              "Jun 2026"
+            ],
+            "table_keys": [
+              "Sales+",
+              "Expenses+",
+              "Operating Profit",
+              "OPM %",
+              "Other Income+",
+              "Interest",
+              "Depreciation",
+              "Profit before tax",
+              "Tax %",
+              "Net Profit+",
+              "EPS in Rs",
+              "Raw PDF",
+              "_headers"
+            ]
+          },
+          "fetched_at": "2026-08-24T18:49:51.723100+05:30"
+        },
+        "year_ago_quarter": {
+          "symbol": "SONACOMS",
+          "period_label": "Jun 2025",
+          "period_end": "2025-06-30",
+          "period_type": "quarter",
+          "revenue": 854.0,
+          "expenses": 648.0,
+          "operating_profit": 206.0,
+          "opm_pct": 24.0,
+          "other_income": 32.0,
+          "interest": 5.0,
+          "depreciation": 67.0,
+          "pbt": 165.0,
+          "tax_pct": 26.0,
+          "pat": 122.0,
+          "eps": 2.01,
+          "source": "screener",
+          "source_url": "https://www.screener.in/company/SONACOMS/consolidated/",
+          "raw_json": {
+            "headers": [
+              "Mar 2025",
+              "Jun 2025",
+              "Sep 2025",
+              "Dec 2025",
+              "Mar 2026",
+              "Jun 2026"
+            ],
+            "table_keys": [
+              "Sales+",
+              "Expenses+",
+              "Operating Profit",
+              "OPM %",
+              "Other Income+",
+              "Interest",
+              "Depreciation",
+              "Profit before tax",
+              "Tax %",
+              "Net Profit+",
+              "EPS in Rs",
+              "Raw PDF",
+              "_headers"
+            ]
+          },
+          "fetched_at": "2026-08-24T18:49:51.723062+05:30"
+        },
+        "latest_annual": {
+          "symbol": "SONACOMS",
+          "period_label": "Mar 2026",
+          "period_end": "2026-03-31",
+          "period_type": "annual",
+          "revenue": 4449.0,
+          "expenses": 3368.0,
+          "operating_profit": 1081.0,
+          "opm_pct": 24.0,
+          "other_income": 72.0,
+          "interest": 23.0,
+          "depreciation": 288.0,
+          "pbt": 842.0,
+          "tax_pct": 25.0,
+          "pat": 629.0,
+          "eps": 10.29,
+          "dividend_payout_pct": 33.0,
+          "source": "screener",
+          "source_url": "https://www.screener.in/company/SONACOMS/consolidated/",
+          "raw_json": {
+            "headers": [
+              "Mar 2023",
+              "Mar 2024",
+              "Mar 2025",
+              "Mar 2026",
+              "TTM"
+            ],
+            "table_keys": [
+              "Sales+",
+              "Expenses+",
+              "Operating Profit",
+              "OPM %",
+              "Other Income+",
+              "Interest",
+              "Depreciation",
+              "Profit before tax",
+              "Tax %",
+              "Net Profit+",
+              "EPS in Rs",
+              "Dividend Payout %",
+              "_headers"
+            ]
+          },
+          "fetched_at": "2026-08-24T18:49:51.723472+05:30"
+        },
+        "previous_annual": {
+          "symbol": "SONACOMS",
+          "period_label": "Mar 2025",
+          "period_end": "2025-03-31",
+          "period_type": "annual",
+          "revenue": 3546.0,
+          "expenses": 2579.0,
+          "operating_profit": 967.0,
+          "opm_pct": 27.0,
+          "other_income": 116.0,
+          "interest": 30.0,
+          "depreciation": 254.0,
+          "pbt": 798.0,
+          "tax_pct": 25.0,
+          "pat": 600.0,
+          "eps": 9.67,
+          "dividend_payout_pct": 33.0,
+          "source": "screener",
+          "source_url": "https://www.screener.in/company/SONACOMS/consolidated/",
+          "raw_json": {
+            "headers": [
+              "Mar 2023",
+              "Mar 2024",
+              "Mar 2025",
+              "Mar 2026",
+              "TTM"
+            ],
+            "table_keys": [
+              "Sales+",
+              "Expenses+",
+              "Operating Profit",
+              "OPM %",
+              "Other Income+",
+              "Interest",
+              "Depreciation",
+              "Profit before tax",
+              "Tax %",
+              "Net Profit+",
+              "EPS in Rs",
+              "Dividend Payout %",
+              "_headers"
+            ]
+          },
+          "fetched_at": "2026-08-24T18:49:51.723461+05:30"
+        },
+        "latest_balance_sheet": {
+          "symbol": "SONACOMS",
+          "period_label": "Mar 2026",
+          "period_end": "2026-03-31",
+          "period_type": "annual",
+          "equity_capital": 622.0,
+          "reserves": 5361.0,
+          "borrowings": 442.0,
+          "other_liabilities": 1039.0,
+          "total_liabilities": 7464.0,
+          "fixed_assets": 3646.0,
+          "cwip": 427.0,
+          "investments": 550.0,
+          "other_assets": 2841.0,
+          "total_assets": 7464.0,
+          "net_debt": -108.0,
+          "source": "screener",
+          "source_url": "https://www.screener.in/company/SONACOMS/consolidated/",
+          "raw_json": {
+            "headers": [
+              "Mar 2022",
+              "Mar 2023",
+              "Mar 2024",
+              "Mar 2025",
+              "Mar 2026"
+            ],
+            "table_keys": [
+              "Equity Capital",
+              "Reserves",
+              "Borrowings+",
+              "Other Liabilities+",
+              "Total Liabilities",
+              "Fixed Assets+",
+              "CWIP",
+              "Investments",
+              "Other Assets+",
+              "Total Assets",
+              "_headers"
+            ]
+          },
+          "fetched_at": "2026-08-24T18:49:51.723963+05:30"
+        },
+        "latest_cash_flow": {
+          "symbol": "SONACOMS",
+          "period_label": "Mar 2026",
+          "period_end": "2026-03-31",
+          "period_type": "annual",
+          "operating_cf": 659.0,
+          "investing_cf": -1554.0,
+          "financing_cf": -1.0,
+          "net_cf": -896.0,
+          "source": "screener",
+          "source_url": "https://www.screener.in/company/SONACOMS/consolidated/",
+          "raw_json": {
+            "headers": [
+              "Mar 2022",
+              "Mar 2023",
+              "Mar 2024",
+              "Mar 2025",
+              "Mar 2026"
+            ],
+            "table_keys": [
+              "Cash from Operating Activity+",
+              "Cash from Investing Activity+",
+              "Cash from Financing Activity+",
+              "Net Cash Flow",
+              "Free Cash Flow",
+              "CFO/OP",
+              "_headers"
+            ]
+          },
+          "fetched_at": "2026-08-24T18:49:51.724275+05:30"
+        },
+        "revenue_yoy_pct": 52.341920374707264,
+        "pat_yoy_pct": 46.721311475409834,
+        "eps_yoy_pct": 44.27860696517414,
+        "revenue_qoq_pct": 3.418124006359302,
+        "pat_qoq_pct": -4.278074866310155,
+        "annual_revenue_yoy_pct": 25.465313028764804,
+        "annual_pat_yoy_pct": 4.833333333333334,
+        "financial_source": "screener",
+        "financial_source_url": "https://www.screener.in/company/SONACOMS/consolidated/",
+        "financial_fetched_at": "2026-08-24T18:49:51.723112+05:30"
+      },
+      "screener": {
+        "source_url": "https://www.screener.in/company/SONACOMS/consolidated/",
+        "ratios": {
+          "Market Cap": "51,041",
+          "Current Price": "814",
+          "High / Low": "844",
+          "Stock P/E": "70.2",
+          "Book Value": "96.2",
+          "Dividend Yield": "0.42",
+          "ROCE": "14.2",
+          "ROE": "11.3",
+          "Face Value": "10.0"
+        },
+        "pros": [
+          "Company is almost debt free.",
+          "Company is expected to give good quarter",
+          "Company has delivered good profit growth of 23.6% CAGR over last 5 years",
+          "Company has been maintaining a healthy dividend payout of 33.6%"
+        ],
+        "cons": [
+          "Stock is trading at 8.46 times its book value"
+        ],
+        "shareholding": {
+          "_quarters": [
+            "Sep 2023",
+            "Dec 2023",
+            "Mar 2024",
+            "Jun 2024",
+            "Sep 2024",
+            "Dec 2024",
+            "Mar 2025",
+            "Jun 2025",
+            "Sep 2025",
+            "Dec 2025",
+            "Mar 2026",
+            "Jun 2026"
+          ],
+          "Promoters": "28.01%",
+          "Promoters_trend": [
+            "29.76%",
+            "29.71%",
+            "29.71%",
+            "29.71%",
+            "28.04%",
+            "28.03%",
+            "28.02%",
+            "28.02%",
+            "28.02%",
+            "28.02%",
+            "28.01%",
+            "28.01%"
+          ],
+          "FIIs": "23.61%",
+          "FIIs_trend": [
+            "33.35%",
+            "32.88%",
+            "32.93%",
+            "32.03%",
+            "33.55%",
+            "33.25%",
+            "29.91%",
+            "29.75%",
+            "23.47%",
+            "23.89%",
+            "23.70%",
+            "23.61%"
+          ],
+          "DIIs": "41.60%",
+          "DIIs_trend": [
+            "27.50%",
+            "27.90%",
+            "28.77%",
+            "29.50%",
+            "30.95%",
+            "31.15%",
+            "34.43%",
+            "34.60%",
+            "40.13%",
+            "40.74%",
+            "41.46%",
+            "41.60%"
+          ],
+          "Government": "0.01%",
+          "Government_trend": [
+            "0.00%",
+            "0.00%",
+            "0.00%",
+            "0.00%",
+            "0.00%",
+            "0.00%",
+            "0.00%",
+            "0.00%",
+            "0.00%",
+            "0.00%",
+            "0.00%",
+            "0.01%"
+          ],
+          "Public": "6.77%",
+          "Public_trend": [
+            "9.39%",
+            "9.51%",
+            "8.59%",
+            "8.75%",
+            "7.44%",
+            "7.57%",
+            "7.62%",
+            "7.64%",
+            "8.37%",
+            "7.35%",
+            "6.82%",
+            "6.77%"
+          ]
+        },
+        "announcements": [
+          {
+            "title": "All",
+            "url": "https://www.bseindia.com/stock-share-price/sona-blw-precision-forgings-ltd/SONACOMS/543300/corp-announcements/"
+          },
+          {
+            "title": "Announcement under Regulation 30 (LODR)-Allotment of ESOP / ESPS14 Aug- Allotment of equity shares pursuant to exercise ",
+            "url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=6cf1f7be-8466-468f-bf52-48967ae84ab8.pdf"
+          },
+          {
+            "title": "Disclosure7 Aug- Chennai GST authority ordered ITC reversal of INR 2.15 crore plus interest and INR 21.05 lakh penalty.",
+            "url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=c31355ca-ebe8-4a15-8963-3b10d4db4345.pdf"
+          },
+          {
+            "title": "Announcement under Regulation 30 (LODR)-Allotment of ESOP / ESPS1 Aug",
+            "url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=e4fbaa7e-983d-4cb7-ad30-8946325e4048.pdf"
+          },
+          {
+            "title": "Announcement under Regulation 30 (LODR)-Earnings Call Transcript30 Jul",
+            "url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=ba4be72b-164f-4dd9-b6ae-ff475176e5bc.pdf"
+          },
+          {
+            "title": "Announcement under Regulation 30 (LODR)-Newspaper Publication24 Jul- Newspaper Advertisement for quarterly financial res",
+            "url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=404a37c8-085d-4193-989c-15a5e4fa917d.pdf"
+          }
+        ],
+        "annual_reports": [
+          {
+            "label": "Annual Report 2022from bse",
+            "url": "https://www.bseindia.com/bseplus/AnnualReport/543300/73238543300.pdf"
+          },
+          {
+            "label": "Annual Report 2021from bse",
+            "url": "https://www.bseindia.com/bseplus/AnnualReport/543300/69492543300.pdf"
+          }
+        ],
+        "concalls": [
+          {
+            "period": "Jul 2026",
+            "transcript_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=ba4be72b-164f-4dd9-b6ae-ff475176e5bc.pdf",
+            "transcript_label": "Jul 2026 Earnings Call Transcript",
+            "ppt_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=5e106ee7-f52d-486e-9c43-43810f5e5f60.pdf",
+            "recording_url": "https://sonacomstar.com/files/documents/sona-comstar-q1fy27-earnings-call-document-XmtQ0p.mp4",
+            "ai_summary_title": "Concall Summary - Jul 2026"
+          },
+          {
+            "period": "May 2026",
+            "transcript_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=e655e3eb-4d7d-4ace-bde9-5a2f30cf8019.pdf",
+            "transcript_label": "May 2026 Earnings Call Transcript",
+            "ppt_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=5de4b3f5-5e8f-4103-95f4-6a276f2fbb83.pdf",
+            "recording_url": "https://sonacomstar.com/files/documents/sona-comstar-q4fy26-earnings-call-document-QmtX0p.mp4",
+            "ai_summary_title": "Concall Summary - May 2026"
+          },
+          {
+            "period": "Mar 2026",
+            "ppt_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=b0c692b1-96ba-48c9-870f-079e8e3c6807.pdf"
+          },
+          {
+            "period": "Jan 2026",
+            "transcript_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=a597eb28-0b1a-4389-b416-e8dcf2e65db3.pdf",
+            "transcript_label": "Jan 2026 Earnings Call Transcript",
+            "ppt_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=0500b77b-d348-48ee-b169-1a404d6c4ce3.pdf",
+            "recording_url": "https://sonacomstar.com/files/documents/sona-comstar-q3fy26-earnings-call-document-QmtX0p.mp4",
+            "ai_summary_title": "Concall Summary - Jan 2026"
+          },
+          {
+            "period": "Oct 2025",
+            "transcript_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=28a02ef7-985b-46c4-a50b-749286217908.pdf",
+            "transcript_label": "Oct 2025 Earnings Call Transcript",
+            "ppt_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=5da2983c-9f98-4a21-87b8-3fb525939852.pdf",
+            "recording_url": "https://sonacomstar.com/files/documents/sona-comstar-q2fy26-earnings-call-g6eUkk.mp4",
+            "ai_summary_title": "Concall Summary - Oct 2025"
+          },
+          {
+            "period": "Aug 2025",
+            "transcript_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=99ca00aa-0b05-44f3-8f01-07e4b3818329.pdf",
+            "transcript_label": "Aug 2025 Earnings Call Transcript",
+            "ppt_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=06e9638b-7dd7-4380-a788-7ceb8c375aec.pdf",
+            "recording_url": "https://youtu.be/fTx8Jktccsk?si=zN85z9jSas-rAsTL",
+            "ai_summary_title": "Concall Summary - Aug 2025"
+          },
+          {
+            "period": "Jul 2025",
+            "ppt_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=3368bff9-f5c0-4c84-8f26-e93d8488ff3f.pdf"
+          },
+          {
+            "period": "May 2025",
+            "transcript_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=4e0df96c-a0d9-4ca8-8f3b-19b3d5210ac9.pdf",
+            "transcript_label": "May 2025 Earnings Call Transcript",
+            "ppt_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=9a122b96-478a-4196-bf48-6fa5c0923120.pdf",
+            "recording_url": "https://www.youtube.com/watch?v=-T0BEGe6bBs",
+            "ai_summary_title": "Concall Summary - May 2025"
+          }
+        ],
+        "error": ""
+      },
+      "technical": {
+        "symbol": "SONACOMS",
+        "price": 817.6,
+        "open": 820.05,
+        "high": 822.05,
+        "low": 802.2,
+        "chg_pct": -0.52,
+        "rsi": 68.6,
+        "adx": 62.7,
+        "macd": "bearish",
+        "supertrend": "SELL",
+        "sma20": 789.26,
+        "sma50": 708.52,
+        "sma200": 571.03,
+        "above_sma20": true,
+        "above_sma50": true,
+        "above_sma200": true,
+        "52w_high": 844.0,
+        "52w_low": 402.3,
+        "pct_from_52h": -3.1,
+        "vol_last": 1975313,
+        "vol_avg_20d": 2592051,
+        "vol_ratio": 0.76,
+        "technical_score": 70,
+        "score_method": "derived from EOD MA alignment, RSI, MACD, Supertrend, and ADX",
+        "data_bars": 273,
+        "as_of": "2026-08-21",
+        "data_source": "PostgreSQL market.equity_eod",
+        "postgres_persist": null
+      },
+      "sources": [
+        {
+          "label": "Screener structured fundamentals",
+          "url": "https://www.screener.in/company/SONACOMS/consolidated/"
+        },
+        {
+          "label": "NSE quote page",
+          "url": "https://www.nseindia.com/get-quotes/equity?symbol=SONACOMS"
+        },
+        {
+          "label": "BSE company page",
+          "url": "https://www.bseindia.com/stock-share-price/sona-blw-precision-forgings-ltd/SONACOMS/543300/"
+        },
+        {
+          "label": "BSE announcement: All",
+          "url": "https://www.bseindia.com/stock-share-price/sona-blw-precision-forgings-ltd/SONACOMS/543300/corp-announcements/"
+        },
+        {
+          "label": "BSE announcement: Announcement under Regulation 30 (LODR)-Allotment of ESOP / ESPS14 Aug- Allotment of equit",
+          "url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=6cf1f7be-8466-468f-bf52-48967ae84ab8.pdf"
+        },
+        {
+          "label": "BSE announcement: Disclosure7 Aug- Chennai GST authority ordered ITC reversal of INR 2.15 crore plus interes",
+          "url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=c31355ca-ebe8-4a15-8963-3b10d4db4345.pdf"
+        },
+        {
+          "label": "Concall transcript: Jul 2026",
+          "url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=ba4be72b-164f-4dd9-b6ae-ff475176e5bc.pdf"
+        },
+        {
+          "label": "Concall transcript: May 2026",
+          "url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=e655e3eb-4d7d-4ace-bde9-5a2f30cf8019.pdf"
+        }
+      ],
+      "source_domains": [
+        "bseindia.com",
+        "nseindia.com",
+        "screener.in"
+      ],
+      "csv": {
+        "rank": 5,
+        "bucket": "Retest trigger map",
+        "symbol": "SONACOMS",
+        "company": "Sona BLW Precision Forgings Limited",
+        "sector": "Auto Components",
+        "policy_score_100": "74.4",
+        "policy_rating": "Active Watch",
+        "phase1_status": "PHASE1_RETEST_TRIGGER_MAP_GOVERNANCE_PENDING",
+        "stance": "Trigger-map candidate; execution gates pending.",
+        "current_price": "817.6",
+        "current_stage": "STAGE_2",
+        "current_rsi": "74.5",
+        "current_relative_strength": "24.69",
+        "relative_strength_score_10": "7.5",
+        "momentum_score_10": "6.5",
+        "setup_quality_score_10": "6.6",
+        "technical_25": "17.1",
+        "fundamental_25": "18.8",
+        "liquidity_tradeability_15": "15",
+        "governance_management_10": "6.0",
+        "valuation_reward_risk_10": "6.5",
+        "entry_trigger": "Break above 852.44 with volume, or retest-hold near 789.26; skip if >5% above planned trigger.",
+        "initial_stop_price": "735.84",
+        "target_2r_price": "981.12",
+        "paper_quantity_by_policy": "18",
+        "paper_position_value": "14716.8",
+        "paper_risk_to_stop": "1471.68",
+        "latest_quarter": "Jun 2026",
+        "latest_revenue_cr": 1301.0,
+        "latest_pat_cr": 179.0,
+        "latest_opm_pct": 23.0,
+        "revenue_yoy_pct": 52.341920374707264,
+        "pat_yoy_pct": 46.721311475409834,
+        "annual_revenue_cr": 4449.0,
+        "annual_pat_cr": 629.0,
+        "market_cap": "51,041",
+        "stock_pe": "70.2",
+        "price_to_book": "96.2",
+        "roe": "11.3",
+        "roce": "14.2",
+        "promoters": "28.01%",
+        "fiis": "23.61%",
+        "diis": "41.60%",
+        "public": "6.77%",
+        "key_strengths": "overlaps one sampled small-cap fund; current Stage 2 trend; profit growth evidence; healthy operating margin",
+        "key_risks": "",
+        "evidence_blockers": "GOVERNANCE_REVIEW_PENDING; WATCH_AGENT_ADDA_EXTENDED",
+        "next_action": "Complete governance/filing review; retest-only because current setup is extended or flagged no-chase.",
+        "source_domains": "bseindia.com; nseindia.com; screener.in",
+        "theme_lens": "EV and premium auto-component content",
+        "theme_thesis": "The theme is rising EV and drivetrain content per vehicle. It needs durable order visibility and margin protection.",
+        "stock_expression": "Sona BLW is the EV/auto-component quality proxy, but the policy scan flags no-chase behavior.",
+        "theme_confirmation": "Fresh result cache, Stage 2 trend, and auto-component policy theme fit.",
+        "theme_risk": "Extended setup, valuation risk, export/customer-cycle sensitivity, and EV demand volatility.",
+        "theme_invalidation": "Retest fails or management commentary weakens on order conversion/margins.",
+        "priority_implication": "Retest-only; no fresh allocation at current extension."
+      }
+    },
+    {
+      "rank": 6,
+      "bucket": "Retest trigger map",
+      "symbol": "RAINBOW",
+      "company": "Rainbow Childrens Medicare Limited",
+      "sector": "Healthcare Services",
+      "policy": {
+        "symbol": "RAINBOW",
+        "company": "Rainbow Childrens Medicare Limited",
+        "sector": "Healthcare Services",
+        "policy_theme_bucket": "Healthcare / specialty services",
+        "theme_status": "CROWDED",
+        "policy_score_100": "65.2",
+        "policy_rating": "Active Watch",
+        "phase1_status": "PHASE1_RETEST_TRIGGER_MAP_GOVERNANCE_PENDING",
+        "preselection_score_100": "74.2",
+        "preselection_decision": "Selection Review - Phased Candidate",
+        "theme_fit_15": "11.0",
+        "fundamental_25": "17.8",
+        "technical_25": "11.9",
+        "relative_strength_score_10": "5.5",
+        "momentum_score_10": "4.0",
+        "setup_quality_score_10": "4.8",
+        "liquidity_tradeability_15": "11",
+        "governance_management_10": "6.0",
+        "valuation_reward_risk_10": "7.5",
+        "current_price": "1433.2",
+        "current_stage": "STAGE_2",
+        "current_signal": "HOLD",
+        "current_rsi": "66.5",
+        "current_relative_strength": "10.92",
+        "technical_setup_score": "25.0",
+        "sma20": "1503.7",
+        "sma50": "1473.27",
+        "distance_from_sma20_pct": "-4.6884351931901325",
+        "distance_from_sma50_pct": "-2.7198001724055954",
+        "pct_from_52w_high": "-12.9",
+        "vol_avg_20d": "104784.0",
+        "avg_turnover_20d_cr": "15.01764288",
+        "vol_ratio": "0.82",
+        "liquidity_gate": "PASS",
+        "financial_gate": "PASS",
+        "governance_gate": "PENDING_OFFICIAL_REVIEW",
+        "stop_distance_gate": "PASS",
+        "reward_risk_gate": "PASS_2R_MODELLED",
+        "no_chase_gate": "WATCH_AGENT_ADDA_EXTENDED",
+        "entry_trigger": "Break above 1662.16 with volume, or retest-hold near 1503.70; skip if >5% above planned trigger.",
+        "reference_entry_price": "1433.2",
+        "initial_stop_price": "1289.88",
+        "initial_stop_distance_pct": "10.0",
+        "stop_method": "10% policy default stop",
+        "target_2r_price": "1719.84",
+        "policy_initial_slot_value": "15000.0",
+        "paper_quantity_by_policy": "10",
+        "paper_position_value": "14332.0",
+        "paper_risk_to_stop": "1433.2",
+        "max_position_qty_by_value": "10",
+        "max_position_qty_by_risk": "26",
+        "max_position_qty_by_liquidity": "2095",
+        "latest_quarter": "Jun 2026",
+        "financial_freshness": "fresh result: Jun 2026; fetched 2026-08-03T19:36:42.104710+05:30",
+        "key_strengths": "owned by two sampled small-cap funds; current Stage 2 trend; healthy operating margin",
+        "key_risks": "nan",
+        "evidence_blockers": "GOVERNANCE_REVIEW_PENDING; WATCH_AGENT_ADDA_EXTENDED",
+        "next_action": "Complete governance/filing review; retest-only because current setup is extended or flagged no-chase."
+      },
+      "assessment": {},
+      "theme": {
+        "theme_lens": "Specialty healthcare services and hospital capacity",
+        "theme_thesis": "The theme is pediatric and maternity specialty healthcare with capacity-led growth.",
+        "stock_expression": "Rainbow is the healthcare-services quality and expansion proxy.",
+        "theme_confirmation": "Fresh result cache, Stage 2 trend, operating-margin evidence, and sampled fund overlap.",
+        "theme_risk": "Capex ramp-up, occupancy, doctor availability, and valuation risk.",
+        "theme_invalidation": "Occupancy/margin trend weakens or retest fails after extension.",
+        "priority_implication": "Retest-only; useful defensive-growth watch if price resets."
+      },
+      "financials": {
+        "latest_quarter": {
+          "symbol": "RAINBOW",
+          "period_label": "Jun 2026",
+          "period_end": "2026-06-30",
+          "period_type": "quarter",
+          "revenue": 470.0,
+          "expenses": 335.0,
+          "operating_profit": 135.0,
+          "opm_pct": 29.0,
+          "other_income": 13.0,
+          "interest": 21.0,
+          "depreciation": 42.0,
+          "pbt": 84.0,
+          "tax_pct": 26.0,
+          "pat": 63.0,
+          "eps": 5.96,
+          "source": "screener",
+          "source_url": "https://www.screener.in/company/RAINBOW/consolidated/",
+          "raw_json": {
+            "headers": [
+              "Mar 2025",
+              "Jun 2025",
+              "Sep 2025",
+              "Dec 2025",
+              "Mar 2026",
+              "Jun 2026"
+            ],
+            "table_keys": [
+              "Sales+",
+              "Expenses+",
+              "Operating Profit",
+              "OPM %",
+              "Other Income+",
+              "Interest",
+              "Depreciation",
+              "Profit before tax",
+              "Tax %",
+              "Net Profit+",
+              "EPS in Rs",
+              "Raw PDF",
+              "_headers"
+            ]
+          },
+          "fetched_at": "2026-08-16T13:37:00.776653+05:30"
+        },
+        "previous_quarter": {
+          "symbol": "RAINBOW",
+          "period_label": "Mar 2026",
+          "period_end": "2026-03-31",
+          "period_type": "quarter",
+          "revenue": 460.0,
+          "expenses": 315.0,
+          "operating_profit": 145.0,
+          "opm_pct": 31.0,
+          "other_income": 4.0,
+          "interest": 20.0,
+          "depreciation": 41.0,
+          "pbt": 87.0,
+          "tax_pct": 10.0,
+          "pat": 78.0,
+          "eps": 7.59,
+          "source": "screener",
+          "source_url": "https://www.screener.in/company/RAINBOW/consolidated/",
+          "raw_json": {
+            "headers": [
+              "Mar 2025",
+              "Jun 2025",
+              "Sep 2025",
+              "Dec 2025",
+              "Mar 2026",
+              "Jun 2026"
+            ],
+            "table_keys": [
+              "Sales+",
+              "Expenses+",
+              "Operating Profit",
+              "OPM %",
+              "Other Income+",
+              "Interest",
+              "Depreciation",
+              "Profit before tax",
+              "Tax %",
+              "Net Profit+",
+              "EPS in Rs",
+              "Raw PDF",
+              "_headers"
+            ]
+          },
+          "fetched_at": "2026-08-16T13:37:00.776649+05:30"
+        },
+        "year_ago_quarter": {
+          "symbol": "RAINBOW",
+          "period_label": "Jun 2025",
+          "period_end": "2025-06-30",
+          "period_type": "quarter",
+          "revenue": 353.0,
+          "expenses": 249.0,
+          "operating_profit": 104.0,
+          "opm_pct": 29.0,
+          "other_income": 20.0,
+          "interest": 18.0,
+          "depreciation": 34.0,
+          "pbt": 71.0,
+          "tax_pct": 25.0,
+          "pat": 54.0,
+          "eps": 5.27,
+          "source": "screener",
+          "source_url": "https://www.screener.in/company/RAINBOW/consolidated/",
+          "raw_json": {
+            "headers": [
+              "Mar 2025",
+              "Jun 2025",
+              "Sep 2025",
+              "Dec 2025",
+              "Mar 2026",
+              "Jun 2026"
+            ],
+            "table_keys": [
+              "Sales+",
+              "Expenses+",
+              "Operating Profit",
+              "OPM %",
+              "Other Income+",
+              "Interest",
+              "Depreciation",
+              "Profit before tax",
+              "Tax %",
+              "Net Profit+",
+              "EPS in Rs",
+              "Raw PDF",
+              "_headers"
+            ]
+          },
+          "fetched_at": "2026-08-16T13:37:00.776634+05:30"
+        },
+        "latest_annual": {
+          "symbol": "RAINBOW",
+          "period_label": "Mar 2026",
+          "period_end": "2026-03-31",
+          "period_type": "annual",
+          "revenue": 1703.0,
+          "expenses": 1155.0,
+          "operating_profit": 548.0,
+          "opm_pct": 32.0,
+          "other_income": 42.0,
+          "interest": 82.0,
+          "depreciation": 151.0,
+          "pbt": 358.0,
+          "tax_pct": 21.0,
+          "pat": 282.0,
+          "eps": 27.4,
+          "dividend_payout_pct": 13.0,
+          "source": "screener",
+          "source_url": "https://www.screener.in/company/RAINBOW/consolidated/",
+          "raw_json": {
+            "headers": [
+              "Mar 2023",
+              "Mar 2024",
+              "Mar 2025",
+              "Mar 2026",
+              "TTM"
+            ],
+            "table_keys": [
+              "Sales+",
+              "Expenses+",
+              "Operating Profit",
+              "OPM %",
+              "Other Income+",
+              "Interest",
+              "Depreciation",
+              "Profit before tax",
+              "Tax %",
+              "Net Profit+",
+              "EPS in Rs",
+              "Dividend Payout %",
+              "_headers"
+            ]
+          },
+          "fetched_at": "2026-08-16T13:37:00.776790+05:30"
+        },
+        "previous_annual": {
+          "symbol": "RAINBOW",
+          "period_label": "Mar 2025",
+          "period_end": "2025-03-31",
+          "period_type": "annual",
+          "revenue": 1516.0,
+          "expenses": 1022.0,
+          "operating_profit": 494.0,
+          "opm_pct": 33.0,
+          "other_income": 51.0,
+          "interest": 77.0,
+          "depreciation": 138.0,
+          "pbt": 330.0,
+          "tax_pct": 26.0,
+          "pat": 244.0,
+          "eps": 23.97,
+          "dividend_payout_pct": 13.0,
+          "source": "screener",
+          "source_url": "https://www.screener.in/company/RAINBOW/consolidated/",
+          "raw_json": {
+            "headers": [
+              "Mar 2023",
+              "Mar 2024",
+              "Mar 2025",
+              "Mar 2026",
+              "TTM"
+            ],
+            "table_keys": [
+              "Sales+",
+              "Expenses+",
+              "Operating Profit",
+              "OPM %",
+              "Other Income+",
+              "Interest",
+              "Depreciation",
+              "Profit before tax",
+              "Tax %",
+              "Net Profit+",
+              "EPS in Rs",
+              "Dividend Payout %",
+              "_headers"
+            ]
+          },
+          "fetched_at": "2026-08-16T13:37:00.776786+05:30"
+        },
+        "latest_balance_sheet": {
+          "symbol": "RAINBOW",
+          "period_label": "Mar 2026",
+          "period_end": "2026-03-31",
+          "period_type": "annual",
+          "equity_capital": 102.0,
+          "reserves": 1547.0,
+          "borrowings": 891.0,
+          "other_liabilities": 236.0,
+          "total_liabilities": 2775.0,
+          "fixed_assets": 1756.0,
+          "cwip": 79.0,
+          "investments": 404.0,
+          "other_assets": 535.0,
+          "total_assets": 2775.0,
+          "net_debt": 487.0,
+          "source": "screener",
+          "source_url": "https://www.screener.in/company/RAINBOW/consolidated/",
+          "raw_json": {
+            "headers": [
+              "Mar 2022",
+              "Mar 2023",
+              "Mar 2024",
+              "Mar 2025",
+              "Mar 2026"
+            ],
+            "table_keys": [
+              "Equity Capital",
+              "Reserves",
+              "Borrowings+",
+              "Other Liabilities+",
+              "Total Liabilities",
+              "Fixed Assets+",
+              "CWIP",
+              "Investments",
+              "Other Assets+",
+              "Total Assets",
+              "_headers"
+            ]
+          },
+          "fetched_at": "2026-08-16T13:37:00.776909+05:30"
+        },
+        "latest_cash_flow": {
+          "symbol": "RAINBOW",
+          "period_label": "Mar 2026",
+          "period_end": "2026-03-31",
+          "period_type": "annual",
+          "operating_cf": 420.0,
+          "investing_cf": -259.0,
+          "financing_cf": -147.0,
+          "net_cf": 14.0,
+          "source": "screener",
+          "source_url": "https://www.screener.in/company/RAINBOW/consolidated/",
+          "raw_json": {
+            "headers": [
+              "Mar 2022",
+              "Mar 2023",
+              "Mar 2024",
+              "Mar 2025",
+              "Mar 2026"
+            ],
+            "table_keys": [
+              "Cash from Operating Activity+",
+              "Cash from Investing Activity+",
+              "Cash from Financing Activity+",
+              "Net Cash Flow",
+              "Free Cash Flow",
+              "CFO/OP",
+              "_headers"
+            ]
+          },
+          "fetched_at": "2026-08-16T13:37:00.776966+05:30"
+        },
+        "revenue_yoy_pct": 33.14447592067988,
+        "pat_yoy_pct": 16.666666666666675,
+        "eps_yoy_pct": 13.09297912713474,
+        "revenue_qoq_pct": 2.1739130434782705,
+        "pat_qoq_pct": -19.23076923076923,
+        "annual_revenue_yoy_pct": 12.33509234828496,
+        "annual_pat_yoy_pct": 15.573770491803284,
+        "financial_source": "screener",
+        "financial_source_url": "https://www.screener.in/company/RAINBOW/consolidated/",
+        "financial_fetched_at": "2026-08-16T13:37:00.776653+05:30"
+      },
+      "screener": {
+        "source_url": "https://www.screener.in/company/RAINBOW/consolidated/",
+        "ratios": {
+          "Market Cap": "14,860",
+          "Current Price": "1,460",
+          "High / Low": "1,625",
+          "Stock P/E": "51.9",
+          "Book Value": "162",
+          "Dividend Yield": "0.24",
+          "ROCE": "17.4",
+          "ROE": "15.9",
+          "Face Value": "10.0"
+        },
+        "pros": [
+          "Company's median sales growth is 22.8% of last 10 years"
+        ],
+        "cons": [
+          "Stock is trading at 9.00 times its book value"
+        ],
+        "shareholding": {
+          "_quarters": [
+            "Sep 2023",
+            "Dec 2023",
+            "Mar 2024",
+            "Jun 2024",
+            "Sep 2024",
+            "Dec 2024",
+            "Mar 2025",
+            "Jun 2025",
+            "Sep 2025",
+            "Dec 2025",
+            "Mar 2026",
+            "Jun 2026"
+          ],
+          "Promoters": "49.84%",
+          "Promoters_trend": [
+            "49.83%",
+            "49.83%",
+            "49.83%",
+            "49.87%",
+            "49.85%",
+            "49.85%",
+            "49.85%",
+            "49.85%",
+            "49.85%",
+            "49.84%",
+            "49.84%",
+            "49.84%"
+          ],
+          "FIIs": "16.03%",
+          "FIIs_trend": [
+            "21.63%",
+            "22.32%",
+            "24.04%",
+            "24.78%",
+            "25.12%",
+            "25.12%",
+            "23.69%",
+            "23.60%",
+            "21.85%",
+            "19.24%",
+            "17.24%",
+            "16.03%"
+          ],
+          "DIIs": "22.56%",
+          "DIIs_trend": [
+            "15.39%",
+            "15.62%",
+            "14.76%",
+            "13.81%",
+            "13.84%",
+            "13.87%",
+            "15.31%",
+            "15.44%",
+            "17.46%",
+            "19.49%",
+            "21.12%",
+            "22.56%"
+          ],
+          "Public": "11.39%",
+          "Public_trend": [
+            "13.14%",
+            "12.23%",
+            "11.37%",
+            "11.53%",
+            "11.20%",
+            "11.16%",
+            "11.14%",
+            "11.11%",
+            "10.82%",
+            "11.40%",
+            "11.68%",
+            "11.39%"
+          ],
+          "Others": "0.18%",
+          "Others_trend": [
+            "0.00%",
+            "0.00%",
+            "0.00%",
+            "0.00%",
+            "0.00%",
+            "0.00%",
+            "0.00%",
+            "0.00%",
+            "0.00%",
+            "0.04%",
+            "0.12%",
+            "0.18%"
+          ]
+        },
+        "announcements": [
+          {
+            "title": "All",
+            "url": "https://www.bseindia.com/stock-share-price/rainbow-childrens-medicare-ltd/RAINBOW/543524/corp-announcements/"
+          },
+          {
+            "title": "Update On Acquisition14 Aug- Rainbow Children\u2019s Medicare completed 64% acquisition of Super Prime Medical Care LLP on Au",
+            "url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=bd2cda3c-d205-4ba0-87a8-6c1ed77ec774.pdf"
+          },
+          {
+            "title": "Announcement under Regulation 30 (LODR)-Earnings Call Transcript4 Aug- Earnings Call Transcript for the quarter ended Ju",
+            "url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=8970d382-3968-4128-9b4c-cddf4546db10.pdf"
+          },
+          {
+            "title": "Announcement under Regulation 30 (LODR)-Analyst / Investor Meet - Outcome31 Jul- Audio recording of Q1 FY27 earnings con",
+            "url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=72f1dc2e-93bd-4229-82ec-5338b30404b0.pdf"
+          },
+          {
+            "title": "Announcement under Regulation 30 (LODR)-Newspaper Publication31 Jul- Newspaper publication of financial results for quar",
+            "url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=23639fd2-b644-4ac8-9856-96d8d9cfc6ac.pdf"
+          },
+          {
+            "title": "Announcement under Regulation 30 (LODR)-Press Release / Media Release30 Jul- Q1 FY27 revenue rose 33% YoY; signed 100-be",
+            "url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=0029643c-876e-4abd-ad02-6d016fd7ed1c.pdf"
+          }
+        ],
+        "annual_reports": [
+          {
+            "label": "Annual Report 2022from bse",
+            "url": "https://www.bseindia.com/bseplus/AnnualReport/543524/74634543524.pdf"
+          }
+        ],
+        "concalls": [
+          {
+            "period": "Aug 2026",
+            "transcript_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=8970d382-3968-4128-9b4c-cddf4546db10.pdf",
+            "transcript_label": "Aug 2026 Earnings Call Transcript",
+            "ppt_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=bb803ec1-af0b-4134-a12d-4892a60d2233.pdf",
+            "recording_url": "https://d31scedd5hpubp.cloudfront.net/investor_files/Audio_Recording_of_Earnings_call_-_Q1_%26_FY_2027.mp3",
+            "ai_summary_title": "Concall Summary - Aug 2026"
+          },
+          {
+            "period": "Jun 2026",
+            "transcript_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=00f2af46-b715-47b0-9821-c0eb807fea45.pdf",
+            "transcript_label": "Jun 2026 Earnings Call Transcript",
+            "ppt_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=1e2d6456-83ef-4799-b053-94ffe50d1b7a.pdf",
+            "ai_summary_title": "Concall Summary - Jun 2026"
+          },
+          {
+            "period": "Feb 2026",
+            "transcript_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=54d134c3-7f93-472b-989b-7a62cbe023d9.pdf",
+            "transcript_label": "Feb 2026 Earnings Call Transcript",
+            "ppt_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=032ce313-d359-4e1a-9e74-6f03111689b4.pdf",
+            "recording_url": "https://youtu.be/nhmwM5OdSdk",
+            "ai_summary_title": "Concall Summary - Feb 2026"
+          },
+          {
+            "period": "Nov 2025",
+            "transcript_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=94b5944b-a643-4e16-a1f0-3f204d44c318.pdf",
+            "transcript_label": "Nov 2025 Earnings Call Transcript",
+            "ppt_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=101ae4ea-97d3-4af1-b0a0-27de988dd09a.pdf",
+            "recording_url": "https://youtu.be/ko9ZFe2IDqc",
+            "ai_summary_title": "Concall Summary - Nov 2025"
+          },
+          {
+            "period": "Aug 2025",
+            "transcript_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=0598f669-5989-41b4-95c5-53dc948bf14f.pdf",
+            "transcript_label": "Aug 2025 Earnings Call Transcript",
+            "ppt_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=2b162b8c-e023-45c6-bef1-64c795280197.pdf",
+            "recording_url": "https://www.youtube.com/watch?v=qZ5LhgL55wM",
+            "ai_summary_title": "Concall Summary - Aug 2025"
+          },
+          {
+            "period": "May 2025",
+            "transcript_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=70f0bace-eab0-4682-8a92-2d3f2cfe89b7.pdf",
+            "transcript_label": "May 2025 Earnings Call Transcript",
+            "ppt_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=01e10600-be84-4086-835a-bc0aee61bdc6.pdf",
+            "ai_summary_title": "Concall Summary - May 2025"
+          },
+          {
+            "period": "Feb 2025",
+            "transcript_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=37a8bbfd-5751-4f66-b98a-1073c68ada59.pdf",
+            "transcript_label": "Feb 2025 Earnings Call Transcript",
+            "ppt_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=644542b5-b3a3-4dd1-af12-0917a4759872.pdf",
+            "ai_summary_title": "Concall Summary - Feb 2025"
+          },
+          {
+            "period": "Nov 2024",
+            "transcript_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=be44ff22-0967-45e4-b0d4-dc34cd56f9ac.pdf",
+            "transcript_label": "Nov 2024 Earnings Call Transcript",
+            "ppt_url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=54a60e73-780b-436a-847a-f348c52d3310.pdf",
+            "ai_summary_title": "Concall Summary - Nov 2024"
+          }
+        ],
+        "error": ""
+      },
+      "technical": {
+        "symbol": "RAINBOW",
+        "price": 1433.2,
+        "open": 1458.0,
+        "high": 1469.9,
+        "low": 1424.6,
+        "chg_pct": -1.4,
+        "rsi": 38.8,
+        "adx": 36.1,
+        "macd": "bearish",
+        "supertrend": "SELL",
+        "sma20": 1503.7,
+        "sma50": 1473.27,
+        "sma200": 1320.87,
+        "above_sma20": false,
+        "above_sma50": false,
+        "above_sma200": true,
+        "52w_high": 1645.7,
+        "52w_low": 1084.0,
+        "pct_from_52h": -12.9,
+        "vol_last": 86438,
+        "vol_avg_20d": 104784,
+        "vol_ratio": 0.82,
+        "technical_score": 25,
+        "score_method": "derived from EOD MA alignment, RSI, MACD, Supertrend, and ADX",
+        "data_bars": 272,
+        "as_of": "2026-08-21",
+        "data_source": "PostgreSQL market.equity_eod",
+        "postgres_persist": null
+      },
+      "sources": [
+        {
+          "label": "Screener structured fundamentals",
+          "url": "https://www.screener.in/company/RAINBOW/consolidated/"
+        },
+        {
+          "label": "NSE quote page",
+          "url": "https://www.nseindia.com/get-quotes/equity?symbol=RAINBOW"
+        },
+        {
+          "label": "BSE company page",
+          "url": "https://www.bseindia.com/stock-share-price/rainbow-childrens-medicare-ltd/RAINBOW/543524/"
+        },
+        {
+          "label": "BSE announcement: All",
+          "url": "https://www.bseindia.com/stock-share-price/rainbow-childrens-medicare-ltd/RAINBOW/543524/corp-announcements/"
+        },
+        {
+          "label": "BSE announcement: Update On Acquisition14 Aug- Rainbow Children\u2019s Medicare completed 64% acquisition of Supe",
+          "url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=bd2cda3c-d205-4ba0-87a8-6c1ed77ec774.pdf"
+        },
+        {
+          "label": "BSE announcement: Announcement under Regulation 30 (LODR)-Earnings Call Transcript4 Aug- Earnings Call Trans",
+          "url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=8970d382-3968-4128-9b4c-cddf4546db10.pdf"
+        },
+        {
+          "label": "Concall transcript: Jun 2026",
+          "url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=00f2af46-b715-47b0-9821-c0eb807fea45.pdf"
+        }
+      ],
+      "source_domains": [
+        "bseindia.com",
+        "nseindia.com",
+        "screener.in"
+      ],
+      "csv": {
+        "rank": 6,
+        "bucket": "Retest trigger map",
+        "symbol": "RAINBOW",
+        "company": "Rainbow Childrens Medicare Limited",
+        "sector": "Healthcare Services",
+        "policy_score_100": "65.2",
+        "policy_rating": "Active Watch",
+        "phase1_status": "PHASE1_RETEST_TRIGGER_MAP_GOVERNANCE_PENDING",
+        "stance": "Trigger-map candidate; execution gates pending.",
+        "current_price": "1433.2",
+        "current_stage": "STAGE_2",
+        "current_rsi": "66.5",
+        "current_relative_strength": "10.92",
+        "relative_strength_score_10": "5.5",
+        "momentum_score_10": "4.0",
+        "setup_quality_score_10": "4.8",
+        "technical_25": "11.9",
+        "fundamental_25": "17.8",
+        "liquidity_tradeability_15": "11",
+        "governance_management_10": "6.0",
+        "valuation_reward_risk_10": "7.5",
+        "entry_trigger": "Break above 1662.16 with volume, or retest-hold near 1503.70; skip if >5% above planned trigger.",
+        "initial_stop_price": "1289.88",
+        "target_2r_price": "1719.84",
+        "paper_quantity_by_policy": "10",
+        "paper_position_value": "14332.0",
+        "paper_risk_to_stop": "1433.2",
+        "latest_quarter": "Jun 2026",
+        "latest_revenue_cr": 470.0,
+        "latest_pat_cr": 63.0,
+        "latest_opm_pct": 29.0,
+        "revenue_yoy_pct": 33.14447592067988,
+        "pat_yoy_pct": 16.666666666666675,
+        "annual_revenue_cr": 1703.0,
+        "annual_pat_cr": 282.0,
+        "market_cap": "14,860",
+        "stock_pe": "51.9",
+        "price_to_book": "162",
+        "roe": "15.9",
+        "roce": "17.4",
+        "promoters": "49.84%",
+        "fiis": "16.03%",
+        "diis": "22.56%",
+        "public": "11.39%",
+        "key_strengths": "owned by two sampled small-cap funds; current Stage 2 trend; healthy operating margin",
+        "key_risks": "",
+        "evidence_blockers": "GOVERNANCE_REVIEW_PENDING; WATCH_AGENT_ADDA_EXTENDED",
+        "next_action": "Complete governance/filing review; retest-only because current setup is extended or flagged no-chase.",
+        "source_domains": "bseindia.com; nseindia.com; screener.in",
+        "theme_lens": "Specialty healthcare services and hospital capacity",
+        "theme_thesis": "The theme is pediatric and maternity specialty healthcare with capacity-led growth.",
+        "stock_expression": "Rainbow is the healthcare-services quality and expansion proxy.",
+        "theme_confirmation": "Fresh result cache, Stage 2 trend, operating-margin evidence, and sampled fund overlap.",
+        "theme_risk": "Capex ramp-up, occupancy, doctor availability, and valuation risk.",
+        "theme_invalidation": "Occupancy/margin trend weakens or retest fails after extension.",
+        "priority_implication": "Retest-only; useful defensive-growth watch if price resets."
+      }
+    }
+  ]
+}

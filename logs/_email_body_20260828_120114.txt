@@ -1,0 +1,54 @@
+Agent Adda
+      Fri, 28 Aug 2026 · 12:01 IST
+
+        Report · midday_market.html · mode: both
+
+  NSE Midday Market — 28 Aug 2026
+
+  Cover note: The Midday Market report has been published to Agent Adda Market Intelligence. A concise summary is below; the full report is attached. This email is research-only and not investment advice.
+
+  Market read: Risk-off session; breadth narrow and Bank Nifty not confirming. Recheck breadth and leadership into the close (next 60–90 minutes).
+
+  Key takeaways (12:00 IST)
+
+    Index pulse: NIFTY 50 24,085 (-0.02%) flat; Bank Nifty 57,360 (-0.26%) weak; Smallcap 250 18,480 (+0.26%) supportive; India VIX 11.04 (-0.29%) volatility easing.
+
+    Leadership concentrated in IT and digital: NIFTY IT +2.79%, NIFTY MIDSMALL IT & TELECOM +1.45%, NIFTY INDIA DIGITAL +1.12%, NIFTY INDIA RAILWAYS PSU +0.66%; weak pockets include Cement (-1.03%), Tourism (-0.91%), Core Housing (-0.82%), Defence (-0.67%).
+
+    Movers: ATHERENERG +6.83%, RRKABEL +2.87%, BEML +2.82%, TATATECH +2.65%; laggards: NHPC -1.95%, KPRMILL -1.88%, ZEEL -1.83%, NCC -1.74%.
+
+    F&O context: NIFTY PCR OI 0.64 (bearish-leaning) and BANKNIFTY 1.1 (constructive); price and OI confirmation still required; upcoming expiries: NIFTY 01-Sep, BANKNIFTY 29-Sep.
+
+    Global backdrop marked RISK_ON: US +1.15%, Asia +0.30%; commodities mixed; USDINR +0.12%, DXY +0.03%.
+
+  What to watch
+
+    NIFTY to hold the key intraday range and avoid a failed second-half breakout.
+
+    Bank Nifty to stop lagging or for financials to keep absorbing weakness; confirm breadth in the next 15–30 minutes.
+
+    Small/microcap strength to sustain without VIX rising.
+
+    Sector focus into close: capital markets, IT, metals, realty; reassess consumer durables, PSU banks, pharma, defence, and auto if weakness persists.
+
+  How to use this
+
+    Treat strength as provisional until breadth, volume, and price acceptance confirm; prefer setups holding above the opening range with volume.
+
+    Use the momentum screen (27 Aug) as a watchlist, not a trade list — e.g., INDSWFTLAB, KABRAEXTRU, AVADHSUGAR, STYLEBAAZA, RBA — validate with RSI, volume, and support distance.
+
+    Avoid chasing sharp movers or RSI above ~80; size positions prudently and respect stops.
+
+    Treat F&O signals as context; wait for alignment among price, PCR, OI buildup, and VWAP/intraday range.
+
+    Verify levels independently. Educational market research only; not investment advice.
+
+  Source: Agent Adda Midday Market dashboard (12:00 IST). Research-only. This is not a recommendation or solicitation. Markets involve risk, including capital loss.
+
+  Regards,
+
+  Agent Adda
+
+  ShunyaAI · NSE Market Intelligence
+
+Not investment advice. For research and learning only. NSE EOD + live snapshot data.

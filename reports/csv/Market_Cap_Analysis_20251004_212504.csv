@@ -1,0 +1,5 @@
+"market_cap_category","stock_count","avg_technical_score","avg_relative_strength","avg_rsi","avg_change_1d","avg_change_1w","recommendation"
+"LARGE_CAP",7,75.04,16.48,65.11,4.3,5.91,"Strong Buy"
+"MID_CAP",8,72.83,21.3,66.44,1.69,5.9,"Strong Buy"
+"SMALL_CAP",12,72.28,31.74,63.16,1.36,4.81,"Strong Buy"
+"MICRO_CAP",57,70.75,21.06,61.15,0.66,4.2,"Strong Buy"

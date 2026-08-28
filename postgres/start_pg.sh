@@ -10,6 +10,14 @@ PG_LOG="$(cd "$(dirname "$0")" && pwd)/postgres.log"
 
 cmd="${1:-start}"
 
+PG_SERVER_OPTS="${PG_SERVER_OPTS:-}"
+if [[ -z "$PG_SERVER_OPTS" ]]; then
+  # In managed/sandboxed environments, SysV shared memory may be blocked and
+  # PostgreSQL can fail to boot with "could not create shared memory segment".
+  # Use mmap/posix shared memory to keep local dev usable.
+  PG_SERVER_OPTS="-c shared_memory_type=mmap -c dynamic_shared_memory_type=posix"
+fi
+
 case "$cmd" in
   start)
     if pg_ctl -D "$PG_DATA" status &>/dev/null; then
@@ -18,7 +26,7 @@ case "$cmd" in
       chmod 700 "$PG_DATA" 2>/dev/null || true
       rm -f "$PG_DATA/postmaster.pid"
       echo "Starting PostgreSQL…"
-      if ! pg_ctl -D "$PG_DATA" -l "$PG_LOG" start; then
+      if ! pg_ctl -D "$PG_DATA" -l "$PG_LOG" -o "$PG_SERVER_OPTS" start; then
         echo "❌ PostgreSQL failed to start. Last log lines:"
         tail -40 "$PG_LOG" 2>/dev/null || true
         exit 1
@@ -32,7 +40,7 @@ case "$cmd" in
     ;;
   restart)
     pg_ctl -D "$PG_DATA" stop -m fast 2>/dev/null || true
-    pg_ctl -D "$PG_DATA" -l "$PG_LOG" start
+    pg_ctl -D "$PG_DATA" -l "$PG_LOG" -o "$PG_SERVER_OPTS" start
     echo "✅ PostgreSQL restarted"
     ;;
   status)

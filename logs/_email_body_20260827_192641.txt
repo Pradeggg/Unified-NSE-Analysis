@@ -1,0 +1,56 @@
+Agent Adda
+      Thu, 27 Aug 2026 · 19:26 IST
+
+        Report · stage2_tracker.html · mode: both
+
+  Market read: Stage 2 breadth softened day-over-day (-64 to 390) but is higher vs last Thursday (+25), with several high-RSI leaders signaling patience.
+
+  Stage 2 Breakout Tracker — EOD Thursday, 27 Aug 2026
+
+  Formula: stage2-fund-ready-v2 | Sources: PostgreSQL/scores.stage_snapshots + market.equity_eod; SQLite stage_changes | Generated: 2026-08-27 19:17
+
+  Sharing today’s India equities Stage 2 rotation summary from Agent Adda Market Intelligence. Brief highlights below.
+
+  Key takeaways
+
+    Stage posture: Stage 2 at 390 (−64 d/d), +25 vs Thu, 20 Aug; Stage 1: 734, Stage 3: 1000, Stage 4: 499.
+
+    Transitions (d/d): 27 new entrants; 178 exits; upgrades S1→S2: 22 and S3→S2: 5; downgrades S2→S1: 6; S3→S4: 4.
+
+    Momentum quality: Multiple leaders above 70 RSI flagged NO CHASE (e.g., WELCORP ~85, SHILPAMED ~83, KMEW ~78, SETL ~85).
+
+    Fund-ready pipeline: 15 candidates cleared the fundamental gate (≥65); notable ADD/ACCUMULATE cues include CUPID, NAM-INDIA, CGCL, VADILAL IND, AJANTPHARM, LAURUSLABS, RADICO, TBZ.
+
+    Sector rotation: Leadership clustering in Pharmaceuticals & Biotechnology, Industrial/Engineering, and Consumer Durables; Chemicals and Capital Markets also contribute.
+
+  What to watch
+
+    Sustainability of S1→S2 upgrades versus exits into week’s end.
+
+    RSI normalization and pullbacks toward moving averages in NO CHASE names before considering entries.
+
+    Durability of leadership in Pharma/Biotech and Industrials; stabilization of breadth around the 390 level.
+
+    Participation across cap tiers (large vs small/micro) for confirmation of risk-on tone.
+
+  How to use this
+
+    Prioritize the Fund-Ready Stage 2 list for deeper research; use ADD/ACCUMULATE/WATCH/AVOID to triage.
+
+    Avoid chasing stretched setups; wait for lower-risk entries where RSI > 70 and the system flags NO CHASE.
+
+    For tactical setups, review VCP candidates referenced in the report.
+
+    Track daily Stage 2 delta and transition mix to gauge short-term regime shifts.
+
+    Data notes: Daily comparisons use 26 Aug 2026 EOD; week-over-week uses EOD Thursday, 20 Aug 2026 baseline.
+
+    This report is for research purposes only and is not investment advice.
+
+  Regards,
+
+  Agent Adda
+
+  ShunyaAI · NSE Market Intelligence
+
+Not investment advice. For research and learning only. NSE EOD + live snapshot data.

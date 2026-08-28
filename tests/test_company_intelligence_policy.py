@@ -3,8 +3,8 @@ import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from company_intelligence_db import init_company_intelligence_db
-from company_intelligence_policy import (
+from company_intelligence.company_intelligence_db import init_company_intelligence_db
+from company_intelligence.company_intelligence_policy import (
     assess_policy_impact,
     list_policy_events,
     store_policy_event,

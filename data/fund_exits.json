@@ -1,0 +1,80 @@
+{
+  "_meta": {
+    "description": "Realized exits ledger \u2014 all partial and full exits from Aug Fund. Single source of truth.",
+    "note": "Add one entry per exit fill. entry_price = original avg cost. exit_price = broker fill price."
+  },
+  "exits": [
+    {
+      "symbol": "THYROCARE",
+      "fund": "Aug SC",
+      "exit_date": "2026-08-22",
+      "qty": 21,
+      "entry_price": 578.4,
+      "exit_price": 565.55,
+      "realized_pnl": -269.85,
+      "realized_pct": -2.22,
+      "type": "FULL",
+      "note": "Stop discipline exit. Supertrend flipped BEARISH Aug-19, failed to recover over 4 sessions. Stock hit 52W low \u20b9563. Sold full 21 shares at \u20b9565.55 on market open 22-Aug-2026."
+    },
+    {
+      "symbol": "ATHERENERG",
+      "fund": "Aug MC",
+      "exit_date": "2026-08-19",
+      "qty": 20,
+      "entry_price": 868.11,
+      "exit_price": 1456.2,
+      "realized_pnl": 11762.0,
+      "realized_pct": 67.74,
+      "type": "PARTIAL",
+      "note": "Profit booking rule triggered (+67.7% > +40% threshold). Sold 20/45 shares. 25 remaining with SL trailed to entry \u20b9868.11. EFS=63.1 <65 \u2014 full exit review at month-end."
+    },
+    {
+      "symbol": "ASIANENE",
+      "fund": "Aug SC",
+      "exit_date": "2026-08-25",
+      "qty": 30,
+      "entry_price": 464.0,
+      "exit_price": 457.7,
+      "realized_pnl": -189.0,
+      "realized_pct": -1.36,
+      "type": "FULL",
+      "note": "Full exit recorded after portfolio review. Position was below entry and carried fresh fundamental warnings: revenue declined QoQ (-19.8%) and PAT declined QoQ (-60.6%). Exit price uses the 2026-08-25 refreshed fund dashboard CMP pending broker-fill correction if needed."
+    },
+    {
+      "symbol": "RPTECH",
+      "fund": "Aug SC",
+      "exit_date": "2026-08-27",
+      "qty": 5,
+      "entry_price": 863.65,
+      "exit_price": 785.0,
+      "realized_pnl": -393.25,
+      "realized_pct": -9.1,
+      "type": "FULL",
+      "note": "Full exit recorded from confirmed broker fill: 5 shares sold at \u20b9785.00 on 27-Aug-2026. Stop-loss and Supertrend bearish alerts were active."
+    },
+    {
+      "symbol": "FEDERALBNK",
+      "fund": "Aug MC",
+      "exit_date": "2026-08-27",
+      "qty": 30,
+      "entry_price": 204.22,
+      "exit_price": 346.0,
+      "realized_pnl": 4253.4,
+      "realized_pct": 69.43,
+      "type": "PARTIAL",
+      "note": "Partial exit recorded from user-provided broker fill: sold 30 shares at \u20b9346.00 on 27-Aug-2026. 191 shares remain at original average cost \u20b9204.22."
+    },
+    {
+      "symbol": "MINDACORP",
+      "fund": "Aug MC",
+      "exit_date": "2026-08-28",
+      "qty": 22,
+      "entry_price": 750.0,
+      "exit_price": 698.7,
+      "realized_pnl": -1128.6,
+      "realized_pct": -6.84,
+      "type": "FULL",
+      "note": "Stop-loss discipline exit. Stage broken to 1, signal HOLD, CMP \u20b9698.7 breached stop \u20b9705. Exited at CMP 2026-08-28."
+    }
+  ]
+}

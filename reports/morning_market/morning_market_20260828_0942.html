@@ -1,0 +1,411 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Agent Adda Morning Market - 2026-08-28 09:42 IST</title>
+  <style>
+    :root {
+      --bg:#0d1117; --panel:#161b22; --panel2:#1c2128; --line:#30363d;
+      --ink:#e6edf3; --muted:#8b949e; --good:#3fb950; --bad:#f85149;
+      --amber:#d29922; --blue:#58a6ff; --teal:#2dd4bf; --soft:#111820;
+      --shadow:0 18px 50px rgba(0,0,0,.24);
+    }
+    * { box-sizing:border-box; }
+    html, body { max-width:100%; overflow-x:hidden; }
+    body { margin:0; font-family:Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color:var(--ink); background:linear-gradient(180deg,#0d1117,#111820 42%,#0d1117); font-size:13px; }
+    a { color:var(--blue); text-decoration-color:rgba(88,166,255,.55); }
+    a:visited { color:var(--teal); }
+    a:hover, a:focus-visible { color:#9ecbff; }
+    .page { width:min(1220px, calc(100% - 32px)); margin:0 auto; padding:28px 0 44px; }
+    .brandbar { display:flex; align-items:center; justify-content:space-between; gap:14px; margin-bottom:14px; }
+    .brand { display:flex; align-items:center; gap:10px; min-width:0; }
+    .logo { width:38px; height:38px; border-radius:10px; display:grid; place-items:center; background:linear-gradient(135deg,#1f6feb,#2dd4bf); color:#fff; font-weight:900; letter-spacing:0; box-shadow:0 8px 22px rgba(31,111,235,.28); }
+    .brand-title { font-weight:850; letter-spacing:.08em; text-transform:uppercase; font-size:12px; color:var(--blue); }
+    .brand-sub { color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:.08em; margin-top:2px; }
+    .hero { display:grid; grid-template-columns:minmax(0,1.4fr) minmax(300px,.6fr); gap:18px; align-items:stretch; padding:26px; background:linear-gradient(135deg,rgba(88,166,255,.12),rgba(45,212,191,.07)), var(--panel); border:1px solid var(--line); box-shadow:var(--shadow); overflow:hidden; }
+    h1 { margin:0; font-size:clamp(32px,5vw,58px); line-height:.95; letter-spacing:0; overflow-wrap:break-word; }
+    h2 { margin:0 0 12px; font-size:18px; letter-spacing:0; }
+    h3 { margin:0 0 10px; font-size:14px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); }
+    p { color:var(--muted); line-height:1.55; overflow-wrap:anywhere; }
+    .kicker { color:var(--blue); font-weight:800; text-transform:uppercase; letter-spacing:.12em; font-size:12px; margin-bottom:8px; }
+    .hero-main { min-width:0; }
+    .hero-main p { max-width:760px; font-size:17px; }
+    .mobile-brief { display:none; }
+    .status-card { background:#0d1117; color:#fff; padding:20px; display:flex; flex-direction:column; justify-content:space-between; min-height:210px; min-width:0; border:1px solid rgba(88,166,255,.24); }
+    .status-card strong { font-size:28px; line-height:1.05; }
+    .status-card span { color:#c9d1d9; display:block; min-width:0; max-width:100%; white-space:normal; overflow-wrap:anywhere; }
+    .status-short { display:none !important; }
+    .audience { margin-top:16px; display:grid; grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr); gap:16px; }
+    .audience-panel { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:18px; box-shadow:0 10px 28px rgba(0,0,0,.16); min-width:0; }
+    .audience-panel strong { color:var(--ink); }
+    .audience-list { margin:0; padding-left:18px; color:var(--muted); line-height:1.65; }
+    .commentary { background:linear-gradient(180deg,rgba(45,212,191,.08),rgba(22,27,34,.98)); border-color:rgba(45,212,191,.34); }
+    .commentary h2 { margin-bottom:4px; }
+    .commentary-title { color:var(--teal); font-size:12px; font-weight:850; text-transform:uppercase; letter-spacing:.1em; margin-bottom:8px; }
+    .commentary-body p { margin:10px 0 0; color:#c9d1d9; font-size:14px; line-height:1.65; }
+    .commentary-meta { margin-top:12px; color:var(--muted); font-size:11px; }
+    .pill-row { display:flex; flex-wrap:wrap; gap:8px; margin-top:18px; }
+    .pill { display:inline-flex; gap:6px; align-items:center; padding:7px 10px; border:1px solid var(--line); background:var(--panel2); color:var(--ink); font-size:12px; font-weight:700; max-width:100%; overflow-wrap:anywhere; }
+    .grid { display:grid; grid-template-columns:repeat(12, 1fr); gap:16px; margin-top:16px; }
+    .panel { grid-column:span 6; background:var(--panel); border:1px solid var(--line); box-shadow:0 10px 28px rgba(0,0,0,.16); padding:18px; min-width:0; border-radius:10px; }
+    .panel.wide { grid-column:span 12; }
+    .panel.third { grid-column:span 4; }
+    .panel.movers { border-color:rgba(88,166,255,.36); background:linear-gradient(180deg,rgba(88,166,255,.08),rgba(22,27,34,.98)); }
+    .section-head { display:flex; justify-content:space-between; gap:12px; align-items:flex-start; flex-wrap:wrap; margin-bottom:12px; }
+    .section-head p { margin:0; font-size:12px; max-width:560px; }
+    .mover-spotlight { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; margin-bottom:12px; }
+    .spot { border:1px solid var(--line); background:var(--panel2); padding:12px; border-radius:8px; }
+    .spot label { display:block; color:var(--muted); font-size:10px; text-transform:uppercase; letter-spacing:.08em; margin-bottom:4px; }
+    .spot strong { display:block; font-size:18px; }
+    .spot span { display:block; margin-top:4px; }
+    .metric-strip { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-top:16px; }
+    .metric { border:1px solid var(--line); background:var(--panel); padding:12px; min-height:88px; border-radius:8px; }
+    .metric label { display:block; color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:.08em; }
+    .metric strong { display:block; font-size:22px; margin-top:6px; }
+    .metric span { font-size:13px; }
+    .table-wrap { overflow:auto; max-width:100%; border:1px solid var(--line); background:var(--panel); border-radius:8px; }
+    table { width:100%; border-collapse:collapse; min-width:620px; }
+    th { background:var(--panel2); color:var(--muted); text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.08em; padding:10px; white-space:nowrap; }
+    td { border-top:1px solid #21262d; padding:10px; vertical-align:top; font-size:13px; }
+    td span { color:var(--muted); font-size:12px; }
+    .pos { color:var(--good); font-weight:800; }
+    .neg { color:var(--bad); font-weight:800; }
+    .flat { color:var(--amber); font-weight:800; }
+    .bar-row { display:grid; grid-template-columns:minmax(130px,1fr) 1.8fr 72px; gap:10px; align-items:center; padding:9px 0; border-top:1px solid #21262d; }
+    .bar-row:first-child { border-top:0; }
+    .bar-label { font-weight:750; font-size:13px; }
+    .bar-track { height:10px; background:#26303b; overflow:hidden; border-radius:999px; }
+    .bar-track span { display:block; height:100%; }
+    .goodbar { background:linear-gradient(90deg,var(--teal),#40c057); }
+    .badbar { background:linear-gradient(90deg,#e8590c,var(--bad)); }
+    .bar-value { text-align:right; font-size:13px; }
+    .callout { border-left:4px solid var(--blue); background:rgba(88,166,255,.10); padding:14px; color:var(--ink); }
+    .checklist { margin:0; padding-left:18px; color:var(--muted); line-height:1.65; }
+    .warning { margin-top:16px; border:1px solid rgba(210,153,34,.45); background:rgba(210,153,34,.10); padding:14px; color:#f2cc8f; }
+    .notice-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; margin-top:16px; }
+    .notice { padding:14px; border:1px solid rgba(88,166,255,.32); background:rgba(88,166,255,.08); color:#c9d1d9; line-height:1.55; border-radius:8px; }
+    .notice strong { color:var(--ink); }
+    .notice.caution { border-color:rgba(210,153,34,.45); background:rgba(210,153,34,.09); color:#f2cc8f; }
+    .footer { margin-top:18px; color:var(--muted); font-size:12px; }
+    @media (max-width: 900px) {
+      .page { width:calc(100% - 20px); padding:14px 0 44px; }
+      .hero { grid-template-columns:1fr; padding:18px; }
+      .panel, .panel.third { grid-column:span 12; }
+      .metric-strip { grid-template-columns:1fr 1fr; }
+      .mover-spotlight { grid-template-columns:1fr; }
+      .notice-grid { grid-template-columns:1fr; }
+      .audience { grid-template-columns:1fr; }
+      table { min-width:560px; }
+    }
+    @media (max-width: 560px) {
+      .brandbar { align-items:stretch; flex-direction:column; }
+      .brandbar > .pill { align-self:flex-start; }
+      .hero-main p.hero-copy { display:none; }
+      .mobile-brief { display:block; color:var(--muted); font-size:15px; line-height:1.45; margin-top:12px; }
+      .status-card { min-height:170px; }
+      .status-long { display:none !important; }
+      .status-short { display:block !important; }
+      .metric-strip { grid-template-columns:1fr; }
+      .bar-row { grid-template-columns:1fr 76px; }
+      .bar-track { grid-column:1 / -1; grid-row:2; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <div class="brandbar">
+      <div class="brand">
+        <div class="logo">AA</div>
+        <div>
+          <div class="brand-title">Agent Adda</div>
+          <div class="brand-sub">Market intelligence dashboard</div>
+        </div>
+      </div>
+      <span class="pill">Educational market intelligence - not advice</span>
+    </div>
+    <section class="hero">
+      <div class="hero-main">
+        <div class="kicker">Agent Adda Morning Market</div>
+        <h1>Selective risk-on</h1>
+        <p class="hero-copy">Broader market is leading while volatility is calm. Bank Nifty is not confirming yet. Use the first 15-30 minutes to confirm whether this is real breadth or just a gap-and-rotate tape.</p>
+        <div class="mobile-brief">Bank Nifty lagging. Confirm breadth in 15-30 min.</div>
+        <div class="pill-row">
+          <span class="pill">As of 2026-08-28 09:42 IST</span>
+          <span class="pill">Domestic live runtime</span>
+          <span class="pill">F&O date 09:43:20</span>
+          <span class="pill">Momentum date 2026-08-27</span>
+        </div>
+      </div>
+      <aside class="status-card">
+        <span>Opening stance</span>
+        <strong>Selective risk-on</strong>
+        <span class="status-long">RISK_ON global backdrop - educational market intelligence only.</span>
+        <span class="status-short">Research only.</span>
+      </aside>
+    </section>
+
+    <section class="audience" aria-label="Audience and retail investor summary">
+      <div class="audience-panel">
+        <div class="commentary-title">Who this report is for</div>
+        <h2>Built for informed retail investors</h2>
+        <p>This morning dashboard is designed for retail investors and swing traders who actively follow Indian equities and want a structured opening read before updating their watchlist, risk exposure, or market view.</p>
+        <ul class="audience-list">
+          <li>Best suited for investors who already track indices, sectors, watchlists, and basic technical context.</li>
+          <li>Useful for spotting leadership, weak pockets, momentum names, F&O context, and confirmation levels.</li>
+          <li>Not a trade-call sheet, portfolio recommendation, or substitute for suitability-based advice.</li>
+        </ul>
+      </div>
+      <div class="audience-panel commentary">
+        <div class="commentary-title">Retail investor commentary</div>
+        <h2>Selective risk-on: read the market as evidence, not as a trade call</h2>
+        <div class="commentary-body">
+          <p>As of 2026-08-28 09:42 IST, the agent adda morning market is best read as selective risk-on. Broader market is leading while volatility is calm. Bank Nifty is not confirming yet. For retail investors, the practical message is to observe whether the first 15-30 minutes confirm participation across NIFTY, Bank Nifty, broader indices, and sector leaders. NIFTY 50 is at 24,149 (+0.24%), Bank Nifty is at 57,425 (-0.15%), and Smallcap 250 is at 18,507 (+0.40%). India VIX is -1.15%, so risk appetite should be judged with volatility in mind.</p><p>Sector leadership is concentrated around NIFTY IT, NIFTY MIDSMALL IT &amp; TELECOM, NIFTY INDIA DIGITAL, NIFTY GROWTH SECTORS 15, while weaker pockets include NIFTY CEMENT, NIFTY INDIA DEFENCE, NIFTY INDIA TOURISM, NIFTY ENERGY. The top mover list highlights TEJASNET, TTML, ATHERENERG, HEG on the positive side and ALOKINDS, PWL, BBTC, WHIRLPOOL on the weak side. Momentum screens are useful for building a watchlist, especially names such as INDSWFTLAB, KABRAEXTRU, AVADHSUGAR, STYLEBAAZA, RBA, but the report should not be treated as a trade list. Look for price holding above the opening range, improving breadth, and volume confirmation before drawing conclusions.</p><p>F&amp;O evidence is a context layer, not a standalone signal. NIFTY reads as neutral with PCR OI 0.75 (expiry 01-Sep-2026), while BANKNIFTY reads as neutral with PCR OI 1.09 (expiry 29-Sep-2026). The global backdrop (as of 2026-08-28) is marked as RISK_ON. Retail investors should use this dashboard to decide what deserves attention, what requires patience, and where risk control matters most.</p>
+        </div>
+        <ul class="audience-list">
+          <li>Use the report as a market map: index direction, breadth, sectors, movers, momentum, F&amp;O, and global cues.</li><li>Treat strength as provisional until the first 15-30 minutes confirm breadth and price acceptance.</li><li>Avoid chasing sharp movers without checking RSI, volume, support distance, and position size.</li><li>Prioritize watchlist refinement and risk control over instant action.</li>
+        </ul>
+        <div class="commentary-meta">Summary source: AI-assisted evidence synthesis fallback. Grounded only in report evidence.</div>
+      </div>
+    </section>
+
+    <section class="metric-strip">
+      <div class="metric"><label>NIFTY 50</label><strong>24,149</strong><span class="pos">+0.24%</span></div>
+      <div class="metric"><label>Bank Nifty</label><strong>57,425</strong><span class="flat">-0.15%</span></div>
+      <div class="metric"><label>Smallcap 250</label><strong>18,507</strong><span class="pos">+0.40%</span></div>
+      <div class="metric"><label>India VIX</label><strong>10.94</strong><span class="pos">-1.15%</span></div>
+    </section>
+
+    <section class="grid">
+      <div class="panel wide">
+        <h2>Domestic Index Pulse</h2>
+        <div class="table-wrap"><table><thead><tr><th>Area</th><th>Level</th><th>Move</th><th>Day Range</th><th>Read</th></tr></thead><tbody><tr><td>NIFTY 50</td><td>24,149</td><td><span class="pos">+0.24%</span></td><td>24,107 - 24,158</td><td>Supportive</td></tr><tr><td>NIFTY BANK</td><td>57,425</td><td><span class="flat">-0.15%</span></td><td>57,264 - 57,499</td><td>Weak</td></tr><tr><td>NIFTY FINANCIAL SERVICES</td><td>26,259</td><td><span class="flat">-0.08%</span></td><td>26,155 - 26,264</td><td>Flat</td></tr><tr><td>NIFTY MIDCAP 100</td><td>64,174</td><td><span class="pos">+0.22%</span></td><td>63,991 - 64,176</td><td>Supportive</td></tr><tr><td>NIFTY SMALLCAP 100</td><td>20,099</td><td><span class="pos">+0.29%</span></td><td>20,045 - 20,111</td><td>Supportive</td></tr><tr><td>NIFTY SMALLCAP 250</td><td>18,507</td><td><span class="pos">+0.40%</span></td><td>18,453 - 18,508</td><td>Supportive</td></tr><tr><td>NIFTY MICROCAP 250</td><td>26,474</td><td><span class="pos">+0.36%</span></td><td>26,400 - 26,492</td><td>Supportive</td></tr><tr><td>INDIA VIX</td><td>10.94</td><td><span class="neg">-1.15%</span></td><td>10.54 - 11.1</td><td>Vol easing</td></tr></tbody></table></div>
+      </div>
+      <div class="panel wide movers">
+        <div class="section-head">
+          <div>
+            <h2>Market Movers: Top Gainers And Losers</h2>
+            <p>Top movers are sourced from yfinance current daily candles (NSE tickers) as of 2026-08-28 09:43:15.</p>
+          </div>
+          <span class="pill">Mover source as of 2026-08-28 09:43:15</span>
+        </div>
+        <div class="mover-spotlight">
+          <div class="spot">
+            <label>Top gainer</label>
+            <strong><a href="https://www.nseindia.com/get-quotes/equity?symbol=TEJASNET" target="_blank" rel="noopener noreferrer">TEJASNET</a></strong>
+            <span class="pos">+10.45%</span>
+          </div>
+          <div class="spot">
+            <label>Top loser</label>
+            <strong><a href="https://www.nseindia.com/get-quotes/equity?symbol=ALOKINDS" target="_blank" rel="noopener noreferrer">ALOKINDS</a></strong>
+            <span class="neg">-7.19%</span>
+          </div>
+        </div>
+        <h3>Top Gainers</h3>
+        <div class="table-wrap"><table><thead><tr><th>Symbol</th><th>Move</th><th>Stage</th><th>Signal</th><th>RS/RSI</th></tr></thead><tbody><tr><td><strong><a href="https://www.nseindia.com/get-quotes/equity?symbol=TEJASNET" target="_blank" rel="noopener noreferrer">TEJASNET</a></strong><br><span>Other</span></td><td><span class="pos">+10.45%</span></td><td>STAGE_1</td><td>Cautious</td><td>61.1</td></tr><tr><td><strong><a href="https://www.nseindia.com/get-quotes/equity?symbol=TTML" target="_blank" rel="noopener noreferrer">TTML</a></strong><br><span></span></td><td><span class="pos">+9.30%</span></td><td>n/a</td><td>No signal</td><td>n/a</td></tr><tr><td><strong><a href="https://www.nseindia.com/get-quotes/equity?symbol=ATHERENERG" target="_blank" rel="noopener noreferrer">ATHERENERG</a></strong><br><span>EV &amp; Auto Ancillaries</span></td><td><span class="pos">+4.35%</span></td><td>STAGE_2</td><td>Strong bullish</td><td>99.5</td></tr><tr><td><strong><a href="https://www.nseindia.com/get-quotes/equity?symbol=HEG" target="_blank" rel="noopener noreferrer">HEG</a></strong><br><span>Metals &amp; Mining</span></td><td><span class="pos">+3.65%</span></td><td>STAGE_2</td><td>Strong bullish</td><td>90.3</td></tr><tr><td><strong><a href="https://www.nseindia.com/get-quotes/equity?symbol=EXIDEIND" target="_blank" rel="noopener noreferrer">EXIDEIND</a></strong><br><span>EV &amp; Auto Ancillaries</span></td><td><span class="pos">+3.56%</span></td><td>STAGE_2</td><td>Bullish</td><td>73.1</td></tr><tr><td><strong><a href="https://www.nseindia.com/get-quotes/equity?symbol=KPITTECH" target="_blank" rel="noopener noreferrer">KPITTECH</a></strong><br><span>IT &amp; Technology</span></td><td><span class="pos">+3.52%</span></td><td>STAGE_4</td><td>Bearish</td><td>0.1</td></tr><tr><td><strong><a href="https://www.nseindia.com/get-quotes/equity?symbol=TCS" target="_blank" rel="noopener noreferrer">TCS</a></strong><br><span>IT &amp; Technology</span></td><td><span class="pos">+3.50%</span></td><td>STAGE_1</td><td>Cautious</td><td>11.5</td></tr><tr><td><strong><a href="https://www.nseindia.com/get-quotes/equity?symbol=NEWGEN" target="_blank" rel="noopener noreferrer">NEWGEN</a></strong><br><span>IT &amp; Technology</span></td><td><span class="pos">+3.30%</span></td><td>STAGE_1</td><td>Watch</td><td>20.5</td></tr><tr><td><strong><a href="https://www.nseindia.com/get-quotes/equity?symbol=COFORGE" target="_blank" rel="noopener noreferrer">COFORGE</a></strong><br><span>IT &amp; Technology</span></td><td><span class="pos">+3.13%</span></td><td>STAGE_2</td><td>Strong bullish</td><td>83.2</td></tr><tr><td><strong><a href="https://www.nseindia.com/get-quotes/equity?symbol=BSOFT" target="_blank" rel="noopener noreferrer">BSOFT</a></strong><br><span>Other</span></td><td><span class="pos">+3.11%</span></td><td>STAGE_4</td><td>Bearish</td><td>5.3</td></tr></tbody></table></div>
+        <h3 style="margin-top:16px">Top Losers</h3>
+        <div class="table-wrap"><table><thead><tr><th>Symbol</th><th>Move</th><th>Stage</th><th>Signal</th><th>RS/RSI</th></tr></thead><tbody><tr><td><strong><a href="https://www.nseindia.com/get-quotes/equity?symbol=ALOKINDS" target="_blank" rel="noopener noreferrer">ALOKINDS</a></strong><br><span></span></td><td><span class="neg">-7.19%</span></td><td>n/a</td><td>No signal</td><td>n/a</td></tr><tr><td><strong><a href="https://www.nseindia.com/get-quotes/equity?symbol=PWL" target="_blank" rel="noopener noreferrer">PWL</a></strong><br><span>Other</span></td><td><span class="neg">-4.21%</span></td><td>STAGE_1</td><td>Cautious</td><td>63.1</td></tr><tr><td><strong><a href="https://www.nseindia.com/get-quotes/equity?symbol=BBTC" target="_blank" rel="noopener noreferrer">BBTC</a></strong><br><span>Other</span></td><td><span class="neg">-2.71%</span></td><td>STAGE_1</td><td>Bullish</td><td>33.5</td></tr><tr><td><strong><a href="https://www.nseindia.com/get-quotes/equity?symbol=WHIRLPOOL" target="_blank" rel="noopener noreferrer">WHIRLPOOL</a></strong><br><span>MNC</span></td><td><span class="neg">-2.32%</span></td><td>STAGE_1</td><td>Bullish</td><td>13.6</td></tr><tr><td><strong><a href="https://www.nseindia.com/get-quotes/equity?symbol=ADANIENSOL" target="_blank" rel="noopener noreferrer">ADANIENSOL</a></strong><br><span>Other</span></td><td><span class="neg">-1.88%</span></td><td>STAGE_2</td><td>Bullish</td><td>96</td></tr><tr><td><strong><a href="https://www.nseindia.com/get-quotes/equity?symbol=GROWW" target="_blank" rel="noopener noreferrer">GROWW</a></strong><br><span>Other</span></td><td><span class="neg">-1.87%</span></td><td>STAGE_1</td><td>Cautious</td><td>78.1</td></tr><tr><td><strong><a href="https://www.nseindia.com/get-quotes/equity?symbol=WELCORP" target="_blank" rel="noopener noreferrer">WELCORP</a></strong><br><span>Metals &amp; Mining</span></td><td><span class="neg">-1.74%</span></td><td>STAGE_2</td><td>Strong bullish</td><td>99.7</td></tr><tr><td><strong><a href="https://www.nseindia.com/get-quotes/equity?symbol=PREMIERENE" target="_blank" rel="noopener noreferrer">PREMIERENE</a></strong><br><span>Other</span></td><td><span class="neg">-1.71%</span></td><td>STAGE_1</td><td>Cautious</td><td>51.5</td></tr></tbody></table></div>
+      </div>
+      <div class="panel">
+        <h2>Sector And Index Leaders</h2>
+        
+            <div class="bar-row">
+              <div class="bar-label">NIFTY IT</div>
+              <div class="bar-track"><span class="goodbar" style="width:100.0%"></span></div>
+              <div class="bar-value pos">+2.73%</div>
+            </div>
+            
+
+            <div class="bar-row">
+              <div class="bar-label">NIFTY MIDSMALL IT &amp; TELECOM</div>
+              <div class="bar-track"><span class="goodbar" style="width:60.1%"></span></div>
+              <div class="bar-value pos">+1.64%</div>
+            </div>
+            
+
+            <div class="bar-row">
+              <div class="bar-label">NIFTY INDIA DIGITAL</div>
+              <div class="bar-track"><span class="goodbar" style="width:47.6%"></span></div>
+              <div class="bar-value pos">+1.30%</div>
+            </div>
+            
+
+            <div class="bar-row">
+              <div class="bar-label">NIFTY GROWTH SECTORS 15</div>
+              <div class="bar-track"><span class="goodbar" style="width:35.5%"></span></div>
+              <div class="bar-value pos">+0.97%</div>
+            </div>
+            
+
+            <div class="bar-row">
+              <div class="bar-label">NIFTY MEDIA</div>
+              <div class="bar-track"><span class="goodbar" style="width:30.0%"></span></div>
+              <div class="bar-value pos">+0.82%</div>
+            </div>
+            
+
+            <div class="bar-row">
+              <div class="bar-label">NIFTY SHARIAH 25</div>
+              <div class="bar-track"><span class="goodbar" style="width:28.2%"></span></div>
+              <div class="bar-value pos">+0.77%</div>
+            </div>
+            
+
+            <div class="bar-row">
+              <div class="bar-label">NIFTY TOP 10 EQUAL WEIGHT</div>
+              <div class="bar-track"><span class="goodbar" style="width:26.7%"></span></div>
+              <div class="bar-value pos">+0.73%</div>
+            </div>
+            
+
+            <div class="bar-row">
+              <div class="bar-label">NIFTY INDIA CORPORATE GROUP INDEX - TATA GROUP 25% CAP</div>
+              <div class="bar-track"><span class="goodbar" style="width:26.7%"></span></div>
+              <div class="bar-value pos">+0.73%</div>
+            </div>
+            
+
+            <div class="bar-row">
+              <div class="bar-label">NIFTY DIVIDEND OPPORTUNITIES 50</div>
+              <div class="bar-track"><span class="goodbar" style="width:25.6%"></span></div>
+              <div class="bar-value pos">+0.70%</div>
+            </div>
+            
+
+            <div class="bar-row">
+              <div class="bar-label">NIFTY MIDCAP LIQUID 15</div>
+              <div class="bar-track"><span class="goodbar" style="width:23.4%"></span></div>
+              <div class="bar-value pos">+0.64%</div>
+            </div>
+            
+      </div>
+      <div class="panel">
+        <h2>Weak Pockets</h2>
+        
+            <div class="bar-row">
+              <div class="bar-label">NIFTY CEMENT</div>
+              <div class="bar-track"><span class="badbar" style="width:100.0%"></span></div>
+              <div class="bar-value neg">-0.66%</div>
+            </div>
+            
+
+            <div class="bar-row">
+              <div class="bar-label">NIFTY INDIA DEFENCE</div>
+              <div class="bar-track"><span class="badbar" style="width:66.7%"></span></div>
+              <div class="bar-value neg">-0.44%</div>
+            </div>
+            
+
+            <div class="bar-row">
+              <div class="bar-label">NIFTY INDIA TOURISM</div>
+              <div class="bar-track"><span class="badbar" style="width:50.0%"></span></div>
+              <div class="bar-value neg">-0.33%</div>
+            </div>
+            
+
+            <div class="bar-row">
+              <div class="bar-label">NIFTY ENERGY</div>
+              <div class="bar-track"><span class="badbar" style="width:42.4%"></span></div>
+              <div class="bar-value neg">-0.28%</div>
+            </div>
+            
+
+            <div class="bar-row">
+              <div class="bar-label">NIFTY INDIA INFRASTRUCTURE &amp; LOGISTICS</div>
+              <div class="bar-track"><span class="badbar" style="width:28.8%"></span></div>
+              <div class="bar-value neg">-0.19%</div>
+            </div>
+            
+
+            <div class="bar-row">
+              <div class="bar-label">NIFTY CORE HOUSING</div>
+              <div class="bar-track"><span class="badbar" style="width:27.3%"></span></div>
+              <div class="bar-value neg">-0.18%</div>
+            </div>
+            
+
+            <div class="bar-row">
+              <div class="bar-label">NIFTY COMMODITIES</div>
+              <div class="bar-track"><span class="badbar" style="width:24.2%"></span></div>
+              <div class="bar-value neg">-0.16%</div>
+            </div>
+            
+
+            <div class="bar-row">
+              <div class="bar-label">NIFTY PSE</div>
+              <div class="bar-track"><span class="badbar" style="width:24.2%"></span></div>
+              <div class="bar-value neg">-0.16%</div>
+            </div>
+            
+
+            <div class="bar-row">
+              <div class="bar-label">NIFTY BANK</div>
+              <div class="bar-track"><span class="badbar" style="width:22.7%"></span></div>
+              <div class="bar-value flat">-0.15%</div>
+            </div>
+            
+
+            <div class="bar-row">
+              <div class="bar-label">NIFTY IPO</div>
+              <div class="bar-track"><span class="badbar" style="width:22.7%"></span></div>
+              <div class="bar-value flat">-0.15%</div>
+            </div>
+            
+      </div>
+      <div class="panel wide">
+        <h2>Momentum Leaders</h2>
+        <p>Latest momentum screen snapshot: 2026-08-27. Treat stale rows as watchlist context until current-day price action confirms.</p>
+        <div class="table-wrap"><table><thead><tr><th>Symbol</th><th>1M Move</th><th>RS</th><th>RSI</th><th>Signal</th></tr></thead><tbody><tr><td><strong><a href="https://www.nseindia.com/get-quotes/equity?symbol=INDSWFTLAB" target="_blank" rel="noopener noreferrer">INDSWFTLAB</a></strong><br><span>Other</span></td><td><span class="pos">+62.88%</span></td><td>100</td><td>79</td><td>Strong bullish</td></tr><tr><td><strong><a href="https://www.nseindia.com/get-quotes/equity?symbol=KABRAEXTRU" target="_blank" rel="noopener noreferrer">KABRAEXTRU</a></strong><br><span>Other</span></td><td><span class="pos">+61.45%</span></td><td>99.8</td><td>75.5</td><td>Bullish</td></tr><tr><td><strong><a href="https://www.nseindia.com/get-quotes/equity?symbol=AVADHSUGAR" target="_blank" rel="noopener noreferrer">AVADHSUGAR</a></strong><br><span>Other</span></td><td><span class="pos">+57.17%</span></td><td>99.4</td><td>81.5</td><td>Bullish</td></tr><tr><td><strong><a href="https://www.nseindia.com/get-quotes/equity?symbol=STYLEBAAZA" target="_blank" rel="noopener noreferrer">STYLEBAAZA</a></strong><br><span>Other</span></td><td><span class="pos">+51.94%</span></td><td>84.1</td><td>70.7</td><td>Bullish</td></tr><tr><td><strong><a href="https://www.nseindia.com/get-quotes/equity?symbol=RBA" target="_blank" rel="noopener noreferrer">RBA</a></strong><br><span>Other</span></td><td><span class="pos">+50.16%</span></td><td>95.9</td><td>57.3</td><td>Strong bullish</td></tr><tr><td><strong><a href="https://www.nseindia.com/get-quotes/equity?symbol=SHILPAMED" target="_blank" rel="noopener noreferrer">SHILPAMED</a></strong><br><span>Pharma &amp; Healthcare</span></td><td><span class="pos">+49.57%</span></td><td>99.6</td><td>83.2</td><td>Strong bullish</td></tr><tr><td><strong><a href="https://www.nseindia.com/get-quotes/equity?symbol=WELCORP" target="_blank" rel="noopener noreferrer">WELCORP</a></strong><br><span>Metals &amp; Mining</span></td><td><span class="pos">+45.37%</span></td><td>99.7</td><td>84.7</td><td>Strong bullish</td></tr><tr><td><strong><a href="https://www.nseindia.com/get-quotes/equity?symbol=ARIES" target="_blank" rel="noopener noreferrer">ARIES</a></strong><br><span>Other</span></td><td><span class="pos">+45.03%</span></td><td>93.2</td><td>81.6</td><td>Strong bullish</td></tr><tr><td><strong><a href="https://www.nseindia.com/get-quotes/equity?symbol=MARINE" target="_blank" rel="noopener noreferrer">MARINE</a></strong><br><span>Other</span></td><td><span class="pos">+44.13%</span></td><td>98.5</td><td>69.8</td><td>Strong bullish</td></tr><tr><td><strong><a href="https://www.nseindia.com/get-quotes/equity?symbol=SBCL" target="_blank" rel="noopener noreferrer">SBCL</a></strong><br><span>Other</span></td><td><span class="pos">+41.88%</span></td><td>99.2</td><td>64.3</td><td>Strong bullish</td></tr></tbody></table></div>
+      </div>
+      <div class="panel">
+        <h2>F&O Index Setup</h2>
+        <p>Latest F&O evidence date: 09:43:20. <strong>Expiry awareness:</strong> NIFTY: next expiry 2026-09-01 (Weekly) · BANKNIFTY: expiry 2026-09-29. On expiry sessions, open interest and PCR can change quickly due to rolls/unwinds; treat max pain and call/put walls as context and re-check after the first 30–60 minutes. Directional conviction needs price, PCR, OI buildup, and VWAP/opening-range confirmation to align.</p>
+        <div class="table-wrap"><table><thead><tr><th>Instrument</th><th>PCR OI</th><th>Max Pain</th><th>Call Wall</th><th>Put Wall</th><th>Buildup</th><th>Read</th></tr></thead><tbody><tr><td>NIFTY</td><td>0.75</td><td>24,200</td><td>24,300</td><td>24,100</td><td>Buildup unavailable</td><td>Neutral</td></tr><tr><td>BANKNIFTY</td><td>1.09</td><td>57,700</td><td>57,500</td><td>57,500</td><td>Buildup unavailable</td><td>Neutral</td></tr></tbody></table></div>
+      </div>
+      <div class="panel">
+        <h2>F&O Stock Watch</h2>
+        <div class="table-wrap"><table><thead><tr><th>Symbol</th><th>Fut Px Δ</th><th>Fut OI</th><th>PCR OI / Vol</th><th>CE / PE Wall</th><th>Max Pain</th><th>Evidence read</th></tr></thead><tbody><tr><td><strong><a href="https://www.nseindia.com/get-quotes/equity?symbol=ADANIPOWER" target="_blank" rel="noopener noreferrer">ADANIPOWER</a></strong></td><td>-1.92%</td><td>49,693</td><td>0.68 / 0.44</td><td>220 / 210</td><td>210 (-1.12% vs spot)</td><td>Price down, PCR bearish — aligned pressure</td></tr><tr><td><strong><a href="https://www.nseindia.com/get-quotes/equity?symbol=HDFCBANK" target="_blank" rel="noopener noreferrer">HDFCBANK</a></strong></td><td>-0.01%</td><td>541,565</td><td>0.66 / 0.44</td><td>730 / 730</td><td>730 (2.24% vs spot)</td><td>Price down, PCR bearish — aligned pressure</td></tr><tr><td><strong><a href="https://www.nseindia.com/get-quotes/equity?symbol=INFY" target="_blank" rel="noopener noreferrer">INFY</a></strong></td><td>2.28%</td><td>187,057</td><td>0.74 / 0.45</td><td>1,160 / 1,100</td><td>1,140 (0.14% vs spot)</td><td>Price up, PCR bearish — weak confirmation</td></tr><tr><td><strong><a href="https://www.nseindia.com/get-quotes/equity?symbol=KOTAKBANK" target="_blank" rel="noopener noreferrer">KOTAKBANK</a></strong></td><td>0.23%</td><td>89,940</td><td>0.91 / 0.88</td><td>420 / 400</td><td>415 (-2.41% vs spot)</td><td>Mixed PCR — wait for price confirmation</td></tr><tr><td><strong><a href="https://www.nseindia.com/get-quotes/equity?symbol=ICICIBANK" target="_blank" rel="noopener noreferrer">ICICIBANK</a></strong></td><td>-0.87%</td><td>134,241</td><td>0.84 / 0.92</td><td>1,470 / 1,400</td><td>1,440 (0.35% vs spot)</td><td>Mixed PCR — wait for price confirmation</td></tr><tr><td><strong><a href="https://www.nseindia.com/get-quotes/equity?symbol=TCS" target="_blank" rel="noopener noreferrer">TCS</a></strong></td><td>3.3%</td><td>139,068</td><td>1.03 / 0.41</td><td>2,300 / 2,300</td><td>2,320 (-0.3% vs spot)</td><td>Price up, PCR constructive — better alignment</td></tr><tr><td><strong><a href="https://www.nseindia.com/get-quotes/equity?symbol=COFORGE" target="_blank" rel="noopener noreferrer">COFORGE</a></strong></td><td>3.69%</td><td>28,129</td><td>0.8 / 0.42</td><td>2,000 / 1,800</td><td>1,900 (-3.11% vs spot)</td><td>Price up, PCR bearish — weak confirmation</td></tr><tr><td><strong><a href="https://www.nseindia.com/get-quotes/equity?symbol=BAJFINANCE" target="_blank" rel="noopener noreferrer">BAJFINANCE</a></strong></td><td>-0.45%</td><td>81,888</td><td>0.71 / 0.95</td><td>1,100 / 1,000</td><td>1,090 (0.9% vs spot)</td><td>Price down, PCR bearish — aligned pressure</td></tr><tr><td><strong><a href="https://www.nseindia.com/get-quotes/equity?symbol=ATHERENERG" target="_blank" rel="noopener noreferrer">ATHERENERG</a></strong></td><td>4.23%</td><td>4,223</td><td>0.31 / 0.19</td><td>1,600 / 1,500</td><td>1,500 (-3.88% vs spot)</td><td>Price up, PCR bearish — weak confirmation</td></tr><tr><td><strong><a href="https://www.nseindia.com/get-quotes/equity?symbol=RELIANCE" target="_blank" rel="noopener noreferrer">RELIANCE</a></strong></td><td>-0.15%</td><td>261,483</td><td>0.74 / 0.53</td><td>1,320 / 1,300</td><td>1,320 (2.54% vs spot)</td><td>Price down, PCR bearish — aligned pressure</td></tr></tbody></table></div>
+      </div>
+      <div class="panel wide">
+        <h2>Global And Commodity Cues</h2>
+        <div class="pill-row"><span class="pill">US +1.15% - positive</span><span class="pill">Asia +0.65% - positive</span><span class="pill">Commodities +0.53% - mixed</span><span class="pill">FX +0.06% - positive</span></div>
+        <div class="table-wrap"><table><thead><tr><th>Asset</th><th>Price</th><th>Move</th><th>As of</th></tr></thead><tbody><tr><td>S&amp;P 500</td><td>7,731</td><td><span class="pos">+0.72%</span></td><td>2026-08-27</td></tr><tr><td>Nasdaq</td><td>26,541</td><td><span class="pos">+1.57%</span></td><td>2026-08-27</td></tr><tr><td>Hang Seng</td><td>25,673</td><td><span class="pos">+0.42%</span></td><td>2026-08-28</td></tr><tr><td>Nikkei 225</td><td>66,705</td><td><span class="pos">+0.87%</span></td><td>2026-08-28</td></tr><tr><td>Gold</td><td>4,632</td><td><span class="pos">+0.48%</span></td><td>2026-08-28</td></tr><tr><td>Crude Oil</td><td>83.12</td><td><span class="neg">-0.49%</span></td><td>2026-08-28</td></tr><tr><td>Copper</td><td>6.69</td><td><span class="pos">+1.59%</span></td><td>2026-08-28</td></tr><tr><td>DXY</td><td>99.17</td><td><span class="flat">+0.01%</span></td><td>2026-08-28</td></tr><tr><td>USDINR</td><td>95.53</td><td><span class="flat">+0.10%</span></td><td>2026-08-28</td></tr></tbody></table></div>
+      </div>
+      <div class="panel third">
+        <h3>Confirm</h3>
+        <ul class="checklist">
+          <li>NIFTY holds above opening range high after the first 15-30 minutes.</li>
+          <li>Bank Nifty stops lagging or financial services keeps absorbing weakness.</li>
+          <li>Small/microcap strength holds without VIX rising.</li>
+        </ul>
+      </div>
+      <div class="panel third">
+        <h3>Respect</h3>
+        <ul class="checklist">
+          <li>Avoid chasing leaders with RSI above 80 or large one-day gaps.</li>
+          <li>Treat F&O as neutral unless PCR and buildup confirm with price.</li>
+          <li>Prefer sectors with both index strength and stock-level breadth.</li>
+        </ul>
+      </div>
+      <div class="panel third">
+        <h3>Watch</h3>
+        <ul class="checklist">
+          <li>Capital markets, IT, metals, realty, and broad-market quality momentum.</li>
+          <li>Consumer durables, PSU banks, pharma, defence, and auto if weakness persists.</li>
+          <li>Crude, USDINR, DXY, and FII/DII flow confirmation.</li>
+        </ul>
+      </div>
+      <div class="panel wide">
+        <h2>Evidence And Freshness</h2>
+        <div class="table-wrap"><table><thead><tr><th>Evidence</th><th>Source</th><th>As of</th></tr></thead><tbody><tr><td>Domestic indices</td><td>terminal.tools.get_live_market_overview</td><td>2026-08-28 09:42 IST</td></tr><tr><td>Top movers</td><td>yfinance current daily candles (NSE tickers)</td><td>2026-08-28 09:43:15</td></tr><tr><td>Momentum</td><td>PostgreSQL scores.stage_snapshots</td><td>2026-08-27</td></tr><tr><td>F&amp;O</td><td>live-nse-api</td><td>09:43:20</td></tr><tr><td>Global</td><td>Live yfinance quotes</td><td>2026-08-28</td></tr></tbody></table></div>
+        
+        <div class="notice-grid">
+          <div class="notice"><strong>AI and data-grounding note:</strong> AI assistants may help draft and organize this market dashboard. Tables, levels, breadth, F&amp;O, momentum, global cues, and source freshness are grounded in Agent Adda evidence shown in the report. AI synthesis does not replace independent verification, suitability assessment, or risk management.</div>
+          <div class="notice caution"><strong>Disclaimer / SEBI-aligned investor caution:</strong> This is for education and general market research only. It is not personalised advice, not a SEBI-registered research report, and not a recommendation or solicitation to buy, sell, hold, trade, or subscribe. Markets carry risk, including capital loss. No assured, fixed, or guaranteed returns are expressed or implied. Verify independently and consult a SEBI-registered investment adviser / qualified professional before acting.</div>
+        </div>
+        <div class="footer">Generated by scripts/build_morning_market_report.py. Educational market intelligence only; not investment advice.</div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

@@ -1,0 +1,43 @@
+Hi Team,
+
+    Agent Adda Aug 2026 Fund Dashboard is refreshed as of 24 Aug 2026, 10:21 IST.
+
+    The dashboard now reflects 22 active positions across the Small-Cap and Mid-Cap funds, including the newly purchased QUESS and SYRMA positions.
+
+  Portfolio Snapshot
+
+    FundPositionsInvestedOpen P&LStatus
+
+    Aug Small-Cap Fund12 / 12₹292,166+₹57,218 (+19.6%)Fully allocated
+
+    Aug Mid-Cap Fund10 / 15₹205,186+₹87,226 (+42.5%)5 dry-powder slots
+
+    Combined22₹497,352+₹144,444 (+29.0%)Monitoring
+
+  What Changed
+
+    QUESS added to the Small-Cap fund: 60 shares at ₹343.20. Position is tagged NEW and starts with an 8% stop reference near ₹315.74.
+
+    SYRMA added to the Mid-Cap fund: 11 shares at ₹1,454.30. Position is tagged NEW and starts with a 7% stop reference near ₹1,352.50.
+
+    Live prices were refreshed for all 22 holdings, PostgreSQL history was updated, and the dashboard includes latest rules-gate, P&L, technical, fundamental, event, news, and next-candidate sections.
+
+  Current Read
+
+    The fund remains in monitoring status: 0 critical alerts, 5 warnings, and 9 positives.
+
+    Best current performer is LAURUSLABS at approximately +79.8%; weakest current position is MINDACORP at approximately -3.2%.
+
+    Realized exits are captured: THYROCARE full exit and ATHERENERG partial exit, with total realized gains of approximately ₹11,492 (+38.9%).
+
+  How to Use the Attachment
+
+    Open the attached HTML file in a browser for the interactive dashboard.
+
+    Use the Fund P&L tab for current allocation, return, stop-loss distance, and holding age.
+
+    Use the Stock Detail modals for technical score, RS, enhanced fund score, quarterly context, and rule-gate checks.
+
+    Use the Next Candidates tab only for research follow-up; it is not an automatic buy list.
+
+    Research-only distribution. This is not investment advice. Please use the attached dashboard for the full evidence trail and risk checks.

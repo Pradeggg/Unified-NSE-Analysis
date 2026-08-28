@@ -33,14 +33,26 @@ def load_postgres_replay_data(
     end_date: str | None,
     top_n: int,
     benchmark_id: str = "Nifty 500",
+    index_filter: str | None = None,
 ) -> PostgresReplayData:
-    """Load NSE EOD replay features using scores.stage_snapshots as stage source."""
+    """Load NSE EOD replay features using scores.stage_snapshots as stage source.
+
+    Args:
+        index_filter: Optional NSE index name (e.g. 'NIFTY 500') to restrict the
+            universe to index members only, ordered by liquidity. When None the
+            top_n most liquid EQ-series stocks are used.
+    """
 
     import psycopg2
 
     with psycopg2.connect(dsn) as conn:
         latest_eod_date = _latest_eod_date(conn, end_date=end_date)
-        top_symbols = _top_liquid_symbols(conn, latest_eod_date=latest_eod_date, top_n=top_n)
+        top_symbols = _top_liquid_symbols(
+            conn,
+            latest_eod_date=latest_eod_date,
+            top_n=top_n,
+            index_filter=index_filter,
+        )
         eod = _load_eod(conn, lookback_date=lookback_date, end_date=end_date, symbols=top_symbols)
         stage = _load_stage_snapshots(conn, lookback_date=lookback_date, end_date=end_date, symbols=top_symbols)
         vcp_picks = _load_vcp_picks(conn, lookback_date=lookback_date, end_date=end_date, symbols=top_symbols)
@@ -155,18 +167,41 @@ def _latest_eod_date(conn: Any, *, end_date: str | None) -> Any:
     return row["trade_date"]
 
 
-def _top_liquid_symbols(conn: Any, *, latest_eod_date: Any, top_n: int) -> list[str]:
-    rows = pd.read_sql_query(
-        """
-        SELECT symbol
-        FROM market.equity_eod
-        WHERE trade_date = %s AND series = 'EQ' AND close > 50 AND volume > 0
-        ORDER BY turnover_cr DESC NULLS LAST, volume DESC NULLS LAST
-        LIMIT %s
-        """,
-        conn,
-        params=[latest_eod_date, int(top_n)],
-    )
+def _top_liquid_symbols(
+    conn: Any,
+    *,
+    latest_eod_date: Any,
+    top_n: int,
+    index_filter: str | None = None,
+) -> list[str]:
+    """Return up to top_n symbols ordered by turnover, optionally filtered to an index."""
+    if index_filter:
+        rows = pd.read_sql_query(
+            """
+            SELECT e.symbol
+            FROM market.equity_eod e
+            JOIN ref.index_compositions ic
+              ON ic.symbol = e.symbol AND ic.index_symbol = %(index_filter)s
+            WHERE e.trade_date = %(date)s AND e.series = 'EQ'
+              AND e.close > 0 AND e.volume > 0
+            ORDER BY e.turnover_cr DESC NULLS LAST, e.volume DESC NULLS LAST
+            LIMIT %(top_n)s
+            """,
+            conn,
+            params={"date": latest_eod_date, "index_filter": index_filter, "top_n": int(top_n)},
+        )
+    else:
+        rows = pd.read_sql_query(
+            """
+            SELECT symbol
+            FROM market.equity_eod
+            WHERE trade_date = %s AND series = 'EQ' AND close > 50 AND volume > 0
+            ORDER BY turnover_cr DESC NULLS LAST, volume DESC NULLS LAST
+            LIMIT %s
+            """,
+            conn,
+            params=[latest_eod_date, int(top_n)],
+        )
     return rows["symbol"].astype(str).str.upper().tolist()
 
 

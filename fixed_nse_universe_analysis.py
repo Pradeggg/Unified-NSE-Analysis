@@ -825,13 +825,25 @@ def analyze_stocks(stock_data, index_data, fundamental_data, company_names, late
     
     print(f"Total stocks with data on {latest_date}: {len(latest_stocks)}")
     
-    # Apply filtering criteria
+    # Apply filtering criteria.
+    # FIX (2026-08-28): use rupee-turnover OR share-volume so high-price / low-float
+    # stocks (e.g. YASHO at ₹4 300/share) are not silently excluded.  At ₹4 300,
+    # even 25 000 shares = ₹10.7 Cr turnover — perfectly liquid — but the old
+    # share-count gate (>100 000) rejected it.  Threshold: ₹2 Cr/day turnover
+    # (~₹20 M) OR the legacy 100 000-share rule, whichever passes.
+    _turnover_threshold = 20_000_000   # ₹2 Cr / day
     filtered_stocks = latest_stocks[
-        (latest_stocks['CLOSE'] > 100) & 
-        (latest_stocks['TOTTRDQTY'] > 100000)
+        (latest_stocks['CLOSE'] > 100) &
+        (
+            (latest_stocks['TOTTRDVAL'] >= _turnover_threshold) |
+            (latest_stocks['TOTTRDQTY'] > 100_000)
+        )
     ].copy()
-    
-    print(f"Stocks meeting criteria (Price > ₹100 & Volume > 100,000): {len(filtered_stocks)}")
+
+    _by_turnover = int(((latest_stocks['CLOSE'] > 100) & (latest_stocks['TOTTRDVAL'] >= _turnover_threshold)).sum())
+    _by_volume   = int(((latest_stocks['CLOSE'] > 100) & (latest_stocks['TOTTRDQTY'] > 100_000)).sum())
+    print(f"Stocks meeting criteria (Price > ₹100 & [Turnover ≥ ₹2 Cr OR Volume > 100 000]): {len(filtered_stocks)}"
+          f"  [turnover-gate: {_by_turnover}, volume-gate: {_by_volume}]")
     print(f"Analyzing {len(filtered_stocks)} filtered stocks for comprehensive analysis")
     
     results = []

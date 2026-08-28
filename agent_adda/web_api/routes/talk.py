@@ -35,9 +35,9 @@ _DEFAULT_WATCHLIST = ["NIFTY", "BANKNIFTY", "RELIANCE", "HDFCBANK", "TCS", "INFY
 
 _STOPWORDS = {
     "A", "ABOUT", "ADD", "AN", "AND", "ARE", "AS", "AT", "BUY", "CAN", "COMPARE", "DO",
-    "FOR", "FROM", "GOOD", "HOW", "IN", "INDEX", "IS", "IT", "LOOKING", "ME", "MY",
-    "OF", "ON", "OR", "SECTOR", "SELL", "SHOW", "STOCK", "STOCKS", "THE", "THIS",
-    "TODAY", "TRACK", "VS", "WATCH", "WATCHLIST", "WHAT", "WITH",
+    "FOR", "FROM", "GET", "GOOD", "HOW", "IN", "INDEX", "IS", "IT", "LOOKING", "ME", "MY",
+    "OF", "ON", "OR", "PLEASE", "PULL", "SECTOR", "SELL", "SHOW", "STOCK", "STOCKS", "THE", "THIS",
+    "TODAY", "TRACK", "VS", "WATCH", "WATCHLIST", "WHAT", "WITH", "YOU",
 }
 _TASK_WORDS = {
     "CURRENT",
@@ -80,7 +80,8 @@ _FOLLOWUP_RE = re.compile(
 # Answer patterns that indicate the bridge produced a symbol-resolution failure
 _BRIDGE_FAILURE_RE = re.compile(
     r"(unresolved;\s*candidates|No exact NSE symbol found|could not build a full evidence|"
-    r"try a direct prompt such as)",
+    r"try a direct prompt such as|<RESOLVED_NSE_SYMBOL>|RESOLVED_NSE_SYMBOL|"
+    r"\bNSE_SYMBOL\b|%3CRESOLVED_NSE_SYMBOL%3E)",
     re.IGNORECASE,
 )
 
@@ -144,6 +145,10 @@ _FINANCIAL_RE = re.compile(
     re.IGNORECASE,
 )
 _INTRADAY_RE = re.compile(r"\b(intraday|live\s+quote|live\s+price|quote|snapshot|5m|15m|30m|1h|orb|vwap)\b", re.IGNORECASE)
+_TECHNICAL_REQUEST_RE = re.compile(
+    r"\b(technical(?:s| analysis)?|setup|stage|rsi|macd|supertrend|support|resistance|trend)\b",
+    re.IGNORECASE,
+)
 
 _SCREENERS: dict[str, dict[str, Any]] = {
     "stage2": {"label": "Stage 2 stocks", "tool": "run_screener_query", "screen_type": "stage2"},
@@ -1151,6 +1156,36 @@ def _fallback_answer(
                             ],
                         )
                     )
+                technical_values = [
+                    row.get("price"),
+                    row.get("stage"),
+                    row.get("rsi"),
+                    row.get("technical_score"),
+                    row.get("trend_signal"),
+                    row.get("trading_signal"),
+                    row.get("supertrend"),
+                    row.get("support"),
+                    row.get("resistance"),
+                ]
+                if any(value not in (None, "") for value in technical_values):
+                    lines.append("")
+                    lines.append(f"**Technical Analysis ({_md_cell(row.get('as_of'))})**")
+                    lines.extend(
+                        _md_table(
+                            ["Price", "Stage", "RSI", "Technical Score", "Trend", "Signal", "Supertrend", "Support", "Resistance"],
+                            [[
+                                _fmt(row.get("price")),
+                                row.get("stage") or "n/a",
+                                _fmt(row.get("rsi")),
+                                _fmt(row.get("technical_score")),
+                                row.get("trend_signal") or "n/a",
+                                row.get("trading_signal") or "n/a",
+                                row.get("supertrend") or "n/a",
+                                _fmt(row.get("support")),
+                                _fmt(row.get("resistance")),
+                            ]],
+                        )
+                    )
                 if row.get("financial_source_url"):
                     lines.append("")
                     lines.append(f"Source: [{row.get('financial_source') or 'financial source'}]({row['financial_source_url']}).")
@@ -1246,6 +1281,97 @@ def _env_flag(name: str, default: str = "1") -> bool:
     return os.getenv(name, default).strip().lower() not in {"0", "false", "no", "off"}
 
 
+_RESPONSE_TEMPLATES: dict[str, dict[str, str]] = {
+    "comparison_matrix": {
+        "label": "Comparison Matrix",
+        "instruction": (
+            "Use a comparison-first structure: one short verdict, then a compact Markdown table "
+            "with one row per metric and one column per stock. Avoid long repeated bullet blocks."
+        ),
+    },
+    "stock_research_card": {
+        "label": "Stock Research Card",
+        "instruction": (
+            "Use a stock research-card structure: concise research view, then grouped sections for "
+            "fundamentals, technicals, moving averages/volume, and risk/levels."
+        ),
+    },
+    "financial_results_table": {
+        "label": "Financial Results Tables",
+        "instruction": (
+            "Use financial tables: quarterly results, annual results, balance sheet, and cash flow "
+            "where evidence exists. Keep units explicit and do not infer missing figures."
+        ),
+    },
+    "screener_table": {
+        "label": "Screener Shortlist Table",
+        "instruction": (
+            "Use a shortlist table with symbol, company, sector, stage, RSI, score, signal, and tags. "
+            "Call rows candidates, not recommendations."
+        ),
+    },
+    "market_context_table": {
+        "label": "Market Context Table",
+        "instruction": (
+            "Use a market-context table for breadth/index rows, followed by one short interpretation."
+        ),
+    },
+    "source_health": {
+        "label": "Source Health",
+        "instruction": (
+            "Use a source-health format: status first, then source freshness rows and explicit blocks."
+        ),
+    },
+    "narrative": {
+        "label": "Narrative",
+        "instruction": "Use concise Markdown prose with only the evidence-backed metrics needed for the answer.",
+    },
+}
+
+
+def _has_evidence_source(evidence: list[TalkEvidenceItem], source: str) -> bool:
+    return any(item.source == source for item in evidence)
+
+
+def _select_response_template(
+    intent: str,
+    *,
+    symbols: list[str] | None = None,
+    comparison: list[dict[str, Any]] | None = None,
+    market: list[dict[str, Any]] | None = None,
+    screener_results: list[dict[str, Any]] | None = None,
+    intraday_context: dict[str, Any] | None = None,
+    evidence: list[TalkEvidenceItem] | None = None,
+) -> str:
+    """Choose the response contract the synthesis layer and UI should follow."""
+    symbols = symbols or []
+    comparison = comparison or []
+    market = market or []
+    screener_results = screener_results or []
+    intraday_context = intraday_context or {}
+    evidence = evidence or []
+    intent_key = (intent or "").strip().lower()
+
+    if intent_key == "financials_review":
+        return "financial_results_table"
+    if intent_key in {"compare", "stock_comparison"} or len(comparison) >= 2 or _has_evidence_source(evidence, "compare_stocks"):
+        return "comparison_matrix"
+    if intent_key == "screener" or screener_results:
+        return "screener_table"
+    if intent_key == "intraday_health" or intraday_context:
+        return "source_health"
+    if intent_key in {"index_context", "market_context"} or market:
+        return "market_context_table"
+    if len(comparison) == 1 or len(symbols) == 1:
+        return "stock_research_card"
+    return "narrative"
+
+
+def _template_instruction(template_id: str) -> str:
+    template = _RESPONSE_TEMPLATES.get(template_id) or _RESPONSE_TEMPLATES["narrative"]
+    return f"{template['label']}: {template['instruction']}"
+
+
 def _llm_synthesis(
     question: str,
     fallback: str,
@@ -1253,6 +1379,7 @@ def _llm_synthesis(
     gaps: list[str],
     context: dict[str, Any] | None = None,
     intent: str = "",
+    response_template: str = "narrative",
 ) -> tuple[str, str, int, int, float, str, str]:
     if not _env_flag("TALK2STOCKS_LLM_SYNTHESIS", "1"):
         return fallback, "fallback_template", 0, 0, 0.0, "disabled", "TALK2STOCKS_LLM_SYNTHESIS disabled"
@@ -1323,6 +1450,7 @@ def _llm_synthesis(
             "do not invent missing numbers; when the user uses pronouns, rely only on the conversation context provided. "
             "Only call something an evidence gap if it appears in the Gaps block. "
             "Null optional fields in Evidence are unavailable fields, not gaps.\n"
+            f"Response template: {_template_instruction(response_template)}\n"
             f"Structured gaps present: {'yes' if has_structured_gaps else 'no'}. "
             "If structured gaps present is no, do not include a gaps/note/missing-evidence sentence.\n\n"
             f"Question: {question}{context_block}{task_instruction}\n\nEvidence:\n{evidence_block}\n\nGaps:\n{gap_block}\n\n"
@@ -1420,6 +1548,20 @@ def _env_use_agent_bridge() -> bool:
     return os.getenv("T2S_USE_AGENT_BRIDGE", "1").strip().lower() not in {"0", "false", "no", "off"}
 
 
+def _normalise_bridge_intent(intent: str, question: str) -> str:
+    """Map terminal-agent intent names onto the stable T2S response contract."""
+    key = (intent or "").strip().lower()
+    if key in {"stock_comparison", "comparison"}:
+        return "compare"
+    if key in {"index_status", "index_context"}:
+        return "index_context"
+    if key in {"market_situation", "market_situation_assessment"}:
+        return "market_context"
+    if key == "stock_results" and _FINANCIAL_RE.search(question or ""):
+        return "financials_review"
+    return key or "general_research"
+
+
 async def _chat_via_bridge(req: TalkChatRequest, session_id: str) -> TalkChatResponse:
     """Route through the CLI Agent pipeline (UnifiedRouter + full 7-stage waterfall).
 
@@ -1446,8 +1588,15 @@ async def _chat_via_bridge(req: TalkChatRequest, session_id: str) -> TalkChatRes
     # fall back to the legacy pipeline which has its own graceful degradation.
     if not answer.strip() or _BRIDGE_FAILURE_RE.search(answer):
         return await _chat_legacy(req, session_id)
+    if _FINANCIAL_RE.search(req.question) and _TECHNICAL_REQUEST_RE.search(req.question):
+        has_technical_evidence = any(
+            isinstance(item, dict) and str(item.get("tool") or item.get("source") or "") == "get_technical_setup"
+            for item in trace
+        )
+        if not has_technical_evidence:
+            return await _chat_legacy(req, session_id)
     backend    = result.get("backend") or "unknown"
-    intent     = extract_intent(result)
+    intent     = _normalise_bridge_intent(extract_intent(result), req.question)
 
     comparison      = extract_comparison(trace)
     market          = extract_market_context(trace)
@@ -1455,6 +1604,17 @@ async def _chat_via_bridge(req: TalkChatRequest, session_id: str) -> TalkChatRes
     evidence        = extract_evidence(trace)
     symbols         = extract_symbols(trace, comparison)
     in_tok, out_tok, cost = extract_usage(result)
+
+    question_text = req.question or ""
+    question_lower = question_text.lower()
+    if ("compare" in question_lower or re.search(r"\bvs\b", question_lower)) and not comparison:
+        return await _chat_legacy(req, session_id)
+    if _detect_screener_key(question_text) and not screener_results:
+        return await _chat_legacy(req, session_id)
+    if _INTRADAY_RE.search(question_text):
+        return await _chat_legacy(req, session_id)
+    if _resolve_query_indices(question_text, []) and not market:
+        return await _chat_legacy(req, session_id)
 
     # Collect gaps from the trace (any tool result with an "error" field)
     gaps: list[str] = []
@@ -1466,6 +1626,15 @@ async def _chat_via_bridge(req: TalkChatRequest, session_id: str) -> TalkChatRes
                 sym = res.get("symbol") or ""
                 prefix = f"{sym}: " if sym else ""
                 gaps.append(f"{prefix}{tool}: {res['error']}")
+
+    response_template = _select_response_template(
+        intent,
+        symbols=symbols,
+        comparison=comparison,
+        market=market,
+        screener_results=screener_results,
+        evidence=evidence,
+    )
 
     # Persist a lightweight session snapshot so /compare and /screener
     # endpoints can still read context if needed.
@@ -1480,6 +1649,7 @@ async def _chat_via_bridge(req: TalkChatRequest, session_id: str) -> TalkChatRes
         session_id=session_id,
         intent=intent,
         answer=answer,
+        response_template=response_template,
         symbols=symbols,
         comparison=comparison,
         screener_results=screener_results,
@@ -1494,6 +1664,8 @@ async def _chat_via_bridge(req: TalkChatRequest, session_id: str) -> TalkChatRes
             "synthesis_policy": "agent_pipeline",
             "synthesis_status": "succeeded" if answer and result.get("intent") != "error" else "failed",
             "synthesis_error": "" if result.get("intent") != "error" else answer,
+            "response_template": response_template,
+            "response_template_label": _RESPONSE_TEMPLATES[response_template]["label"],
             "mode": req.mode,
             "provider": backend,
         },
@@ -1592,8 +1764,18 @@ async def _chat_legacy(req: TalkChatRequest, session_id: str) -> TalkChatRespons
             intraday_context=intraday_context,
         )
 
+    response_template = _select_response_template(
+        intent,
+        symbols=symbols,
+        comparison=comparison,
+        market=market,
+        screener_results=screener_results,
+        intraday_context=intraday_context,
+        evidence=evidence,
+    )
+
     answer, model, in_tok, out_tok, cost, synthesis_status, synthesis_error = _llm_synthesis(
-        question, fallback, evidence, gaps, context, intent,
+        question, fallback, evidence, gaps, context, intent, response_template,
     )
     _remember_turn(
         session_id, intent, question, symbols, indices,
@@ -1605,6 +1787,7 @@ async def _chat_legacy(req: TalkChatRequest, session_id: str) -> TalkChatRespons
         session_id=session_id,
         intent=intent,
         answer=answer,
+        response_template=response_template,
         symbols=symbols,
         comparison=comparison,
         screener_results=screener_results,
@@ -1619,6 +1802,8 @@ async def _chat_legacy(req: TalkChatRequest, session_id: str) -> TalkChatRespons
             "synthesis_policy": "llm_preferred" if _env_flag("TALK2STOCKS_LLM_SYNTHESIS", "1") else "local_only",
             "synthesis_status": synthesis_status,
             "synthesis_error": synthesis_error,
+            "response_template": response_template,
+            "response_template_label": _RESPONSE_TEMPLATES[response_template]["label"],
             "mode": req.mode,
             "provider": "openai" if model != "fallback_template" else "local",
         },
@@ -1706,12 +1891,14 @@ async def screener(req: TalkScreenerRequest):
         gaps,
         None,
         "screener",
+        "screener_table",
     )
     _remember_turn(session_id, "screener", question, symbols, [], evidence, gaps, [], [], answer, screener_results, {})
     return TalkChatResponse(
         session_id=session_id,
         intent="screener",
         answer=answer,
+        response_template="screener_table",
         symbols=symbols,
         screener_results=screener_results,
         evidence=evidence,
@@ -1723,6 +1910,8 @@ async def screener(req: TalkScreenerRequest):
             "synthesis_policy": "llm_preferred" if _env_flag("TALK2STOCKS_LLM_SYNTHESIS", "1") else "local_only",
             "synthesis_status": synthesis_status,
             "synthesis_error": synthesis_error,
+            "response_template": "screener_table",
+            "response_template_label": _RESPONSE_TEMPLATES["screener_table"]["label"],
             "mode": req.mode,
             "provider": "openai" if model != "fallback_template" else "local",
         },

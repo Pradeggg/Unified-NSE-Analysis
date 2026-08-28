@@ -54,7 +54,7 @@ _NSE_HEADERS = {
         "Chrome/124.0.0.0 Safari/537.36"
     ),
     "Accept":          "*/*",
-    "Accept-Encoding": "gzip, deflate, br",
+    "Accept-Encoding": "gzip, deflate",
     "Accept-Language": "en-US,en;q=0.9",
     "Connection":      "keep-alive",
     "Referer":         "https://www.nseindia.com/option-chain",
@@ -594,15 +594,21 @@ def fetch_live_option_chain(symbol: str, expiry: str | None = None,
     sym = symbol.upper().strip()
     is_index = sym in _INDEX_SYMBOLS
 
-    endpoint = (
-        f"https://www.nseindia.com/api/option-chain-indices?symbol={sym}"
-        if is_index else
-        f"https://www.nseindia.com/api/option-chain-equities?symbol={sym}"
-    )
-
     for attempt in range(retries + 1):
         try:
             sess = _get_nse_session(force_refresh=(attempt > 0))
+            chain_type = "Indices" if is_index else "Equity"
+            if expiry is None:
+                contract_url = f"https://www.nseindia.com/api/option-chain-contract-info?symbol={sym}"
+                contract_response = sess.get(contract_url, timeout=20)
+                contract_response.raise_for_status()
+                contract_info = contract_response.json()
+                expiry = (contract_info.get("expiryDates") or [None])[0]
+            endpoint = (
+                f"https://www.nseindia.com/api/option-chain-v3?type={chain_type}"
+                f"&symbol={sym}"
+                + (f"&expiry={expiry}" if expiry else "")
+            )
             r = sess.get(endpoint, timeout=20)
             if r.status_code == 401 and attempt < retries:
                 time.sleep(1)
@@ -610,7 +616,7 @@ def fetch_live_option_chain(symbol: str, expiry: str | None = None,
             if r.status_code == 404:
                 fallback = _live_chain_from_eod(sym, expiry)
                 if "error" not in fallback:
-                    fallback["live_error"] = "NSE option-chain endpoint returned 404"
+                    fallback["live_error"] = "NSE option-chain-v3 endpoint returned 404"
                 return fallback
             r.raise_for_status()
             raw = r.json()
@@ -632,7 +638,7 @@ def fetch_live_option_chain(symbol: str, expiry: str | None = None,
 
         rows = []
         for item in records["data"]:
-            exp = item.get("expiryDate", "")
+            exp = item.get("expiryDate") or item.get("expiryDates", "")
             if target_expiry and exp != target_expiry:
                 continue
             strike = item.get("strikePrice")

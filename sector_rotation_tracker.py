@@ -108,7 +108,7 @@ def write_tradingview_watchlist(
     latest_dir = latest_dir or (ROOT / "reports" / "latest")
 
     def _fund_ok(row: dict) -> bool:
-        return _fund_action(row)[0] in {"ADD", "ACCUMULATE"}
+        return _fund_action(row)[0] in {"CANDIDATE", "REVIEW"}
 
     selected: list[dict] = []
     for row in _apply_stage2_rs_signals(list(report.get("stage2_now") or [])):
@@ -1343,7 +1343,13 @@ def backfill_snapshots(
             price_as_of_date=d,
             fetch_live=False,
             force=force,
-            compute_supertrend=False,
+            compute_supertrend=True,   # FIX (2026-08-28): was False — caused NULL
+                                       # supertrend_state for symbols absent from
+                                       # daily_scores (e.g. high-price low-float stocks
+                                       # filtered by the share-volume gate).
+                                       # _compute_supertrend_for_symbols reads directly
+                                       # from market.equity_eod (≥20 bars guard) so it
+                                       # is safe to enable here.
             hist_override=hist_as_of,
             analysis_override=analysis,
             csv_path_override=source_path,
@@ -1853,9 +1859,9 @@ def _fund_action(r: dict) -> tuple[str, str]:
         return "NO_CHASE", f"RSI {rsi:.0f} is above 70; wait for a lower-risk entry"
     technical_signal = _stage2_rs_trading_signal(r)
     if technical_signal == "STRONG_BUY":
-        return "ADD", "Fundamentals pass and technical setup is strong"
+        return "CANDIDATE", "Fundamentals pass and technical setup is strong — research candidate"
     if technical_signal == "BUY":
-        return "ACCUMULATE", "Fundamentals pass and technical setup is constructive"
+        return "REVIEW", "Fundamentals pass and technical setup is constructive — on watchlist for review"
     return "WATCH", f"Fundamentals pass; technical signal is {technical_signal.replace('_', ' ')}"
 
 
@@ -2273,7 +2279,7 @@ def build_change_report(
     result["stage2_now"] = _apply_stage2_rs_signals(result["stage2_now"])
     fund_ready = [
         row for row in result["stage2_now"]
-        if row.get("fund_action") in {"ADD", "ACCUMULATE"}
+        if row.get("fund_action") in {"CANDIDATE", "REVIEW"}
     ]
     top_picks = sorted(
         fund_ready,
@@ -3812,6 +3818,9 @@ function closePickModal() {
   <div class="section">
     {tabs_html}
   </div>
+</div>
+<div style="background:#fff3cd;color:#856404;border-top:2px solid #ffc107;padding:1rem 2rem;font-size:.85rem;margin-top:1rem;">
+  ⚠️ <strong>Research and educational use only.</strong> This report is not investment advice, a buy or sell recommendation, or a SEBI-registered research report. Signals, scores, and labels (including &ldquo;Candidate&rdquo; and &ldquo;Review&rdquo;) are model outputs — not personalized advice. Agent Adda is not a SEBI-registered research analyst or investment adviser. Consult a SEBI-registered intermediary before acting on any information.
 </div>
 {js}
 </body></html>"""

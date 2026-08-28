@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.agentadda.midday_market</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/Users/pradeepgorai/Documents/Projects/finance/Unified-NSE-Analysis/.venv/bin/python3</string>
+    <string>/Users/pradeepgorai/Documents/Projects/finance/Unified-NSE-Analysis/scripts/run_morning_market_publish.py</string>
+    <string>--variant</string>
+    <string>midday</string>
+  </array>
+
+  <key>WorkingDirectory</key>
+  <string>/Users/pradeepgorai/Documents/Projects/finance/Unified-NSE-Analysis</string>
+
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Hour</key>
+    <integer>12</integer>
+    <key>Minute</key>
+    <integer>0</integer>
+  </dict>
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>/Users/pradeepgorai/Documents/Projects/finance/Unified-NSE-Analysis/.venv/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+    <key>PYTHONPATH</key>
+    <string>/Users/pradeepgorai/Documents/Projects/finance/Unified-NSE-Analysis</string>
+    <key>PYTHONUNBUFFERED</key>
+    <string>1</string>
+    <key>AGENTADDA_WWW_REPO</key>
+    <string>/Users/pradeepgorai/Documents/Projects/agentadda-www</string>
+  </dict>
+
+  <key>StandardOutPath</key>
+  <string>/Users/pradeepgorai/.agent-adda/logs/midday_market.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/pradeepgorai/.agent-adda/logs/midday_market_err.log</string>
+
+  <key>RunAtLoad</key>
+  <false/>
+</dict>
+</plist>

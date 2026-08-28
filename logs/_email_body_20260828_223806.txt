@@ -1,0 +1,84 @@
+Agent Adda
+      Fri, 28 Aug 2026 · 22:38 IST
+
+        Report · swing_playbook.html · mode: both
+
+    Market read: Breadth cautious; balanced-profile swing setups dominate; all entries require intraday confirmation.
+
+  Swing Trade Playbook — 28 Aug 2026
+
+  Published to Agent Adda Market Intelligence. Delivery: summary below; full report attached (swing_playbook.html). Research-only; not investment advice.
+
+  Key takeaways
+
+    20 candidates screened: 10 tactical (shorter-horizon), 10 position (wider-stop); zero watchlist rows this cycle.
+
+    Risk profile: balanced; typical reference stop distance ~7.2% (tactical) and ~9.3% (position). Consider capping per-trade risk at ≤1% of equity as a guide.
+
+    CUPID leads (score 74.8) with trigger Rs 285.15, stop Rs 264.54, targets Rs 316.07 / Rs 326.37.
+
+    Stage 2 strength and high relative strength dominate across top names; all setups labeled INTRADAY_CONFIRM.
+
+    Portfolio actions: multiple CANDIDATE_ADD flags (e.g., CUPID, RATNAVEER, RUBICON, ATHERENERG, SKYGOLD). MINDACORP flagged STOP_LOSS_BREACH; COFORGE, ENDURANCE, and FEDERALBNK marked REVIEW_STOP.
+
+  Top tactical candidates (reference levels)
+
+      Symbol
+      Trigger
+      Stop
+      Target 1
+      Target 2
+
+      CUPID
+      Rs 285.15
+      Rs 264.54
+      Rs 316.07
+      Rs 326.37
+
+      RATNAVEER
+      Rs 297.90
+      Rs 276.37
+      Rs 330.20
+      Rs 340.96
+
+      MOREPENLAB
+      Rs 107.25
+      Rs 99.50
+      Rs 118.88
+      Rs 122.76
+
+  Note: Trigger prices are reference levels for further research, not entry instructions. Validate live price/volume and liquidity independently.
+
+  What to watch
+
+    Intraday behavior around trigger levels (price and volume confirmation), especially for CUPID, RATNAVEER, MOREPENLAB.
+
+    Liquidity and potential slippage near reference levels; adjust sizing accordingly.
+
+    Holdings risk management: MINDACORP breached stop; review per your plan. COFORGE, ENDURANCE, FEDERALBNK flagged for stop review.
+
+    Market breadth and volatility; reduce notional if conditions weaken.
+
+  How to use this
+
+    Confirm live price, volume, and liquidity vs. reference trigger levels before acting.
+
+    Set independent stop levels; treat reference stops as thesis invalidation guides.
+
+    Size positions using your own risk limits; for a balanced profile, consider ≤1% account equity per trade.
+
+    Prioritize candidates over watchlist items in cautious breadth; phase entries on intraday confirmation.
+
+    Disclaimer
+
+    This material is for research and educational purposes only. It does not constitute investment advice, a buy/sell recommendation, or a research report as defined under the SEBI (Research Analysts) Regulations, 2014. Agent Adda is not a SEBI-registered research analyst or investment adviser. All signals, scores, reference prices, and labels are model outputs and are not personalized. Past performance does not guarantee future results. Markets involve risk, including loss of capital. Consult a SEBI-registered investment adviser or research analyst before acting on any information here.
+
+    Research only — not SEBI-registered investment advice. Verify independently before any action.
+
+  Regards,
+
+  Agent Adda
+
+  ShunyaAI · NSE Market Intelligence
+
+Not investment advice. For research and learning only. NSE EOD + live snapshot data.

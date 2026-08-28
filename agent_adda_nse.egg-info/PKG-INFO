@@ -1,0 +1,131 @@
+Metadata-Version: 2.4
+Name: agent-adda-nse
+Version: 0.1.0
+Summary: Agent Adda Market Intelligence Agent for Indian markets
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+Requires-Dist: rich>=13.0.0
+Requires-Dist: requests>=2.28.0
+Requires-Dist: python-dotenv>=1.0.0
+Provides-Extra: llm
+Requires-Dist: openai>=1.0.0; extra == "llm"
+Requires-Dist: ollama>=0.4.0; extra == "llm"
+Provides-Extra: reports
+Requires-Dist: playwright>=1.45.0; extra == "reports"
+Requires-Dist: openpyxl>=3.1.0; extra == "reports"
+Provides-Extra: search
+Requires-Dist: ddgs>=9.0.0; extra == "search"
+Requires-Dist: googlesearch-python>=1.2.3; extra == "search"
+
+# Agent Adda Market Intelligence Agent
+
+Agent Adda is a research and learning platform for Indian market analysis. It combines rules-based market screeners, local historical data, reports, and optional LLM-assisted narratives.
+
+This is not investment advice, not a trading recommendation, and not a SEBI registered advisory product. Users are responsible for their own compliance, legal obligations, data usage, and trading decisions.
+
+## Install For Local Use
+
+From the project root:
+
+```bash
+python3 -m venv .venv
+.venv/bin/pip install -e .
+```
+
+The editable install exposes the first-class command:
+
+```bash
+agent-adda --help
+```
+
+## First Run
+
+Create a local user configuration:
+
+```bash
+agent-adda setup --non-interactive
+```
+
+By default this creates:
+
+```text
+~/.agent-adda/config.toml
+~/.agent-adda/data/
+~/.agent-adda/reports/
+```
+
+Run health checks:
+
+```bash
+agent-adda doctor
+```
+
+Bootstrap historical EOD data into SQLite from CSV files:
+
+```bash
+agent-adda data bootstrap --historical --source data
+```
+
+The historical database is created at:
+
+```text
+~/.agent-adda/data/market_data.sqlite
+```
+
+## Configuration
+
+The setup command writes `config.toml` with these core sections:
+
+```toml
+[paths]
+home_dir = "/Users/<user>/.agent-adda"
+data_dir = "/Users/<user>/.agent-adda/data"
+reports_dir = "/Users/<user>/.agent-adda/reports"
+database_path = "/Users/<user>/.agent-adda/data/market_data.sqlite"
+
+[models]
+mode = "rules"
+openai_api_key_env = "OPENAI_API_KEY"
+ollama_model = "llama3.1"
+
+[compliance]
+disclaimer_acknowledged = false
+```
+
+Supported model modes are:
+
+- `rules`
+- `local-llm`
+- `openai`
+- `hybrid`
+
+## Runtime Commands
+
+```bash
+agent-adda terminal
+agent-adda agent
+agent-adda data bootstrap --historical --source data
+agent-adda doctor
+```
+
+## Historical Data
+
+The installer foundation treats historical data as a managed local asset. Bootstrap currently loads CSV files that expose:
+
+```text
+SYMBOL, DATE, OPEN, HIGH, LOW, CLOSE, VOLUME
+```
+
+The resulting SQLite tables are:
+
+```text
+daily_prices
+data_refresh_log
+```
+
+Future refresh work should attach the existing NSE download scripts behind:
+
+```bash
+agent-adda data refresh --eod
+agent-adda data refresh --intraday
+```

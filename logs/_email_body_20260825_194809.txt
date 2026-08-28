@@ -1,0 +1,54 @@
+Agent Adda
+      Tue, 25 Aug 2026 · 19:48 IST
+
+        Report · sector_rotation.html · mode: both
+
+  NSE Sector Rotation Report — EOD Tuesday, 25 Aug 2026
+
+    Rotation regime (60% confidence) in an early-recovery backdrop; FIIs/DIIs net buyers; VIX 11.1 falling; Nifty 50 at 24,335 (+0.5%).
+
+  Published: Agent Adda Market Intelligence (25 Aug 2026)
+
+  Attachment: sector_rotation.html (full report)
+
+  Key takeaways
+
+    Market regime: ROTATION (rule-based), confidence 60%, duration 1 day; Economic cycle: RECOVERY (64% confidence).
+
+    Participation: FIIs +₹1,182 Cr today; DIIs +₹2,493 Cr today; 5D: FIIs +₹2,115 Cr, DIIs +₹14,708 Cr.
+
+    Volatility & breadth: India VIX 11.1 (−3.4% d/d); TRIN 0.60 (bullish); McClellan −18.4 (neutral); Net A/D −284; NIFTY50 43% & Smallcap 38% above 200DMA.
+
+    Leadership pockets: Capital Goods & Industrials (score 5.8; 1M +4.7%; RS +1.7%), Logistics & Transport (1M +7.7%; breadth 63%), PSU Banks (1M +3.1%; 50% >50DMA), IT (1M +7.0%; 100% >50DMA). Defensives screened weaker.
+
+    Rotation breadth: 6 sectors above Nifty 500 baseline; 31 active model BUY signals (e.g., UNIPARTS, AEGISLOG, HFCL, CYIENTDLM).
+
+  What to watch
+
+    Breadth improvement (A/D turning positive) and resolution of the current bearish divergence.
+
+    Volatility path: a reversal higher in VIX would weaken the rotation case.
+
+    Institutional flow turns: sustained FII/DII selling would argue for a more defensive stance.
+
+    Global decoupling signals in Gold and USDINR vs Nifty 500 (30d vs 60d correlation shift > 20%).
+
+  How to use this
+
+    Use as a sector lens: tilt research toward early‑recovery beneficiaries (Capital Goods/Industrials, Logistics, PSU Banks, select IT) while de‑emphasizing defensives.
+
+    Treat model “BUY” as a screen, not a recommendation: validate liquidity, earnings/events, and risk before any action.
+
+    Risk controls: maintain predefined stops and sizing; note Logistics sensitivity to fuel/freight and flow‑driven reversals.
+
+    Reassess stance if breadth remains weak, VIX rises, or institutional flows reverse.
+
+  Disclaimer: This email summarizes rules‑based, educational market intelligence and is not investment advice or a trading recommendation. Validate all data, prices, liquidity, corporate events, and risks independently before making any financial decision.
+
+  Regards,
+
+  Agent Adda
+
+  ShunyaAI · NSE Market Intelligence
+
+Not investment advice. For research and learning only. NSE EOD + live snapshot data.

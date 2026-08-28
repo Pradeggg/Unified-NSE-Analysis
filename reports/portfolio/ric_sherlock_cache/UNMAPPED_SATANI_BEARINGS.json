@@ -1,0 +1,86 @@
+{
+  "symbol": "UNMAPPED_SATANI_BEARINGS",
+  "portfolio": {
+    "symbol": "UNMAPPED_SATANI_BEARINGS",
+    "inputs": "DECBEA",
+    "company_name": "SATANI BEARINGS LTD",
+    "isin": "INE498D01012",
+    "qty": "20",
+    "avg_cost": "280.70",
+    "broker_price": "278.00",
+    "cost_value": "5614.00",
+    "market_value": "5560.00",
+    "realized_pnl": "15896.50",
+    "unrealized_pnl": "-54.00",
+    "unrealized_pct": "-0.96",
+    "mapping_status": "LEGACY_OR_UNMAPPED"
+  },
+  "collected_at": "2026-08-18T08:55:09",
+  "source_trail": [
+    "get_symbol_snapshot",
+    "get_technical_setup",
+    "scrape_screener_in",
+    "explain_intraday_setup"
+  ],
+  "errors": [],
+  "snapshot": {
+    "symbol": "UNMAPPED_SATANI_BEARINGS",
+    "data_source": "PostgreSQL scores.stage_snapshots",
+    "error": "UNMAPPED_SATANI_BEARINGS not found in DB snapshot",
+    "missing_evidence": [
+      "stage_snapshot"
+    ],
+    "evidence_coverage": "missing",
+    "snapshot_date": "2026-08-17"
+  },
+  "technical": {
+    "symbol": "UNMAPPED_SATANI_BEARINGS",
+    "error": "No price history available; on-demand fetch returned no usable EOD bars",
+    "missing_evidence": [
+      "price_history"
+    ],
+    "data_source": "missing"
+  },
+  "fundamentals": {
+    "symbol": "UNMAPPED_SATANI_BEARINGS",
+    "error": "404 Client Error: Not Found for url: https://www.screener.in/company/UNMAPPED_SATANI_BEARINGS/",
+    "source_url": "https://www.screener.in/company/UNMAPPED_SATANI_BEARINGS/"
+  },
+  "cached_financials": {
+    "symbol": "UNMAPPED_SATANI_BEARINGS",
+    "data_source": "PostgreSQL financial statement cache",
+    "pg_sources": [
+      "scores.quarterly_results",
+      "scores.annual_results",
+      "scores.balance_sheet",
+      "scores.cash_flow"
+    ],
+    "quarterly": [],
+    "annual": [],
+    "balance_sheet": [],
+    "cash_flow": [],
+    "section_counts": {
+      "quarterly": 0,
+      "annual": 0,
+      "balance_sheet": 0,
+      "cash_flow": 0
+    },
+    "error": "No cached PostgreSQL financial statement rows found for UNMAPPED_SATANI_BEARINGS",
+    "missing_evidence": [
+      "cached_financials"
+    ]
+  },
+  "trade_setup": {
+    "symbol": "UNMAPPED_SATANI_BEARINGS",
+    "timeframe": "15m",
+    "data_mode": "intraday",
+    "source": "PostgreSQL intraday.ohlcv_bars",
+    "error": "No PostgreSQL intraday.ohlcv_bars for UNMAPPED_SATANI_BEARINGS at 15m; No yfinance candles available to seed PostgreSQL intraday.ohlcv_bars"
+  },
+  "verdict": "Cautious / Review",
+  "chart_history": {
+    "symbol": "UNMAPPED_SATANI_BEARINGS",
+    "error": "no EOD price history available",
+    "bars": []
+  }
+}

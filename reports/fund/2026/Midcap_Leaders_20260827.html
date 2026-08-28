@@ -1,0 +1,831 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Midcap Leaders Dashboard</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Inter:wght@400;500;600;700&display=swap">
+<style>
+:root {
+  --bg:       #0d1117;
+  --surface:  #161b22;
+  --surface2: #21262d;
+  --border:   #30363d;
+  --accent:   #388bfd;
+  --green:    #3fb950;
+  --red:      #f85149;
+  --yellow:   #d29922;
+  --amber:    #e3b341;
+  --text:     #e6edf3;
+  --muted:    #8b949e;
+  --mono:     'JetBrains Mono', monospace;
+  --sans:     'Inter', system-ui, sans-serif;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 14px; }
+body { font-family: var(--sans); background: var(--bg); color: var(--text); min-height: 100vh; }
+
+/* ── header ── */
+.hdr { background: var(--surface); border-bottom: 1px solid var(--border); padding: 20px 28px; display: flex; align-items: center; gap: 16px; }
+.hdr-logo { font-family: var(--mono); font-weight: 600; font-size: 18px; color: var(--accent); letter-spacing: -0.5px; }
+.hdr-logo span { color: var(--muted); font-weight: 400; font-size: 13px; margin-left: 8px; }
+.hdr-right { margin-left: auto; font-family: var(--mono); font-size: 12px; color: var(--muted); text-align: right; }
+
+/* ── metrics bar ── */
+.metrics { display: flex; gap: 12px; padding: 20px 28px; flex-wrap: wrap; }
+.metric { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 14px 18px; min-width: 130px; flex: 1; }
+.metric .label { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-bottom: 6px; }
+.metric .val { font-family: var(--mono); font-size: 26px; font-weight: 600; color: var(--text); }
+.metric .val.green { color: var(--green); }
+.metric .val.yellow { color: var(--yellow); }
+.metric .val.blue { color: var(--accent); }
+
+/* ── filter tabs ── */
+.tabs { display: flex; gap: 6px; padding: 0 28px 16px; flex-wrap: wrap; }
+.tab { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 6px 14px; font-size: 12px; font-weight: 500; color: var(--muted); cursor: pointer; transition: all .15s; }
+.tab:hover { border-color: var(--accent); color: var(--accent); }
+.tab.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+/* ── theme pills ── */
+.theme-row { display: flex; gap: 8px; padding: 0 28px 20px; flex-wrap: wrap; }
+.theme-pill { background: var(--surface2); border: 1px solid var(--border); border-radius: 20px; padding: 4px 12px; font-size: 11px; color: var(--muted); }
+.theme-pill strong { color: var(--text); }
+
+/* ── table wrap ── */
+.tbl-wrap { padding: 0 28px 28px; overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; font-size: 12.5px; min-width: 900px; }
+thead th { background: var(--surface2); color: var(--muted); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; padding: 10px 10px; border-bottom: 1px solid var(--border); text-align: left; }
+tbody tr { border-bottom: 1px solid var(--border); transition: background .1s; }
+tbody tr:last-child { border-bottom: none; }
+tbody tr:hover { background: var(--surface2); }
+td { padding: 9px 10px; vertical-align: middle; }
+.sym-cell { font-family: var(--mono); font-weight: 600; font-size: 13px; color: var(--accent); white-space: nowrap; }
+.sym-cell .company { display: block; font-family: var(--sans); font-weight: 400; font-size: 11px; color: var(--muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 160px; }
+.sym-links { display: flex; gap: 6px; margin-top: 4px; }
+.sym-links a { font-size: 10px; color: var(--muted); text-decoration: none; padding: 1px 5px; border: 1px solid var(--border); border-radius: 3px; transition: color .15s, border-color .15s; }
+.sym-links a:hover { color: var(--accent); border-color: var(--accent); }
+
+/* ── score bar ── */
+.score-cell { min-width: 90px; }
+.score-val { font-family: var(--mono); font-size: 14px; font-weight: 600; }
+.score-bar { height: 4px; border-radius: 2px; margin-top: 4px; background: var(--border); overflow: hidden; }
+.score-fill { height: 100%; border-radius: 2px; }
+.score-fill.high { background: var(--green); }
+.score-fill.mid  { background: var(--yellow); }
+.score-fill.low  { background: var(--red); }
+
+/* ── chips ── */
+.chip { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; letter-spacing: .02em; white-space: nowrap; }
+.chip.core    { background: rgba(63,185,80,.15); color: var(--green); border: 1px solid rgba(63,185,80,.3); }
+.chip.watch   { background: rgba(210,153,34,.15); color: var(--yellow); border: 1px solid rgba(210,153,34,.3); }
+.chip.refresh { background: rgba(248,81,73,.12); color: var(--red); border: 1px solid rgba(248,81,73,.25); }
+.chip.stage2  { background: rgba(56,139,253,.15); color: var(--accent); border: 1px solid rgba(56,139,253,.3); }
+.chip.stage1  { background: rgba(139,148,158,.12); color: var(--muted); border: 1px solid rgba(139,148,158,.2); }
+.chip.buy     { background: rgba(63,185,80,.15); color: var(--green); border: 1px solid rgba(63,185,80,.3); }
+.chip.sell    { background: rgba(248,81,73,.12); color: var(--red); border: 1px solid rgba(248,81,73,.25); }
+.chip.hold    { background: rgba(139,148,158,.12); color: var(--muted); border: 1px solid rgba(139,148,158,.2); }
+
+/* ── gate dots ── */
+.gates { display: flex; gap: 5px; flex-wrap: wrap; }
+.gate { width: 22px; height: 22px; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 700; }
+.gate.pass  { background: rgba(63,185,80,.2);  color: var(--green); }
+.gate.watch { background: rgba(210,153,34,.2); color: var(--yellow); }
+.gate.fail  { background: rgba(248,81,73,.15); color: var(--red); }
+
+/* ── mono numbers ── */
+.mono { font-family: var(--mono); }
+.pos { color: var(--green); }
+.neg { color: var(--red); }
+
+/* ── refresh badge ── */
+.refresh-badge { font-size: 9px; color: var(--amber); margin-top: 3px; }
+
+/* ── section label ── */
+.section-label { padding: 4px 28px 10px; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .07em; }
+
+/* ── disclaimer ── */
+.disclaimer { margin: 0 28px 40px; background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--yellow); border-radius: 8px; padding: 18px 20px; }
+.disclaimer h4 { font-size: 12px; text-transform: uppercase; letter-spacing: .07em; color: var(--yellow); margin-bottom: 10px; }
+.disclaimer p { font-size: 11.5px; color: var(--muted); line-height: 1.7; margin-bottom: 8px; }
+.disclaimer p:last-child { margin-bottom: 0; }
+
+@media (max-width: 700px) {
+  .hdr, .metrics, .tabs, .theme-row, .tbl-wrap, .section-label, .disclaimer { padding-left: 16px; padding-right: 16px; }
+  .metrics { gap: 8px; }
+  .metric { min-width: 100px; }
+}
+</style>
+</head>
+<body>
+
+<header class="hdr">
+  <div class="hdr-logo">Agent Adda<span>Midcap Leaders · Research Dashboard</span></div>
+  <div class="hdr-right">
+    Run date: 2026-08-27<br>
+    <span style="color:var(--red);font-size:11px;">Research only — not investment advice</span>
+  </div>
+</header>
+
+<div class="metrics" id="metrics"></div>
+
+<div class="tabs" id="tabs">
+  <button class="tab active" data-filter="all">All</button>
+  <button class="tab" data-filter="core">Core Candidates</button>
+  <button class="tab" data-filter="watch">Watch / Prepare</button>
+  <button class="tab" data-filter="stage2">Stage 2 Only</button>
+  <button class="tab" data-filter="buy">Buy Signal</button>
+</div>
+
+<div class="section-label">Sector / Government Theme Distribution</div>
+<div class="theme-row" id="theme-row"></div>
+
+<div class="tbl-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>Symbol</th>
+        <th>Score</th>
+        <th>Bucket</th>
+        <th>Stage</th>
+        <th title="Stage2 | Growth | EPS | YoY Sales | Gov Theme">Gates S·G·E·Y·V</th>
+        <th>RSI / RS</th>
+        <th>Price</th>
+        <th>vs SMA50 / 200</th>
+        <th>52w High</th>
+        <th>6m / 1y Ret</th>
+        <th>Signal</th>
+      </tr>
+    </thead>
+    <tbody id="tbody"></tbody>
+  </table>
+</div>
+
+<div class="disclaimer">
+  <h4>⚠ SEBI Research Analyst Disclaimer</h4>
+  <p>This report is generated by Agent Adda, an automated rules-based research and analysis tool. It is intended purely for educational and informational purposes. It does not constitute investment advice, a recommendation, solicitation, or offer to buy or sell any security. The analysis is based on publicly available data and algorithmic scoring models.</p>
+  <p>Agent Adda is not registered as a Research Analyst under SEBI (Research Analysts) Regulations, 2014, nor as an Investment Adviser under SEBI (Investment Advisers) Regulations, 2013. Nothing in this report should be construed as personalised investment advice. Past performance of any stock, sector, or strategy mentioned herein is not indicative of future results.</p>
+  <p>All fundamental data is sourced from official exchange filings, Screener.in, and yfinance. Fundamental refresh is marked as required where the local cache is stale. Do not act on any screening output until you have independently verified current financial disclosures directly from the company's investor-relations page, NSE/BSE exchange filings, and the Ministry of Corporate Affairs. Perform your own due diligence before making any financial decision.</p>
+  <p>Investors should consult a SEBI-registered Investment Adviser and consider their individual risk appetite, investment horizon, and financial situation before acting on any information in this report.</p>
+</div>
+
+<script>
+const DATA = [
+  {
+    "sym": "OFSS",
+    "company": "OFSS",
+    "sector": "IT / Digital",
+    "gov_theme": "Digital infrastructure",
+    "sector_theme": "Digital infrastructure and enterprise technology",
+    "score": 84.1,
+    "tech_comp": 30.0,
+    "fund_comp": 30.1,
+    "theme_comp": 19.0,
+    "fund_score": 80.7,
+    "tech_score": 94.9,
+    "bucket": "CORE CANDIDATE",
+    "bucket_cls": "core",
+    "stage": "STAGE_2",
+    "g_stage2": "pass",
+    "g_growth": "pass",
+    "g_eps": "pass",
+    "g_yoy": "pass",
+    "g_gov": "pass",
+    "rsi": 51.6,
+    "rs": 89.2,
+    "price": 11800.0,
+    "sma50": 11254.35,
+    "sma200": 8844.74,
+    "vs_sma50": 4.8,
+    "vs_sma200": 33.4,
+    "dist_52h": -0.8,
+    "ret_6m": 78.5,
+    "ret_1y": 41.0,
+    "signal": "BUY",
+    "signal_cls": "buy",
+    "blockers": [],
+    "fund_refresh": true
+  },
+  {
+    "sym": "SONACOMS",
+    "company": "SONACOMS",
+    "sector": "Auto / Auto Components",
+    "gov_theme": "EV and mobility",
+    "sector_theme": "Mobility, EV ancillaries and component localisation",
+    "score": 82.7,
+    "tech_comp": 30.0,
+    "fund_comp": 29.7,
+    "theme_comp": 18.0,
+    "fund_score": 78.8,
+    "tech_score": 93.8,
+    "bucket": "CORE CANDIDATE",
+    "bucket_cls": "core",
+    "stage": "STAGE_2",
+    "g_stage2": "pass",
+    "g_growth": "pass",
+    "g_eps": "pass",
+    "g_yoy": "pass",
+    "g_gov": "pass",
+    "rsi": 51.2,
+    "rs": 92.39,
+    "price": 795.0,
+    "sma50": 720.94,
+    "sma200": 575.81,
+    "vs_sma50": 10.3,
+    "vs_sma200": 38.1,
+    "dist_52h": -3.5,
+    "ret_6m": 46.7,
+    "ret_1y": 76.5,
+    "signal": "BUY",
+    "signal_cls": "buy",
+    "blockers": [],
+    "fund_refresh": true
+  },
+  {
+    "sym": "NYKAA",
+    "company": "NYKAA",
+    "sector": "IT / Digital",
+    "gov_theme": "Digital infrastructure",
+    "sector_theme": "Digital infrastructure and enterprise technology",
+    "score": 80.6,
+    "tech_comp": 28.1,
+    "fund_comp": 29.6,
+    "theme_comp": 18.0,
+    "fund_score": 81.4,
+    "tech_score": 93.2,
+    "bucket": "CORE CANDIDATE",
+    "bucket_cls": "core",
+    "stage": "STAGE_2",
+    "g_stage2": "pass",
+    "g_growth": "pass",
+    "g_eps": "pass",
+    "g_yoy": "pass",
+    "g_gov": "pass",
+    "rsi": 57.6,
+    "rs": 82.61,
+    "price": 340.0,
+    "sma50": 322.79,
+    "sma200": 275.31,
+    "vs_sma50": 5.3,
+    "vs_sma200": 23.5,
+    "dist_52h": -1.4,
+    "ret_6m": 27.5,
+    "ret_1y": 45.4,
+    "signal": "BUY",
+    "signal_cls": "buy",
+    "blockers": [],
+    "fund_refresh": true
+  },
+  {
+    "sym": "OBEROIRLTY",
+    "company": "OBEROIRLTY",
+    "sector": "Housing",
+    "gov_theme": "Housing and urban infra",
+    "sector_theme": "Housing, building materials and urban infrastructure",
+    "score": 79.4,
+    "tech_comp": 27.6,
+    "fund_comp": 27.8,
+    "theme_comp": 19.0,
+    "fund_score": 77.8,
+    "tech_score": 75.6,
+    "bucket": "WATCH / PREPARE",
+    "bucket_cls": "watch",
+    "stage": "STAGE_2",
+    "g_stage2": "pass",
+    "g_growth": "pass",
+    "g_eps": "pass",
+    "g_yoy": "pass",
+    "g_gov": "pass",
+    "rsi": 64.0,
+    "rs": 74.51,
+    "price": 1870.0,
+    "sma50": 1834.21,
+    "sma200": 1667.8,
+    "vs_sma50": 2.0,
+    "vs_sma200": 12.1,
+    "dist_52h": -4.3,
+    "ret_6m": 23.7,
+    "ret_1y": 15.5,
+    "signal": "HOLD",
+    "signal_cls": "hold",
+    "blockers": [],
+    "fund_refresh": true
+  },
+  {
+    "sym": "KEI",
+    "company": "KEI",
+    "sector": "Housing",
+    "gov_theme": "Housing and urban infra",
+    "sector_theme": "Housing, building materials and urban infrastructure",
+    "score": 78.8,
+    "tech_comp": 24.3,
+    "fund_comp": 31.4,
+    "theme_comp": 18.0,
+    "fund_score": 84.8,
+    "tech_score": 82.0,
+    "bucket": "WATCH / PREPARE",
+    "bucket_cls": "watch",
+    "stage": "STAGE_2",
+    "g_stage2": "pass",
+    "g_growth": "pass",
+    "g_eps": "pass",
+    "g_yoy": "pass",
+    "g_gov": "pass",
+    "rsi": 47.3,
+    "rs": 70.38,
+    "price": 5540.0,
+    "sma50": 5319.96,
+    "sma200": 4753.54,
+    "vs_sma50": 4.1,
+    "vs_sma200": 16.5,
+    "dist_52h": -5.7,
+    "ret_6m": 12.1,
+    "ret_1y": 43.4,
+    "signal": "BUY",
+    "signal_cls": "buy",
+    "blockers": [],
+    "fund_refresh": true
+  },
+  {
+    "sym": "COFORGE",
+    "company": "COFORGE",
+    "sector": "IT / Digital",
+    "gov_theme": "Digital infrastructure",
+    "sector_theme": "Digital infrastructure and enterprise technology",
+    "score": 76.6,
+    "tech_comp": 29.4,
+    "fund_comp": 22.2,
+    "theme_comp": 20.0,
+    "fund_score": 10.0,
+    "tech_score": 72.0,
+    "bucket": "WATCH / PREPARE",
+    "bucket_cls": "watch",
+    "stage": "STAGE_2",
+    "g_stage2": "pass",
+    "g_growth": "watch",
+    "g_eps": "pass",
+    "g_yoy": "pass",
+    "g_gov": "pass",
+    "rsi": 66.9,
+    "rs": 93.41,
+    "price": 1880.0,
+    "sma50": 1624.29,
+    "sma200": 1517.88,
+    "vs_sma50": 15.7,
+    "vs_sma200": 23.9,
+    "dist_52h": -5.0,
+    "ret_6m": 55.0,
+    "ret_1y": 8.2,
+    "signal": "HOLD",
+    "signal_cls": "hold",
+    "blockers": [],
+    "fund_refresh": true
+  },
+  {
+    "sym": "KALYANKJIL",
+    "company": "KALYANKJIL",
+    "sector": "Consumer Durables",
+    "gov_theme": "No direct government-investment tag",
+    "sector_theme": "Premiumisation and household consumption",
+    "score": 76.0,
+    "tech_comp": 30.0,
+    "fund_comp": 31.0,
+    "theme_comp": 10.0,
+    "fund_score": 84.6,
+    "tech_score": 83.7,
+    "bucket": "WATCH / PREPARE",
+    "bucket_cls": "watch",
+    "stage": "STAGE_2",
+    "g_stage2": "pass",
+    "g_growth": "pass",
+    "g_eps": "pass",
+    "g_yoy": "pass",
+    "g_gov": "fail",
+    "rsi": 57.9,
+    "rs": 98.41,
+    "price": 610.6,
+    "sma50": 521.79,
+    "sma200": 447.62,
+    "vs_sma50": 17.0,
+    "vs_sma200": 36.4,
+    "dist_52h": -3.8,
+    "ret_6m": 50.5,
+    "ret_1y": 19.7,
+    "signal": "HOLD",
+    "signal_cls": "hold",
+    "blockers": [
+      "NO_GOVERNMENT_INVESTMENT_CONFIRMATION"
+    ],
+    "fund_refresh": true
+  },
+  {
+    "sym": "PAYTM",
+    "company": "PAYTM",
+    "sector": "Financial Services",
+    "gov_theme": "Digital infrastructure",
+    "sector_theme": "Credit, insurance, wealth and capital-market participation",
+    "score": 75.8,
+    "tech_comp": 27.0,
+    "fund_comp": 26.8,
+    "theme_comp": 19.0,
+    "fund_score": 77.1,
+    "tech_score": 70.1,
+    "bucket": "RETEST ONLY",
+    "bucket_cls": "refresh",
+    "stage": "STAGE_2",
+    "g_stage2": "pass",
+    "g_growth": "pass",
+    "g_eps": "pass",
+    "g_yoy": "pass",
+    "g_gov": "pass",
+    "rsi": 77.3,
+    "rs": 93.48,
+    "price": 1716.0,
+    "sma50": 1359.45,
+    "sma200": 1221.84,
+    "vs_sma50": 26.2,
+    "vs_sma200": 40.4,
+    "dist_52h": -0.1,
+    "ret_6m": 51.4,
+    "ret_1y": 39.4,
+    "signal": "HOLD",
+    "signal_cls": "hold",
+    "blockers": [
+      "EXTENDED_RSI_RETEST_ONLY"
+    ],
+    "fund_refresh": true
+  },
+  {
+    "sym": "UNOMINDA",
+    "company": "UNOMINDA",
+    "sector": "Auto / Auto Components",
+    "gov_theme": "EV and mobility",
+    "sector_theme": "Mobility, EV ancillaries and component localisation",
+    "score": 75.1,
+    "tech_comp": 22.9,
+    "fund_comp": 31.2,
+    "theme_comp": 16.0,
+    "fund_score": 81.7,
+    "tech_score": 72.8,
+    "bucket": "WATCH / PREPARE",
+    "bucket_cls": "watch",
+    "stage": "STAGE_2",
+    "g_stage2": "pass",
+    "g_growth": "pass",
+    "g_eps": "pass",
+    "g_yoy": "pass",
+    "g_gov": "pass",
+    "rsi": 43.8,
+    "rs": 68.98,
+    "price": 1260.0,
+    "sma50": 1179.6,
+    "sma200": 1172.17,
+    "vs_sma50": 6.8,
+    "vs_sma200": 7.5,
+    "dist_52h": -7.8,
+    "ret_6m": 3.5,
+    "ret_1y": -2.8,
+    "signal": "HOLD",
+    "signal_cls": "hold",
+    "blockers": [],
+    "fund_refresh": true
+  },
+  {
+    "sym": "MEDANTA",
+    "company": "MEDANTA",
+    "sector": "Healthcare",
+    "gov_theme": "No direct government-investment tag",
+    "sector_theme": "Healthcare services, hospitals and diagnostics",
+    "score": 73.4,
+    "tech_comp": 28.0,
+    "fund_comp": 32.4,
+    "theme_comp": 8.0,
+    "fund_score": 80.7,
+    "tech_score": 76.0,
+    "bucket": "WATCH / PREPARE",
+    "bucket_cls": "watch",
+    "stage": "STAGE_2",
+    "g_stage2": "pass",
+    "g_growth": "pass",
+    "g_eps": "pass",
+    "g_yoy": "pass",
+    "g_gov": "fail",
+    "rsi": 52.7,
+    "rs": 75.04,
+    "price": 1458.9,
+    "sma50": 1370.76,
+    "sma200": 1205.1,
+    "vs_sma50": 6.4,
+    "vs_sma200": 21.1,
+    "dist_52h": -1.2,
+    "ret_6m": 26.9,
+    "ret_1y": 4.2,
+    "signal": "HOLD",
+    "signal_cls": "hold",
+    "blockers": [
+      "NO_GOVERNMENT_INVESTMENT_CONFIRMATION"
+    ],
+    "fund_refresh": true
+  },
+  {
+    "sym": "NAM-INDIA",
+    "company": "NAM-INDIA",
+    "sector": "Capital Markets",
+    "gov_theme": "No direct government-investment tag",
+    "sector_theme": "Financialisation and market infrastructure",
+    "score": 72.8,
+    "tech_comp": 27.8,
+    "fund_comp": 32.0,
+    "theme_comp": 8.0,
+    "fund_score": 87.3,
+    "tech_score": 88.7,
+    "bucket": "WATCH / PREPARE",
+    "bucket_cls": "watch",
+    "stage": "STAGE_2",
+    "g_stage2": "pass",
+    "g_growth": "pass",
+    "g_eps": "pass",
+    "g_yoy": "pass",
+    "g_gov": "fail",
+    "rsi": 55.0,
+    "rs": 59.28,
+    "price": 1223.0,
+    "sma50": 1182.83,
+    "sma200": 997.08,
+    "vs_sma50": 3.4,
+    "vs_sma200": 22.7,
+    "dist_52h": -2.2,
+    "ret_6m": 25.4,
+    "ret_1y": 53.2,
+    "signal": "BUY",
+    "signal_cls": "buy",
+    "blockers": [
+      "NO_GOVERNMENT_INVESTMENT_CONFIRMATION"
+    ],
+    "fund_refresh": true
+  },
+  {
+    "sym": "BHEL",
+    "company": "BHEL",
+    "sector": "Energy",
+    "gov_theme": "Energy infrastructure",
+    "sector_theme": "Power, grid and energy transition capex",
+    "score": 72.6,
+    "tech_comp": 30.0,
+    "fund_comp": 17.6,
+    "theme_comp": 20.0,
+    "fund_score": 10.0,
+    "tech_score": 89.1,
+    "bucket": "WATCH / PREPARE",
+    "bucket_cls": "watch",
+    "stage": "STAGE_2",
+    "g_stage2": "pass",
+    "g_growth": "watch",
+    "g_eps": "pass",
+    "g_yoy": "pass",
+    "g_gov": "pass",
+    "rsi": 54.8,
+    "rs": 58.6,
+    "price": 415.5,
+    "sma50": 409.18,
+    "sma200": 330.12,
+    "vs_sma50": 1.5,
+    "vs_sma200": 25.9,
+    "dist_52h": -4.7,
+    "ret_6m": 58.6,
+    "ret_1y": 99.3,
+    "signal": "BUY",
+    "signal_cls": "buy",
+    "blockers": [],
+    "fund_refresh": true
+  },
+  {
+    "sym": "PERSISTENT",
+    "company": "PERSISTENT",
+    "sector": "IT / Digital",
+    "gov_theme": "Digital infrastructure",
+    "sector_theme": "Digital infrastructure and enterprise technology",
+    "score": 72.5,
+    "tech_comp": 14.7,
+    "fund_comp": 32.7,
+    "theme_comp": 20.0,
+    "fund_score": 87.3,
+    "tech_score": 58.5,
+    "bucket": "WATCH / PREPARE",
+    "bucket_cls": "watch",
+    "stage": "STAGE_1",
+    "g_stage2": "watch",
+    "g_growth": "pass",
+    "g_eps": "pass",
+    "g_yoy": "pass",
+    "g_gov": "pass",
+    "rsi": 58.7,
+    "rs": 79.81,
+    "price": 5590.5,
+    "sma50": 5181.25,
+    "sma200": 5456.8,
+    "vs_sma50": 7.9,
+    "vs_sma200": 2.5,
+    "dist_52h": -14.8,
+    "ret_6m": 18.2,
+    "ret_1y": 5.2,
+    "signal": "HOLD",
+    "signal_cls": "hold",
+    "blockers": [
+      "NO_STAGE2_CONFIRMATION"
+    ],
+    "fund_refresh": true
+  },
+  {
+    "sym": "POLYCAB",
+    "company": "POLYCAB",
+    "sector": "Housing",
+    "gov_theme": "Housing and urban infra",
+    "sector_theme": "Housing, building materials and urban infrastructure",
+    "score": 71.3,
+    "tech_comp": 14.3,
+    "fund_comp": 32.0,
+    "theme_comp": 20.0,
+    "fund_score": 88.5,
+    "tech_score": 72.5,
+    "bucket": "WATCH / PREPARE",
+    "bucket_cls": "watch",
+    "stage": "STAGE_1",
+    "g_stage2": "watch",
+    "g_growth": "pass",
+    "g_eps": "pass",
+    "g_yoy": "pass",
+    "g_gov": "pass",
+    "rsi": 39.7,
+    "rs": 43.83,
+    "price": 9060.0,
+    "sma50": 9302.75,
+    "sma200": 8285.15,
+    "vs_sma50": -2.6,
+    "vs_sma200": 9.4,
+    "dist_52h": -10.2,
+    "ret_6m": 8.5,
+    "ret_1y": 27.5,
+    "signal": "HOLD",
+    "signal_cls": "hold",
+    "blockers": [
+      "NO_STAGE2_CONFIRMATION"
+    ],
+    "fund_refresh": true
+  },
+  {
+    "sym": "UNIONBANK",
+    "company": "Union Bank of India",
+    "sector": "Housing",
+    "gov_theme": "Housing and urban infra",
+    "sector_theme": "Housing, building materials and urban infrastructure",
+    "score": 69.9,
+    "tech_comp": 23.9,
+    "fund_comp": 21.1,
+    "theme_comp": 20.0,
+    "fund_score": 68.8,
+    "tech_score": 69.4,
+    "bucket": "WATCH / PREPARE",
+    "bucket_cls": "watch",
+    "stage": "STAGE_2",
+    "g_stage2": "pass",
+    "g_growth": "pass",
+    "g_eps": "pass",
+    "g_yoy": "pass",
+    "g_gov": "pass",
+    "rsi": 60.2,
+    "rs": 76.78,
+    "price": 187.52,
+    "sma50": 175.02,
+    "sma200": 171.03,
+    "vs_sma50": 7.1,
+    "vs_sma200": 9.6,
+    "dist_52h": -7.3,
+    "ret_6m": -5.9,
+    "ret_1y": 47.6,
+    "signal": "HOLD",
+    "signal_cls": "hold",
+    "blockers": [],
+    "fund_refresh": true
+  }
+];
+const SUMMARY = {"total": 15, "core": 3, "watch": 11, "stage2": 13, "buy_sig": 6, "avg_score": 76.1};
+
+// ── metrics ──────────────────────────────────────────────────────────────────
+(function buildMetrics() {
+  const m = document.getElementById('metrics');
+  const items = [
+    { label: 'Symbols Scored', val: SUMMARY.total, cls: '' },
+    { label: 'Core Candidates', val: SUMMARY.core, cls: 'green' },
+    { label: 'Watch / Prepare', val: SUMMARY.watch, cls: 'yellow' },
+    { label: 'Stage 2', val: SUMMARY.stage2, cls: 'blue' },
+    { label: 'Buy Signal', val: SUMMARY.buy_sig, cls: 'green' },
+    { label: 'Avg Score', val: SUMMARY.avg_score, cls: '' },
+  ];
+  m.innerHTML = items.map(i =>
+    `<div class="metric"><div class="label">${i.label}</div><div class="val ${i.cls}">${i.val}</div></div>`
+  ).join('');
+})();
+
+// ── theme pills ───────────────────────────────────────────────────────────────
+(function buildThemes() {
+  const counts = {};
+  DATA.forEach(r => {
+    const t = r.gov_theme || r.sector_theme || 'Other';
+    counts[t] = (counts[t] || 0) + 1;
+  });
+  const sorted = Object.entries(counts).sort((a,b) => b[1]-a[1]);
+  document.getElementById('theme-row').innerHTML = sorted.map(([t,n]) =>
+    `<div class="theme-pill"><strong>${n}</strong> ${t}</div>`
+  ).join('');
+})();
+
+// ── table ─────────────────────────────────────────────────────────────────────
+function scoreColor(s) { return s >= 75 ? 'high' : s >= 60 ? 'mid' : 'low'; }
+function stageChip(stage) {
+  const s = (stage||'').toUpperCase();
+  const cls = s.includes('2') ? 'stage2' : 'stage1';
+  return `<span class="chip ${cls}">${stage || 'N/A'}</span>`;
+}
+function gateBox(g, title) {
+  const icon = g==='pass' ? '✓' : g==='watch' ? '~' : '✕';
+  return `<div class="gate ${g}" title="${title}">${icon}</div>`;
+}
+function retClass(v) { return v > 0 ? 'pos' : v < 0 ? 'neg' : ''; }
+function pct(v) { const sign = v>=0?'+':''; return sign+v+'%'; }
+
+function buildRow(d) {
+  const tv = `https://in.tradingview.com/chart/?symbol=NSE%3A${d.sym}`;
+  const sc = `https://www.screener.in/company/${d.sym}/`;
+  const scoreVal = d.score;
+  const fillClass = scoreColor(scoreVal);
+  const bucketLabel = d.bucket || '—';
+  const vs50Cls = d.vs_sma50 >= 0 ? 'pos' : 'neg';
+  const vs200Cls = d.vs_sma200 >= 0 ? 'pos' : 'neg';
+  return `<tr data-bucket="${d.bucket_cls}" data-stage="${d.stage.toLowerCase()}" data-signal="${d.signal_cls}">
+    <td class="sym-cell">
+      ${d.sym}
+      <span class="company">${d.company}</span>
+      <div class="sym-links">
+        <a href="${tv}" target="_blank" rel="noopener">TV</a>
+        <a href="${sc}" target="_blank" rel="noopener">SCR</a>
+      </div>
+    </td>
+    <td class="score-cell">
+      <span class="score-val mono">${scoreVal}</span>
+      <div class="score-bar"><div class="score-fill ${fillClass}" style="width:${scoreVal}%"></div></div>
+      ${d.fund_refresh ? '<div class="refresh-badge">⟳ Fundamental refresh reqd</div>' : ''}
+    </td>
+    <td><span class="chip ${d.bucket_cls}">${bucketLabel}</span></td>
+    <td>${stageChip(d.stage)}</td>
+    <td>
+      <div class="gates">
+        ${gateBox(d.g_stage2,'Stage 2')}
+        ${gateBox(d.g_growth,'Growth')}
+        ${gateBox(d.g_eps,'High EPS')}
+        ${gateBox(d.g_yoy,'YoY Sales')}
+        ${gateBox(d.g_gov,'Gov Theme')}
+      </div>
+    </td>
+    <td class="mono"><span style="color:var(--amber)">${d.rsi}</span> <span style="color:var(--muted);font-size:10px">RSI</span><br><span style="color:var(--accent)">${d.rs}</span> <span style="color:var(--muted);font-size:10px">RS</span></td>
+    <td class="mono">₹${d.price.toLocaleString('en-IN')}</td>
+    <td class="mono">
+      <span class="${vs50Cls}">${pct(d.vs_sma50)}</span> <span style="color:var(--muted);font-size:10px">50d</span><br>
+      <span class="${vs200Cls}">${pct(d.vs_sma200)}</span> <span style="color:var(--muted);font-size:10px">200d</span>
+    </td>
+    <td class="mono ${retClass(d.dist_52h)}">${pct(d.dist_52h)}</td>
+    <td class="mono">
+      <span class="${retClass(d.ret_6m)}">${pct(d.ret_6m)}</span><br>
+      <span class="${retClass(d.ret_1y)}">${pct(d.ret_1y)}</span>
+    </td>
+    <td><span class="chip ${d.signal_cls}">${d.signal}</span></td>
+  </tr>`;
+}
+
+let currentFilter = 'all';
+function renderTable() {
+  const tbody = document.getElementById('tbody');
+  const filtered = DATA.filter(d => {
+    if (currentFilter === 'all') return true;
+    if (currentFilter === 'core') return d.bucket_cls === 'core';
+    if (currentFilter === 'watch') return d.bucket_cls === 'watch';
+    if (currentFilter === 'stage2') return d.stage.toUpperCase().includes('2');
+    if (currentFilter === 'buy') return d.signal_cls === 'buy';
+    return true;
+  });
+  tbody.innerHTML = filtered.length ? filtered.map(buildRow).join('') :
+    `<tr><td colspan="11" style="text-align:center;color:var(--muted);padding:20px">No rows match this filter</td></tr>`;
+}
+renderTable();
+
+// ── tab filter ────────────────────────────────────────────────────────────────
+document.getElementById('tabs').addEventListener('click', e => {
+  const btn = e.target.closest('.tab');
+  if (!btn) return;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  currentFilter = btn.dataset.filter;
+  renderTable();
+});
+</script>
+</body>
+</html>

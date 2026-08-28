@@ -3,10 +3,10 @@ import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from company_intelligence_db import init_company_intelligence_db
-from company_intelligence_extract import list_evidence_by_symbol
-from company_intelligence_promote import promote_indexed_company_evidence
-from company_website_indexer import crawl_company_website, download_company_document
+from company_intelligence.company_intelligence_db import init_company_intelligence_db
+from company_intelligence.company_intelligence_extract import list_evidence_by_symbol
+from company_intelligence.company_intelligence_promote import promote_indexed_company_evidence
+from company_intelligence.company_website_indexer import crawl_company_website, download_company_document
 
 
 class CompanyIntelligencePromoteTests(unittest.TestCase):

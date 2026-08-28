@@ -4,8 +4,8 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from company_index_job import run_company_index_job
-from company_intelligence_db import init_company_intelligence_db
+from company_intelligence.company_index_job import run_company_index_job
+from company_intelligence.company_intelligence_db import init_company_intelligence_db
 
 
 class CompanyIndexJobTests(unittest.TestCase):

@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Agent Adda Research | LT Foods Limited (LTFOODS) | Research</title>
+  <style>
+    
+    
+    :root{
+      --bg:#0d1117;--bg2:#111820;--panel:#161b22;--line:#30363d;
+      --ink:#f8faff;--muted:#a8b3bf;--subtle:#788391;
+      --sky:#0ea5e9;--sky2:#38bdf8;--green:#22c55e;--amber:#f59e0b;--red:#f43f5e;
+      --display:"Playfair Display",Georgia,"Times New Roman",serif;
+      --sans:"Plus Jakarta Sans",Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+      --mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace;
+    }
+    *{box-sizing:border-box} html{scroll-behavior:smooth}
+    body{margin:0;background:linear-gradient(180deg,var(--bg),var(--bg2) 36%,var(--bg));color:var(--ink);font:14px/1.65 var(--sans);-webkit-font-smoothing:antialiased}
+    a{color:var(--sky2);text-decoration:none} a:hover{text-decoration:underline}
+    .page{max-width:1240px;margin:0 auto;padding:26px 24px 64px}
+    .topbar{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:10px 0 22px;border-bottom:1px solid var(--line)}
+    .brand{display:flex;align-items:center;gap:12px;font-weight:700;color:var(--ink)}
+    .mark{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:#f8faff;color:#0d1117;font:700 14px var(--sans)}
+    .nav{display:flex;gap:10px;flex-wrap:wrap;color:var(--muted);font-size:12px}
+    .nav a,.status-pill{color:var(--muted);padding:6px 10px;border:1px solid var(--line);border-radius:999px;background:#ffffff08}
+    .status-pill{color:#fde68a;border-color:#f59e0b66;background:#f59e0b14;font-weight:800;text-transform:uppercase;letter-spacing:.06em}
+    .hero{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(310px,.75fr);gap:28px;padding:44px 0 30px;align-items:end}
+    .eyebrow{display:inline-flex;align-items:center;gap:8px;color:var(--sky2);font-weight:700;text-transform:uppercase;font-size:11px;letter-spacing:.12em;margin-bottom:16px}
+    .dot{width:8px;height:8px;border-radius:50%;background:var(--sky)}
+    h1,h2,h3{font-family:var(--display);line-height:1.12;margin:0;color:var(--ink);letter-spacing:0}
+    h1{font-size:clamp(39px,6vw,74px);font-weight:700} h1 span{color:var(--sky2)}
+    h2{font-size:32px} h3{font-size:20px;margin:4px 0 10px}
+    .subtitle{max-width:780px;margin:18px 0 0;color:#d6d3d1;font-size:17px;line-height:1.7}
+    .meta{margin-top:18px;color:var(--subtle);font-size:12px}
+    .hero-panel,.card{background:linear-gradient(180deg,var(--panel),#111820);border:1px solid var(--line);border-radius:8px;padding:16px}
+    .hero-panel{padding:18px;box-shadow:0 20px 70px #00000055}
+    .price{font:700 42px/1 var(--sans);letter-spacing:0;color:var(--ink)}
+    .move{font:700 16px var(--mono);color:var(--green);margin-top:8px}
+    .verdict{margin-top:18px;padding-top:18px;border-top:1px solid var(--line);color:#d6d3d1}
+    .badge-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px}
+    .badge{font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sky2);border:1px solid #0ea5e955;background:#0ea5e912;border-radius:999px;padding:5px 9px}
+    section{padding:28px 0;border-top:1px solid var(--line)}
+    .section-head{display:flex;align-items:end;justify-content:space-between;gap:18px;margin-bottom:18px}
+    .section-note{max-width:590px;color:var(--muted);font-size:13px}
+    p{margin:0 0 14px;color:#d6d3d1}
+    .grid{display:grid;gap:14px}.grid.cols-4{grid-template-columns:repeat(4,minmax(0,1fr))}.grid.cols-3{grid-template-columns:repeat(3,minmax(0,1fr))}.grid.cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .metric-label{color:var(--subtle);font-size:11px;text-transform:uppercase;font-weight:700;letter-spacing:.08em}
+    .metric-value{display:block;font-size:24px;font-weight:800;line-height:1.15;margin-top:7px;color:var(--ink)}
+    .metric-detail{display:block;color:var(--muted);font-size:12px;margin-top:6px}
+    .green{color:var(--green)}.amber{color:var(--amber)}.red{color:var(--red)}.muted{color:var(--muted)}
+    .table-wrap{overflow-x:visible;border:1px solid var(--line);border-radius:8px;background:#0d1117;margin-bottom:14px}
+    table{width:100%;border-collapse:collapse;table-layout:fixed;min-width:0}
+    th,td{padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top;text-align:right;white-space:normal;overflow-wrap:anywhere;word-break:normal;font-size:12px;line-height:1.35}
+    th:first-child,td:first-child{text-align:left;width:23%}
+    th{font-size:9.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);background:#161b22;font-weight:800}
+    td{color:#d6d3d1}tr:last-child td{border-bottom:0}
+    .narrative{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:18px}
+    .pullquote{font-family:var(--display);font-size:28px;line-height:1.25;color:var(--ink);border-left:4px solid var(--sky);padding-left:18px;margin:0 0 18px}
+    .callout{border-left:4px solid var(--sky);background:#0ea5e912;border-radius:8px;padding:14px 16px;color:#d6d3d1}
+    .risk-callout{border-left-color:var(--red);background:#f43f5e12}
+    .chart-frame{border:1px solid var(--line);border-radius:8px;overflow:hidden;background:#0b1220;box-shadow:0 20px 70px #00000055}
+    .chart-image{display:block;width:100%;height:auto;background:#0b1220}
+    .score{display:grid;grid-template-columns:160px 1fr 58px;gap:12px;align-items:center;margin:12px 0}
+    .score-name{color:var(--muted);font-size:12px;display:flex;align-items:center;gap:8px}
+    .swatch{width:9px;height:9px;border-radius:50%;display:inline-block;background:var(--score-color)}
+    .score-track{height:14px;border-radius:999px;background:#27313d;overflow:hidden;border:1px solid #ffffff10}
+    .score-fill{display:block;height:100%;border-radius:999px;background:var(--score-color);box-shadow:0 0 18px var(--score-glow)}
+    .score-num{font:800 12px var(--mono);color:var(--score-color);text-align:center;border:1px solid var(--score-glow);background:#ffffff08;border-radius:999px;padding:3px 0}
+    .score.fund{--score-color:#22c55e;--score-glow:#22c55e66}.score.invest{--score-color:#38bdf8;--score-glow:#38bdf866}.score.earnings{--score-color:#a78bfa;--score-glow:#a78bfa66}.score.growth{--score-color:#34d399;--score-glow:#34d39966}.score.strength{--score-color:#f59e0b;--score-glow:#f59e0b66}.score.institutional{--score-color:#fb7185;--score-glow:#fb718566}.score.tech{--score-color:#06b6d4;--score-glow:#06b6d466}
+    .mini-bars{display:grid;grid-template-columns:repeat(5,minmax(46px,1fr));align-items:end;gap:10px;height:190px;padding:14px;border:1px solid var(--line);border-radius:8px;background:#0d1117}
+    .bar{display:flex;flex-direction:column;justify-content:end;gap:7px;height:100%;min-width:0}.bar span:first-child{display:block;background:linear-gradient(180deg,var(--sky2),#0369a1);border-radius:6px 6px 0 0;min-height:12px}.bar b{font:700 11px var(--mono);color:#d6d3d1;text-align:center}.bar small{color:var(--subtle);font-size:10px;text-align:center}
+    ul{margin:0;padding-left:18px;color:#d6d3d1}li{margin:7px 0}
+    .source-list{columns:2;column-gap:24px}.source-list li{break-inside:avoid;color:var(--muted)}
+    .footer{margin-top:28px;padding:18px;border:1px solid #f43f5e55;background:#f43f5e12;border-radius:8px;color:#fecdd3}
+    code,.mono{font-family:var(--mono)}
+    @media(max-width:980px){.hero,.narrative{grid-template-columns:1fr}.grid.cols-4,.grid.cols-3,.grid.cols-2{grid-template-columns:1fr}.source-list{columns:1}}
+    @media(max-width:620px){.page{padding:18px 14px 44px}.topbar,.section-head{align-items:flex-start;flex-direction:column}.price{font-size:34px}.score{grid-template-columns:125px 1fr 48px}th,td{padding:5px 4px;font-size:10px;line-height:1.25}th{font-size:8.5px;letter-spacing:0;text-transform:none}th:first-child,td:first-child{width:24%}}
+  </style>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Playfair+Display:wght@400;700&display=swap">
+</head>
+<body>
+<div class="page">
+  <header class="topbar">
+    <div class="brand"><div class="mark">AA</div><span>AgentAdda Market Intelligence</span></div>
+    <nav class="nav" aria-label="Report sections"><span class="status-pill">Research</span><a href="#fundamentals">Fundamentals</a><a href="#chart">Chart</a><a href="#technicals">Technicals</a><a href="#brokers">Brokers</a><a href="#risks">Risks</a></nav>
+  </header>
+
+  <section class="hero">
+    <div>
+      <div class="eyebrow"><span class="dot"></span> Comprehensive stock research | LTFOODS</div>
+      <h1>LT Foods Limited <span>(LTFOODS)</span></h1>
+      <p class="subtitle">A branded basmati and specialty-rice compounder with +27.9% Q1 FY27 revenue growth, a CRISIL AA/Stable credit upgrade, and improving international distribution — technically extended after the Aug 2026 breakout; better entry on a pullback.</p>
+      <p class="meta">Data refreshed 25 Aug 2026. EOD snapshot as of 2026-08-24. Consolidated financials in INR crore unless stated. Financials in INR crore unless stated.</p>
+    </div>
+    <aside class="hero-panel">
+      <div class="metric-label">Live delayed price</div><div class="price">INR 451</div><div class="move"><span class="green">+7.34%</span> vs prior close | RSI 76.4 | Vol 14.19x avg</div>
+      <div class="verdict"><strong>Research stance:</strong> Fundamentally constructive — branded FMCG compounder with improving credit. Technically: RSI 76.4, ADX 59.9 — extended post-breakout. Watch for pullback to 420–430 before adding.</div>
+      <div class="badge-row"><span class="badge">EFS 68.9</span><span class="badge">Tech 86.00</span><span class="badge">RSI 76.4</span><span class="badge">Stage 1</span></div>
+    </aside>
+  </section>
+
+  <section>
+    <div class="grid cols-4"><div class="card"><span class="metric-label">Market cap</span><strong class="metric-value">INR 15,661 Cr</strong><span class="metric-detail">Screener / live scrape</span></div><div class="card"><span class="metric-label">P/E</span><strong class="metric-value">24.4x</strong><span class="metric-detail">On trailing earnings</span></div><div class="card"><span class="metric-label">Jun 2026 revenue</span><strong class="metric-value class="green"">+27.9%</strong><span class="metric-detail">YoY, Screener consolidated</span></div><div class="card"><span class="metric-label">Jun 2026 PAT</span><strong class="metric-value class="green"">+8.9%</strong><span class="metric-detail">YoY, below revenue growth</span></div><div class="card"><span class="metric-label">ROCE</span><strong class="metric-value">17.7%</strong><span class="metric-detail">Return on capital employed</span></div><div class="card"><span class="metric-label">ROE</span><strong class="metric-value">14.9%</strong><span class="metric-detail">Return on equity</span></div><div class="card"><span class="metric-label">Debt / equity</span><strong class="metric-value">0.36x</strong><span class="metric-detail">Computed from BS</span></div><div class="card"><span class="metric-label">Vol ratio (EOD)</span><strong class="metric-value class="green"">14.19x</strong><span class="metric-detail">Versus 20-day average</span></div></div>
+  </section>
+
+  <section>
+    <div class="section-head"><h2>Investment Read</h2><p class="section-note">Separate the company from the entry. LT Foods Limited has a genuine branded-food franchise with scale and credit quality. The stock has just printed a large-volume breakout and is technically extended.</p></div>
+    <div class="narrative">
+      <div class="card"><p class="pullquote">The Daawat and Royal brands create pricing power in a commodity category — the question is whether Q1 FY27 momentum can persist without margin compression.</p>
+<p>LT Foods Limited operates at the branded end of the basmati and specialty-rice value chain.
+The model spans sourcing, aging, processing, and distribution under the Daawat brand
+(≈25% India market share) and Royal brand (#1 in North America, ≈49% share).
+Selling branded rice at a premium to generic commodity grades is the core moat —
+it translates into better pricing power, inventory management, and retailer shelf permanence.</p>
+<p>The financial trajectory confirms the model: revenue compounded at ~16% over FY23–FY26,
+the credit rating was upgraded to <strong>CRISIL AA/Stable</strong> in Feb 2026,
+and Q1 FY27 showed <strong>revenue ++27.9% YoY</strong> led by North America (+49%)
+and India e-commerce. Working capital improved materially — inventory days fell from 221 to 187.</p>
+<p>Broker consensus is constructive: LT Foods holds Buy consensus with average target INR 509-519. Motilal Oswal maintains Buy TP INR 520. Daawat (25% India  | LT Foods Q1 FY27 consolidated revenue +27.9% YoY to Rs 3152 Cr. EBITDA +20% t.</p>
+<p>CRISIL upgraded LT Foods to AA/Stable from AA-/Positive. Interest coverage 10-11x. Annual FCF Rs 800-900 Cr. Strong bran.</p>
+</div>
+      <div class="card"><h3>Decision Frame</h3><ul><li><strong>Business:</strong> branded basmati/specialty-rice FMCG compounder.</li><li><strong>Fundamentals:</strong> improving growth, manageable leverage, AA credit rating.</li><li><strong>Technical:</strong> RSI 76.4, ADX 59.9, vol 14.19x — high-momentum, extended.</li><li><strong>Action bias:</strong> watch for pullback to 420–430; not a clean chase above 460.</li><li><strong>Invalidation:</strong> daily close below 405 with volume — failed breakout.</li></ul></div>
+    </div>
+  </section>
+
+  <section id="fundamentals">
+    <div class="section-head"><h2>Fundamental Scores</h2><p class="section-note">Agent Adda scores from local stage snapshot (2026-08-24). Useful sector-relative ranking signals — not standalone buy/sell rules.</p></div>
+    <div class="grid cols-2">
+      <div class="card"><div class="score fund"><span class="score-name"><span class="swatch"></span>Enhanced fund score</span><span class="score-track"><span class="score-fill" style="width:69%"></span></span><span class="score-num">68.9</span></div><div class="score invest"><span class="score-name"><span class="swatch"></span>Investment score</span><span class="score-track"><span class="score-fill" style="width:69%"></span></span><span class="score-num">69.4</span></div><div class="score earnings"><span class="score-name"><span class="swatch"></span>Earnings quality</span><span class="score-track"><span class="score-fill" style="width:63%"></span></span><span class="score-num">63.0</span></div><div class="score growth"><span class="score-name"><span class="swatch"></span>Sales growth</span><span class="score-track"><span class="score-fill" style="width:68%"></span></span><span class="score-num">68.3</span></div><div class="score strength"><span class="score-name"><span class="swatch"></span>Financial strength</span><span class="score-track"><span class="score-fill" style="width:77%"></span></span><span class="score-num">77.0</span></div><div class="score institutional"><span class="score-name"><span class="swatch"></span>Institutional bias</span><span class="score-track"><span class="score-fill" style="width:75%"></span></span><span class="score-num">75.0</span></div><div class="score tech"><span class="score-name"><span class="swatch"></span>Technical score</span><span class="score-track"><span class="score-fill" style="width:86%"></span></span><span class="score-num">86.0</span></div></div>
+      <div class="card"><h3>Score Interpretation</h3><p>The score stack is <strong>constructive but not exceptional</strong>. Financial strength (77) and institutional bias (75) are the best components. Earnings quality (63) is acceptable. Sales growth (68.3) reflects the strong revenue trajectory.</p><div class="callout">EFS 68.9 puts LTFOODS in the upper-middle tier of the NSE universe — a credible watchlist candidate, not a high-conviction screener top-pick.</div></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head"><h2>Company Overview</h2><p class="section-note">Daawat is the India consumer query; Royal is the North America brand; LT Foods Limited is the NSE-listed parent entity.</p></div>
+    <div class="grid cols-3"><div class="card"><h3>Business</h3><p>LT Foods is a global specialty-rice and packaged-foods company. The model spans procurement (Punjab/Haryana basmati belt), aging, milling, branded packing, and multichannel distribution — making it more than a commodity-rice exporter.</p></div><div class="card"><h3>Brands</h3><p>Daawat (~25% India branded-basmati share) and Royal (#1 in North America, ~49% U.S. basmati import share). Brand strength supports premiumization and reduces pure-commodity price sensitivity.</p></div><div class="card"><h3>Markets</h3><p>Revenue from 80+ countries: India (domestic growth + e-commerce &gt;40% on key platforms), North America (+49% Q1 FY27, includes Golden Star consolidation), Europe, Middle East, and Rest of World.</p></div></div>
+  </section>
+
+  <section>
+    <div class="section-head"><h2>Historical P&amp;L</h2><p class="section-note">Revenue compounded at ~16% over FY23–FY26. PAT growth is positive but lagged sales and operating profit — watch OPM and interest/depreciation drag.</p></div>
+    <div class="table-wrap"><table><thead><tr><th>Period</th><th>Revenue</th><th>Op. Profit</th><th>OPM</th><th>PAT</th><th>EPS</th><th>Payout</th></tr></thead><tbody><tr><td>FY2023</td><td>6,936</td><td>701</td><td>10%</td><td>423</td><td>11.60</td><td>9%</td></tr><tr><td>FY2024</td><td>7,772</td><td>938</td><td>12%</td><td>598</td><td>17.09</td><td>9%</td></tr><tr><td>FY2025</td><td>8,681</td><td>979</td><td>11%</td><td>612</td><td>17.43</td><td>17%</td></tr><tr><td>FY2026</td><td>10,946</td><td>1,159</td><td>11%</td><td>625</td><td>18.01</td><td>17%</td></tr><tr><td>TTM</td><td>11,633</td><td>1,245</td><td>11%</td><td>640</td><td>18.44</td><td>n/a</td></tr></tbody></table></div>
+    <div class="mini-bars"><div class="bar"><span style="height:64%"></span><b>6,936</b><small>FY23</small></div><div class="bar"><span style="height:70%"></span><b>7,772</b><small>FY24</small></div><div class="bar"><span style="height:77%"></span><b>8,681</b><small>FY25</small></div><div class="bar"><span style="height:95%"></span><b>10,946</b><small>FY26</small></div><div class="bar"><span style="height:100%"></span><b>11,633</b><small>TTM</small></div></div>
+  </section>
+
+  <section>
+    <div class="section-head"><h2>Quarterly Results</h2><p class="section-note">Last 6 quarters from Screener.in consolidated. Jun 2026: revenue ++27.9% YoY — strongest quarter in the window.</p></div>
+    <div class="table-wrap"><table><thead><tr><th>Quarter</th><th>Revenue</th><th>Op. Profit</th><th>OPM</th><th>PAT</th><th>EPS</th></tr></thead><tbody><tr><td>Mar 2025</td><td>2,228</td><td>258</td><td>12%</td><td>161</td><td>4.62</td></tr><tr><td>Jun 2025</td><td>2,464</td><td>265</td><td>11%</td><td>168</td><td>4.85</td></tr><tr><td>Sep 2025</td><td>2,766</td><td>309</td><td>11%</td><td>164</td><td>4.72</td></tr><tr><td>Dec 2025</td><td>2,809</td><td>314</td><td>11%</td><td>157</td><td>4.53</td></tr><tr><td>Mar 2026</td><td>2,907 &lt;span class=&quot;green&quot;&gt;(+30.5%)&lt;/span&gt;</td><td>267 &lt;span class=&quot;green&quot;&gt;(+3.5%)&lt;/span&gt;</td><td>9%</td><td>136 &lt;span class=&quot;red&quot;&gt;(-15.5%)&lt;/span&gt;</td><td>3.91</td></tr><tr><td>Jun 2026</td><td>3,152 &lt;span class=&quot;green&quot;&gt;(+27.9%)&lt;/span&gt;</td><td>354 &lt;span class=&quot;green&quot;&gt;(+33.6%)&lt;/span&gt;</td><td>11%</td><td>183 &lt;span class=&quot;green&quot;&gt;(+8.9%)&lt;/span&gt;</td><td>5.28</td></tr></tbody></table></div>
+  </section>
+
+  <section>
+    <div class="section-head"><h2>Balance Sheet And Cash Flow</h2><p class="section-note">Borrowings rose with inventory and working-capital needs. D/E remains manageable. Net debt/EBITDA ~0.48x per Q1 concall.</p></div>
+    <div class="grid cols-2"><div class="table-wrap"><table><thead><tr><th>Balance sheet item</th><th>Mar 2024</th><th>Mar 2025</th><th>Mar 2026</th></tr></thead><tbody><tr><td>Equity Capital</td><td>35</td><td>35</td><td>35</td></tr><tr><td>Reserves</td><td>3,337</td><td>3,819</td><td>4,486</td></tr><tr><td>Borrowings+</td><td>917</td><td>1,261</td><td>1,610</td></tr><tr><td>Total Liabilities</td><td>6,042</td><td>7,413</td><td>9,064</td></tr><tr><td>Fixed Assets+</td><td>1,160</td><td>1,404</td><td>1,852</td></tr><tr><td>Total Assets</td><td>6,042</td><td>7,413</td><td>9,064</td></tr></tbody></table></div><div class="table-wrap"><table><thead><tr><th>Cash flow item</th><th>Mar 2024</th><th>Mar 2025</th><th>Mar 2026</th></tr></thead><tbody><tr><td>CFO</td><td>757</td><td>462</td><td>910</td></tr><tr><td>CFI</td><td>-201</td><td>-219</td><td>-845</td></tr><tr><td>CFF</td><td>-538</td><td>-150</td><td>-127</td></tr><tr><td>FCF</td><td>556</td><td>224</td><td>554</td></tr><tr><td>Net Cash</td><td>17</td><td>93</td><td>-62</td></tr></tbody></table></div></div>
+    <div class="callout risk-callout">CFO/Operating profit was healthy in FY2026 (~78%). Working capital cycle improved from 195 → 170 days (Q1 FY27 concall). FCF positive across FY24–FY26 — important for debt-comfort given expansion capex.</div>
+  </section>
+
+  <section>
+    <div class="section-head"><h2>Concall, Filings And News</h2><p class="section-note">Q1 FY27 earnings call was held on July 30, 2026. Read-through: management tone is confident, North America + India both firing, organic segment margin recovery targeted by year-end.</p></div>
+    <div class="grid cols-3"><div class="card"><h3>Q1 FY27 Highlights</h3><ul><li>Revenue 3,152 Cr (++27.9% YoY).</li><li>Operating profit 354 Cr | OPM: 11%.</li><li>PAT 183 Cr (++8.9% YoY) — lagged revenue.</li><li>Basmati/specialty rice segment EBITDA margin ~13%.</li><li>North America: Revenue +49%; U.S. import share >60%.</li><li>Working capital: inventory days 221 → 187.</li></ul></div><div class="card"><h3>Management Guidance</h3><ul><li>India: early-growth market; e-commerce >40% on key platforms.</li><li>North America: some growth from Golden Star consolidation + tariff effects.</li><li>Organic segment: pivot from wholesale to direct CPG; 7-8% EBITDA by year-end.</li><li>Europe/Middle East: freight and geopolitical headwinds; limited pass-through.</li></ul></div><div class="card"><h3>Watch Items</h3><ul><li>PAT growth lagged revenue — interest, depreciation, and organic drag.</li><li>Organic segment margin still weak; execution risk until recovery.</li><li>Middle East margin pressure from freight / competitive pass-through.</li><li>Normalized Q1 growth (excl. Golden Star) is lower than headline figure.</li></ul></div></div>
+    <div class="table-wrap" style="margin-top:14px"><table><thead><tr><th>Source</th><th>Key takeaway</th></tr></thead><tbody><tr><td><a href="https://www.angelone.in/news/stocks/lt-foods-share-price-gains-over-4-after-q1-fy27-earnings-results-total-income-up-26-4-yoy" target="_blank">LT Foods Q1 FY27 Results: PAT +8.9% | AngelOne</a></td><td>LT Foods Q1 FY27 consolidated net profit +8.9% to Rs 183 Cr. Revenue +26.4% to Rs 3161 Cr. International revenue 71%. Basmati/specialty rice revenue +34%, volume +11%.</td></tr><tr><td><a href="https://univest.in/blogs/lt-foods-analyst-review-2026" target="_blank">LT Foods Analyst Review 2026 | Univest</a></td><td>LT Foods holds Buy consensus with average target INR 509-519. Motilal Oswal maintains Buy TP INR 520. Daawat (25% India mkt share) and Royal (49% North America share) provide durable pricing power.</td></tr><tr><td><a href="https://www.investing.com/news/company-news/lt-foods-q1-fy27" target="_blank">LT Foods Q1 FY27: Revenue +27.9% | Investing.com</a></td><td>LT Foods Q1 FY27 consolidated revenue +27.9% YoY to Rs 3152 Cr. EBITDA +20% to Rs 363 Cr. North America +49%. Working capital cycle improved from 195 to 170 days.</td></tr></tbody></table></div>
+  </section>
+
+  <section>
+    <div class="section-head"><h2>Sector And Competitive Context</h2><p class="section-note">LTFOODS is economically an FMCG/packaged-foods/export story. Broad FMCG breadth was weak during the Aug 2026 breakout — the move was idiosyncratic (earnings-led), not a sector rotation.</p></div>
+    <div class="table-wrap"><div class="table-wrap"><table><thead><tr><th>Indicator</th><th>Value</th><th>Signal</th></tr></thead><tbody><tr><td>Broad FMCG % above 50DMA</td><td>~26.7%</td><td class="amber">Weak — sector breadth not confirming</td></tr><tr><td>Stock RS vs Nifty (base 100)</td><td>122.9</td><td class="green">Leadership reasserted</td></tr><tr><td>ADX</td><td>59.9</td><td class="green">Strong trend momentum</td></tr></tbody></table></div></div>
+    <div class="table-wrap"><div class="table-wrap"><table><thead><tr><th>Symbol</th><th>Stage</th><th>Tech Score</th><th>RS</th><th>Fund Score</th><th>Signal</th></tr></thead><tbody><tr><td>LTFOODS</td><td>Stage 1</td><td>86.00</td><td>122.9</td><td>68.9</td><td class="green">BUY</td></tr><tr><td>KRBL</td><td>Stage 2</td><td>76</td><td>54.0</td><td>70.4</td><td class="green">BUY</td></tr><tr><td>BECTORFOOD</td><td>Stage 1</td><td>62.7</td><td>76.7</td><td>66.0</td><td class="amber">HOLD</td></tr><tr><td>BIKAJI</td><td>Stage 4</td><td>5</td><td>-4.0</td><td>—</td><td class="red">SELL</td></tr><tr><td>TASTYBITE</td><td>Stage 2</td><td>85</td><td>10.3</td><td>—</td><td class="green">BUY</td></tr></tbody></table></div></div>
+  </section>
+
+  <section id="chart">
+    <div class="section-head"><h2>Equity Chart V1</h2><p class="section-note">Generated by equity_chart_v1 from PostgreSQL market.equity_eod. Chart shows daily OHLCV, RSI, MACD, Supertrend, and relative strength vs Nifty.</p></div>
+    <div class="chart-frame"><img class="chart-image" src="ltfoods_2026-08-24_chart_embed.png" alt="LTFOODS Agent Adda equity chart"></div>
+    <p class="meta">Equity chart generated Aug 24 2026 from market.equity_eod. Open interactive: <a href='../latest/charts/LTFOODS_chart.html'>charts/LTFOODS_chart.html</a>.</p>
+  </section>
+
+  <section id="technicals">
+    <div class="section-head"><h2>Technical Analysis</h2><p class="section-note">RSI 76.4 + ADX 59.9 + vol 14.19x — a powerful trend, but extended condition makes fresh entries risky.</p></div>
+    <div class="grid cols-2"><div class="table-wrap"><table><thead><tr><th>Lens</th><th>Value</th><th>Assessment</th></tr></thead><tbody><tr><td>Price (EOD)</td><td>459.0</td><td>—</td></tr><tr><td>SMA 20</td><td>417.55</td><td class="green">Above</td></tr><tr><td>SMA 50</td><td>395.79</td><td class="green">Above</td></tr><tr><td>SMA 200</td><td>396.63</td><td class="green">Above</td></tr><tr><td>RSI (14)</td><td>76.4</td><td class="amber">Extended &gt;75</td></tr><tr><td>ADX</td><td>59.9</td><td class="green">Very strong trend</td></tr><tr><td>MACD</td><td>bullish</td><td class="green">Bullish</td></tr><tr><td>Supertrend</td><td>SELL</td><td class="amber">Bear signal</td></tr><tr><td>Volume ratio</td><td>14.19x</td><td class="green">Strong breakout volume</td></tr><tr><td>52w high</td><td>510.85</td><td>-10.1% from 52w high</td></tr></tbody></table></div><div class="table-wrap"><table><thead><tr><th>Ratio</th><th>Value</th></tr></thead><tbody><tr><td>Market cap</td><td>INR 15,661 Cr</td></tr><tr><td>P/E</td><td>24.4x</td></tr><tr><td>ROCE</td><td>17.7%</td></tr><tr><td>ROE</td><td>14.9%</td></tr><tr><td>Book value</td><td>INR 130</td></tr><tr><td>High / Low</td><td>491</td></tr><tr><td>Dividend yield</td><td>0.66%</td></tr></tbody></table></div></div>
+    <div class="card"><h3>Weinstein And O'Neil Read</h3>
+<h3>Stan Weinstein Stage Analysis</h3>
+<p>Agent Adda EOD snapshot marks LTFOODS as <strong>Stage 1</strong>
+(late Stage 1 → early Stage 2 transition). Price is above all three SMAs (20/50/200),
+relative strength has turned up sharply, and volume expanded heavily on the breakout.
+Confirmation requires a weekly close holding the breakout area and a constructive retest.</p>
+<div class="callout">A single high-volume candle is evidence of intention, not confirmation. Stage 2 is confirmed when the breakout is defended over 2–3 weeks with rising RS.</div>
+<h3 style="margin-top:14px">William O'Neil / CAN SLIM Lens</h3>
+<p>Positive: strong Q1 revenue growth, high-volume price breakout, RS leadership, broker optimism.
+Weak: CANSLIM composite was limited in prior snapshot, PAT growth slower than sales,
+and entry is late after the spike.</p>
+<div class="callout">O'Neil discipline prefers a proper base pivot with defined stop — not a late entry after an extended candle with RSI 76.4.</div>
+</div>
+  </section>
+
+  <section id="brokers">
+    <div class="section-head"><h2>Broker And Market View</h2><p class="section-note">Recent public broker summaries are supportive. Treat targets as market context, not valuation proof — targets were set before the Aug 24 breakout spike.</p></div>
+    <div class="card"><table><thead><tr><th>Date / source</th><th>Broker</th><th>Rating</th><th>At price</th><th>Target</th><th>Key thesis</th></tr></thead><tbody><tr><td>Aug 2026</td><td>Motilal Oswal / Moneycontrol</td><td>Buy</td><td>411</td><td>520</td><td>Q1 revenue growth, basmati strength, EBITDA momentum.</td></tr><tr><td>Apr 2026</td><td>Motilal Oswal / Moneycontrol</td><td>Buy</td><td>410</td><td>500</td><td>Constructive view after correction.</td></tr><tr><td>Mar 2026</td><td>Geojit / Moneycontrol</td><td>Buy</td><td>393</td><td>518</td><td>Upside from growth and valuation normalisation.</td></tr><tr><td>Jan 2026</td><td>Motilal Oswal / Moneycontrol</td><td>Buy</td><td>371</td><td>500</td><td>Branded specialty-food thesis.</td></tr><tr><td>Aug 2026</td><td>Trendlyne consensus</td><td>Positive</td><td>427</td><td>519 avg</td><td>Two-broker average; cluster around INR 518–520.</td></tr><tr><td>LT Foods Analyst Review 2026 | Univest</td><td>univest.in</td><td>Buy/Watch</td><td>—</td><td>—</td><td>LT Foods holds Buy consensus with average target INR 509-519. Motilal Oswal maintains Buy TP INR 520. Daawat (25% India </td></tr><tr><td>LT Foods Q1 FY27: Revenue +27.9% | Investing.com</td><td>investing.com</td><td>Buy/Watch</td><td>—</td><td>—</td><td>LT Foods Q1 FY27 consolidated revenue +27.9% YoY to Rs 3152 Cr. EBITDA +20% to Rs 363 Cr. North America +49%. Working ca</td></tr></tbody></table><div class="callout">At INR 451, the INR 518–520 public target cluster implies ~15% upside. The broker view supports business quality — it does not justify chasing a stretched candle.</div></div>
+  </section>
+
+  <section>
+    <div class="section-head"><h2>Valuation Scenarios</h2><p class="section-note">Simple scenario anchors from forward EPS and P/E range. Broker targets cluster at INR 518–520 (base/broker case).</p></div>
+    <div class="table-wrap"><table><thead><tr><th>Scenario</th><th>Forward EPS</th><th>P/E</th><th>Implied value</th><th>vs INR 451</th><th>Condition required</th></tr></thead><tbody><tr><td>Bear</td><td>17.0</td><td>18x</td><td>306</td><td class="red">−32%</td><td>Margin compression, growth slowdown, multiple contraction.</td></tr><tr><td>Base</td><td>20.0</td><td>24x</td><td>480</td><td>Flat</td><td>Steady growth, OPM ~10–11%, normal valuation.</td></tr><tr><td>Broker cluster</td><td>n/a</td><td>n/a</td><td>518–520</td><td class="green">+15%</td><td>Public broker view intact; Q2 FY27 confirms momentum.</td></tr><tr><td>Bull</td><td>23.0</td><td>30x</td><td>690</td><td class="green">+53%</td><td>Strong EPS delivery, branded-food premium multiple, new energy optionality.</td></tr></tbody></table></div>
+  </section>
+
+  <section id="risks">
+    <div class="section-head"><h2>Issues And Risks</h2><p class="section-note">The main risk today is not that the company is poor — it is paying a stretched price after a sharp move on a business that carries agricultural, freight, currency, and working-capital risk.</p></div>
+    <div class="table-wrap"><table><thead><tr><th>Risk</th><th>Evidence</th><th>Severity</th><th>Mitigation watch</th></tr></thead><tbody><tr><td>Entry risk</td><td>RSI 76.4, vol 14.19x — late buyers face sharp pullback risk.</td><td class="red">High</td><td>Wait for pullback / volume reset.</td></tr><tr><td>Margin compression</td><td>OPM 9% in Mar 2026; PAT growth lagged revenue (+8.9% vs +27.9%).</td><td class="amber">Medium</td><td>Watch Q2 OPM and interest cost trend.</td></tr><tr><td>Working capital</td><td>Rice aging cycle = long inventory; borrowings rose to 1,610 Cr in FY2026.</td><td class="amber">Medium</td><td>Monitor inventory days and D/E quarterly.</td></tr><tr><td>Export policy</td><td>India basmati export rules can change; destination-market demand can shift.</td><td class="amber">Medium</td><td>Policy tracker + North America concentration.</td></tr><tr><td>Organic segment</td><td>Margin weak; wholesale→direct CPG transition still in progress.</td><td class="muted">Low</td><td>7–8% EBITDA target by Dec 2026.</td></tr><tr><td>Valuation</td><td>25x trailing earnings; broker upside now modest at ~15% post-spike.</td><td class="muted">Low</td><td>EPS follow-through in Q2–Q4 FY27.</td></tr></tbody></table></div>
+  </section>
+
+  <section>
+    <div class="section-head"><h2>Evidence Trail</h2><p class="section-note">Source-first trail for review.</p></div>
+    <ul class="source-list"><li>Agent Adda EOD technical: PostgreSQL <code>market.equity_eod</code>, 2026-08-24.</li><li>Agent Adda stage snapshot: <code>scores.stage_snapshots</code>, Aug 2026.</li><li><a href="https://www.screener.in/company/LTFOODS/consolidated/">Screener consolidated page for LTFOODS</a>.</li><li><a href="https://ltfoods.com/investors">LT Foods investor page</a> — Q1 FY27 presentation and transcript.</li><li><a href="https://www.investing.com/news/company-news/lt-foods-q1-fy27-slides-revenue-jumps-26-brand-momentum-builds-93CH-4827896">Investing.com Q1 FY27 slides summary</a>.</li><li><a href="https://quartr.com/events/lt-foods-limited-ltfoods-q1-26-27_F4Y3fuax">Quartr Q1 FY27 earnings summary</a>.</li><li><a href="https://www.moneycontrol.com/news/business/buy-lt-foods-target-of-rs-520-motilal-oswal-13992716.html">Motilal Oswal BUY target INR 520, Aug 2026</a>.</li><li><a href="https://www.moneycontrol.com/news/business/stocks/buy-lt-foods-target-of-rs-518-geojit-financial-services-13852749.html">Geojit BUY target INR 518, Mar 2026</a>.</li><li><a href="https://trendlyne.com/research-reports/stock/302/LTFOODS/lt-foods-ltd/">Trendlyne broker consensus summary</a>.</li><li><a href="https://www.crisil.com/mnt/winshare/Ratings/RatingList/RatingDocs/LTFoodsLimited_July%2028_%202025_RR_374566.html">CRISIL rating rationale</a>. Upgraded AA/Stable Feb 2026.</li><li><a href="https://www.angelone.in/news/stocks/lt-foods-share-price-gains-over-4-after-q1-fy27-earnings-results-total-income-up-26-4-yoy">AngelOne Q1 FY27 results coverage</a>.</li><li><a href="https://www.equitybulls.com/category.php?id=373673">EquityBulls Q1 FY27 detailed numbers</a>.</li><li><a href="https://univest.in/blogs/lt-foods-analyst-review-2026" target="_blank">LT Foods Analyst Review 2026 | Univest</a>.</li><li><a href="https://www.investing.com/news/company-news/lt-foods-q1-fy27" target="_blank">LT Foods Q1 FY27: Revenue +27.9% | Investing.com</a>.</li><li><a href="https://www.investywise.com/lt-foods-credit-rating-upgrade-confirmed/" target="_blank">LT Foods Credit Rating Upgraded to AA/Stable | CRISIL</a>.</li><li><a href="https://www.tradologie.com/blogs/top-10-basmati-rice-exporters-in-india/" target="_blank">LT Foods Basmati Exports 80+ Countries</a>.</li></ul>
+    <div class="footer"><strong>Research-only disclaimer:</strong> This Agent Adda report is independent research for review, not personalized investment advice and not a buy/sell recommendation. Markets involve risk, including loss of capital. Verify all figures against company filings, exchange disclosures, and current market data before acting. SEBI-registered intermediaries may have suitability, risk-profiling, and disclosure obligations; this note is not a substitute for advice from a SEBI-registered investment adviser or research analyst.</div>
+  </section>
+</div>
+</body>
+</html>

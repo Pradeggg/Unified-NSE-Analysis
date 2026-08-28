@@ -1,0 +1,30 @@
+Category,Assumption,Value,Unit,Notes
+Date,Model date,2026-08-23,date,Prepared for AgentAdda.in product review
+FX,USD to INR,95.66,INR per USD,Wise mid-market reference
+Usage,Trading days per month,22,days,Used for monthly usage model
+Usage,Standard query input tokens,10000,tokens,Tool-retrieved context plus conversation
+Usage,Standard query output tokens,1200,tokens,Concise answer plus citations/follow-ups
+OpenAI,gpt-5-nano input price,0.05,USD per 1M input tokens,Official OpenAI pricing page
+OpenAI,gpt-5-nano output price,0.40,USD per 1M output tokens,Official OpenAI pricing page
+OpenAI,gpt-4o-mini input price,0.15,USD per 1M input tokens,Official OpenAI pricing page
+OpenAI,gpt-4o-mini output price,0.60,USD per 1M output tokens,Official OpenAI pricing page
+OpenAI,gpt-5.6-luna input price,0.20,USD per 1M input tokens,Official OpenAI pricing page
+OpenAI,gpt-5.6-luna output price,1.20,USD per 1M output tokens,Official OpenAI pricing page
+OpenAI,gpt-5.6-terra input price,2.00,USD per 1M input tokens,Official OpenAI pricing page
+OpenAI,gpt-5.6-terra output price,12.00,USD per 1M output tokens,Official OpenAI pricing page
+OpenAI,gpt-4o input price,2.50,USD per 1M input tokens,Official OpenAI pricing page
+OpenAI,gpt-4o output price,10.00,USD per 1M output tokens,Official OpenAI pricing page
+OpenAI,gpt-4 input price,30.00,USD per 1M input tokens,Official OpenAI pricing page
+OpenAI,gpt-4 output price,60.00,USD per 1M output tokens,Official OpenAI pricing page
+DeepSeek,V4 Flash off-peak input price,0.22,USD per 1M input tokens,Official DeepSeek pricing page
+DeepSeek,V4 Flash off-peak output price,0.66,USD per 1M output tokens,Official DeepSeek pricing page
+Sarvam,Sarvam 105B input price,29.28,INR per 1M input tokens,Official Sarvam pricing page
+Sarvam,Sarvam 105B output price,73.20,INR per 1M output tokens,Official Sarvam pricing page
+Fixed cost,Hosting/CDN,2000,INR per month,Lean paid beta assumption
+Fixed cost,PostgreSQL/storage/backups,3000,INR per month,Lean paid beta assumption
+Fixed cost,Monitoring/logs/analytics,1500,INR per month,Lean paid beta assumption
+Fixed cost,Email infrastructure,1000,INR per month,Lean paid beta assumption
+Fixed cost,Domain/security/misc,500,INR per month,Lean paid beta assumption
+Fixed cost,Support/content ops reserve,7000,INR per month,Lean paid beta assumption
+Fixed cost,Total fixed cost,15000,INR per month,Excludes market data license
+

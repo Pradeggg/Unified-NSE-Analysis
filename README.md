@@ -4,6 +4,12 @@ Agent Adda is a research and learning platform for Indian market analysis. It co
 
 This is not investment advice, not a trading recommendation, and not a SEBI registered advisory product. Users are responsible for their own compliance, legal obligations, data usage, and trading decisions.
 
+## Codex Skills
+
+If you are using Codex with this repo, start here:
+
+- [Codex Skill Index](docs/codex_skill_index.md)
+
 ## Install For Local Use
 
 From the project root:

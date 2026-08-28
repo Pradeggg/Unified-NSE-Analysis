@@ -62,6 +62,7 @@ def _load_dotenv(path: Path) -> None:
 
 ROOT = Path(__file__).resolve().parent
 _load_dotenv(ROOT / ".env")
+_load_dotenv(ROOT.parent / ".env")
 if ROOT.parent.name == ".worktrees":
     _load_dotenv(ROOT.parent.parent / ".env")
 
@@ -91,6 +92,10 @@ DEFAULT_MODEL = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
 TOP_PICKS_LLM_TIMEOUT = int(os.environ.get("TOP_PICKS_LLM_TIMEOUT", "90"))
 TOP_PICKS_PORTFOLIO_LLM_TIMEOUT = int(os.environ.get("TOP_PICKS_PORTFOLIO_LLM_TIMEOUT", "120"))
 MAX_PICKS = 10
+MIN_PICK_INVESTMENT_SCORE = float(os.environ.get("TOP_PICKS_MIN_INVESTMENT_SCORE", "70"))
+MIN_PICK_RS_PCT = float(os.environ.get("TOP_PICKS_MIN_RS_PCT", "20"))
+MAX_PICK_COUNT_PER_SECTOR = int(os.environ.get("TOP_PICKS_MAX_SECTOR_PICK_COUNT", "3"))
+MAX_BASE_POSITION_SIZE_PCT = float(os.environ.get("TOP_PICKS_MAX_BASE_POSITION_SIZE_PCT", "8"))
 PG_DSN = (
     os.environ.get("AGENT_ADDA_PG_DSN")
     or os.environ.get("PG_DSN")
@@ -784,11 +789,11 @@ def _svg_targets(last: float | None, entry_low: float | None, entry_high: float 
                 f'font-family="Inter,sans-serif">{html_mod.escape(label)}</text>'
                 f'<text x="{xx:.1f}" y="{ty + (-10 if above else 12)}" font-size="9" text-anchor="middle" fill="#64748b" '
                 f'font-family="Inter,sans-serif">₹{float(v):,.0f}</text>')
-    parts.append(marker(stop, "#b91c1c", "STOP", above=False))
+    parts.append(marker(stop, "#b91c1c", "INV.", above=False))   # invalidation level
     parts.append(marker(last, "#0f172a", "NOW", above=True))
-    parts.append(marker(t1, "#0f766e", "T1", above=False))
-    parts.append(marker(t2, "#16a34a", "T2", above=True))
-    parts.append(marker(t3, "#7c3aed", "T3", above=False))
+    parts.append(marker(t1, "#0f766e", "RT1", above=False))      # reference target 1
+    parts.append(marker(t2, "#16a34a", "RT2", above=True))       # reference target 2
+    parts.append(marker(t3, "#7c3aed", "RT3", above=False))      # reference target 3
     parts.append('</svg>')
     return "".join(parts)
 
@@ -1316,12 +1321,12 @@ def _svg_candlestick(chart: dict, *, symbol: str = "", entry_low=None, entry_hig
     for v in (chart.get("support_levels") or []):
         parts.append(_hline_only(v, "#26a69a", dash="3,3", opacity=0.65))
         _add_lbl(v, "#26a69a", f"S {float(v):,.0f}", "right")
-    # Stop/Targets
+    # Model reference levels (invalidation + target references — not directives)
     for v, color, prefix in [
-        (stop, "#ef4444", "STOP"),
-        (t1,   "#2dd4bf", "T1"),
-        (t2,   "#22c55e", "T2"),
-        (t3,   "#a78bfa", "T3"),
+        (stop, "#ef4444", "INV."),   # invalidation level
+        (t1,   "#2dd4bf", "RT1"),    # reference target 1
+        (t2,   "#22c55e", "RT2"),    # reference target 2
+        (t3,   "#a78bfa", "RT3"),    # reference target 3
     ]:
         if v is None: continue
         parts.append(_hline_only(v, color, dash="5,3", opacity=0.85))
@@ -1330,7 +1335,7 @@ def _svg_candlestick(chart: dict, *, symbol: str = "", entry_low=None, entry_hig
     if entry_low is not None and entry_high is not None:
         try:
             mid = (float(entry_low) + float(entry_high)) / 2
-            _add_lbl(mid, "#42a5f5", "ENTRY", "right")
+            _add_lbl(mid, "#42a5f5", "REF.", "right")   # model reference range midpoint
         except (TypeError, ValueError): pass
 
     # ── Resolve overlapping labels (vertical push)
@@ -2402,7 +2407,36 @@ def _portfolio_lab_best_strategy_confirmations() -> dict[str, dict]:
     return out
 
 
-_MAX_PER_SECTOR = 2   # cap to ensure diversification across sectors
+_MAX_PER_SECTOR = MAX_PICK_COUNT_PER_SECTOR
+
+
+def _is_current_buyable_stage2(row: dict | None) -> bool:
+    """Gate report candidates on the current stage snapshot, not stale overlays."""
+    if not row:
+        return False
+    stage = str(row.get("stage") or "").upper()
+    trading_signal = str(row.get("trading_signal") or "").upper()
+    trend_signal = str(row.get("trend_signal") or "").upper()
+    supertrend = str(row.get("supertrend_state") or "").upper()
+    inv = _safe_float(row.get("investment_score")) or 0.0
+    rs = _safe_float(row.get("relative_strength")) or 0.0
+    return (
+        stage == "STAGE_2"
+        and trading_signal in {"BUY", "STRONG_BUY"}
+        and trend_signal in {"BULLISH", "STRONG_BULLISH"}
+        and supertrend in {"", "BULLISH"}
+        and inv >= MIN_PICK_INVESTMENT_SCORE
+        and rs >= MIN_PICK_RS_PCT
+    )
+
+
+def _merge_current_stage2_row(current: dict, overlay: dict | None = None) -> dict:
+    row = dict(current or {})
+    if overlay:
+        for k, v in overlay.items():
+            if k in {"vcp_score", "vcp_breakout_pct", "vcp_contraction_pct", "narrative", "fund_details"}:
+                row[k] = v
+    return row
 
 def build_pick_list(conn, snap_date: str, n: int = MAX_PICKS) -> list[PickRationale]:
     """Build ranked pick list using four aligned signals."""
@@ -2438,12 +2472,11 @@ def build_pick_list(conn, snap_date: str, n: int = MAX_PICKS) -> list[PickRation
              vcp_row: dict | None = None, research_item: dict | None = None) -> None:
         if sym in seen or len(picks) >= n:
             return
+        if not _is_current_buyable_stage2(row):
+            return
         sector_profile = _sector_profile_for_row(sym, row)
         sect = sector_profile["sector"]
-        # Enforce diversification cap, but allow persisted VCP-confirmed and
-        # best-strategy-confirmed names to surface when the setup is thematic.
-        sector_cap = _MAX_PER_SECTOR + (3 if any(token in source for token in ("vcp", "strategy", "research")) else 0)
-        if sect and per_sector.get(sect, 0) >= sector_cap:
+        if sect and per_sector.get(sect, 0) >= _MAX_PER_SECTOR:
             return
         strat = strategy_conf.get(sym) or {}
         research_item = research_item or {}
@@ -2554,16 +2587,20 @@ def build_pick_list(conn, snap_date: str, n: int = MAX_PICKS) -> list[PickRation
     # ── Tier 1: VCP-confirmed + in a top-ranked sector  ───────────────────
     for r in vcp_picks:
         sym = r["symbol"]
-        sect = _sector_profile_for_row(sym, r)["sector"]
+        current = st2_syms.get(sym)
+        if not _is_current_buyable_stage2(current):
+            continue
+        row = _merge_current_stage2_row(current, r)
+        sect = _sector_profile_for_row(sym, row)["sector"]
         if sect not in top_sectors:
             continue
         strength = top_sectors[sect]
-        inv  = float(r.get("investment_score") or 0)
+        inv  = float(row.get("investment_score") or 0)
         vcp  = float(r.get("vcp_score") or 0)
         source = "vcp+sector"
         if sym in strategy_conf:
             source = "strategy+vcp+sector"
-        _add(sym, r, source,
+        _add(sym, row, source,
              f"VCP-confirmed Stage 2 (vcp={vcp:.0f}, inv={inv:.1f}) "
              f"in top-ranked sector {sect} (strength={strength:.0f})"
              + (f"; strategy `{strategy_conf[sym].get('strategy_id')}` confirms" if sym in strategy_conf else ""),
@@ -2592,11 +2629,15 @@ def build_pick_list(conn, snap_date: str, n: int = MAX_PICKS) -> list[PickRation
     for r in vcp_picks:
         if len(picks) >= n: break
         sym  = r["symbol"]
-        sect = _sector_profile_for_row(sym, r)["sector"]
-        inv  = float(r.get("investment_score") or 0)
+        current = st2_syms.get(sym)
+        if not _is_current_buyable_stage2(current):
+            continue
+        row = _merge_current_stage2_row(current, r)
+        sect = _sector_profile_for_row(sym, row)["sector"]
+        inv  = float(row.get("investment_score") or 0)
         vcp  = float(r.get("vcp_score") or 0)
         source = "strategy+vcp" if sym in strategy_conf else "vcp"
-        _add(sym, r, source,
+        _add(sym, row, source,
              f"VCP-confirmed Stage 2 (vcp={vcp:.0f}, inv={inv:.1f}); "
              f"sector {sect} not in current top-10 rotation"
              + (f"; strategy `{strategy_conf[sym].get('strategy_id')}` confirms" if sym in strategy_conf else ""),
@@ -3254,6 +3295,88 @@ def compute_financial_analytics(qtr: list[dict], ann: list[dict],
 # ─────────────────────────────────────────────────────────────────────────────
 # Risk / Reward / Target computation
 # ─────────────────────────────────────────────────────────────────────────────
+def compute_extension_status(tech: dict | None, snap: dict | None = None) -> dict:
+    """Classify price extension so strong setups are not presented as chase buys."""
+    tech = tech or {}
+    snap = snap or {}
+    last = _safe_float(tech.get("last") or snap.get("price"))
+    ema20 = _safe_float(tech.get("ema20") or tech.get("sma20"))
+    ema50 = _safe_float(tech.get("ema50") or tech.get("sma50"))
+    rsi = _safe_float(tech.get("rsi"))
+    dist_high = _safe_float(
+        tech.get("dist_from_high_pct")
+        if tech.get("dist_from_high_pct") is not None
+        else tech.get("dist_52w_high")
+    )
+    ret_1m = _safe_float(tech.get("ret_1m") or snap.get("change_1m_pct"))
+
+    points = 0
+    reasons: list[str] = []
+    dist_ema20 = None
+    dist_ema50 = None
+    if last and ema20:
+        dist_ema20 = (last / ema20 - 1) * 100
+        if dist_ema20 >= 12:
+            points += 3
+            reasons.append(f"{dist_ema20:.1f}% above EMA20")
+        elif dist_ema20 >= 8:
+            points += 2
+            reasons.append(f"{dist_ema20:.1f}% above EMA20")
+        elif dist_ema20 >= 5:
+            points += 1
+            reasons.append(f"{dist_ema20:.1f}% above EMA20")
+    if last and ema50:
+        dist_ema50 = (last / ema50 - 1) * 100
+        if dist_ema50 >= 20:
+            points += 2
+            reasons.append(f"{dist_ema50:.1f}% above EMA50")
+        elif dist_ema50 >= 12:
+            points += 1
+            reasons.append(f"{dist_ema50:.1f}% above EMA50")
+    if rsi is not None:
+        if rsi >= 78:
+            points += 3
+            reasons.append(f"RSI {rsi:.0f}")
+        elif rsi >= 72:
+            points += 2
+            reasons.append(f"RSI {rsi:.0f}")
+        elif rsi >= 68:
+            points += 1
+            reasons.append(f"RSI {rsi:.0f}")
+    if dist_high is not None:
+        if dist_high >= 0:
+            points += 2
+            reasons.append(f"new 52w high {dist_high:+.1f}%")
+        elif dist_high > -3:
+            points += 1
+            reasons.append(f"{dist_high:+.1f}% from 52w high")
+    if ret_1m is not None:
+        if ret_1m >= 18:
+            points += 2
+            reasons.append(f"1M return {ret_1m:+.1f}%")
+        elif ret_1m >= 12:
+            points += 1
+            reasons.append(f"1M return {ret_1m:+.1f}%")
+
+    if points >= 5:
+        status = "OVEREXTENDED"
+        guidance = "Do not chase; prefer pullback toward EMA20/base reset or staged entry only."
+    elif points >= 2:
+        status = "EXTENDED"
+        guidance = "Buy only on controlled pullback or tight base; keep size capped."
+    else:
+        status = "NORMAL"
+        guidance = "Extension is not the main risk flag; standard staged entry rules apply."
+    return {
+        "status": status,
+        "score": points,
+        "reasons": reasons[:5],
+        "guidance": guidance,
+        "dist_ema20_pct": dist_ema20,
+        "dist_ema50_pct": dist_ema50,
+    }
+
+
 def compute_risk_reward(tech: dict, snap: dict | None, fund: dict | None,
                         analytics: dict) -> dict:
     """Derive entry zone, targets, stop-loss, RR ratio, and a 0-10 risk score.
@@ -3276,6 +3399,13 @@ def compute_risk_reward(tech: dict, snap: dict | None, fund: dict | None,
     dist_high = tech.get("dist_from_high_pct")  # negative when below high
     if not last or not atr:
         return {"error": "missing price/ATR"}
+    extension = compute_extension_status(tech, snap)
+    out["extension_status"] = extension["status"]
+    out["extension_score"] = extension["score"]
+    out["extension_reasons"] = extension["reasons"]
+    out["extension_guidance"] = extension["guidance"]
+    out["dist_ema20_pct"] = extension.get("dist_ema20_pct")
+    out["dist_ema50_pct"] = extension.get("dist_ema50_pct")
 
     # ----- Entry zone: anchor on EMA20 or 0.5 ATR pullback -----
     ema20 = tech.get("ema20") or last
@@ -3340,6 +3470,13 @@ def compute_risk_reward(tech: dict, snap: dict | None, fund: dict | None,
     rsi = tech.get("rsi")
     if rsi and rsi > 75: score += 1.5; breakdown.append(f"RSI {rsi:.0f} (+1.5)")
     elif rsi and rsi > 70: score += 1.0; breakdown.append(f"RSI {rsi:.0f} (+1.0)")
+    # Explicit extension risk
+    if extension["status"] == "OVEREXTENDED":
+        score += 2.0
+        breakdown.append("Overextended (+2.0)")
+    elif extension["status"] == "EXTENDED":
+        score += 1.0
+        breakdown.append("Extended (+1.0)")
     # Stage
     stage = (snap.get("stage") or "")
     if stage == "STAGE_4": score += 3.0; breakdown.append("Stage 4 (+3.0)")
@@ -3367,11 +3504,16 @@ def compute_risk_reward(tech: dict, snap: dict | None, fund: dict | None,
 
     # Suggested position size — inverse risk + RR
     rr = out.get("rr_ratio_4m") or 0
-    if score >= 7 or rr < 1: out["position_size_pct"] = 4
-    elif score >= 5: out["position_size_pct"] = 6
-    elif score >= 3 and rr >= 2: out["position_size_pct"] = 10
-    elif rr >= 3: out["position_size_pct"] = 12
-    else: out["position_size_pct"] = 8
+    if score >= 7 or rr < 1: pos = 4
+    elif score >= 5: pos = 6
+    elif score >= 3 and rr >= 2: pos = 8
+    elif rr >= 3: pos = 8
+    else: pos = 8
+    if extension["status"] == "OVEREXTENDED":
+        pos = min(pos, 3)
+    elif extension["status"] == "EXTENDED":
+        pos = min(pos, 5)
+    out["position_size_pct"] = min(pos, MAX_BASE_POSITION_SIZE_PCT)
 
     return out
 
@@ -4106,12 +4248,15 @@ def _serialize_stocks_for_llm(stocks: list[dict]) -> str:
 
 
 _DEEP_SYSTEM_MSG = (
-    "You are a senior buy-side equity research analyst building a comprehensive "
-    "investment thesis for each Indian (NSE) stock you are given. You reason "
-    "FIRST PRINCIPLES across price action, sector context, fundamental scoring "
-    "frameworks (Piotroski, Altman Z, Beneish M), P&L momentum, balance sheet "
-    "health, cash-flow quality, and recent corporate actions. You are quantitative "
-    "— every claim cites a number from the JSON dossier. You never invent figures."
+    "You are a senior equity research professional building an objective research summary "
+    "for each Indian (NSE) stock you are given. You reason across price action, sector "
+    "context, fundamental scoring frameworks (Piotroski, Altman Z, Beneish M), P&L momentum, "
+    "balance sheet health, cash-flow quality, and recent corporate actions. You are quantitative "
+    "— every claim cites a number from the JSON dossier. You never invent figures. "
+    "IMPORTANT: Your output is for research and educational purposes only. It is not SEBI-registered "
+    "investment advice. Do not frame any output as a personalized buy or sell recommendation. "
+    "All price levels (targets, stops, entries) are research reference points derived from the data — "
+    "always accompany them with the note that they are model outputs, not advice."
 )
 
 
@@ -4165,14 +4310,14 @@ def _build_deep_llm_prompt(stocks: list[dict], macro_context: str, snap_date: st
         '        "rating_disclaimer": "Always include: \\"Synthesised from dossier — no live broker poll wired.\\""',
         '      },',
         '      "key_risks": ["risk 1 with metric", "risk 2", "risk 3"],',
-        '      "action": "1 sentence: entry zone or wait-for-pullback level, invalidation, stop guidance",',
-        '      "potential_target_short_term": "numeric ₹ target for ~2 months (cite ATR/level used)",',
-        '      "target_4m": "numeric ₹ target for ~4 months (cite ATR/breakout level used)",',
-        '      "potential_target_long_term": "numeric ₹ target for ~6 months (cite growth/valuation logic)",',
-        '      "stop_loss": "numeric ₹ stop-loss with reasoning (e.g. EMA50, prior swing)",',
-        '      "risk_reward_ratio": "numeric ratio (target_upside ÷ stop_downside) for the 4-month view",',
+        '      "action": "1 sentence: key research observation framing the setup — describe the technical/fundamental condition objectively without specifying entry prices, stop-loss levels, or directives to buy or sell",',
+        '      "potential_target_short_term": "model reference level for ~2 months based on ATR/technical structure (label as \'model reference\', not a price target or advice)",',
+        '      "target_4m": "model reference level for ~4 months based on ATR/breakout structure (label as \'model reference\', not a price target or advice)",',
+        '      "potential_target_long_term": "model reference level for ~6 months based on valuation/growth logic (label as \'model reference\', not a price target or advice)",',
+        '      "stop_loss": "model reference invalidation level with reasoning (e.g. EMA50, prior swing) — label as \'reference invalidation level\', not a stop-loss instruction",',
+        '      "risk_reward_ratio": "model reference ratio (reference upside ÷ reference downside) for the 4-month view — not a trading instruction",',
         '      "risk_score_0_10": "integer 0-10 risk score with brief rationale (0=low, 10=high) considering volatility, valuation, leverage, stage, fundamentals",',
-        '      "position_size_pct": "suggested % of portfolio capital for this name (1-15) given risk score and conviction",',
+        '      "position_size_pct": "illustrative % weight used in model portfolio construction (1-15) based on risk score — not a personal allocation recommendation",',
         '      "conviction": "HIGH | MEDIUM | LOW",',
         '      "conviction_rationale": "1 sentence justifying the conviction tier"',
         '    }',
@@ -4185,6 +4330,11 @@ def _build_deep_llm_prompt(stocks: list[dict], macro_context: str, snap_date: st
         "- If a metric is missing/None, say so explicitly rather than fabricating.",
         "- Cite concrete numbers from the dossier (e.g., 'PAT QoQ +24.8%', 'ROCE 34%', 'Net cash ₹3,169 Cr').",
         "- The thesis must integrate at LEAST 5 of the 10 dimensions listed above.",
+        "- All price reference levels (targets, stops, entries) are model-derived research reference points, "
+          "not personalized investment advice. Frame them as such — e.g. 'model reference target' or "
+          "'technical reference stop', not as instructions to the reader.",
+        "- The output is for research and educational purposes only and does not constitute SEBI-registered "
+          "investment advice or a buy/sell recommendation. Do not use language that implies a personal directive.",
     ])
 
 
@@ -4260,6 +4410,14 @@ def _rule_based_narratives(stocks: list[dict]) -> dict:
             bull.append(f"Momentum RSI {tech['rsi']:.0f}")
         if tech.get("dist_from_high_pct") is not None and tech["dist_from_high_pct"] > -5:
             bull.append("Within 5% of 52w high")
+        rr = s.get("risk_reward") or {}
+        ext_status = rr.get("extension_status") or "NORMAL"
+        ext_reasons = rr.get("extension_reasons") or []
+        ext_guidance = rr.get("extension_guidance") or ""
+        if ext_status == "OVEREXTENDED":
+            risk.append("Overextended: " + ("; ".join(ext_reasons) if ext_reasons else "price stretched vs trend — validate live conditions independently"))
+        elif ext_status == "EXTENDED":
+            risk.append("Extended: " + ("; ".join(ext_reasons) if ext_reasons else "technical levels extended — review against own risk framework"))
 
         # Fundamentals (scores)
         ps = float(fund.get("piotroski_score") or 0)
@@ -4311,7 +4469,11 @@ def _rule_based_narratives(stocks: list[dict]) -> dict:
         def _f(v, fmt="{:.1f}"):
             try: return fmt.format(float(v))
             except (TypeError, ValueError): return "—"
-        rr = s.get("risk_reward") or {}
+        action_prefix = ""
+        if ext_status == "OVEREXTENDED":
+            action_prefix = "Extended relative to EMA20/base — technical setup warrants caution and independent review. "
+        elif ext_status == "EXTENDED":
+            action_prefix = "Moderately extended — validate live conditions independently before drawing conclusions. "
         per_stock[s["symbol"]] = {
             "thesis": thesis,
             "key_catalysts": cat or ["Watch next quarterly print"],
@@ -4324,7 +4486,8 @@ def _rule_based_narratives(stocks: list[dict]) -> dict:
             ),
             "technical_view": (
                 f"RSI {_f(tech.get('rsi'))}, 1Y return {_f(tech.get('ret_1y'))}%, "
-                f"dist from 52w high {_f(tech.get('dist_from_high_pct'))}%."
+                f"dist from 52w high {_f(tech.get('dist_from_high_pct'))}%; "
+                f"extension {ext_status}."
             ),
             "chart_narrative": _rule_chart_narrative(tech, rr),
             "sector_view": sec_text,
@@ -4339,11 +4502,12 @@ def _rule_based_narratives(stocks: list[dict]) -> dict:
             "analyst_consensus": _rule_analyst_consensus(s, a, fund, snap, rr, rs, bull, risk),
             "key_risks": risk or ["No quantitative red flag in dossier"],
             "action": (
-                f"Enter ₹{_f(rr.get('entry_low'),'{:.0f}')}-₹{_f(rr.get('entry_high'),'{:.0f}')}; "
-                f"stop ₹{_f(rr.get('stop_loss'),'{:.0f}')}; "
-                f"signal {snap.get('trading_signal','HOLD')}."
+                action_prefix +
+                f"Model reference range ₹{_f(rr.get('entry_low'),'{:.0f}')}-₹{_f(rr.get('entry_high'),'{:.0f}')}; "
+                f"reference invalidation level ₹{_f(rr.get('stop_loss'),'{:.0f}')}; "
+                f"technical signal {snap.get('trading_signal','HOLD')} (research filter, not a directive)."
             ) if rr and "error" not in rr else
-            f"{snap.get('trading_signal','HOLD')} bias; stage {snap.get('stage','—')}; size per regime",
+            f"Technical signal {snap.get('trading_signal','HOLD')}; stage {snap.get('stage','—')} (research filter, not a directive).",
             "potential_target_short_term": rr.get("target_2m"),
             "potential_target_long_term": rr.get("target_6m"),
             "target_4m": rr.get("target_4m"),
@@ -4352,6 +4516,9 @@ def _rule_based_narratives(stocks: list[dict]) -> dict:
             "risk_score_0_10": rr.get("risk_score"),
             "risk_tier": rr.get("risk_tier"),
             "risk_factors": rr.get("risk_factors") or [],
+            "extension_status": ext_status,
+            "extension_reasons": ext_reasons,
+            "extension_guidance": ext_guidance,
             "position_size_pct": rr.get("position_size_pct"),
             "conviction": "HIGH" if len(bull) >= 5 else ("MEDIUM" if len(bull) >= 3 else "LOW"),
             "conviction_rationale": f"{len(bull)} positive · {len(risk)} negative factors flagged",
@@ -4359,8 +4526,8 @@ def _rule_based_narratives(stocks: list[dict]) -> dict:
     return {
         "executive_summary": (
             f"Mechanically-synthesised basket of {len(stocks)} stocks combining sector-rotation "
-            "leadership and Weinstein stage-2 momentum, deep-screened across "
-            "P&L, BS, CF, fundamental scores and corporate events. AgentAdda Insights — "
+            "leadership and current Weinstein stage-2 momentum, screened across available "
+            "P&L, BS, CF, fundamental scores, extension risk and corporate events. AgentAdda Insights — "
             "rule-based."
         ),
         "top_conviction_picks": [
@@ -4368,9 +4535,10 @@ def _rule_based_narratives(stocks: list[dict]) -> dict:
             if per_stock[s["symbol"]]["conviction"] == "HIGH"
         ][:3],
         "portfolio_construction": (
-            "Equal-weight 10% per name baseline. Overweight HIGH-conviction names by +2%, "
-            "halve LOW-conviction sizes. Cap sector exposure at 30%. Scale gross to 60-70% in "
-            "elevated VIX regimes; cap per-trade risk at 1-2% of NAV via stop-distance × size."
+            "Suggested sizes are max position caps, not a fully-invested model portfolio. "
+            "Current rules cap each name at 8%, reduce extended names to 5% and overextended "
+            "names to 3%. Cap sector exposure at 30%. Scale gross to 60-70% in elevated VIX "
+            "regimes; cap per-trade risk at 1-2% of NAV via stop-distance × size."
         ),
         "sector_concentration_note": "Review sector weights against the spread shown below.",
         "per_stock": per_stock,
@@ -4438,8 +4606,9 @@ def generate_narratives(stocks: list[dict], macro_context: str, snap_date: str,
         print("   ⚠️  All deep-analysis chunks failed — using rule-based for all stocks")
         return rule_fallback
 
-    # Fill any missing symbol from rule-based AND merge computed risk_reward
-    # baseline as defaults (LLM-supplied targets/stops take precedence).
+    # Fill any missing symbol from rule-based and make computed risk controls
+    # authoritative. LLM prose can explain, but it must not override stops,
+    # RR, risk tier, position size, or extension state.
     for s in stocks:
         sym = s["symbol"]
         if sym not in per_stock:
@@ -4447,15 +4616,18 @@ def generate_narratives(stocks: list[dict], macro_context: str, snap_date: str,
         rr = s.get("risk_reward") or {}
         if rr and "error" not in rr:
             ps = per_stock[sym]
-            ps.setdefault("potential_target_short_term", rr.get("target_2m"))
-            ps.setdefault("target_4m", rr.get("target_4m"))
-            ps.setdefault("potential_target_long_term", rr.get("target_6m"))
-            ps.setdefault("stop_loss", rr.get("stop_loss"))
-            ps.setdefault("risk_reward_ratio", rr.get("rr_ratio_4m"))
-            ps.setdefault("risk_score_0_10", rr.get("risk_score"))
-            ps.setdefault("risk_tier", rr.get("risk_tier"))
-            ps.setdefault("risk_factors", rr.get("risk_factors") or [])
-            ps.setdefault("position_size_pct", rr.get("position_size_pct"))
+            ps["potential_target_short_term"] = rr.get("target_2m")
+            ps["target_4m"] = rr.get("target_4m")
+            ps["potential_target_long_term"] = rr.get("target_6m")
+            ps["stop_loss"] = rr.get("stop_loss")
+            ps["risk_reward_ratio"] = rr.get("rr_ratio_4m")
+            ps["risk_score_0_10"] = rr.get("risk_score")
+            ps["risk_tier"] = rr.get("risk_tier")
+            ps["risk_factors"] = rr.get("risk_factors") or []
+            ps["position_size_pct"] = rr.get("position_size_pct")
+            ps["extension_status"] = rr.get("extension_status")
+            ps["extension_reasons"] = rr.get("extension_reasons") or []
+            ps["extension_guidance"] = rr.get("extension_guidance")
         # Chart narrative fallback if LLM didn't emit one
         if not per_stock[sym].get("chart_narrative"):
             per_stock[sym]["chart_narrative"] = _rule_chart_narrative(s.get("tech") or {}, rr)
@@ -4541,6 +4713,63 @@ def _pct(v: Any, decimals: int = 1) -> str:
         return f"{float(v):.{decimals}f}%"
     except Exception:
         return str(v)
+
+
+def _first_float(*values: Any) -> float | None:
+    for value in values:
+        out = _safe_float(value)
+        if out is not None:
+            return out
+    return None
+
+
+def _sanitise_action_text(text: str) -> str:
+    """SEBI compliance: strip directive entry/stop-loss price patterns.
+
+    Applied to the LLM 'action' field in BOTH the MD and HTML render paths as a
+    belt-and-braces guard — even when the prompt schema already prohibits prices.
+    """
+    if not text:
+        return text
+    _sig_m = re.search(r"\bsignal\s+([A-Z_]+)", text)
+    _sig_tok = _sig_m.group(1) if _sig_m else ""
+    # 1. Full directive block: "Enter/Entry [at] ₹X[-₹Y]; stop[-loss] ₹Z; signal S[.]"
+    text = re.sub(
+        r"(?i)(enter|entry)\s+(at\s+|above\s+|below\s+|near\s+|around\s+|in\s+the\s+range\s+of\s+)?"
+        r"₹[\d,]+(?:\s*[-–]\s*₹[\d,]+)?"
+        r"(?:\s*[;,]\s*stop(?:[\s.\-]?loss)?\s+(?:at\s+|of\s+|near\s+|around\s+)?₹[\d,]+)?"
+        r"(?:\s*[;,]\s*signal\s+\w+)?\.?",
+        (f"Technical signal: {_sig_tok} (research filter, not a directive)."
+         if _sig_tok else "Technical setup warrants independent review."),
+        text,
+    )
+    # 2. Residual stop-loss price references (handles "stop loss of ₹X" with space)
+    text = re.sub(
+        r"(?i)(;|,)?\s*(with\s+a?\s*)?stop(?:[\s.\-]?loss)?\s+(at|of|near|around)?\s*₹[\d,]+",
+        " (reference invalidation level as per model)",
+        text,
+    )
+    # 3. "Consider entering / entering on pullback to ₹XXXX"
+    text = re.sub(
+        r"(?i)(consider\s+)?(entering|buying)\s+(on\s+)?(a\s+)?pullbacks?"
+        r"(\s+(towards?|to|near|around|at))?\s+₹[\d,]+",
+        "setup warrants review at current technical levels",
+        text,
+    )
+    # 4. "wait for pullback to ₹XXXX" / "await pullback towards ₹XXXX"
+    text = re.sub(
+        r"(?i)(await|wait\s+for)\s+a?\s*pullbacks?"
+        r"(\s+(towards?|to|near|around|at))?\s+₹[\d,]+",
+        "monitor for technical consolidation",
+        text,
+    )
+    # 5. Any remaining "preposition ₹XXXX" that looks like an action price
+    text = re.sub(
+        r"(?i)(at|above|below|near|around|towards?)\s+₹[\d,]+",
+        "at current technical levels",
+        text,
+    )
+    return re.sub(r"  +", " ", text).strip()
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -4663,30 +4892,32 @@ def render_markdown(snap_date: str, picks: list[PickRationale], enriched: list[d
     out.append("## Executive Summary\n\n")
     out.append(f"{narratives.get('executive_summary','')}\n\n")
     out.append(f"**Macro context:** {macro_context}\n\n")
+    out.append(f"**Data freshness:** Latest available market snapshot used for this report is **{snap_date}**; generation time may be later than the EOD data date.\n\n")
 
     out.append(_selection_methodology_markdown())
 
     out.append("## Pick Summary\n\n")
-    out.append("| # | Symbol | Sector | Sub-sector | Price | Stage | Inv.Score | RS% | 6M Tgt | RR(4M) | Risk | Source |\n")
-    out.append("|---|---|---|---|---:|---|---:|---:|---:|---:|:---:|---|\n")
+    out.append("| # | Symbol | Sector | Sub-sector | Price | Stage | Inv.Score | RS% | 6M Tgt | RR(4M) | Risk | Extension | Source |\n")
+    out.append("|---|---|---|---|---:|---|---:|---:|---:|---:|:---:|:---:|---|\n")
     per_stock_narr_pre = narratives.get("per_stock", {}) or {}
     for i, (p, e) in enumerate(zip(picks, enriched), 1):
         snap = e["snapshot"] or {}
         narr_i = per_stock_narr_pre.get(p.symbol, {})
         rr_i = e.get("risk_reward") or {}
-        tgt = narr_i.get("potential_target_long_term") or rr_i.get("target_6m")
+        tgt = _first_float(narr_i.get("potential_target_long_term"), rr_i.get("target_6m"))
         try: tgt_d = f"₹{float(tgt):,.0f}" if tgt is not None else "—"
         except (TypeError, ValueError): tgt_d = "—"
-        rrv = narr_i.get("risk_reward_ratio") or rr_i.get("rr_ratio_4m")
+        rrv = _first_float(narr_i.get("risk_reward_ratio"), rr_i.get("rr_ratio_4m"))
         try: rr_d = f"{float(rrv):.2f}x" if rrv is not None else "—"
         except (TypeError, ValueError): rr_d = "—"
-        rsv = narr_i.get("risk_score_0_10") if narr_i.get("risk_score_0_10") is not None else rr_i.get("risk_score")
+        rsv = _first_float(rr_i.get("risk_score"), narr_i.get("risk_score_0_10"))
         try: rs_d = f"{float(rsv):.1f}" if rsv is not None else "—"
         except (TypeError, ValueError): rs_d = "—"
+        ext_d = narr_i.get("extension_status") or rr_i.get("extension_status") or "—"
         out.append(
             f"| {i} | **{p.symbol}** | {p.sector} | {p.sub_sector or '—'} | {_nz(snap.get('price'))} | "
             f"{snap.get('stage','—')} | {_nz(snap.get('investment_score'))} | "
-            f"{_pct(snap.get('relative_strength'))} | {tgt_d} | {rr_d} | {rs_d} | {p.source} |\n"
+            f"{_pct(snap.get('relative_strength'))} | {tgt_d} | {rr_d} | {rs_d} | {ext_d} | {p.source} |\n"
         )
 
     out.append("\n## Per-Stock Deep Dive\n\n")
@@ -4751,28 +4982,36 @@ def render_markdown(snap_date: str, picks: list[PickRationale], enriched: list[d
             else:
                 out.append(f"**Key risks:** {risks}\n\n")
         if narr.get("action"):
-            out.append(f"**Action:** {narr['action']}\n\n")
+            _action_text = _sanitise_action_text(narr["action"])
+            out.append(f"**Research observation:** {_action_text}\n\n")
         rr_md = e.get("risk_reward") or {}
         if rr_md and "error" not in rr_md:
             def _m(v): 
                 try: return f"₹{float(v):,.0f}"
                 except (TypeError, ValueError): return "—"
-            t1 = narr.get('potential_target_short_term') or rr_md.get('target_2m')
-            t3 = narr.get('target_4m') or rr_md.get('target_4m')
-            t12 = narr.get('potential_target_long_term') or rr_md.get('target_6m')
-            sl = narr.get('stop_loss') or rr_md.get('stop_loss')
-            rr_v = narr.get('risk_reward_ratio') or rr_md.get('rr_ratio_4m')
-            rs_v = narr.get('risk_score_0_10') if narr.get('risk_score_0_10') is not None else rr_md.get('risk_score')
-            tier = narr.get('risk_tier') or rr_md.get('risk_tier','')
+            t1 = _first_float(narr.get('potential_target_short_term'), rr_md.get('target_2m'))
+            t3 = _first_float(narr.get('target_4m'), rr_md.get('target_4m'))
+            t12 = _first_float(narr.get('potential_target_long_term'), rr_md.get('target_6m'))
+            sl = _first_float(narr.get('stop_loss'), rr_md.get('stop_loss'))
+            rr_v = _first_float(narr.get('risk_reward_ratio'), rr_md.get('rr_ratio_4m'))
+            rs_v = _first_float(rr_md.get('risk_score'), narr.get('risk_score_0_10'))
+            tier = rr_md.get('risk_tier') or narr.get('risk_tier','')
+            ext_status = narr.get("extension_status") or rr_md.get("extension_status") or "—"
+            ext_reasons = narr.get("extension_reasons") or rr_md.get("extension_reasons") or []
+            ext_guidance = narr.get("extension_guidance") or rr_md.get("extension_guidance") or ""
             try: rr_disp = f"{float(rr_v):.2f}x" if rr_v is not None else "—"
             except (TypeError, ValueError): rr_disp = "—"
             try: rs_disp = f"{float(rs_v):.1f}" if rs_v is not None else "—"
             except (TypeError, ValueError): rs_disp = "—"
+            ext_text = ext_status
+            if ext_reasons:
+                ext_text += " — " + "; ".join(map(str, ext_reasons))
             out.append(
-                f"**Targets:** 2M {_m(t1)} · 4M {_m(t3)} · 6M {_m(t12)}  \n"
-                f"**Stop:** {_m(sl)} · **Risk/Reward (4M):** {rr_disp}  \n"
-                f"**Risk score:** {rs_disp} / 10 ({tier}) · **Suggested size:** "
-                f"{narr.get('position_size_pct') or rr_md.get('position_size_pct','—')}%\n\n"
+                f"**Model ref targets:** 2M {_m(t1)} · 4M {_m(t3)} · 6M {_m(t12)} _(model reference only)_  \n"
+                f"**Model inv. level:** {_m(sl)} · **Reward/Risk (4M):** {rr_disp}  \n"
+                f"**Risk score:** {rs_disp} / 10 ({tier}) · **Illustrative weight:** "
+                f"{rr_md.get('position_size_pct','—')}% _(not a personal allocation recommendation)_  \n"
+                f"**Extension:** {ext_text}. {ext_guidance}\n\n"
             )
         if narr.get("conviction"):
             out.append(f"**Conviction:** **{narr['conviction']}** — {narr.get('conviction_rationale','')}\n\n")
@@ -5321,29 +5560,39 @@ def _stock_card_html(idx: int, p: PickRationale, e: dict, narr: dict) -> str:
     def _fmt_rr(v):
         try: return f"{float(v):.2f}×"
         except (TypeError, ValueError): return "—"
-    risk_score = narr.get("risk_score_0_10")
+    risk_score = (rr or {}).get("risk_score")
+    if risk_score is None:
+        risk_score = narr.get("risk_score_0_10")
     try: risk_score_n = float(risk_score) if risk_score is not None else None
     except (TypeError, ValueError): risk_score_n = None
-    risk_tier = narr.get("risk_tier") or (
+    risk_tier = (rr or {}).get("risk_tier") or narr.get("risk_tier") or (
         "LOW" if risk_score_n is not None and risk_score_n <= 3 else
         "MEDIUM" if risk_score_n is not None and risk_score_n <= 6 else
         "HIGH" if risk_score_n is not None else ""
     )
     risk_color = {"LOW": "#16a34a", "MEDIUM": "#d97706", "HIGH": "#b91c1c"}.get(risk_tier, "#64748b")
+    ext_status = narr.get("extension_status") or (rr or {}).get("extension_status") or "NORMAL"
+    ext_reasons = narr.get("extension_reasons") or (rr or {}).get("extension_reasons") or []
+    ext_guidance = narr.get("extension_guidance") or (rr or {}).get("extension_guidance") or ""
+    ext_chip_cls = {"NORMAL": "green", "EXTENDED": "amber", "OVEREXTENDED": "red"}.get(ext_status, "slate")
+    ext_detail = ext_status
+    if ext_reasons:
+        ext_detail += " - " + "; ".join(map(str, ext_reasons[:3]))
 
     rr_rows = [
-        ("Entry zone (low–high)",
+        ("Model ref range",
          f"{_fmt_money(rr.get('entry_low'))} – {_fmt_money(rr.get('entry_high'))}" if rr else "—"),
-        ("Stop loss", _fmt_money(narr.get('stop_loss') if narr.get('stop_loss') is not None else (rr or {}).get('stop_loss'))),
-        ("Target 2M", _fmt_money(narr.get('potential_target_short_term') if narr.get('potential_target_short_term') is not None else (rr or {}).get('target_2m'))),
-        ("Target 4M", _fmt_money(narr.get('target_4m') if narr.get('target_4m') is not None else (rr or {}).get('target_4m'))),
-        ("Target 6M", _fmt_money(narr.get('potential_target_long_term') if narr.get('potential_target_long_term') is not None else (rr or {}).get('target_6m'))),
-        ("Reward / Risk (4M)", _fmt_rr(narr.get('risk_reward_ratio') if narr.get('risk_reward_ratio') is not None else (rr or {}).get('rr_ratio_4m'))),
+        ("Model inv. level", _fmt_money(_first_float(narr.get('stop_loss'), (rr or {}).get('stop_loss')))),
+        ("Ref target 2M", _fmt_money(_first_float(narr.get('potential_target_short_term'), (rr or {}).get('target_2m')))),
+        ("Ref target 4M", _fmt_money(_first_float(narr.get('target_4m'), (rr or {}).get('target_4m')))),
+        ("Ref target 6M", _fmt_money(_first_float(narr.get('potential_target_long_term'), (rr or {}).get('target_6m')))),
+        ("Reward / Risk (4M)", _fmt_rr(_first_float(narr.get('risk_reward_ratio'), (rr or {}).get('rr_ratio_4m')))),
         ("Reward / Risk (6M)", _fmt_rr((rr or {}).get('rr_ratio_6m'))),
         ("Risk per share", _fmt_money((rr or {}).get('risk_per_share'))),
-        ("Suggested position size", f"{narr.get('position_size_pct') or (rr or {}).get('position_size_pct') or '—'}% of portfolio"),
+        ("Extension", ext_detail),
+        ("Illustrative weight", f"{(rr or {}).get('position_size_pct') or '—'}% (model only — not a personal allocation recommendation)"),
     ]
-    risk_factors = narr.get("risk_factors") or (rr or {}).get("risk_factors") or []
+    risk_factors = (rr or {}).get("risk_factors") or narr.get("risk_factors") or []
     risk_factors_html = (
         f"<p style='margin:6px 0 0 0;font-size:11px;color:#64748b'>"
         f"Risk score breakdown: {h(' · '.join(map(str, risk_factors)))}</p>"
@@ -5352,7 +5601,7 @@ def _stock_card_html(idx: int, p: PickRationale, e: dict, narr: dict) -> str:
     rr_card_html = (
         "<div class='overview-grid' style='margin-top:12px'>"
         "<div class='summary-card' style='background:#fff7ed'>"
-        "<h3>🎯 Targets &amp; Risk/Reward</h3>"
+        "<h3>📊 Model Reference Levels <span style='font-size:.72rem;font-weight:400;color:#92400e'>(not investment advice)</span></h3>"
         f"{_table(rr_rows)}{risk_factors_html}"
         "</div>"
         "<div class='summary-card' style='background:#fef2f2'>"
@@ -5363,6 +5612,7 @@ def _stock_card_html(idx: int, p: PickRationale, e: dict, narr: dict) -> str:
         "<p style='margin-top:8px;font-size:12px;color:#475569'>"
         "0–3 LOW · 4–6 MEDIUM · 7–10 HIGH. Blends ATR-volatility, distance-from-high, RSI, "
         "Weinstein stage, Altman Z / Beneish M, debt trend &amp; OCF/PAT quality.</p>"
+        f"<p style='margin-top:8px;font-size:12px;color:#475569'><b>Extension:</b> {h(ext_status)}. {h(ext_guidance)}</p>"
         "</div></div>"
     )
 
@@ -5400,11 +5650,11 @@ def _stock_card_html(idx: int, p: PickRationale, e: dict, narr: dict) -> str:
             '<span style="background:#ab47bc;padding:3px 8px;border-radius:3px">EMA 200</span>'
             '<span style="background:#26a69a;padding:3px 8px;border-radius:3px">Support</span>'
             '<span style="background:#ef5350;padding:3px 8px;border-radius:3px">Resistance</span>'
-            '<span style="background:#42a5f5;padding:3px 8px;border-radius:3px">Entry zone</span>'
-            '<span style="background:#ef4444;padding:3px 8px;border-radius:3px">Stop</span>'
-            '<span style="background:#2dd4bf;padding:3px 8px;border-radius:3px">T1 (2M)</span>'
-            '<span style="background:#22c55e;padding:3px 8px;border-radius:3px">T2 (4M)</span>'
-            '<span style="background:#a78bfa;padding:3px 8px;border-radius:3px">T3 (6M)</span>'
+            '<span style="background:#42a5f5;padding:3px 8px;border-radius:3px" title="Model reference range — not an entry recommendation">Ref range</span>'
+            '<span style="background:#ef4444;padding:3px 8px;border-radius:3px" title="Model invalidation level — not a stop-loss instruction">Inv. level</span>'
+            '<span style="background:#2dd4bf;padding:3px 8px;border-radius:3px" title="Model reference target 1 — not a price target recommendation">Ref T1 (2M)</span>'
+            '<span style="background:#22c55e;padding:3px 8px;border-radius:3px" title="Model reference target 2 — not a price target recommendation">Ref T2 (4M)</span>'
+            '<span style="background:#a78bfa;padding:3px 8px;border-radius:3px" title="Model reference target 3 — not a price target recommendation">Ref T3 (6M)</span>'
             '<span style="background:#a78bfa;padding:3px 8px;border-radius:3px">POC (Vol Profile)</span>'
             '<span style="background:#e879f9;padding:3px 8px;border-radius:3px">RSI 14</span>'
             '</div>'
@@ -5617,9 +5867,9 @@ def _stock_card_html(idx: int, p: PickRationale, e: dict, narr: dict) -> str:
              risk_tier or ""),
             ("green",
              "6M Target",
-             (f"₹{float(narr.get('potential_target_long_term') or rr.get('target_6m') or 0):,.0f}"
-              if (narr.get('potential_target_long_term') or rr.get('target_6m')) else "—"),
-             f"RR {_fmt_rr(narr.get('risk_reward_ratio') or rr.get('rr_ratio_4m'))}"),
+             (f"₹{float(_first_float(narr.get('potential_target_long_term'), rr.get('target_6m'))):,.0f}"
+              if _first_float(narr.get('potential_target_long_term'), rr.get('target_6m')) is not None else "—"),
+             f"RR {_fmt_rr(_first_float(narr.get('risk_reward_ratio'), rr.get('rr_ratio_4m')))}"),
         ]
         kpi_tiles_html = "".join(
             f'<div class="tp-kpi-tile {cls}"><div class="lbl">{h(lbl)}</div>'
@@ -5726,7 +5976,7 @@ def _stock_card_html(idx: int, p: PickRationale, e: dict, narr: dict) -> str:
         _narr_blk("val", "Valuation", "💰", narr.get("valuation_note")),
         _narr_blk("cat", "Key Catalysts", "🚀", narr.get("key_catalysts")),
         _narr_blk("risk", "Key Risks", "⚠️", narr.get("key_risks")),
-        _narr_blk("act", "Action", "🎯", narr.get("action")),
+        _narr_blk("act", "Research Observation", "🔍", _sanitise_action_text(narr.get("action") or "")),
     ])
 
     # Conviction chip
@@ -5816,6 +6066,7 @@ def _stock_card_html(idx: int, p: PickRationale, e: dict, narr: dict) -> str:
         {f'<span class="tp-chip green">Best Strategy: {h(p.strategy_id or "")} · {h((p.strategy_signal or "").replace("_", " "))}</span>' if p.strategy_confirmed else ''}
         {f'<span class="tp-chip {conv_cls}">Conviction: {h(conv)}</span>' if conv else ''}
         {f'<span class="tp-chip {risk_chip_cls}">Risk: {h(risk_tier)}</span>' if risk_tier else ''}
+        <span class="tp-chip {ext_chip_cls}">Extension: {h(ext_status)}</span>
         <span class="tp-chip blue">Signal: {h(snap.get('trading_signal') or '—')}</span>
         <span class="tp-chip slate">Supertrend: {h(snap.get('supertrend_state') or '—')}</span>
         {_rrg_sector_badge(p)}
@@ -5981,6 +6232,11 @@ def render_html(snap_date: str, picks: list[PickRationale], enriched: list[dict]
     warn_n   = sum(1 for p in picks if p.rrg_quadrant in ("LAGGING", "WEAKENING"))
     high_conv = sum(1 for p in picks
                     if (per_stock_narr.get(p.symbol, {}).get("conviction") or "").upper() == "HIGH")
+    extended_n = sum(
+        1 for p, e in zip(picks, enriched)
+        if ((per_stock_narr.get(p.symbol, {}).get("extension_status")
+             or (e.get("risk_reward") or {}).get("extension_status")) in {"EXTENDED", "OVEREXTENDED"})
+    )
 
     conf_sub = f"{triple_n} triple · {dual_n} dual · {warn_n} sector headwind"
     hero_kpis = "".join([
@@ -6010,12 +6266,13 @@ def render_html(snap_date: str, picks: list[PickRationale], enriched: list[dict]
     <div>
       <div class="tp-hero-kicker">{h(AGENT_BRAND)} · Equity Research</div>
       <h1 class="tp-hero-title">Top Investment Picks Analysis</h1>
-      <p class="tp-hero-sub">Highest-conviction names merged from Sector Rotation, Stage 2/VCP, and the Portfolio Strategy Lab best strategy, with deep technical · fundamental · risk-reward analysis.</p>
+      <p class="tp-hero-sub">Highest-conviction names merged from Sector Rotation, current Stage 2/VCP, and the Portfolio Strategy Lab best strategy, with technical · available fundamental · risk-reward · extension analysis.</p>
       <div class="tp-hero-meta">
         <span class="tp-pill blue">Report Date · {h(snap_date)}</span>
         <span class="tp-pill green">{len(picks)} picks</span>
         <span class="tp-pill violet">{triple_n} triple-confirmed</span>
         <span class="tp-pill blue">{dual_n} dual-confirmed</span>
+        {f'<span class="tp-pill amber">{extended_n} extended</span>' if extended_n else ''}
         {f'<span class="tp-pill amber" style="background:#7f1d1d;border-color:#991b1b">{warn_n} sector headwind</span>' if warn_n else ''}
         <span class="tp-pill amber">Generated {datetime.now().strftime('%d %b %Y %H:%M IST')}</span>
       </div>
@@ -6062,28 +6319,22 @@ def render_html(snap_date: str, picks: list[PickRationale], enriched: list[dict]
         rr_i = e.get("risk_reward") or {}
         conv_i = (narr_i.get("conviction") or "").upper()
         conv_c = {"HIGH": "#16a34a", "MEDIUM": "#d97706", "LOW": "#64748b"}.get(conv_i, "#64748b")
-        rs_val = narr_i.get("risk_score_0_10")
-        try: rs_val = float(rs_val) if rs_val is not None else None
-        except (TypeError, ValueError): rs_val = None
-        if rs_val is None:
-            rs_val = rr_i.get("risk_score")
+        rs_val = _first_float(rr_i.get("risk_score"), narr_i.get("risk_score_0_10"))
         rs_disp = f"{rs_val:.1f}" if rs_val is not None else "—"
         rs_c = ("#16a34a" if (rs_val or 99) <= 3 else
                 "#d97706" if (rs_val or 99) <= 6 else "#b91c1c") if rs_val is not None else "#64748b"
-        rr_val = (narr_i.get("risk_reward_ratio")
-                   if narr_i.get("risk_reward_ratio") is not None
-                   else rr_i.get("rr_ratio_4m"))
+        rr_val = _first_float(narr_i.get("risk_reward_ratio"), rr_i.get("rr_ratio_4m"))
         try: rr_disp = f"{float(rr_val):.2f}×" if rr_val is not None else "—"
         except (TypeError, ValueError): rr_disp = "—"
-        tgt = (narr_i.get("potential_target_long_term")
-               if narr_i.get("potential_target_long_term") is not None
-               else rr_i.get("target_6m"))
+        tgt = _first_float(narr_i.get("potential_target_long_term"), rr_i.get("target_6m"))
         try: tgt_disp = f"₹{float(tgt):,.0f}" if tgt is not None else "—"
         except (TypeError, ValueError): tgt_disp = "—"
         conv_chip_cls = {"HIGH":"green","MEDIUM":"amber","LOW":"slate"}.get(conv_i, "slate")
         risk_chip_cls = ("green" if (rs_val is not None and rs_val <= 3) else
                          "amber" if (rs_val is not None and rs_val <= 6) else
                          "red"   if rs_val is not None else "slate")
+        ext_status = (narr_i.get("extension_status") or rr_i.get("extension_status") or "NORMAL")
+        ext_chip_cls = {"NORMAL": "green", "EXTENDED": "amber", "OVEREXTENDED": "red"}.get(ext_status, "slate")
         src_chip = {
             "dual": ("green", "Dual"),
             "sector_rot": ("blue", "Sector"),
@@ -6112,6 +6363,7 @@ def render_html(snap_date: str, picks: list[PickRationale], enriched: list[dict]
             f"<td style='text-align:right;font-weight:700'>{tgt_disp}</td>"
             f"<td style='text-align:right;font-weight:700'>{rr_disp}</td>"
             f"<td style='text-align:center'><span class='tp-chip {risk_chip_cls}'>{rs_disp}</span></td>"
+            f"<td style='text-align:center'><span class='tp-chip {ext_chip_cls}'>{h(ext_status)}</span></td>"
             f"<td><span class='tp-chip {conv_chip_cls}'>{h(conv_i or '—')}</span></td>"
             f"<td><span class='tp-chip {src_chip[0]}'>{h(src_chip[1])}</span></td></tr>"
         )
@@ -6128,6 +6380,7 @@ def render_html(snap_date: str, picks: list[PickRationale], enriched: list[dict]
       <th style='text-align:right'>6M Tgt</th>
       <th style='text-align:right'>RR (4M)</th>
       <th style='text-align:center'>Risk</th>
+      <th style='text-align:center'>Extension</th>
       <th>Conviction</th><th>Source</th>
     </tr></thead>
     <tbody>{''.join(summary_rows)}</tbody>

@@ -1,0 +1,56 @@
+Agent Adda
+      Thu, 27 Aug 2026 · 19:22 IST
+
+        Report · sector_rotation.html · mode: both
+
+  NSE Sector Rotation — EOD Thursday, 27 Aug 2026
+
+  Published by Agent Adda Market Intelligence. This email is a concise, evidence-led cover note and summary of today’s report. It is not investment advice.
+
+  Coverage: NSE | EOD 27 Aug 2026 | Attachment: Sector Rotation Report — 27 Aug 2026
+
+    Market read: Rotation regime (60% confidence); Nifty 50 24,091 (-0.5% d/d); India VIX 11.1 (+5.1% d/d) with weak breadth — maintain a defensive posture in a slowdown phase.
+
+  Key takeaways
+
+    Regime: ROTATION (60%, 1 day). Economic cycle: SLOWDOWN (67% confidence). Favours FMCG, Pharma, IT; avoids Metals, Auto, Real Estate.
+
+    Internals weak: Nifty 50 43% >200DMA; Smallcap 38% >200DMA; McClellan -29.9 (BEARISH_CROSS); TRIN 0.98 (Neutral); Net A/D -889.
+
+    Flows: Last 5D FII +₹2,437 Cr (today -₹298 Cr); DII +₹16,250 Cr (today +₹4,977 Cr) — domestic support continues.
+
+    Leadership: Pharma & Healthcare leads (Score 6.4; 1M +3.3%; RS +1.7%; 60% >50DMA). Secondary strength in Capital Goods & Industrials (5.9; 1M +3.9%; RS +2.3%), Capital Markets (5.8; 1M +4.2%; RS +2.6%; 47% >50DMA), and Defence & Aerospace (3.7; 1M +6.4%; 82% >50DMA).
+
+    Monitoring zones: IT & Technology (3.0; 1M -0.6%; RS -2.2%; 89% >50DMA) and Commodities (3.2; 1M +1.0%; RS -0.6%; 40% >50DMA) — use tactically, conviction low.
+
+    Signals: 29 active BUY across 33 candidates; examples from screens: CUPID, LAURUSLABS, MEDANTA, NEULANDLAB, CYIENTDLM, DIVISLAB, HAPPYFORGE (research use only).
+
+  What to watch
+
+    Breadth and internals: improvement in %>200DMA, A/D, and a bullish McClellan turn; TRIN shifting from Neutral to Positive.
+
+    Volatility: India VIX easing from 11.1 with stabilization alongside price.
+
+    Flows: sustained DII support and FII flip to net buys on a rolling basis.
+
+    Sector confirmation: Pharma & Healthcare maintaining RS > 0 with >60% breadth; Capital Markets sustaining RS > 1.6% on consolidations; breakouts holding in Defence leaders.
+
+    Global correlation shifts: decoupling alerts in Gold and Nikkei 225; monitor USDINR and crude correlations for regime impact.
+
+  How to use this
+
+    Use the rotation ranks with sector breadth to prioritize research in defensive/relative-strength groups (Pharma & Healthcare; selectively Capital Goods, Capital Markets, Defence) and de-emphasize Metals, Auto, Realty.
+
+    Demand confirmation: add only on validated breakouts/RS improvements; respect risk levels and pre-defined stops; verify liquidity, corporate events, and valuations.
+
+    Review the 29 screened candidates for earnings visibility and follow-through; maintain a watchlist and reassess daily as regime/breadth evolve.
+
+  Disclaimer: This research is educational AI/rules-based market intelligence and is not investment advice or a trading recommendation. Validate all data, prices, liquidity, corporate events, and risk independently before making any financial decision.
+
+  Regards,
+
+  Agent Adda
+
+  ShunyaAI · NSE Market Intelligence
+
+Not investment advice. For research and learning only. NSE EOD + live snapshot data.

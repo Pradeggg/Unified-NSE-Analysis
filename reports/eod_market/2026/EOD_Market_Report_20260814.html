@@ -1,0 +1,531 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EOD Market Report 2026-08-14</title>
+<style>
+    :root{--ink:#172322;--muted:#667370;--line:#d6ddda;--soft-line:#e8edeb;--bg:#f4f6f5;--card:#ffffff;--panel:#111821;--green:#0f7a5f;--red:#b4232b;--amber:#a65f00;--blue:#1f5f99;--shadow:0 18px 42px rgba(23,35,34,.08);}
+    *{box-sizing:border-box} html{scroll-behavior:smooth} body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.45}
+    .wrap{max-width:1360px;margin:0 auto;padding:24px}.eyebrow{color:var(--muted);font-size:12px;text-transform:uppercase;font-weight:850;letter-spacing:.08em}
+    header.hero{background:#ffffff;border:1px solid var(--line);border-radius:8px;padding:22px;box-shadow:var(--shadow);margin-bottom:16px}
+    .hero-top{display:flex;justify-content:space-between;gap:18px;align-items:flex-start}.title-block{max-width:760px}h1{margin:4px 0 8px;font-size:38px;line-height:1.06;letter-spacing:0}h2{font-size:19px;margin:0 0 14px}h3{font-size:15px;margin:0 0 8px;color:#223a37}.sub{color:var(--muted);font-size:14px}
+    .session-badge{min-width:260px;border-left:4px solid var(--blue);padding:8px 0 8px 14px}.session-badge b{display:block;font-size:18px}.session-badge span{display:block;margin-top:4px;color:var(--muted);font-size:13px}
+    .nav{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0 0}.nav a,.report-link{display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:999px;padding:7px 10px;background:#fbfcfb;color:#243331;text-decoration:none;font-size:12px;font-weight:850}.nav a:hover,.report-link:hover{border-color:#95aaa5;background:#eef4f2}
+    .report-pack{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:16px;padding-top:14px;border-top:1px solid var(--soft-line)}
+    .grid{display:grid;gap:16px}.kpis{grid-template-columns:repeat(4,minmax(0,1fr))}.three{grid-template-columns:repeat(3,minmax(0,1fr))}.two{grid-template-columns:1.18fr .82fr}.halves{grid-template-columns:1fr 1fr}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:16px;box-shadow:0 1px 0 rgba(23,35,34,.04)}.section{margin-top:16px}.kpi .label{color:var(--muted);font-size:11px;text-transform:uppercase;font-weight:850;letter-spacing:.08em}.kpi .value{font-size:25px;font-weight:900;margin-top:5px;line-height:1.15}.kpi .note{margin-top:6px;color:var(--muted);font-size:13px}
+    .pulse{display:grid;gap:10px}.pulse-row{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--soft-line)}.pulse-row:last-child{border-bottom:0}.pulse-row span{color:var(--muted);font-size:13px}.pulse-row b{text-align:right}
+    .pos{color:var(--green)}.neg{color:var(--red)}.flat{color:var(--amber)}.info{color:var(--blue)}
+    .table-scroll{overflow-x:auto;border:1px solid var(--soft-line);border-radius:8px}.table-scroll table{min-width:760px}table{width:100%;border-collapse:collapse;font-size:13px}th,td{border-bottom:1px solid var(--soft-line);padding:9px 8px;text-align:left;vertical-align:top}th{color:#51625f;font-size:11px;text-transform:uppercase;letter-spacing:.06em;background:#fafbfb}tr:last-child td{border-bottom:0}
+    .pill{display:inline-flex;border-radius:999px;padding:3px 9px;font-size:12px;font-weight:850;background:#eef4f2;color:#24413e}.pill.pos{background:#dcfce7;color:#166534}.pill.neg{background:#fee2e2;color:#991b1b}
+    .event{display:grid;grid-template-columns:70px 1fr;gap:10px;padding:10px 0;border-bottom:1px solid var(--soft-line)}.event:last-child{border-bottom:0}.time{font-weight:900;color:#214744}.commentary{font-size:16px;max-width:92ch}.muted{color:var(--muted)}
+    .heat{display:inline-block;min-width:62px;font-weight:900;text-align:center;border-radius:6px;color:#fff;padding:3px 8px}.heat.g1{background:#166534}.heat.g2{background:#16a34a}.heat.n{background:#a16207}.heat.r1{background:#dc2626}.heat.r2{background:#991b1b}
+    svg{max-width:100%;height:auto}.chart-dark{background:var(--panel);border-color:#1f2a38;color:#e4edf4}.chart-dark h2{color:#e4edf4}.empty-chart{min-height:220px;display:grid;place-items:center;color:var(--muted);border:1px dashed var(--line);border-radius:8px}
+    .stock-link{border:0;background:transparent;color:var(--green);font-weight:900;font:inherit;cursor:pointer;padding:0;text-decoration:underline;text-underline-offset:3px}.stock-link:focus-visible,.nav a:focus-visible,.report-link:focus-visible{outline:3px solid rgba(31,95,153,.28);outline-offset:2px}.clickable-row{cursor:pointer}.clickable-row:hover{background:#f2f8f6}
+    .detail-panel{position:sticky;top:12px}.detail-title{font-size:22px;font-weight:900}.detail-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:12px}.detail-kv{border:1px solid var(--soft-line);border-radius:8px;padding:10px;background:#fbfcfc}.detail-kv span{display:block;color:var(--muted);font-size:11px;text-transform:uppercase;font-weight:850}.detail-kv b{font-size:16px;overflow-wrap:anywhere}
+    .bubble-note{font-size:12px;color:var(--muted);margin-top:8px}.footer{margin-top:20px;color:var(--muted);font-size:12px;border-top:1px solid var(--line);padding-top:14px}
+    .bubble{transition:stroke-width .15s ease, fill-opacity .15s ease}.participation-map a{text-decoration:none}
+    @media(max-width:980px){.kpis,.three,.two,.halves{grid-template-columns:1fr}.wrap{padding:14px}.hero-top{display:block}h1{font-size:29px}.session-badge{min-width:0;margin-top:14px}.detail-panel{position:static}.table-scroll table{min-width:680px}}
+    @media(max-width:560px){.card,header.hero{padding:13px}.event{grid-template-columns:58px 1fr}.kpi .value{font-size:21px}.detail-grid{grid-template-columns:1fr}}
+    </style>
+</head>
+<body>
+<main class="wrap">
+  <header class="hero">
+    <div class="hero-top">
+      <div class="title-block">
+        <div class="eyebrow">NSE Market Intelligence</div>
+        <h1>EOD Market Report</h1>
+        <div class="sub">2026-08-14 · generated 2026-08-20 09:36 IST · 15m Bars from PostgreSQL</div>
+      </div>
+      <div class="session-badge">
+        <b>Recovery After Shakeout</b>
+        <span>Index finish improved after a weak breadth window.</span>
+      </div>
+    </div>
+    <nav class="nav" aria-label="Report sections">
+      <a href="#commentary">Commentary</a>
+      <a href="#breadth">Breadth</a>
+      <a href="#participation">Participation</a>
+      <a href="#leaders">Leadership</a>
+      <a href="#stocks">Stocks</a>
+      <a href="#sectors">Sectors</a>
+    </nav>
+    <div class="report-pack">
+      <span class="eyebrow">Report Pack</span>
+      <a class='report-link' href='file:///Users/pradeepgorai/Documents/Projects/finance/Unified-NSE-Analysis/reports/latest/sector_rotation.html'>Sector Rotation</a><a class='report-link' href='file:///Users/pradeepgorai/Documents/Projects/finance/Unified-NSE-Analysis/reports/latest/stage2_tracker.html'>Stage 2 Tracker</a><a class='report-link' href='file:///Users/pradeepgorai/Documents/Projects/finance/Unified-NSE-Analysis/reports/latest/top_picks.html'>Top Picks</a><a class='report-link' href='file:///Users/pradeepgorai/Documents/Projects/finance/Unified-NSE-Analysis/reports/latest/swing_playbook.html'>Swing Playbook</a><a class='report-link' href='file:///Users/pradeepgorai/Documents/Projects/finance/Unified-NSE-Analysis/reports/latest/portfolio_strategy_lab.html'>Portfolio Lab</a>
+    </div>
+  </header>
+
+  <section class="grid kpis">
+    <div class="card kpi"><div class="label">NIFTY</div><div class="value flat">24,366.00 · +0.01%</div><div class="sub">Range 24,298.35 - 24,405.20</div></div>
+    <div class="card kpi"><div class="label">BANKNIFTY</div><div class="value neg">57,491.10 · -0.18%</div><div class="sub">Range 57,380.65 - 57,679.80</div></div>
+    <div class="card kpi"><div class="label">Best Breadth Hour</div><div class="value info">09:00</div><div class="note">+66.7% advancers</div></div>
+    <div class="card kpi"><div class="label">Weakest Breadth Hour</div><div class="value flat">10:00</div><div class="note">0.0% advancers</div></div>
+  </section>
+
+  <section class="grid three section">
+    <div class="card pulse">
+      <h2>Market Pulse</h2>
+      <div class="pulse-row"><span>Stored universe</span><b>3 stocks</b></div>
+      <div class="pulse-row"><span>Volume peak</span><b>09:00 · 0.0L</b></div>
+      <div class="pulse-row"><span>Leading sector</span><b class="neg">Unclassified -0.62%</b></div>
+      <div class="pulse-row"><span>Pressure sector</span><b class="neg">Unclassified -0.62%</b></div>
+    </div>
+    <div class="card kpi">
+      <div class="label">Breadth Swing</div>
+      <div class="value">0.0% to +66.7%</div>
+      <div class="note">10:00 trough, 09:00 expansion</div>
+    </div>
+    <div class="card kpi">
+      <div class="label">Source Trail</div>
+      <div class="value">15m Bars</div>
+      <div class="note">PostgreSQL intraday.ohlcv_bars · commentary grounded in computed facts</div>
+    </div>
+  </section>
+
+  <section class="grid two section" id="commentary">
+    <div class="card">
+      <h2>Market Desk Commentary</h2>
+      <div class="commentary">The day was a recovery-after-shakeout session. NIFTY closed +0.01% from its first stored bar while BANKNIFTY closed -0.18%, so the index-level finish was constructive but not uniformly led by banks. The decisive intraday event was the breadth trough at 10:00, where only 0.0% of moving stocks advanced. That was followed by a breadth expansion at 09:00 with +66.7% advancers, which argues that the rebound was broader than a narrow heavyweight lift. Within the covered universe, Unclassified was the strongest sector cluster, while Unclassified lagged. For the next session, the key question is whether late-day breadth can persist; if it fades early, the recovery should be treated as a tactical bounce rather than a fresh trend impulse.</div>
+    </div>
+    <div class="card">
+      <h2>Event Log</h2>
+      <div class='event'><div class='time'>09:00</div><div><strong>Opening tone</strong><br><span class='muted'>NIFTY -0.08%, BANKNIFTY +0.02%; breadth 2 advances vs 1 declines.</span></div></div>
+<div class='event'><div class='time'>10:00</div><div><strong>Breadth trough</strong><br><span class='muted'>Only 0.0% of moving stocks advanced; this was the broadest risk-off phase.</span></div></div>
+<div class='event'><div class='time'>09:00</div><div><strong>Breadth expansion</strong><br><span class='muted'>Advancers improved to +66.7%, confirming the strongest recovery window.</span></div></div>
+<div class='event'><div class='time'>09:00</div><div><strong>Highest participation</strong><br><span class='muted'>Stored universe volume peaked at 0 shares; watch whether this marked distribution or accumulation.</span></div></div>
+<div class='event'><div class='time'>day</div><div><strong>NIFTY range</strong><br><span class='muted'>High 24,405.20 near 14:00, low 24,298.35 near 10:30.</span></div></div>
+<div class='event'><div class='time'>day</div><div><strong>BANKNIFTY range</strong><br><span class='muted'>High 57,679.80, low 57,380.65; closed -0.18% from open.</span></div></div>
+<div class='event'><div class='time'>15:00</div><div><strong>Closing tone</strong><br><span class='muted'>NIFTY -0.03%, BANKNIFTY -0.04%; late breadth 2 / 1.</span></div></div>
+    </div>
+  </section>
+
+  <section class="grid halves section">
+    <div class="card chart-dark">
+      <h2>NIFTY · Candlestick Tape</h2>
+      <svg class='tv-chart' viewBox='0 0 880 360' role='img' aria-label='NIFTY intraday candlestick chart'>
+<rect width='100%' height='100%' rx='10' fill='#101722'/>
+<g stroke='#243142' stroke-width='1'>
+<line x1='58' x2='812' y1='26.0' y2='26.0'/>
+<line x1='58' x2='812' y1='100.0' y2='100.0'/>
+<line x1='58' x2='812' y1='174.0' y2='174.0'/>
+<line x1='58' x2='812' y1='248.0' y2='248.0'/>
+<line x1='58' x2='812' y1='322.0' y2='322.0'/>
+<line x1='73.1' x2='73.1' y1='26' y2='322'/>
+<line x1='163.6' x2='163.6' y1='26' y2='322'/>
+<line x1='254.0' x2='254.0' y1='26' y2='322'/>
+<line x1='344.5' x2='344.5' y1='26' y2='322'/>
+<line x1='435.0' x2='435.0' y1='26' y2='322'/>
+<line x1='525.5' x2='525.5' y1='26' y2='322'/>
+<line x1='616.0' x2='616.0' y1='26' y2='322'/>
+<line x1='706.4' x2='706.4' y1='26' y2='322'/>
+<line x1='796.9' x2='796.9' y1='26' y2='322'/>
+</g>
+<text x='822' y='30.0' fill='#9aa7b5' font-size='12'>24,414</text>
+<text x='822' y='104.0' fill='#9aa7b5' font-size='12'>24,383</text>
+<text x='822' y='178.0' fill='#9aa7b5' font-size='12'>24,352</text>
+<text x='822' y='252.0' fill='#9aa7b5' font-size='12'>24,321</text>
+<text x='822' y='326.0' fill='#9aa7b5' font-size='12'>24,290</text>
+<line x1='73.1' x2='73.1' y1='145.4' y2='280.5' stroke='#ef5350' stroke-width='1.4'/>
+<rect x='65.1' y='145.4' width='16.0' height='130.5' rx='2' fill='#ef5350'/>
+<line x1='103.2' x2='103.2' y1='189.7' y2='286.7' stroke='#22c7a9' stroke-width='1.4'/>
+<rect x='95.2' y='221.1' width='16.0' height='54.0' rx='2' fill='#22c7a9'/>
+<line x1='133.4' x2='133.4' y1='185.9' y2='243.8' stroke='#22c7a9' stroke-width='1.4'/>
+<rect x='125.4' y='193.6' width='16.0' height='24.8' rx='2' fill='#22c7a9'/>
+<line x1='163.6' x2='163.6' y1='156.3' y2='200.6' stroke='#22c7a9' stroke-width='1.4'/>
+<rect x='155.6' y='189.1' width='16.0' height='4.5' rx='2' fill='#22c7a9'/>
+<line x1='193.7' x2='193.7' y1='185.4' y2='227.1' stroke='#ef5350' stroke-width='1.4'/>
+<rect x='185.7' y='189.8' width='16.0' height='33.2' rx='2' fill='#ef5350'/>
+<line x1='223.9' x2='223.9' y1='220.6' y2='301.6' stroke='#ef5350' stroke-width='1.4'/>
+<rect x='215.9' y='221.5' width='16.0' height='17.2' rx='2' fill='#ef5350'/>
+<line x1='254.0' x2='254.0' y1='205.2' y2='269.0' stroke='#ef5350' stroke-width='1.4'/>
+<rect x='246.0' y='237.3' width='16.0' height='31.2' rx='2' fill='#ef5350'/>
+<line x1='284.2' x2='284.2' y1='244.3' y2='282.4' stroke='#22c7a9' stroke-width='1.4'/>
+<rect x='276.2' y='261.8' width='16.0' height='4.7' rx='2' fill='#22c7a9'/>
+<line x1='314.4' x2='314.4' y1='220.6' y2='265.5' stroke='#22c7a9' stroke-width='1.4'/>
+<rect x='306.4' y='259.9' width='16.0' height='2.0' rx='2' fill='#22c7a9'/>
+<line x1='344.5' x2='344.5' y1='224.3' y2='275.2' stroke='#22c7a9' stroke-width='1.4'/>
+<rect x='336.5' y='231.5' width='16.0' height='28.7' rx='2' fill='#22c7a9'/>
+<line x1='374.7' x2='374.7' y1='209.4' y2='245.2' stroke='#ef5350' stroke-width='1.4'/>
+<rect x='366.7' y='230.8' width='16.0' height='2.6' rx='2' fill='#ef5350'/>
+<line x1='404.8' x2='404.8' y1='188.9' y2='251.7' stroke='#22c7a9' stroke-width='1.4'/>
+<rect x='396.8' y='198.7' width='16.0' height='31.6' rx='2' fill='#22c7a9'/>
+<line x1='435.0' x2='435.0' y1='167.1' y2='202.4' stroke='#22c7a9' stroke-width='1.4'/>
+<rect x='427.0' y='184.7' width='16.0' height='12.7' rx='2' fill='#22c7a9'/>
+<line x1='465.2' x2='465.2' y1='183.1' y2='217.8' stroke='#ef5350' stroke-width='1.4'/>
+<rect x='457.2' y='185.9' width='16.0' height='26.2' rx='2' fill='#ef5350'/>
+<line x1='495.3' x2='495.3' y1='170.4' y2='214.5' stroke='#22c7a9' stroke-width='1.4'/>
+<rect x='487.3' y='179.3' width='16.0' height='30.8' rx='2' fill='#22c7a9'/>
+<line x1='525.5' x2='525.5' y1='173.1' y2='201.0' stroke='#ef5350' stroke-width='1.4'/>
+<rect x='517.5' y='179.7' width='16.0' height='6.1' rx='2' fill='#ef5350'/>
+<line x1='555.6' x2='555.6' y1='181.1' y2='208.6' stroke='#ef5350' stroke-width='1.4'/>
+<rect x='547.6' y='185.4' width='16.0' height='15.4' rx='2' fill='#ef5350'/>
+<line x1='585.8' x2='585.8' y1='158.4' y2='232.3' stroke='#22c7a9' stroke-width='1.4'/>
+<rect x='577.8' y='160.7' width='16.0' height='41.0' rx='2' fill='#22c7a9'/>
+<line x1='616.0' x2='616.0' y1='64.1' y2='162.0' stroke='#22c7a9' stroke-width='1.4'/>
+<rect x='608.0' y='70.8' width='16.0' height='89.8' rx='2' fill='#22c7a9'/>
+<line x1='646.1' x2='646.1' y1='46.4' y2='100.6' stroke='#ef5350' stroke-width='1.4'/>
+<rect x='638.1' y='70.8' width='16.0' height='27.3' rx='2' fill='#ef5350'/>
+<line x1='676.3' x2='676.3' y1='84.6' y2='131.3' stroke='#ef5350' stroke-width='1.4'/>
+<rect x='668.3' y='99.0' width='16.0' height='27.7' rx='2' fill='#ef5350'/>
+<line x1='706.4' x2='706.4' y1='118.5' y2='139.1' stroke='#ef5350' stroke-width='1.4'/>
+<rect x='698.4' y='124.3' width='16.0' height='7.5' rx='2' fill='#ef5350'/>
+<line x1='736.6' x2='736.6' y1='96.1' y2='143.0' stroke='#22c7a9' stroke-width='1.4'/>
+<rect x='728.6' y='119.5' width='16.0' height='11.0' rx='2' fill='#22c7a9'/>
+<line x1='766.8' x2='766.8' y1='101.2' y2='167.6' stroke='#ef5350' stroke-width='1.4'/>
+<rect x='758.8' y='120.3' width='16.0' height='47.3' rx='2' fill='#ef5350'/>
+<line x1='796.9' x2='796.9' y1='140.0' y2='166.7' stroke='#22c7a9' stroke-width='1.4'/>
+<rect x='788.9' y='140.0' width='16.0' height='26.6' rx='2' fill='#22c7a9'/>
+<text x='73.1' y='348' text-anchor='middle' fill='#9aa7b5' font-size='11'>09:15</text>
+<text x='193.7' y='348' text-anchor='middle' fill='#9aa7b5' font-size='11'>10:15</text>
+<text x='314.4' y='348' text-anchor='middle' fill='#9aa7b5' font-size='11'>11:15</text>
+<text x='435.0' y='348' text-anchor='middle' fill='#9aa7b5' font-size='11'>12:15</text>
+<text x='555.6' y='348' text-anchor='middle' fill='#9aa7b5' font-size='11'>13:15</text>
+<text x='676.3' y='348' text-anchor='middle' fill='#9aa7b5' font-size='11'>14:15</text>
+<text x='796.9' y='348' text-anchor='middle' fill='#9aa7b5' font-size='11'>15:15</text>
+<line x1='58' x2='812' y1='140.0' y2='140.0' stroke='#6dd3ff' stroke-dasharray='3 5' opacity='.75'/>
+<rect x='814' y='128.0' width='58' height='24' rx='4' fill='#0ea5e9'/>
+<text x='843' y='144.0' text-anchor='middle' fill='#ffffff' font-size='12' font-weight='800'>24,366</text>
+<text x='58' y='22' fill='#e4edf4' font-size='15' font-weight='800'>NIFTY · 15m</text>
+</svg>
+    </div>
+    <div class="card chart-dark">
+      <h2>BANKNIFTY · Candlestick Tape</h2>
+      <svg class='tv-chart' viewBox='0 0 880 360' role='img' aria-label='BANKNIFTY intraday candlestick chart'>
+<rect width='100%' height='100%' rx='10' fill='#101722'/>
+<g stroke='#243142' stroke-width='1'>
+<line x1='58' x2='812' y1='26.0' y2='26.0'/>
+<line x1='58' x2='812' y1='100.0' y2='100.0'/>
+<line x1='58' x2='812' y1='174.0' y2='174.0'/>
+<line x1='58' x2='812' y1='248.0' y2='248.0'/>
+<line x1='58' x2='812' y1='322.0' y2='322.0'/>
+<line x1='73.1' x2='73.1' y1='26' y2='322'/>
+<line x1='163.6' x2='163.6' y1='26' y2='322'/>
+<line x1='254.0' x2='254.0' y1='26' y2='322'/>
+<line x1='344.5' x2='344.5' y1='26' y2='322'/>
+<line x1='435.0' x2='435.0' y1='26' y2='322'/>
+<line x1='525.5' x2='525.5' y1='26' y2='322'/>
+<line x1='616.0' x2='616.0' y1='26' y2='322'/>
+<line x1='706.4' x2='706.4' y1='26' y2='322'/>
+<line x1='796.9' x2='796.9' y1='26' y2='322'/>
+</g>
+<text x='822' y='30.0' fill='#9aa7b5' font-size='12'>57,704</text>
+<text x='822' y='104.0' fill='#9aa7b5' font-size='12'>57,617</text>
+<text x='822' y='178.0' fill='#9aa7b5' font-size='12'>57,530</text>
+<text x='822' y='252.0' fill='#9aa7b5' font-size='12'>57,443</text>
+<text x='822' y='326.0' fill='#9aa7b5' font-size='12'>57,357</text>
+<line x1='73.1' x2='73.1' y1='114.3' y2='214.5' stroke='#ef5350' stroke-width='1.4'/>
+<rect x='65.1' y='121.1' width='16.0' height='87.3' rx='2' fill='#ef5350'/>
+<line x1='103.2' x2='103.2' y1='141.3' y2='232.7' stroke='#22c7a9' stroke-width='1.4'/>
+<rect x='95.2' y='146.6' width='16.0' height='58.7' rx='2' fill='#22c7a9'/>
+<line x1='133.4' x2='133.4' y1='98.8' y2='168.8' stroke='#22c7a9' stroke-width='1.4'/>
+<rect x='125.4' y='110.5' width='16.0' height='36.4' rx='2' fill='#22c7a9'/>
+<line x1='163.6' x2='163.6' y1='46.4' y2='137.3' stroke='#22c7a9' stroke-width='1.4'/>
+<rect x='155.6' y='89.4' width='16.0' height='22.7' rx='2' fill='#22c7a9'/>
+<line x1='193.7' x2='193.7' y1='85.0' y2='182.8' stroke='#ef5350' stroke-width='1.4'/>
+<rect x='185.7' y='85.9' width='16.0' height='90.3' rx='2' fill='#ef5350'/>
+<line x1='223.9' x2='223.9' y1='172.8' y2='248.9' stroke='#ef5350' stroke-width='1.4'/>
+<rect x='215.9' y='175.3' width='16.0' height='18.2' rx='2' fill='#ef5350'/>
+<line x1='254.0' x2='254.0' y1='175.0' y2='225.0' stroke='#ef5350' stroke-width='1.4'/>
+<rect x='246.0' y='193.2' width='16.0' height='27.8' rx='2' fill='#ef5350'/>
+<line x1='284.2' x2='284.2' y1='218.2' y2='247.4' stroke='#ef5350' stroke-width='1.4'/>
+<rect x='276.2' y='220.1' width='16.0' height='16.3' rx='2' fill='#ef5350'/>
+<line x1='314.4' x2='314.4' y1='217.3' y2='286.4' stroke='#ef5350' stroke-width='1.4'/>
+<rect x='306.4' y='235.4' width='16.0' height='42.0' rx='2' fill='#ef5350'/>
+<line x1='344.5' x2='344.5' y1='231.8' y2='301.6' stroke='#22c7a9' stroke-width='1.4'/>
+<rect x='336.5' y='238.3' width='16.0' height='39.7' rx='2' fill='#22c7a9'/>
+<line x1='374.7' x2='374.7' y1='233.3' y2='279.6' stroke='#ef5350' stroke-width='1.4'/>
+<rect x='366.7' y='237.1' width='16.0' height='29.4' rx='2' fill='#ef5350'/>
+<line x1='404.8' x2='404.8' y1='235.7' y2='297.5' stroke='#22c7a9' stroke-width='1.4'/>
+<rect x='396.8' y='235.7' width='16.0' height='26.6' rx='2' fill='#22c7a9'/>
+<line x1='435.0' x2='435.0' y1='203.9' y2='248.1' stroke='#22c7a9' stroke-width='1.4'/>
+<rect x='427.0' y='228.4' width='16.0' height='7.5' rx='2' fill='#22c7a9'/>
+<line x1='465.2' x2='465.2' y1='225.6' y2='275.4' stroke='#ef5350' stroke-width='1.4'/>
+<rect x='457.2' y='228.2' width='16.0' height='37.5' rx='2' fill='#ef5350'/>
+<line x1='495.3' x2='495.3' y1='238.0' y2='271.8' stroke='#22c7a9' stroke-width='1.4'/>
+<rect x='487.3' y='253.0' width='16.0' height='12.3' rx='2' fill='#22c7a9'/>
+<line x1='525.5' x2='525.5' y1='222.3' y2='258.4' stroke='#22c7a9' stroke-width='1.4'/>
+<rect x='517.5' y='225.5' width='16.0' height='26.1' rx='2' fill='#22c7a9'/>
+<line x1='555.6' x2='555.6' y1='223.0' y2='268.2' stroke='#ef5350' stroke-width='1.4'/>
+<rect x='547.6' y='226.1' width='16.0' height='29.3' rx='2' fill='#ef5350'/>
+<line x1='585.8' x2='585.8' y1='240.4' y2='301.0' stroke='#22c7a9' stroke-width='1.4'/>
+<rect x='577.8' y='246.8' width='16.0' height='7.8' rx='2' fill='#22c7a9'/>
+<line x1='616.0' x2='616.0' y1='153.1' y2='247.5' stroke='#22c7a9' stroke-width='1.4'/>
+<rect x='608.0' y='159.6' width='16.0' height='86.2' rx='2' fill='#22c7a9'/>
+<line x1='646.1' x2='646.1' y1='107.0' y2='162.9' stroke='#22c7a9' stroke-width='1.4'/>
+<rect x='638.1' y='128.8' width='16.0' height='31.8' rx='2' fill='#22c7a9'/>
+<line x1='676.3' x2='676.3' y1='118.8' y2='186.1' stroke='#ef5350' stroke-width='1.4'/>
+<rect x='668.3' y='130.3' width='16.0' height='43.3' rx='2' fill='#ef5350'/>
+<line x1='706.4' x2='706.4' y1='149.2' y2='185.4' stroke='#ef5350' stroke-width='1.4'/>
+<rect x='698.4' y='173.6' width='16.0' height='10.2' rx='2' fill='#ef5350'/>
+<line x1='736.6' x2='736.6' y1='162.6' y2='201.2' stroke='#ef5350' stroke-width='1.4'/>
+<rect x='728.6' y='183.5' width='16.0' height='2.5' rx='2' fill='#ef5350'/>
+<line x1='766.8' x2='766.8' y1='169.9' y2='234.7' stroke='#ef5350' stroke-width='1.4'/>
+<rect x='758.8' y='187.0' width='16.0' height='47.6' rx='2' fill='#ef5350'/>
+<line x1='796.9' x2='796.9' y1='207.4' y2='234.7' stroke='#22c7a9' stroke-width='1.4'/>
+<rect x='788.9' y='207.4' width='16.0' height='27.3' rx='2' fill='#22c7a9'/>
+<text x='73.1' y='348' text-anchor='middle' fill='#9aa7b5' font-size='11'>09:15</text>
+<text x='193.7' y='348' text-anchor='middle' fill='#9aa7b5' font-size='11'>10:15</text>
+<text x='314.4' y='348' text-anchor='middle' fill='#9aa7b5' font-size='11'>11:15</text>
+<text x='435.0' y='348' text-anchor='middle' fill='#9aa7b5' font-size='11'>12:15</text>
+<text x='555.6' y='348' text-anchor='middle' fill='#9aa7b5' font-size='11'>13:15</text>
+<text x='676.3' y='348' text-anchor='middle' fill='#9aa7b5' font-size='11'>14:15</text>
+<text x='796.9' y='348' text-anchor='middle' fill='#9aa7b5' font-size='11'>15:15</text>
+<line x1='58' x2='812' y1='207.4' y2='207.4' stroke='#6dd3ff' stroke-dasharray='3 5' opacity='.75'/>
+<rect x='814' y='195.4' width='58' height='24' rx='4' fill='#0ea5e9'/>
+<text x='843' y='211.4' text-anchor='middle' fill='#ffffff' font-size='12' font-weight='800'>57,491</text>
+<text x='58' y='22' fill='#e4edf4' font-size='15' font-weight='800'>BANKNIFTY · 15m</text>
+</svg>
+    </div>
+  </section>
+
+  <section class="grid two section" id="breadth">
+    <div class="card">
+      <h2>Hourly Advance / Decline</h2>
+      <svg viewBox='0 0 880 280' role='img' aria-label='Hourly advance decline bars'>
+<rect width='100%' height='100%' rx='12' fill='#fbfcfc'/>
+<line x1='40' x2='840' y1='240' y2='240' stroke='#cad3d3'/>
+<rect x='60.6' y='106.7' width='29.7' height='133.3' rx='4' fill='#16a34a'/>
+<rect x='94.3' y='173.3' width='29.7' height='66.7' rx='4' fill='#dc2626'/>
+<text x='90.3' y='268' text-anchor='middle' font-size='11' fill='#667'>09:00</text>
+<rect x='174.9' y='240.0' width='29.7' height='0.0' rx='4' fill='#16a34a'/>
+<rect x='208.6' y='40.0' width='29.7' height='200.0' rx='4' fill='#dc2626'/>
+<text x='204.6' y='268' text-anchor='middle' font-size='11' fill='#667'>10:00</text>
+<rect x='289.1' y='106.7' width='29.7' height='133.3' rx='4' fill='#16a34a'/>
+<rect x='322.9' y='173.3' width='29.7' height='66.7' rx='4' fill='#dc2626'/>
+<text x='318.9' y='268' text-anchor='middle' font-size='11' fill='#667'>11:00</text>
+<rect x='403.4' y='106.7' width='29.7' height='133.3' rx='4' fill='#16a34a'/>
+<rect x='437.1' y='173.3' width='29.7' height='66.7' rx='4' fill='#dc2626'/>
+<text x='433.1' y='268' text-anchor='middle' font-size='11' fill='#667'>12:00</text>
+<rect x='517.7' y='173.3' width='29.7' height='66.7' rx='4' fill='#16a34a'/>
+<rect x='551.4' y='106.7' width='29.7' height='133.3' rx='4' fill='#dc2626'/>
+<text x='547.4' y='268' text-anchor='middle' font-size='11' fill='#667'>13:00</text>
+<rect x='632.0' y='240.0' width='29.7' height='0.0' rx='4' fill='#16a34a'/>
+<rect x='665.7' y='40.0' width='29.7' height='200.0' rx='4' fill='#dc2626'/>
+<text x='661.7' y='268' text-anchor='middle' font-size='11' fill='#667'>14:00</text>
+<rect x='746.3' y='106.7' width='29.7' height='133.3' rx='4' fill='#16a34a'/>
+<rect x='780.0' y='173.3' width='29.7' height='66.7' rx='4' fill='#dc2626'/>
+<text x='776.0' y='268' text-anchor='middle' font-size='11' fill='#667'>15:00</text>
+<text x='52' y='28' fill='#16a34a' font-size='13' font-weight='700'>Advances</text>
+<text x='150' y='28' fill='#dc2626' font-size='13' font-weight='700'>Declines</text>
+</svg>
+    </div>
+    <div class="card">
+      <h2>Sector Heatmap</h2>
+      <svg viewBox='0 0 880 330' role='img' aria-label='Sector heatmap'>
+<rect width='100%' height='100%' rx='12' fill='#fbfcfc'/>
+<rect x='18.0' y='18.0' width='162.4' height='62' rx='8' fill='rgba(185,28,28,0.95)'/>
+<text x='28.0' y='38.0' fill='#ffffff' font-size='12' font-weight='800'>Unclassified</text>
+<text x='28.0' y='60.0' fill='#ffffff' font-size='16' font-weight='900'>-0.62%</text>
+<text x='170.4' y='62.0' text-anchor='end' fill='#ffffff' font-size='11'>1/2</text>
+</svg>
+    </div>
+  </section>
+
+  <section class="card section" id="participation">
+    <h2>Participation Bubble Chart</h2>
+    <svg class='participation-map' viewBox='0 0 880 490' role='img' aria-label='Stock participation map by day move, technical score, and volume'>
+<rect width='100%' height='100%' rx='12' fill='#fbfcfc'/>
+<rect x='74' y='46' width='764' height='366' rx='8' fill='#ffffff' stroke='#dfe7e4'/>
+<rect x='726.1' y='46' width='111.9' height='183.0' fill='#ecfdf5' opacity='.42'/>
+<rect x='74' y='229.0' width='652.1' height='183.0' fill='#fff1f2' opacity='.5'/>
+<line x1='74' x2='838' y1='412' y2='412' stroke='#b9c6c2'/>
+<line x1='74' x2='74' y1='46' y2='412' stroke='#b9c6c2'/>
+<line x1='726.1' x2='726.1' y1='46' y2='412' stroke='#7b8b87' stroke-dasharray='4 5'/>
+<line x1='74' x2='838' y1='229.0' y2='229.0' stroke='#7b8b87' stroke-dasharray='4 5'/>
+<text x='830' y='64' text-anchor='end' fill='#166534' font-size='12' font-weight='800'>Strength + participation</text>
+<text x='82' y='402' fill='#991b1b' font-size='12' font-weight='800'>Pressure + weak score</text>
+<text x='74' y='24' fill='#172322' font-size='15' font-weight='900'>Participation Map</text>
+<text x='74' y='40' fill='#667370' font-size='12'>Day move vs technical score; circle area scales by stored intraday volume</text>
+<line x1='93.5' x2='93.5' y1='412' y2='417' stroke='#8fa09b'/>
+<text x='93.5' y='433' text-anchor='middle' fill='#667370' font-size='11'>-1.3%</text>
+<line x1='726.1' x2='726.1' y1='412' y2='417' stroke='#8fa09b'/>
+<text x='726.1' y='433' text-anchor='middle' fill='#667370' font-size='11'>0.0%</text>
+<line x1='823.4' x2='823.4' y1='412' y2='417' stroke='#8fa09b'/>
+<text x='823.4' y='433' text-anchor='middle' fill='#667370' font-size='11'>+0.2%</text>
+<line x1='69' x2='74' y1='412.0' y2='412.0' stroke='#8fa09b'/>
+<text x='65' y='416.0' text-anchor='end' fill='#667370' font-size='11'>0</text>
+<line x1='69' x2='74' y1='229.0' y2='229.0' stroke='#8fa09b'/>
+<text x='65' y='233.0' text-anchor='end' fill='#667370' font-size='11'>50</text>
+<line x1='69' x2='74' y1='46.0' y2='46.0' stroke='#8fa09b'/>
+<text x='65' y='50.0' text-anchor='end' fill='#667370' font-size='11'>100</text>
+<text x='456' y='446' text-anchor='middle' fill='#4c5b58' font-size='12' font-weight='800'>Day % move</text>
+<text x='24' y='229' fill='#4c5b58' font-size='12' font-weight='800' text-anchor='middle' transform='rotate(-90 24 229)'>Technical Score</text>
+<g id='bubble-tooltip' visibility='hidden' pointer-events='none'>
+<rect id='tt-bg' x='0' y='0' width='180' height='80' rx='6' fill='#1a2632' fill-opacity='.94'/>
+<text id='tt-sym' x='10' y='20' fill='#fff' font-size='13' font-weight='900'></text>
+<text id='tt-move' x='10' y='38' fill='#9ca3af' font-size='11'></text>
+<text id='tt-tech' x='10' y='52' fill='#9ca3af' font-size='11'></text>
+<text id='tt-vol' x='10' y='66' fill='#9ca3af' font-size='11'></text>
+</g>
+<a href='https://www.nseindia.com/get-quotes/equity?symbol=SENSEX' target='_blank' rel='noopener'>
+<circle class='bubble' cx='838.0' cy='229.0' r='5.0' fill='#0f7a5f' fill-opacity='0.42' stroke='#0b5947' stroke-opacity='.55' stroke-width='1.2' style='cursor:pointer' data-sym='SENSEX' data-move='+0.23%' data-tech='-' data-vol='0.0L'/>
+</a>
+<a href='https://www.nseindia.com/get-quotes/equity?symbol=NIFTYMIDCAP' target='_blank' rel='noopener'>
+<circle class='bubble' cx='361.1' cy='229.0' r='5.0' fill='#b4232b' fill-opacity='0.42' stroke='#7f1d1d' stroke-opacity='.55' stroke-width='1.2' style='cursor:pointer' data-sym='NIFTYMIDCAP' data-move='-0.75%' data-tech='-' data-vol='0.0L'/>
+</a>
+<a href='https://www.nseindia.com/get-quotes/equity?symbol=INDIA_VIX' target='_blank' rel='noopener'>
+<circle class='bubble' cx='74.0' cy='229.0' r='5.0' fill='#b4232b' fill-opacity='0.42' stroke='#7f1d1d' stroke-opacity='.55' stroke-width='1.2' style='cursor:pointer' data-sym='INDIA_VIX' data-move='-1.34%' data-tech='-' data-vol='0.0L'/>
+</a>
+<rect x='370.1' y='223.0' width='78' height='14' rx='2' fill='#fff' fill-opacity='.85'/>
+<text x='372.1' y='233.0' text-anchor='start' fill='#172322' font-size='10.5' font-weight='700'>NIFTYMIDCAP</text>
+<rect x='83.0' y='223.0' width='66' height='14' rx='2' fill='#fff' fill-opacity='.85'/>
+<text x='85.0' y='233.0' text-anchor='start' fill='#172322' font-size='10.5' font-weight='700'>INDIA_VIX</text>
+<circle cx='674' cy='432' r='15.0' fill='none' stroke='#71827e' stroke-width='1.1'/>
+<text x='674' y='460' text-anchor='middle' fill='#667370' font-size='10'>0L</text>
+<circle cx='732' cy='432' r='20.5' fill='none' stroke='#71827e' stroke-width='1.1'/>
+<text x='732' y='460' text-anchor='middle' fill='#667370' font-size='10'>0L</text>
+<circle cx='790' cy='432' r='25.0' fill='none' stroke='#71827e' stroke-width='1.1'/>
+<text x='790' y='460' text-anchor='middle' fill='#667370' font-size='10'>0L</text>
+<text x='646' y='436' text-anchor='end' fill='#4c5b58' font-size='11' font-weight='800'>Volume</text>
+<circle cx='696' cy='26' r='6' fill='#0f7a5f' fill-opacity='.78'/><text x='708' y='30' fill='#4c5b58' font-size='11'>Positive</text>
+<circle cx='766' cy='26' r='6' fill='#b4232b' fill-opacity='.78'/><text x='778' y='30' fill='#4c5b58' font-size='11'>Negative</text>
+</svg>
+    <div class="bubble-note">Bubble size represents stored intraday volume. X-axis is day move; Y-axis is latest technical score where available.</div>
+  </section>
+
+  <section class="card section">
+    <h2>Hour-By-Hour Tape</h2>
+    <div class="table-scroll"><table><thead><tr><th>Hour</th><th>NIFTY</th><th>BANKNIFTY</th><th>A/D</th><th>Adv %</th><th>Avg Stock</th><th>Volume</th></tr></thead><tbody><tr><td>09:00</td><td class='neg'>-0.08%</td><td class='flat'>+0.02%</td><td>2 / 1</td><td><span class='heat g1'>+66.7%</span></td><td class='flat'>+0.04%</td><td>0.0L</td></tr><tr><td>10:00</td><td class='neg'>-0.13%</td><td class='neg'>-0.22%</td><td>0 / 3</td><td><span class='heat r2'>0.0%</span></td><td class='neg'>-0.32%</td><td>0.0L</td></tr><tr><td>11:00</td><td class='pos'>+0.06%</td><td class='neg'>-0.09%</td><td>2 / 1</td><td><span class='heat g1'>+66.7%</span></td><td class='flat'>+0.02%</td><td>0.0L</td></tr><tr><td>12:00</td><td class='pos'>+0.09%</td><td class='flat'>+0.02%</td><td>2 / 1</td><td><span class='heat g1'>+66.7%</span></td><td class='neg'>-0.09%</td><td>0.0L</td></tr><tr><td>13:00</td><td class='pos'>+0.19%</td><td class='pos'>+0.19%</td><td>1 / 2</td><td><span class='heat r1'>+33.3%</span></td><td class='neg'>-0.07%</td><td>0.0L</td></tr><tr><td>14:00</td><td class='neg'>-0.08%</td><td class='flat'>-0.05%</td><td>0 / 3</td><td><span class='heat r2'>0.0%</span></td><td class='neg'>-0.15%</td><td>0.0L</td></tr><tr><td>15:00</td><td class='flat'>-0.03%</td><td class='flat'>-0.04%</td><td>2 / 1</td><td><span class='heat g1'>+66.7%</span></td><td class='flat'>-0.03%</td><td>0.0L</td></tr></tbody></table></div>
+  </section>
+
+  <section class="card section" id="leaders">
+    <h2>Hourly Leadership And Pressure Points</h2>
+    <div class="table-scroll"><table><thead><tr><th>Hour</th><th>Top Gainers</th><th>Top Losers</th><th>Volume Leaders</th></tr></thead><tbody><tr><td>09:00</td><td>INDIA_VIX +0.55%, SENSEX +0.01%, NIFTYMIDCAP -0.43%</td><td>NIFTYMIDCAP -0.43%, SENSEX +0.01%, INDIA_VIX +0.55%</td><td>SENSEX 0.0L, NIFTYMIDCAP 0.0L, INDIA_VIX 0.0L</td></tr>
+<tr><td>10:00</td><td>SENSEX -0.12%, NIFTYMIDCAP -0.26%, INDIA_VIX -0.57%</td><td>INDIA_VIX -0.57%, NIFTYMIDCAP -0.26%, SENSEX -0.12%</td><td>NIFTYMIDCAP 0.0L, INDIA_VIX 0.0L, SENSEX 0.0L</td></tr>
+<tr><td>11:00</td><td>NIFTYMIDCAP +0.10%, SENSEX +0.06%, INDIA_VIX -0.11%</td><td>INDIA_VIX -0.11%, SENSEX +0.06%, NIFTYMIDCAP +0.10%</td><td>SENSEX 0.0L, INDIA_VIX 0.0L, NIFTYMIDCAP 0.0L</td></tr>
+<tr><td>12:00</td><td>NIFTYMIDCAP +0.16%, SENSEX +0.08%, INDIA_VIX -0.53%</td><td>INDIA_VIX -0.53%, SENSEX +0.08%, NIFTYMIDCAP +0.16%</td><td>NIFTYMIDCAP 0.0L, INDIA_VIX 0.0L, SENSEX 0.0L</td></tr>
+<tr><td>13:00</td><td>SENSEX +0.21%, NIFTYMIDCAP -0.08%, INDIA_VIX -0.33%</td><td>INDIA_VIX -0.33%, NIFTYMIDCAP -0.08%, SENSEX +0.21%</td><td>NIFTYMIDCAP 0.0L, INDIA_VIX 0.0L, SENSEX 0.0L</td></tr>
+<tr><td>14:00</td><td>NIFTYMIDCAP -0.06%, SENSEX -0.09%, INDIA_VIX -0.29%</td><td>INDIA_VIX -0.29%, SENSEX -0.09%, NIFTYMIDCAP -0.06%</td><td>INDIA_VIX 0.0L, SENSEX 0.0L, NIFTYMIDCAP 0.0L</td></tr>
+<tr><td>15:00</td><td>SENSEX +0.08%, INDIA_VIX +0.02%, NIFTYMIDCAP -0.20%</td><td>NIFTYMIDCAP -0.20%, INDIA_VIX +0.02%, SENSEX +0.08%</td><td>SENSEX 0.0L, NIFTYMIDCAP 0.0L, INDIA_VIX 0.0L</td></tr></tbody></table></div>
+  </section>
+
+  <section class="grid two section" id="stocks">
+    <div class="card">
+      <h2>Top Advancers</h2>
+      <div class="table-scroll"><table><thead><tr><th>Symbol</th><th>Sector</th><th>Day %</th><th>Volume</th><th>Stage</th><th>Signal</th></tr></thead><tbody><tr class='clickable-row' data-symbol='SENSEX'><td><button class='stock-link' type='button' data-symbol='SENSEX' aria-label='Show SENSEX detail'>SENSEX</button></td><td>Unclassified</td><td class='pos'>+0.23%</td><td>0.0L</td><td>-</td><td>-</td></tr>
+<tr class='clickable-row' data-symbol='NIFTYMIDCAP'><td><button class='stock-link' type='button' data-symbol='NIFTYMIDCAP' aria-label='Show NIFTYMIDCAP detail'>NIFTYMIDCAP</button></td><td>Unclassified</td><td class='pos'>-0.75%</td><td>0.0L</td><td>-</td><td>-</td></tr>
+<tr class='clickable-row' data-symbol='INDIA_VIX'><td><button class='stock-link' type='button' data-symbol='INDIA_VIX' aria-label='Show INDIA_VIX detail'>INDIA_VIX</button></td><td>Unclassified</td><td class='pos'>-1.34%</td><td>0.0L</td><td>-</td><td>-</td></tr></tbody></table></div>
+    </div>
+    <div class="card">
+      <h2>Top Decliners</h2>
+      <div class="table-scroll"><table><thead><tr><th>Symbol</th><th>Sector</th><th>Day %</th><th>Volume</th><th>Stage</th><th>Signal</th></tr></thead><tbody><tr class='clickable-row' data-symbol='INDIA_VIX'><td><button class='stock-link' type='button' data-symbol='INDIA_VIX' aria-label='Show INDIA_VIX detail'>INDIA_VIX</button></td><td>Unclassified</td><td class='neg'>-1.34%</td><td>0.0L</td><td>-</td><td>-</td></tr>
+<tr class='clickable-row' data-symbol='NIFTYMIDCAP'><td><button class='stock-link' type='button' data-symbol='NIFTYMIDCAP' aria-label='Show NIFTYMIDCAP detail'>NIFTYMIDCAP</button></td><td>Unclassified</td><td class='neg'>-0.75%</td><td>0.0L</td><td>-</td><td>-</td></tr>
+<tr class='clickable-row' data-symbol='SENSEX'><td><button class='stock-link' type='button' data-symbol='SENSEX' aria-label='Show SENSEX detail'>SENSEX</button></td><td>Unclassified</td><td class='neg'>+0.23%</td><td>0.0L</td><td>-</td><td>-</td></tr></tbody></table></div>
+    </div>
+  </section>
+
+  <section class="grid two section">
+    <div class="card">
+      <h2>Most Active Detail Panel</h2>
+      <div class="table-scroll"><table><thead><tr><th>Most Active</th><th>Sector</th><th>Day %</th><th>Volume</th><th>Stage</th><th>Signal</th></tr></thead><tbody><tr class='clickable-row' data-symbol='SENSEX'><td><button class='stock-link' type='button' data-symbol='SENSEX' aria-label='Show SENSEX detail'>SENSEX</button></td><td>Unclassified</td><td class='flat'>+0.23%</td><td>0.0L</td><td>-</td><td>-</td></tr>
+<tr class='clickable-row' data-symbol='NIFTYMIDCAP'><td><button class='stock-link' type='button' data-symbol='NIFTYMIDCAP' aria-label='Show NIFTYMIDCAP detail'>NIFTYMIDCAP</button></td><td>Unclassified</td><td class='flat'>-0.75%</td><td>0.0L</td><td>-</td><td>-</td></tr>
+<tr class='clickable-row' data-symbol='INDIA_VIX'><td><button class='stock-link' type='button' data-symbol='INDIA_VIX' aria-label='Show INDIA_VIX detail'>INDIA_VIX</button></td><td>Unclassified</td><td class='flat'>-1.34%</td><td>0.0L</td><td>-</td><td>-</td></tr></tbody></table></div>
+    </div>
+    <div class="card detail-panel" id="stock-detail">
+      <div class="detail-title">Stock Detail</div>
+      <div class="muted">Awaiting symbol selection.</div>
+    </div>
+  </section>
+
+  <section class="card section" id="sectors">
+    <h2>Sector Breadth</h2>
+    <div class="table-scroll"><table><thead><tr><th>Sector</th><th>Stocks</th><th>Avg Day %</th><th>A/D</th><th>Adv %</th></tr></thead><tbody><tr><td>Unclassified</td><td>3</td><td class='neg'>-0.62%</td><td>1 / 2</td><td>+33.3%</td></tr></tbody></table></div>
+  </section>
+
+  <div class="footer">
+    Coverage note: this report uses the stored intraday 15m universe available in PostgreSQL. It is not a complete NSE-wide breadth measure unless the intraday capture universe is complete. Research and learning only; not investment advice.
+  </div>
+  <script type="application/json" id="stock-detail-data">{"SENSEX": {"symbol": "SENSEX", "company": "SENSEX", "sector": "Unclassified", "marketCap": "-", "stage": "-", "signal": "-", "technicalScore": null, "relativeStrength": null, "open": 77833.4297, "close": 78009.25, "high": 78205.7891, "low": 77685.3203, "dayPct": 0.23, "volumeL": 0.0}, "NIFTYMIDCAP": {"symbol": "NIFTYMIDCAP", "company": "NIFTYMIDCAP", "sector": "Unclassified", "marketCap": "-", "stage": "-", "signal": "-", "technicalScore": null, "relativeStrength": null, "open": 18398.1992, "close": 18260.6504, "high": 18401.4004, "low": 18260.6504, "dayPct": -0.75, "volumeL": 0.0}, "INDIA_VIX": {"symbol": "INDIA_VIX", "company": "INDIA_VIX", "sector": "Unclassified", "marketCap": "-", "stage": "-", "signal": "-", "technicalScore": null, "relativeStrength": null, "open": 11.4175, "close": 11.265, "high": 11.56, "low": 10.825, "dayPct": -1.34, "volumeL": 0.0}}</script>
+  <script>
+  const stockData = JSON.parse(document.getElementById('stock-detail-data').textContent);
+  const panel = document.getElementById('stock-detail');
+  function fmtNum(v, digits=2) {
+    if (v === null || v === undefined || Number.isNaN(Number(v))) return '-';
+    return Number(v).toLocaleString('en-IN', {minimumFractionDigits: digits, maximumFractionDigits: digits});
+  }
+  function fmtPct(v) {
+    if (v === null || v === undefined || Number.isNaN(Number(v))) return '-';
+    const n = Number(v);
+    return `${n > 0 ? '+' : ''}${n.toFixed(2)}%`;
+  }
+  function renderStock(sym) {
+    const d = stockData[sym];
+    if (!d) return;
+    const cls = Number(d.dayPct || 0) >= 0 ? 'pos' : 'neg';
+    panel.innerHTML = `
+      <div class="detail-title">${d.symbol}</div>
+      <div class="muted">${d.company || d.symbol} · ${d.sector}</div>
+      <div class="detail-grid">
+        <div class="detail-kv"><span>Day Move</span><b class="${cls}">${fmtPct(d.dayPct)}</b></div>
+        <div class="detail-kv"><span>Volume</span><b>${fmtNum(d.volumeL, 1)}L</b></div>
+        <div class="detail-kv"><span>Open / Close</span><b>${fmtNum(d.open)} → ${fmtNum(d.close)}</b></div>
+        <div class="detail-kv"><span>Range</span><b>${fmtNum(d.low)} - ${fmtNum(d.high)}</b></div>
+        <div class="detail-kv"><span>Stage</span><b>${d.stage || '-'}</b></div>
+        <div class="detail-kv"><span>Signal</span><b>${d.signal || '-'}</b></div>
+        <div class="detail-kv"><span>Technical Score</span><b>${fmtNum(d.technicalScore, 1)}</b></div>
+        <div class="detail-kv"><span>Relative Strength</span><b>${fmtNum(d.relativeStrength, 1)}</b></div>
+      </div>`;
+  }
+  document.querySelectorAll('[data-symbol]').forEach(el => {
+    el.addEventListener('click', () => renderStock(el.dataset.symbol));
+  });
+  const firstStock = Object.keys(stockData)[0];
+  if (firstStock) renderStock(firstStock);
+
+  // Bubble chart tooltip interactivity
+  const tooltip = document.getElementById('bubble-tooltip');
+  if (tooltip) {
+    const ttBg = document.getElementById('tt-bg');
+    const ttSym = document.getElementById('tt-sym');
+    const ttMove = document.getElementById('tt-move');
+    const ttTech = document.getElementById('tt-tech');
+    const ttVol = document.getElementById('tt-vol');
+    const svg = tooltip.closest('svg');
+    
+    document.querySelectorAll('.bubble[data-sym]').forEach(bubble => {
+      bubble.addEventListener('mouseenter', (e) => {
+        const sym = bubble.getAttribute('data-sym');
+        const move = bubble.getAttribute('data-move');
+        const tech = bubble.getAttribute('data-tech');
+        const vol = bubble.getAttribute('data-vol');
+        
+        ttSym.textContent = sym;
+        ttMove.textContent = `Day Move: ${move}`;
+        ttTech.textContent = `Technical: ${tech}`;
+        ttVol.textContent = `Volume: ${vol}`;
+        
+        // Position tooltip near bubble
+        const cx = parseFloat(bubble.getAttribute('cx'));
+        const cy = parseFloat(bubble.getAttribute('cy'));
+        const r = parseFloat(bubble.getAttribute('r'));
+        let tx = cx + r + 10;
+        let ty = cy - 40;
+        
+        // Keep within SVG bounds
+        if (tx + 180 > 880) tx = cx - r - 190;
+        if (ty < 10) ty = 10;
+        if (ty + 80 > 480) ty = 400;
+        
+        tooltip.setAttribute('transform', `translate(${tx}, ${ty})`);
+        tooltip.setAttribute('visibility', 'visible');
+        
+        // Highlight bubble on hover
+        bubble.setAttribute('stroke-width', '3');
+        bubble.setAttribute('fill-opacity', '0.95');
+      });
+      
+      bubble.addEventListener('mouseleave', () => {
+        tooltip.setAttribute('visibility', 'hidden');
+        bubble.setAttribute('stroke-width', '1.2');
+        const opacity = bubble.getAttribute('data-tech') !== 'N/A' ? '0.74' : '0.42';
+        bubble.setAttribute('fill-opacity', opacity);
+      });
+    });
+  }
+  </script>
+</main>
+</body>
+</html>

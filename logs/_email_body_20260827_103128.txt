@@ -1,0 +1,54 @@
+Agent Adda
+      Thu, 27 Aug 2026 · 10:31 IST
+
+        Report · morning_market.html · mode: both
+
+  Agent Adda Morning Market — 27 Aug 2026
+
+  Attached: Morning Market — 27 Aug 2026 (morning_market.html). Summary below. Educational market intelligence — not investment advice.
+
+    Market read: Risk-off open with soft breadth; Bank Nifty lagging — confirm in 15–30 minutes.
+
+  Key takeaways (as of 10:30 IST)
+
+    Headline indices near flat: NIFTY 50 24,181 (-0.11%), Bank Nifty 57,793 (+0.02%), Smallcap 250 18,461 (+0.03%); India VIX 10.79 (+2.15%).
+
+    Participation is weak; Bank Nifty not confirming early moves. Use the first 15–30 minutes to validate breadth vs. a gap-and-rotate open.
+
+    Leaders: NIFTY Private Bank (+0.53%), Realty (+0.44%), India Defence (+0.44%), Consumer Durables (+0.40%).
+
+    Weak pockets: Capital Markets (-0.85%), Dividend Opportunities 50 (-0.64%), FMCG (-0.59%), Oil & Gas (-0.52%).
+
+    F&O indices neutral: NIFTY PCR OI 0.63 (max pain 24,250; 24,300/24,200 walls); BANKNIFTY PCR 1.14 (max pain 57,800; 57,500 call/put walls).
+
+    Movers: Gainers BHEL (+3.0%), SCI (+2.82%); Losers MCX (-1.71%), NTPC (-1.14%). Momentum watchlist (stale until confirmed): INDSWFTLAB, AVADHSUGAR, KABRAEXTRU, RBA, STYLEBAAZA.
+
+  What to watch
+
+    NIFTY to hold above opening range high after 15–30 minutes; Bank Nifty to stop lagging or Financial Services to absorb weakness.
+
+    Breadth in small/micro caps to persist without a further rise in VIX.
+
+    Follow-through in private banks, realty, defence, and consumer durables; monitor Capital Markets and FMCG for continued underperformance.
+
+    F&O confirmation: PCR/OI buildup aligning with price, VWAP, and opening-range behavior.
+
+  How to use this
+
+    Use as a market map: indices, breadth, sectors, movers, momentum, F&O, and global cues.
+
+    Refine the watchlist; prefer price acceptance above the opening range with volume before acting.
+
+    Avoid chasing sharp gaps or high RSI (>80); check support distance and position sizing.
+
+    Treat F&O as context until PCR and OI buildup align with price; favor sectors showing both index-level strength and stock-level breadth.
+
+  This email is for education and general market research only. It is not investment advice, not a SEBI-registered research report, and not a recommendation to buy, sell, or hold any security. Please verify independently and consult a SEBI-registered adviser before acting.
+
+  Regards,
+
+  Agent Adda
+
+  ShunyaAI · NSE Market Intelligence
+
+Not investment advice. For research and learning only. NSE EOD + live snapshot data.

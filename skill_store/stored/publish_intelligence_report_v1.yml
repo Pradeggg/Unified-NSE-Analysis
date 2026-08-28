@@ -1,0 +1,136 @@
+id: publish_intelligence_report_v1
+version: 1
+status: production
+created_at: '2026-08-24T00:00:00'
+created_by: hand_crafted
+generation_model: null
+domain: report_distribution
+title: Publish Agent Adda Intelligence Report
+description: >
+  Validate a generated Agent Adda HTML report, publish it to agentadda.in under
+  Market Intelligence, verify the live report URLs and latest.json metadata, and
+  prepare or send the Agent Adda recipient notification after explicit approval.
+tags:
+  - publish
+  - deployment
+  - report_qa
+  - market_intelligence
+  - deep_research
+  - email
+  - notification
+  - agentadda_www
+  - compliance
+input_patterns:
+  - "post this report to agentadda.in"
+  - "publish this under market intelligence"
+  - "publish the deep research report"
+  - "deploy the Agent Adda report and email recipients"
+  - "send notification to Agent Adda recipients"
+  - "post to agentadda.in and notify the list"
+evidence_required:
+  description: >
+    Publication requires a generated HTML artifact, verified site metadata,
+    successful local site build, live URL checks, configured recipient list, and
+    explicit approval before email send.
+  files:
+    - reports/**/*.html
+    - scripts/push_to_www.py
+    - config/report_recipients.yml
+    - terminal/email_dispatcher.py
+    - /Users/pradeepgorai/Documents/Projects/agentadda-www/package.json
+    - /Users/pradeepgorai/Documents/Projects/agentadda-www/src/content/stocks/reports
+  external_targets:
+    - https://agentadda.in/stocks/reports/{slug}
+    - https://agentadda.in/reports/{slug}.html
+tool_plan_template:
+  - name: validate_local_report
+    tool_name: shell
+    params:
+      command: "ls -lh {html_path} && rg -n \"Traceback|REPORT GENERATION FAILED|nan%|>nan<|undefined|PLACEHOLDER|TODO|file://|Embedded -\" {html_path}"
+    description: Check that the report is present and has no obvious broken visible artifacts.
+    notes: >
+      A non-zero rg result can be acceptable only if each hit is reviewed and
+      shown to be inside non-visible script/style data or intentionally present.
+  - name: dry_run_site_publish
+    tool_name: shell
+    params:
+      command: ".venv/bin/python scripts/push_to_www.py --html {html_path} --slug {slug} --title \"{title}\" --excerpt \"{excerpt}\" --type {report_type} --tickers {tickers_csv} --sector \"{sectors_csv}\" --tags \"{tags_csv}\" --read-time \"{read_time}\" --date {date} --dry-run"
+    description: Run the publisher's quality gate and preview destination HTML/MDX paths.
+  - name: publish_to_www_repo
+    tool_name: shell
+    params:
+      command: ".venv/bin/python scripts/push_to_www.py --html {html_path} --slug {slug} --title \"{title}\" --excerpt \"{excerpt}\" --type {report_type} --tickers {tickers_csv} --sector \"{sectors_csv}\" --tags \"{tags_csv}\" --read-time \"{read_time}\" --date {date}"
+    description: Copy the report into agentadda-www, write MDX metadata, and commit the site repo.
+  - name: build_site
+    tool_name: shell
+    params:
+      command: "cd /Users/pradeepgorai/Documents/Projects/agentadda-www && npm run build"
+    description: Validate the static Next.js export before deployment.
+  - name: push_site_commit
+    tool_name: shell
+    params:
+      command: "cd /Users/pradeepgorai/Documents/Projects/agentadda-www && git push origin main"
+    description: Push the committed website change to trigger production deployment.
+    notes: Push only after build passes and the commit contains only the intended report files.
+  - name: verify_live_urls
+    tool_name: shell
+    params:
+      command: "curl -s -L -o /tmp/agentadda_report.html -w '%{http_code} %{url_effective} %{size_download}\\n' https://agentadda.in/stocks/reports/{slug} && curl -s -L -o /tmp/agentadda_standalone.html -w '%{http_code} %{url_effective} %{size_download}\\n' https://agentadda.in/reports/{slug}.html && curl -s -L https://agentadda.in/stocks/reports/latest.json | python3 -m json.tool | rg \"{slug}|{report_type}\""
+    description: Confirm public report page, standalone HTML, and latest metadata.
+  - name: prepare_email_preview
+    tool_name: shell
+    params:
+      command: ".venv/bin/python -m terminal.email_dispatcher {report_key_or_path} --mode both --subject \"{subject}\""
+    description: Draft or preview notification using configured recipients.
+    notes: >
+      Prefer a dry-run or preview before sending. If OPENAI_API_KEY is missing,
+      create a short HTML notification under reports/generated and disclose that
+      LLM synthesis was unavailable.
+  - name: send_email_after_confirmation
+    tool_name: shell
+    params:
+      command: ".venv/bin/python -m terminal.email_dispatcher {report_key_or_path} --mode both --subject \"{subject}\" --send"
+    description: Send only after the user explicitly approves the exact subject, URL, and recipient list.
+output_contract:
+  - html_path
+  - slug
+  - report_type
+  - website_commit
+  - build_result
+  - report_url
+  - standalone_html_url
+  - latest_json_verified
+  - email_preview_path
+  - recipients_summary
+  - notification_status
+validation_rules:
+  - Run a dry-run publication before writing to agentadda-www.
+  - Run the agentadda-www production build before pushing.
+  - Verify both public URLs return HTTP 200 before marking publish complete.
+  - Verify latest.json includes the slug and report type.
+  - Do not expose secrets from .env, keychain, SMTP, OpenAI, or Cloudflare.
+  - Do not use temporary Cloudflare deployments for production.
+  - Do not send email without explicit current-conversation approval.
+  - Keep published and emailed wording research-only, not personalized investment advice.
+  - Include Agent Adda and SEBI disclaimer framing.
+synthesis_guidance:
+  - Report the live URLs first after publishing.
+  - Mention build and commit evidence.
+  - Summarize email status as previewed, sent, or blocked.
+  - If deployment is stale, distinguish pushed-to-GitHub from live-on-site.
+  - If LLM synthesis is unavailable, say so and use a concise deterministic notification.
+metadata:
+  cli: ".venv/bin/python scripts/push_to_www.py --html REPORT.html --slug SLUG --title \"TITLE\" --excerpt \"EXCERPT\" --type deep-research --dry-run"
+  tags:
+    - publish
+    - email
+    - report
+    - deep-research
+review:
+  status: pass
+  findings: []
+  rationale: >
+    Hand-crafted from the LTFOODS/Daawat publication workflow. Captures QA,
+    site publish, build, push, live verification, notification dry-run, approval,
+    and compliance boundaries.
+  attempts: 1

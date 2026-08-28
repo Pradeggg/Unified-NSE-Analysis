@@ -1,0 +1,58 @@
+Agent Adda
+      Mon, 24 Aug 2026 · 19:00 IST
+
+        Report · swing_playbook.html · mode: both
+
+  Market read: Swing risk allowed; breadth cautious—use confirmed triggers and balanced sizing.
+
+  Attached: swing_playbook.html (full report). Live report URL (plain text): https://agentadda.in/stocks/reports/swing-playbook-2026-08-24
+
+  Research-only summary for NSE-listed swing candidates. Not investment advice.
+
+  Swing Trading Playbook — 24 Aug 2026
+
+  Risk profile: Balanced; cap risk at 1.0% per trade; target 8–12 open positions. All entries are confirmation triggers.
+
+  Key takeaways
+
+    Framework: Buy only above trigger; respect the initial stop; reduce size when stop distance is wide; recheck live liquidity before orders.
+
+    KALYANKJIL leads the Daily Action Sheet (Score 90.9; STAGE_1; RS 98.8). Trigger Rs 609.59; Stop Rs 565.53 (~7.2%); T1 Rs 675.67 (1.5R); T2 Rs 697.70 (2.0R).
+
+    Top tactical candidates include WELCORP (Score 90.7; Trg Rs 2,335.02; Stop Rs 2,166.25; T1 Rs 2,588.17; STAGE_2; RS 99.3), COFORGE (90.6; Trg Rs 1,910.62; Stop Rs 1,772.52; T1 Rs 2,117.76; STAGE_1), and LAURUSLABS (89.7; Trg Rs 1,820.02; Stop Rs 1,688.47; T1 Rs 2,017.34; STAGE_2).
+
+    Position list is dominated by STAGE_2 names with 1.5R/2.0R targets and typical stop distance ~9.3%; highest scores: WELCORP, LAURUSLABS, TVSMOTOR.
+
+    Breadth: 20 candidates; 0 watchlist rows; prefer candidates over watchlist when breadth is cautious.
+
+    No holding-aware portfolio actions (portfolio holdings not provided in this run).
+
+  What to watch
+
+    Intraday confirmations around triggers for leaders (e.g., KALYANKJIL, WELCORP); avoid pre-emptive entries.
+
+    Liquidity checks on mid/small caps (e.g., QUADFUTURE, CUPID, HFCL) before orders.
+
+    Stop-distance regime: ~7.2% (tactical) vs ~9.3% (position); adjust size accordingly.
+
+    Stage and momentum: persistence of STAGE_2 breakouts and high RS/VCP signals in top-ranked names.
+
+  Action items
+
+    Queue alerts and orders only above stated triggers; pre-define stops and targets (1.5R / 2.0R).
+
+    Size positions to a maximum 1.0% account risk per trade; reduce size if stop distance widens.
+
+    Maintain 8–12 open positions; diversify across names; prefer higher-score candidates.
+
+    Map candidates to your existing holdings; no automated portfolio actions are provided in this release.
+
+  Research only. Not investment advice or a trading recommendation. Confirm live price, liquidity, and risk before action.
+
+  Regards,
+
+  Agent Adda
+
+  ShunyaAI · NSE Market Intelligence
+
+Not investment advice. For research and learning only. NSE EOD + live snapshot data.

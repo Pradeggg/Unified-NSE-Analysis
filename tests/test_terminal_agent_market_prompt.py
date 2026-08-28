@@ -14,7 +14,7 @@ from terminal.renderers.narrator import NARRATION_INTENTS
 from terminal.situation_assessment import TurnContext
 from terminal.tools import compare_stocks
 from terminal.deliberation import build_hypotheses, build_plan, evaluate_evidence, render_final_answer
-from voice_persona import normalize_spoken_query
+from voice.voice_persona import normalize_spoken_query
 
 
 class TerminalAgentMarketPromptTests(unittest.TestCase):

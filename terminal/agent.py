@@ -27,8 +27,11 @@ from dotenv import load_dotenv
 
 logger = logging.getLogger(__name__)
 
-# Load .env from project root (two levels up from terminal/)
-load_dotenv(Path(__file__).parent.parent / ".env")
+# Load .env from project root and the parent finance workspace. The daily
+# publish path keeps shared LLM credentials in the parent `.env`.
+_PROJECT_ROOT = Path(__file__).parent.parent
+load_dotenv(_PROJECT_ROOT / ".env")
+load_dotenv(_PROJECT_ROOT.parent / ".env")
 
 from .tools import TOOL_REGISTRY, call_tool, get_symbol_snapshot, openai_tool_schemas, resolve_symbol
 from .market_calendar import market_context_for_agent, market_session_status

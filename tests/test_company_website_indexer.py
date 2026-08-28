@@ -4,8 +4,8 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
-from company_intelligence_db import init_company_intelligence_db
-from company_website_indexer import (
+from company_intelligence.company_intelligence_db import init_company_intelligence_db
+from company_intelligence.company_website_indexer import (
     classify_link,
     crawl_company_website,
     discover_sitemap_urls,

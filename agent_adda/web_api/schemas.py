@@ -117,6 +117,7 @@ class TalkChatResponse(BaseModel):
     session_id: str
     intent: str
     answer: str
+    response_template: str = "narrative"
     symbols: list[str] = Field(default_factory=list)
     comparison: list[dict[str, Any]] = Field(default_factory=list)
     screener_results: list[dict[str, Any]] = Field(default_factory=list)

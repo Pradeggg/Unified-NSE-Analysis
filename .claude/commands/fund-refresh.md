@@ -52,6 +52,10 @@ Only show signal categories that have at least one symbol.
 
 ### 4 — Flag anything actionable
 
+The generated dashboard must also place these items in the first **Action Items** tab,
+with severity, symbol, evidence, and a suggested next review step. This is a review
+queue only and must remain aligned with the Alerts tab.
+
 If any position has signal EXIT or WEAKENING, print a clear warning:
 
 ```

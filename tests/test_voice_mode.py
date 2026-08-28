@@ -3,7 +3,7 @@ import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from voice_mode import VoiceModeState, handle_voice_mode_command, speak_answer_when_enabled
+from voice.voice_mode import VoiceModeState, handle_voice_mode_command, speak_answer_when_enabled
 
 
 class VoiceModeTests(unittest.TestCase):

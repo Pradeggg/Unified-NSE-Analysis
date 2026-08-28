@@ -1,4 +1,4 @@
-from company_intelligence_pg import (
+from company_intelligence.company_intelligence_pg import (
     REQUIRED_TABLES,
     add_company_alias,
     get_company_aliases,

@@ -1,0 +1,12 @@
+[
+  {
+    "messaging_product": "whatsapp",
+    "recipient_type": "individual",
+    "to": "919999999999",
+    "type": "text",
+    "text": {
+      "preview_url": false,
+      "body": "*Agent Adda Alert*\n24 Aug 2026 reports published\n\nPublished Agent Adda Market Intelligence for 24 Aug 2026:\n\nTop Picks\nhttps://agentadda.in/stocks/reports/top-picks-2026-08-24\n\nSector Rotation\nhttps://agentadda.in/stocks/reports/sector-rotation-2026-08-24\n\nStage 2 Breakout Tracker\nhttps://agentadda.in/stocks/reports/stage2-tracker-2026-08-24\n\nResearch only. Not investment advice.\n\nResearch only. Not investment advice."
+    }
+  }
+]

@@ -1,0 +1,1061 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Smallcap Research Dashboard</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Inter:wght@400;500;600;700&display=swap">
+<style>
+:root {
+  --bg:       #0d1117;
+  --surface:  #161b22;
+  --surface2: #21262d;
+  --border:   #30363d;
+  --accent:   #388bfd;
+  --green:    #3fb950;
+  --red:      #f85149;
+  --yellow:   #d29922;
+  --amber:    #e3b341;
+  --text:     #e6edf3;
+  --muted:    #8b949e;
+  --mono:     'JetBrains Mono', monospace;
+  --sans:     'Inter', system-ui, sans-serif;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 14px; }
+body { font-family: var(--sans); background: var(--bg); color: var(--text); min-height: 100vh; }
+
+.hdr { background: var(--surface); border-bottom: 1px solid var(--border); padding: 20px 28px; display: flex; align-items: center; gap: 16px; }
+.hdr-logo { font-family: var(--mono); font-weight: 600; font-size: 18px; color: var(--accent); }
+.hdr-logo span { color: var(--muted); font-weight: 400; font-size: 13px; margin-left: 8px; }
+.hdr-right { margin-left: auto; font-family: var(--mono); font-size: 12px; color: var(--muted); text-align: right; }
+
+.metrics { display: flex; gap: 12px; padding: 20px 28px; flex-wrap: wrap; }
+.metric { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 14px 18px; min-width: 130px; flex: 1; }
+.metric .label { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-bottom: 6px; }
+.metric .val { font-family: var(--mono); font-size: 24px; font-weight: 600; }
+.metric .val.green { color: var(--green); }
+.metric .val.yellow { color: var(--yellow); }
+.metric .val.red { color: var(--red); }
+.metric .val.blue { color: var(--accent); }
+
+/* ── tab nav ── */
+.tab-nav { display: flex; gap: 0; border-bottom: 1px solid var(--border); margin: 0 28px; }
+.tab-nav-btn { background: none; border: none; border-bottom: 2px solid transparent; padding: 10px 18px; font-family: var(--sans); font-size: 13px; font-weight: 500; color: var(--muted); cursor: pointer; transition: all .15s; }
+.tab-nav-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+.tab-pane { display: none; }
+.tab-pane.active { display: block; }
+
+.tbl-wrap { padding: 20px 28px; overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; font-size: 12.5px; min-width: 860px; }
+thead th { background: var(--surface2); color: var(--muted); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; padding: 10px; border-bottom: 1px solid var(--border); text-align: left; }
+tbody tr { border-bottom: 1px solid var(--border); }
+tbody tr:last-child { border-bottom: none; }
+tbody tr:hover { background: var(--surface2); }
+td { padding: 9px 10px; vertical-align: middle; }
+
+.sym-cell { font-family: var(--mono); font-weight: 600; font-size: 13px; color: var(--accent); }
+.sym-cell .co { display: block; font-family: var(--sans); font-weight: 400; font-size: 11px; color: var(--muted); margin-top: 2px; }
+.sym-links { display: flex; gap: 5px; margin-top: 4px; }
+.sym-links a { font-size: 10px; color: var(--muted); text-decoration: none; padding: 1px 5px; border: 1px solid var(--border); border-radius: 3px; }
+.sym-links a:hover { color: var(--accent); border-color: var(--accent); }
+
+.score-bar { height: 4px; border-radius: 2px; background: var(--border); overflow: hidden; margin-top: 4px; }
+.score-fill { height: 100%; border-radius: 2px; }
+.score-fill.high { background: var(--green); }
+.score-fill.mid  { background: var(--yellow); }
+.score-fill.low  { background: var(--red); }
+
+.chip { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+.chip.core      { background: rgba(63,185,80,.15); color: var(--green);  border: 1px solid rgba(63,185,80,.3); }
+.chip.watch     { background: rgba(210,153,34,.15);color: var(--yellow); border: 1px solid rgba(210,153,34,.3); }
+.chip.blocked   { background: rgba(248,81,73,.12); color: var(--red);    border: 1px solid rgba(248,81,73,.25); }
+.chip.neutral   { background: rgba(139,148,158,.12);color: var(--muted); border: 1px solid rgba(139,148,158,.2); }
+.chip.bullish   { background: rgba(63,185,80,.15); color: var(--green);  border: 1px solid rgba(63,185,80,.3); }
+.chip.bearish   { background: rgba(248,81,73,.12); color: var(--red);    border: 1px solid rgba(248,81,73,.25); }
+.chip.stage2    { background: rgba(56,139,253,.15);color: var(--accent); border: 1px solid rgba(56,139,253,.3); }
+
+.tags { display: flex; gap: 4px; flex-wrap: wrap; }
+.tag { font-size: 10px; padding: 2px 6px; border-radius: 4px; }
+.tag.ok  { background: rgba(63,185,80,.12);  color: var(--green); }
+.tag.bad { background: rgba(248,81,73,.10);  color: var(--red); }
+
+.mono { font-family: var(--mono); }
+.pos  { color: var(--green); }
+.neg  { color: var(--red); }
+.mut  { color: var(--muted); }
+
+.trigger-badge { font-size: 10px; font-family: var(--mono); color: var(--amber); }
+
+/* shadow P&L cell */
+.pnl-cell { font-family: var(--mono); }
+.pnl-cell .main { font-size: 14px; font-weight: 600; }
+.pnl-cell .sub  { font-size: 10px; color: var(--muted); }
+
+/* setup levels mini-table */
+.levels { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 8px; }
+.levels .lbl { font-size: 10px; color: var(--muted); }
+.levels .lvl { font-family: var(--mono); font-size: 11px; }
+
+/* disclaimer */
+.disclaimer { margin: 0 28px 40px; background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--yellow); border-radius: 8px; padding: 18px 20px; }
+.disclaimer h4 { font-size: 12px; text-transform: uppercase; letter-spacing: .07em; color: var(--yellow); margin-bottom: 10px; }
+.disclaimer p { font-size: 11.5px; color: var(--muted); line-height: 1.7; margin-bottom: 8px; }
+.disclaimer p:last-child { margin-bottom: 0; }
+
+@media (max-width: 700px) {
+  .hdr, .metrics, .tab-nav, .tbl-wrap, .disclaimer { padding-left: 16px; padding-right: 16px; }
+  .tab-nav { margin: 0 16px; }
+}
+</style>
+</head>
+<body>
+
+<header class="hdr">
+  <div class="hdr-logo">Agent Adda<span>Smallcap Research · Fund Dashboard</span></div>
+  <div class="hdr-right">Run date: 2026-08-24<br><span style="color:var(--red);font-size:11px;">Research only — not investment advice</span></div>
+</header>
+
+<div class="metrics" id="metrics"></div>
+
+<div class="tab-nav">
+  <button class="tab-nav-btn active" data-tab="research">Research Update</button>
+  <button class="tab-nav-btn" data-tab="market">Market Check</button>
+</div>
+
+<!-- ── TAB 1: Research Update ── -->
+<div class="tab-pane active" id="tab-research">
+  <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Symbol</th>
+          <th>Policy / Readiness</th>
+          <th>Rating</th>
+          <th>Stage / Trend</th>
+          <th>RSI / RS</th>
+          <th>Price</th>
+          <th>Readiness Signals</th>
+          <th>Financials (annual)</th>
+          <th>Quarter</th>
+          <th>Trigger / Action</th>
+        </tr>
+      </thead>
+      <tbody id="tbody-research"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ── TAB 2: Market Check ── -->
+<div class="tab-pane" id="tab-market">
+  <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Symbol</th>
+          <th>Bucket / Theme</th>
+          <th>Policy</th>
+          <th>Price / Δ</th>
+          <th>Shadow P&amp;L</th>
+          <th>Setup Levels</th>
+          <th>Distances</th>
+          <th>R:R</th>
+          <th>Trigger State</th>
+          <th>Next Action</th>
+        </tr>
+      </thead>
+      <tbody id="tbody-market"></tbody>
+    </table>
+  </div>
+</div>
+
+<div class="disclaimer">
+  <h4>⚠ SEBI Research Analyst Disclaimer</h4>
+  <p>This report is generated by Agent Adda, an automated rules-based research and analysis tool. It is intended purely for educational and informational purposes. It does not constitute investment advice, a recommendation, solicitation, or offer to buy or sell any security. The analysis is based on publicly available data and algorithmic scoring models.</p>
+  <p>Agent Adda is not registered as a Research Analyst under SEBI (Research Analysts) Regulations, 2014, nor as an Investment Adviser under SEBI (Investment Advisers) Regulations, 2013. Nothing in this report should be construed as personalised investment advice. Past performance of any stock, sector, or strategy mentioned herein is not indicative of future results.</p>
+  <p>All fundamental data is sourced from official exchange filings, Screener.in, and yfinance. Fundamental refresh is mandatory before any paper order. Do not act on any screening output until you have independently verified current financial disclosures directly from the company's investor-relations page, NSE/BSE exchange filings, and the Ministry of Corporate Affairs.</p>
+  <p>Investors should consult a SEBI-registered Investment Adviser and consider their individual risk appetite, investment horizon, and financial situation before acting on any information in this report.</p>
+</div>
+
+<script>
+const RESEARCH = [
+  {
+    "sym": "SYRMA",
+    "company": "Syrma SGS Technology Ltd",
+    "sector": "Industrial Manufacturing",
+    "policy_score": 77.9,
+    "readiness": 74.9,
+    "rating": "Core Candidate",
+    "phase1": "PHASE1_TRIGGER_MAP_GOVERNANCE_PENDING",
+    "stage_sig": "STAGE_2 / HOLD",
+    "supertrend": "BEARISH",
+    "rsi": 57.6,
+    "rs": 31.24,
+    "price": 1459.9,
+    "pct_chg": 1.31,
+    "stop": 1295.37,
+    "target": 1727.16,
+    "paper_val": 18710.9,
+    "risk": 1871.1,
+    "rev_cr": 4819.0,
+    "pat_cr": 346.0,
+    "rev_yoy": 27.3,
+    "pat_yoy": 88.0,
+    "d_e": 0.14,
+    "ocf_cr": 290.0,
+    "qtr": "Jun 2026",
+    "freshness": "fresh result: Jun 2026; fetched 2026-08-06T19:27:33.612251+05:30",
+    "result_status": "Fresh Jun 2026 result in local cache",
+    "trigger": "WAIT",
+    "action": "Evidence pack / governance review",
+    "tags": [
+      {
+        "ok": true,
+        "label": "stage2"
+      },
+      {
+        "ok": true,
+        "label": "rs ok"
+      },
+      {
+        "ok": true,
+        "label": "rsi constructive"
+      },
+      {
+        "ok": false,
+        "label": "governance pending"
+      },
+      {
+        "ok": false,
+        "label": "supertrend conflict"
+      }
+    ],
+    "blockers": [
+      "GOVERNANCE_REVIEW_PENDING",
+      "PASS",
+      "PENDING_OFFICIAL_REVIEW"
+    ]
+  },
+  {
+    "sym": "RUBICON",
+    "company": "Rubicon Research Limited",
+    "sector": "Pharmaceuticals & Biotechnology",
+    "policy_score": 77.6,
+    "readiness": 68.6,
+    "rating": "Core Candidate",
+    "phase1": "RETEST_AND_REFRESH_BEFORE_PHASE1",
+    "stage_sig": "STAGE_2 / BUY",
+    "supertrend": "BULLISH",
+    "rsi": 61.2,
+    "rs": 55.11,
+    "price": 1776.1,
+    "pct_chg": 2.98,
+    "stop": 1552.23,
+    "target": 2069.64,
+    "paper_val": 18971.7,
+    "risk": 1897.2,
+    "rev_cr": 1754.0,
+    "pat_cr": 247.0,
+    "rev_yoy": 36.6,
+    "pat_yoy": 84.3,
+    "d_e": 0.24,
+    "ocf_cr": 205.0,
+    "qtr": "Mar 2026",
+    "freshness": "needs Q1 FY27 refresh: latest cached quarter Mar 2026; fetched 2026-08-06T19:27:47.669125+05:30",
+    "result_status": "Q1 FY27 result not visible in fetched official investor page",
+    "trigger": "WAIT",
+    "action": "Refresh first",
+    "tags": [
+      {
+        "ok": true,
+        "label": "stage2"
+      },
+      {
+        "ok": true,
+        "label": "buy signal"
+      },
+      {
+        "ok": true,
+        "label": "rs leader"
+      },
+      {
+        "ok": true,
+        "label": "rsi constructive"
+      },
+      {
+        "ok": false,
+        "label": "stale result"
+      },
+      {
+        "ok": false,
+        "label": "governance pending"
+      },
+      {
+        "ok": false,
+        "label": "no chase"
+      }
+    ],
+    "blockers": [
+      "REFRESH_REQUIRED",
+      "GOVERNANCE_REVIEW_PENDING",
+      "WATCH_AGENT_ADDA_EXTENDED",
+      "REFRESH_REQUIRED",
+      "PENDING_OFFICIAL_REVIEW"
+    ]
+  },
+  {
+    "sym": "CPPLUS",
+    "company": "Aditya Infotech Limited",
+    "sector": "IT - Software",
+    "policy_score": 74.0,
+    "readiness": 66.0,
+    "rating": "Active Watch",
+    "phase1": "REFRESH_RESULTS_BEFORE_PHASE1",
+    "stage_sig": "STAGE_2 / BUY",
+    "supertrend": "BEARISH",
+    "rsi": 51.9,
+    "rs": 35.2,
+    "price": 3419.5,
+    "pct_chg": -1.03,
+    "stop": 3127.95,
+    "target": 4170.6,
+    "paper_val": 13902.0,
+    "risk": 1390.2,
+    "rev_cr": 4221.0,
+    "pat_cr": 368.0,
+    "rev_yoy": 35.6,
+    "pat_yoy": 4.8,
+    "d_e": 0.14,
+    "ocf_cr": 13.0,
+    "qtr": "Mar 2026",
+    "freshness": "needs Q1 FY27 refresh: latest cached quarter Mar 2026; fetched 2026-08-06T19:27:37.056101+05:30",
+    "result_status": "Q1 FY27 result pending",
+    "trigger": "WAIT",
+    "action": "Refresh first",
+    "tags": [
+      {
+        "ok": true,
+        "label": "stage2"
+      },
+      {
+        "ok": true,
+        "label": "buy signal"
+      },
+      {
+        "ok": true,
+        "label": "rs good"
+      },
+      {
+        "ok": true,
+        "label": "rsi constructive"
+      },
+      {
+        "ok": false,
+        "label": "stale result"
+      },
+      {
+        "ok": false,
+        "label": "governance pending"
+      },
+      {
+        "ok": false,
+        "label": "supertrend conflict"
+      }
+    ],
+    "blockers": [
+      "REFRESH_REQUIRED",
+      "GOVERNANCE_REVIEW_PENDING",
+      "REFRESH_REQUIRED",
+      "PENDING_OFFICIAL_REVIEW"
+    ]
+  },
+  {
+    "sym": "KARURVYSYA",
+    "company": "Karur Vysya Bank Limited",
+    "sector": "Banks",
+    "policy_score": 70.3,
+    "readiness": 65.3,
+    "rating": "Active Watch",
+    "phase1": "PHASE1_TRIGGER_MAP_GOVERNANCE_PENDING",
+    "stage_sig": "STAGE_2 / HOLD",
+    "supertrend": "BULLISH",
+    "rsi": 68.3,
+    "rs": 11.46,
+    "price": 338.15,
+    "pct_chg": 0.85,
+    "stop": 313.74,
+    "target": 379.02,
+    "paper_val": 14762.0,
+    "risk": 957.4,
+    "rev_cr": 7022.87,
+    "pat_cr": 2510.33,
+    "rev_yoy": 15.3,
+    "pat_yoy": 29.3,
+    "d_e": 0.0,
+    "ocf_cr": 0.0,
+    "qtr": "Jun 2026",
+    "freshness": "fresh result: Jun 2026; fetched 2026-08-06T19:28:11.737169+05:30",
+    "result_status": "Fresh Jun 2026 result in local cache",
+    "trigger": "RETEST_HELD_BUT_BLOCKED",
+    "action": "Evidence pack / governance review",
+    "tags": [
+      {
+        "ok": true,
+        "label": "stage2"
+      },
+      {
+        "ok": false,
+        "label": "rs low"
+      },
+      {
+        "ok": false,
+        "label": "governance pending"
+      }
+    ],
+    "blockers": [
+      "GOVERNANCE_REVIEW_PENDING",
+      "PASS",
+      "PENDING_OFFICIAL_REVIEW"
+    ]
+  },
+  {
+    "sym": "RRKABEL",
+    "company": "R R KABEL LTD",
+    "sector": "Industrial Products",
+    "policy_score": 72.3,
+    "readiness": 62.3,
+    "rating": "Active Watch",
+    "phase1": "RETEST_ONLY_NO_CHASE",
+    "stage_sig": "STAGE_2 / HOLD",
+    "supertrend": "BULLISH",
+    "rsi": 85.0,
+    "rs": 38.37,
+    "price": 2869.9,
+    "pct_chg": -1.78,
+    "stop": 2627.37,
+    "target": 3503.16,
+    "paper_val": 14596.5,
+    "risk": 1459.7,
+    "rev_cr": 9722.0,
+    "pat_cr": 492.0,
+    "rev_yoy": 27.6,
+    "pat_yoy": 57.7,
+    "d_e": 0.13,
+    "ocf_cr": 295.0,
+    "qtr": "Jun 2026",
+    "freshness": "fresh result: Jun 2026; fetched 2026-07-31T18:49:33.612196+05:30",
+    "result_status": "Fresh Jun 2026 result in local cache",
+    "trigger": "WAIT",
+    "action": "Retest only",
+    "tags": [
+      {
+        "ok": true,
+        "label": "stage2"
+      },
+      {
+        "ok": true,
+        "label": "rs good"
+      },
+      {
+        "ok": false,
+        "label": "rsi extended"
+      },
+      {
+        "ok": false,
+        "label": "governance pending"
+      },
+      {
+        "ok": false,
+        "label": "no chase"
+      }
+    ],
+    "blockers": [
+      "GOVERNANCE_REVIEW_PENDING",
+      "FAIL_RSI_EXTENDED",
+      "PASS",
+      "PENDING_OFFICIAL_REVIEW"
+    ]
+  },
+  {
+    "sym": "GLAND",
+    "company": "Gland Pharma Limited",
+    "sector": "Pharmaceuticals & Biotechnology",
+    "policy_score": 72.0,
+    "readiness": 61.0,
+    "rating": "Active Watch",
+    "phase1": "REFRESH_RESULTS_BEFORE_PHASE1",
+    "stage_sig": "STAGE_2 / BUY",
+    "supertrend": "BULLISH",
+    "rsi": 65.1,
+    "rs": 9.45,
+    "price": 2801.6,
+    "pct_chg": -0.63,
+    "stop": 2488.23,
+    "target": 3481.44,
+    "paper_val": 14096.5,
+    "risk": 1655.3,
+    "rev_cr": 6431.0,
+    "pat_cr": 1027.0,
+    "rev_yoy": 14.5,
+    "pat_yoy": 46.9,
+    "d_e": 0.03,
+    "ocf_cr": 1031.0,
+    "qtr": "Mar 2026",
+    "freshness": "needs Q1 FY27 refresh: latest cached quarter Mar 2026; fetched 2026-08-06T19:27:38.770004+05:30",
+    "result_status": "Board meeting scheduled before Q1 FY27 result extraction",
+    "trigger": "WAIT",
+    "action": "Refresh first",
+    "tags": [
+      {
+        "ok": true,
+        "label": "stage2"
+      },
+      {
+        "ok": true,
+        "label": "buy signal"
+      },
+      {
+        "ok": false,
+        "label": "rs low"
+      },
+      {
+        "ok": false,
+        "label": "stale result"
+      },
+      {
+        "ok": false,
+        "label": "governance pending"
+      }
+    ],
+    "blockers": [
+      "REFRESH_REQUIRED",
+      "GOVERNANCE_REVIEW_PENDING",
+      "WATCH_THIN_CURRENT_VOLUME",
+      "REFRESH_REQUIRED",
+      "PENDING_OFFICIAL_REVIEW"
+    ]
+  },
+  {
+    "sym": "SKYGOLD",
+    "company": "Sky Gold And Diamonds Limited",
+    "sector": "Consumer Durables",
+    "policy_score": 71.9,
+    "readiness": 60.9,
+    "rating": "Active Watch",
+    "phase1": "RETEST_AND_REFRESH_BEFORE_PHASE1",
+    "stage_sig": "STAGE_2 / BUY",
+    "supertrend": "BULLISH",
+    "rsi": 66.0,
+    "rs": 38.7,
+    "price": 798.0,
+    "pct_chg": -0.75,
+    "stop": 723.15,
+    "target": 964.2,
+    "paper_val": 14463.0,
+    "risk": 1446.3,
+    "rev_cr": 6295.0,
+    "pat_cr": 282.0,
+    "rev_yoy": 77.4,
+    "pat_yoy": 112.0,
+    "d_e": 0.72,
+    "ocf_cr": -45.0,
+    "qtr": "Mar 2026",
+    "freshness": "needs Q1 FY27 refresh: latest cached quarter Mar 2026; fetched 2026-08-06T19:27:35.339853+05:30",
+    "result_status": "Q1 FY27 result event pending / not in fetched official extract",
+    "trigger": "WAIT",
+    "action": "Refresh first",
+    "tags": [
+      {
+        "ok": true,
+        "label": "stage2"
+      },
+      {
+        "ok": true,
+        "label": "buy signal"
+      },
+      {
+        "ok": true,
+        "label": "rs good"
+      },
+      {
+        "ok": false,
+        "label": "stale result"
+      },
+      {
+        "ok": false,
+        "label": "governance pending"
+      },
+      {
+        "ok": false,
+        "label": "negative ocf"
+      },
+      {
+        "ok": false,
+        "label": "working capital leverage"
+      }
+    ],
+    "blockers": [
+      "REFRESH_REQUIRED",
+      "GOVERNANCE_REVIEW_PENDING",
+      "WATCH_EXTENDED_FROM_20DMA",
+      "REFRESH_REQUIRED",
+      "PENDING_OFFICIAL_REVIEW"
+    ]
+  },
+  {
+    "sym": "SANSERA",
+    "company": "Sansera Engineering Ltd.",
+    "sector": "Auto Components",
+    "policy_score": 70.3,
+    "readiness": 56.3,
+    "rating": "Active Watch",
+    "phase1": "RETEST_AND_REFRESH_BEFORE_PHASE1",
+    "stage_sig": "STAGE_2 / HOLD",
+    "supertrend": "BULLISH",
+    "rsi": 76.8,
+    "rs": 25.43,
+    "price": 3844.3,
+    "pct_chg": -0.84,
+    "stop": 3489.21,
+    "target": 4652.28,
+    "paper_val": 11630.7,
+    "risk": 1163.1,
+    "rev_cr": 3498.0,
+    "pat_cr": 327.0,
+    "rev_yoy": 15.9,
+    "pat_yoy": 50.7,
+    "d_e": 0.19,
+    "ocf_cr": 387.0,
+    "qtr": "Mar 2026",
+    "freshness": "needs Q1 FY27 refresh: latest cached quarter Mar 2026; fetched 2026-08-06T19:27:49.448378+05:30",
+    "result_status": "Fresh result still required in local cache",
+    "trigger": "WAIT",
+    "action": "Refresh first",
+    "tags": [
+      {
+        "ok": true,
+        "label": "stage2"
+      },
+      {
+        "ok": true,
+        "label": "rs ok"
+      },
+      {
+        "ok": false,
+        "label": "rsi extended"
+      },
+      {
+        "ok": false,
+        "label": "stale result"
+      },
+      {
+        "ok": false,
+        "label": "governance pending"
+      }
+    ],
+    "blockers": [
+      "REFRESH_REQUIRED",
+      "GOVERNANCE_REVIEW_PENDING",
+      "WATCH_RSI_EXTENDED",
+      "REFRESH_REQUIRED",
+      "PENDING_OFFICIAL_REVIEW"
+    ]
+  },
+  {
+    "sym": "RAINBOW",
+    "company": "Rainbow Childrens Medicare Limited",
+    "sector": "Healthcare Services",
+    "policy_score": 65.2,
+    "readiness": 55.2,
+    "rating": "Active Watch",
+    "phase1": "PHASE1_RETEST_TRIGGER_MAP_GOVERNANCE_PENDING",
+    "stage_sig": "STAGE_2 / HOLD",
+    "supertrend": "BULLISH",
+    "rsi": 66.5,
+    "rs": 10.92,
+    "price": 1460.1,
+    "pct_chg": 1.88,
+    "stop": 1289.88,
+    "target": 1719.84,
+    "paper_val": 14332.0,
+    "risk": 1433.2,
+    "rev_cr": 1703.0,
+    "pat_cr": 282.0,
+    "rev_yoy": 12.3,
+    "pat_yoy": 15.6,
+    "d_e": 0.54,
+    "ocf_cr": 420.0,
+    "qtr": "Jun 2026",
+    "freshness": "fresh result: Jun 2026; fetched 2026-08-03T19:36:42.104710+05:30",
+    "result_status": "Fresh Jun 2026 result in local cache",
+    "trigger": "WAIT",
+    "action": "Retest only",
+    "tags": [
+      {
+        "ok": true,
+        "label": "stage2"
+      },
+      {
+        "ok": false,
+        "label": "rs low"
+      },
+      {
+        "ok": false,
+        "label": "governance pending"
+      },
+      {
+        "ok": false,
+        "label": "no chase"
+      }
+    ],
+    "blockers": [
+      "GOVERNANCE_REVIEW_PENDING",
+      "WATCH_AGENT_ADDA_EXTENDED",
+      "PASS",
+      "PENDING_OFFICIAL_REVIEW"
+    ]
+  }
+];
+const MARKET   = [
+  {
+    "sym": "SYRMA",
+    "company": "Syrma SGS Technology Ltd",
+    "bucket": "Clean trigger map",
+    "theme_lens": "India EMS and manufacturing scale-up",
+    "policy_score": 77.9,
+    "rating": "Core Candidate",
+    "ref_price": 1439.3,
+    "latest": 1459.9,
+    "pct_chg": 1.31,
+    "move_vs_ref": 1.43,
+    "breakout": 1558.43,
+    "retest": 1426.62,
+    "stop": 1295.37,
+    "target": 1727.16,
+    "d_breakout": 6.7,
+    "d_retest": 2.3,
+    "d_stop": 12.7,
+    "paper_ref": 18710.9,
+    "paper_lat": 18978.7,
+    "shadow_pnl": 267.8,
+    "shadow_pnl_pct": 5.356,
+    "risk": 1871.1,
+    "qty": 13,
+    "rr": 1.62,
+    "trigger": "NO_TRIGGER_WAIT",
+    "trigger_note": "No mapped breakout/retest trigger has confirmed.",
+    "blockers": "GOVERNANCE_REVIEW_PENDING",
+    "next_action": "Complete governance/filing review, then wait for breakout-retest or pullback trigger."
+  },
+  {
+    "sym": "KARURVYSYA",
+    "company": "Karur Vysya Bank Limited",
+    "bucket": "Clean trigger map",
+    "theme_lens": "Private-bank credit cycle and regional lending franchise",
+    "policy_score": 70.3,
+    "rating": "Active Watch",
+    "ref_price": 335.5,
+    "latest": 338.15,
+    "pct_chg": 0.85,
+    "move_vs_ref": 0.79,
+    "breakout": 355.32,
+    "retest": 337.08,
+    "stop": 313.74,
+    "target": 379.02,
+    "d_breakout": 5.1,
+    "d_retest": 0.3,
+    "d_stop": 7.8,
+    "paper_ref": 14762.0,
+    "paper_lat": 14878.6,
+    "shadow_pnl": 116.6,
+    "shadow_pnl_pct": 2.332,
+    "risk": 957.4,
+    "qty": 44,
+    "rr": 1.67,
+    "trigger": "RETEST_TRIGGER_WATCH",
+    "trigger_note": "Retest zone held so far; needs close/volume confirmation before order.",
+    "blockers": "GOVERNANCE_REVIEW_PENDING",
+    "next_action": "Complete governance/filing review, then wait for breakout-retest or pullback trigger."
+  },
+  {
+    "sym": "AEGISVOPAK",
+    "company": "Aegis Vopak Terminals Limited",
+    "bucket": "Clean trigger map",
+    "theme_lens": "Energy storage, terminals, and logistics infrastructure",
+    "policy_score": 70.0,
+    "rating": "Active Watch",
+    "ref_price": 276.3,
+    "latest": 270.3,
+    "pct_chg": -2.17,
+    "move_vs_ref": -2.17,
+    "breakout": 314.6,
+    "retest": 282.91,
+    "stop": 248.67,
+    "target": 331.56,
+    "d_breakout": 16.4,
+    "d_retest": -4.5,
+    "d_stop": 8.7,
+    "paper_ref": 14920.2,
+    "paper_lat": 14596.2,
+    "shadow_pnl": -324.0,
+    "shadow_pnl_pct": -6.48,
+    "risk": 1492.0,
+    "qty": 54,
+    "rr": 2.83,
+    "trigger": "RETEST_UNDER_PRESSURE",
+    "trigger_note": "Retest zone was lost intraday; no order.",
+    "blockers": "GOVERNANCE_REVIEW_PENDING",
+    "next_action": "Complete governance/filing review, then wait for breakout-retest or pullback trigger."
+  },
+  {
+    "sym": "VMART",
+    "company": "V-Mart Retail Ltd.",
+    "bucket": "Clean trigger map",
+    "theme_lens": "Value retail and discretionary consumption recovery",
+    "policy_score": 68.3,
+    "rating": "Active Watch",
+    "ref_price": 838.85,
+    "latest": 856.55,
+    "pct_chg": 2.15,
+    "move_vs_ref": 2.11,
+    "breakout": 896.88,
+    "retest": 789.86,
+    "stop": 769.72,
+    "target": 977.11,
+    "d_breakout": 4.7,
+    "d_retest": 8.4,
+    "d_stop": 11.3,
+    "paper_ref": 14260.5,
+    "paper_lat": 14561.3,
+    "shadow_pnl": 300.9,
+    "shadow_pnl_pct": 6.018,
+    "risk": 1175.2,
+    "qty": 17,
+    "rr": 1.39,
+    "trigger": "NO_TRIGGER_WAIT",
+    "trigger_note": "No mapped breakout/retest trigger has confirmed.",
+    "blockers": "GOVERNANCE_REVIEW_PENDING",
+    "next_action": "Complete governance/filing review, then wait for breakout-retest or pullback trigger."
+  },
+  {
+    "sym": "SONACOMS",
+    "company": "Sona BLW Precision Forgings Limited",
+    "bucket": "Retest trigger map",
+    "theme_lens": "EV and premium auto-component content",
+    "policy_score": 74.4,
+    "rating": "Active Watch",
+    "ref_price": 817.6,
+    "latest": 813.5,
+    "pct_chg": -0.5,
+    "move_vs_ref": -0.5,
+    "breakout": 852.44,
+    "retest": 789.26,
+    "stop": 735.84,
+    "target": 981.12,
+    "d_breakout": 4.8,
+    "d_retest": 3.1,
+    "d_stop": 10.6,
+    "paper_ref": 14716.8,
+    "paper_lat": 14643.0,
+    "shadow_pnl": -73.8,
+    "shadow_pnl_pct": -1.476,
+    "risk": 1471.7,
+    "qty": 18,
+    "rr": 2.16,
+    "trigger": "NO_TRIGGER_WAIT",
+    "trigger_note": "No mapped breakout/retest trigger has confirmed.",
+    "blockers": "GOVERNANCE_REVIEW_PENDING; WATCH_AGENT_ADDA_EXTENDED",
+    "next_action": "Complete governance/filing review; retest-only because current setup is extended or flagged no-chase."
+  },
+  {
+    "sym": "RAINBOW",
+    "company": "Rainbow Childrens Medicare Limited",
+    "bucket": "Retest trigger map",
+    "theme_lens": "Specialty healthcare services and hospital capacity",
+    "policy_score": 65.2,
+    "rating": "Active Watch",
+    "ref_price": 1433.2,
+    "latest": 1460.1,
+    "pct_chg": 1.88,
+    "move_vs_ref": 1.88,
+    "breakout": 1662.16,
+    "retest": 1503.7,
+    "stop": 1289.88,
+    "target": 1719.84,
+    "d_breakout": 13.8,
+    "d_retest": -2.9,
+    "d_stop": 13.2,
+    "paper_ref": 14332.0,
+    "paper_lat": 14601.0,
+    "shadow_pnl": 269.0,
+    "shadow_pnl_pct": 5.38,
+    "risk": 1433.2,
+    "qty": 10,
+    "rr": 1.53,
+    "trigger": "RETEST_UNDER_PRESSURE",
+    "trigger_note": "Retest zone was lost intraday; no order.",
+    "blockers": "GOVERNANCE_REVIEW_PENDING; WATCH_AGENT_ADDA_EXTENDED",
+    "next_action": "Complete governance/filing review; retest-only because current setup is extended or flagged no-chase."
+  }
+];
+const R_SUM    = {"total": 9, "core": 2, "wait": 8, "avg_pol": 72.4, "avg_ready": 63.4};
+const M_SUM    = {"total": 6, "total_paper": 92258.8, "total_pnl": 556.5, "pnl_cls": "green", "clean_map": 4, "retest_map": 2};
+
+// ── metrics (combines both datasets) ─────────────────────────────────────────
+(function() {
+  const m = document.getElementById('metrics');
+  const items = [
+    { label: 'Research Symbols', val: R_SUM.total, cls: '' },
+    { label: 'Core Candidates',  val: R_SUM.core,  cls: 'green' },
+    { label: 'Waiting (WAIT)',   val: R_SUM.wait,  cls: 'yellow' },
+    { label: 'Avg Policy Score', val: R_SUM.avg_pol, cls: '' },
+    { label: 'Paper Portfolio',  val: '₹'+M_SUM.total_paper.toLocaleString('en-IN'), cls: '' },
+    { label: 'Shadow P&L',       val: (M_SUM.total_pnl >= 0 ? '+' : '') + '₹'+M_SUM.total_pnl.toLocaleString('en-IN'), cls: M_SUM.pnl_cls },
+  ];
+  m.innerHTML = items.map(i =>
+    `<div class="metric"><div class="label">${i.label}</div><div class="val ${i.cls}">${i.val}</div></div>`
+  ).join('');
+})();
+
+// ── tab nav ───────────────────────────────────────────────────────────────────
+document.querySelector('.tab-nav').addEventListener('click', e => {
+  const btn = e.target.closest('.tab-nav-btn');
+  if (!btn) return;
+  document.querySelectorAll('.tab-nav-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+});
+
+// ── helpers ───────────────────────────────────────────────────────────────────
+function sym(s, co) {
+  const tv = `https://in.tradingview.com/chart/?symbol=NSE%3A${s}`;
+  const sc = `https://www.screener.in/company/${s}/`;
+  return `<td class="sym-cell">${s}<span class="co">${co}</span>
+    <div class="sym-links"><a href="${tv}" target="_blank">TV</a><a href="${sc}" target="_blank">SCR</a></div></td>`;
+}
+function pct(v) { const s = v>=0?'+':''; return s+v+'%'; }
+function cls(v) { return v>0?'pos':v<0?'neg':''; }
+function scoreFill(v) { return v>=70?'high':v>=55?'mid':'low'; }
+
+function chipRating(r) {
+  const lo = r.toLowerCase();
+  if (lo.includes('core')) return `<span class="chip core">${r}</span>`;
+  if (lo.includes('watch')) return `<span class="chip watch">${r}</span>`;
+  return `<span class="chip neutral">${r}</span>`;
+}
+function chipTrend(t) {
+  const u = t.toUpperCase();
+  if (u === 'BULLISH') return `<span class="chip bullish">↑ Bullish</span>`;
+  if (u === 'BEARISH') return `<span class="chip bearish">↓ Bearish</span>`;
+  return `<span class="chip neutral">${t}</span>`;
+}
+function chipStage(s) {
+  if (s.includes('2')) return `<span class="chip stage2">${s}</span>`;
+  return `<span class="chip neutral">${s}</span>`;
+}
+function chipTrigger(t) {
+  if (t === 'WAIT') return `<span class="chip neutral">WAIT</span>`;
+  if (t.includes('RETEST_TRIGGER')) return `<span class="chip watch">${t}</span>`;
+  if (t.includes('BLOCKED') || t.includes('PRESSURE')) return `<span class="chip blocked">${t}</span>`;
+  if (t.includes('READY')) return `<span class="chip core">${t}</span>`;
+  return `<span class="chip neutral">${t}</span>`;
+}
+
+// ── research table ────────────────────────────────────────────────────────────
+function buildResearchRow(d) {
+  const stageParts = d.stage_sig.split('/').map(s => s.trim());
+  const stageHtml = stageParts.map(s => chipStage(s)).join(' ');
+
+  const tagsHtml = d.tags.map(t =>
+    `<span class="tag ${t.ok ? 'ok' : 'bad'}">${t.ok ? '+' : '−'} ${t.label}</span>`
+  ).join('');
+
+  const freshClass = d.freshness.includes('fresh') ? 'pos' : (d.freshness.includes('needs') ? 'neg' : 'mut');
+
+  return `<tr>
+    ${sym(d.sym, d.company)}
+    <td>
+      <span class="mono" style="font-size:15px;font-weight:600">${d.policy_score}</span>
+      <div class="score-bar"><div class="score-fill ${scoreFill(d.policy_score)}" style="width:${d.policy_score}%"></div></div>
+      <div style="margin-top:4px">
+        <span class="mono" style="font-size:11px;color:var(--muted)">Readiness </span>
+        <span class="mono" style="font-size:12px;font-weight:600">${d.readiness}</span>
+      </div>
+    </td>
+    <td>${chipRating(d.rating)}</td>
+    <td>${stageHtml}<br>${chipTrend(d.supertrend)}</td>
+    <td class="mono"><span style="color:var(--amber)">${d.rsi}</span> <span class="mut" style="font-size:10px">RSI</span><br>
+        <span style="color:var(--accent)">${d.rs}</span> <span class="mut" style="font-size:10px">RS</span></td>
+    <td class="mono">
+      ₹${d.price.toLocaleString('en-IN')}
+      <br><span class="${cls(d.pct_chg)}" style="font-size:11px">${pct(d.pct_chg)}</span>
+    </td>
+    <td><div class="tags">${tagsHtml || '<span class="mut">—</span>'}</div></td>
+    <td class="mono" style="font-size:11px">
+      Rev ₹${d.rev_cr.toLocaleString('en-IN')}cr <span class="${cls(d.rev_yoy)}">${pct(d.rev_yoy)}</span><br>
+      PAT ₹${d.pat_cr.toLocaleString('en-IN')}cr <span class="${cls(d.pat_yoy)}">${pct(d.pat_yoy)}</span><br>
+      D/E ${d.d_e} · OCF ₹${d.ocf_cr}cr
+    </td>
+    <td style="font-size:11px">
+      <span class="mono ${freshClass.includes('pos')?'pos':freshClass.includes('neg')?'neg':'mut'}">${d.qtr}</span><br>
+      <span class="mut" style="font-size:10px">${d.financial_freshness||d.freshness}</span>
+    </td>
+    <td>
+      ${chipTrigger(d.trigger)}
+      <div style="font-size:10px;color:var(--muted);margin-top:4px">${d.action}</div>
+    </td>
+  </tr>`;
+}
+
+// ── market-check table ────────────────────────────────────────────────────────
+function buildMarketRow(d) {
+  const bucketCls = d.bucket.toLowerCase().includes('clean') ? 'core' : 'watch';
+  const moveCls = cls(d.move_vs_ref);
+  const pnlCls = cls(d.shadow_pnl);
+  const pnlSign = d.shadow_pnl >= 0 ? '+' : '';
+  const rrStr = d.rr !== null ? d.rr.toFixed(2)+'R' : '—';
+  return `<tr>
+    ${sym(d.sym, d.company)}
+    <td>
+      <span class="chip ${bucketCls}" style="font-size:10px">${d.bucket}</span>
+      <div style="font-size:10px;color:var(--muted);margin-top:4px">${d.theme_lens}</div>
+    </td>
+    <td>
+      <span class="mono" style="font-weight:600">${d.policy_score}</span><br>
+      <span style="font-size:10px;color:var(--muted)">${d.rating}</span>
+    </td>
+    <td class="mono">
+      ₹${d.latest.toLocaleString('en-IN')} <span class="${cls(d.pct_chg)}">${pct(d.pct_chg)}</span><br>
+      <span class="mut" style="font-size:10px">ref ₹${d.ref_price.toLocaleString('en-IN')}
+        <span class="${moveCls}">${pct(d.move_vs_ref)}</span></span>
+    </td>
+    <td class="pnl-cell">
+      <div class="main ${pnlCls}">${pnlSign}₹${d.shadow_pnl.toLocaleString('en-IN')}</div>
+      <div class="sub">₹${d.paper_lat.toLocaleString('en-IN')} position</div>
+      <div class="sub ${pnlCls}">${pnlSign}${d.shadow_pnl_pct}% NAV</div>
+    </td>
+    <td>
+      <div class="levels">
+        <span class="lbl">Breakout</span><span class="lvl">₹${d.breakout}</span>
+        <span class="lbl">Retest</span><span class="lvl">₹${d.retest}</span>
+        <span class="lbl">Stop</span><span class="lvl neg">₹${d.stop}</span>
+        <span class="lbl">Target</span><span class="lvl pos">₹${d.target}</span>
+      </div>
+    </td>
+    <td class="mono" style="font-size:11px">
+      To brk <span class="${cls(-d.d_breakout)}">${pct(d.d_breakout)}</span><br>
+      Abv ret <span class="pos">${pct(d.d_retest)}</span><br>
+      Abv stp <span class="pos">${pct(d.d_stop)}</span>
+    </td>
+    <td class="mono" style="font-weight:600;font-size:14px">${rrStr}</td>
+    <td>${chipTrigger(d.trigger)}</td>
+    <td style="font-size:10px;color:var(--muted);max-width:160px">${d.next_action}</td>
+  </tr>`;
+}
+
+document.getElementById('tbody-research').innerHTML = RESEARCH.map(buildResearchRow).join('');
+document.getElementById('tbody-market').innerHTML   = MARKET.map(buildMarketRow).join('');
+</script>
+</body>
+</html>

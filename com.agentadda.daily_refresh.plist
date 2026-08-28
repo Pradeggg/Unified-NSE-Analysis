@@ -4,18 +4,22 @@
 <!--
   Agent Adda — Daily NSE Data Refresh LaunchAgent
   ================================================
-  Runs daily_refresh.py on weekdays at 16:15 IST (10:45 UTC)
-  — 45 minutes after NSE market close (15:30 IST).
+  Runs daily_refresh.py on weekdays at 18:00 IST (12:30 UTC)
+  — 2 h 30 min after NSE market close (15:30 IST).
 
-  Install:
+  Install / update:
     cp com.agentadda.daily_refresh.plist ~/Library/LaunchAgents/
-    launchctl load ~/Library/LaunchAgents/com.agentadda.daily_refresh.plist
+    launchctl unload ~/Library/LaunchAgents/com.agentadda.daily_refresh.plist 2>/dev/null; true
+    launchctl load   ~/Library/LaunchAgents/com.agentadda.daily_refresh.plist
 
   Check status:
     launchctl list | grep agentadda
 
-  View logs:
-    tail -f /tmp/agentadda_daily_refresh.log
+  View live log:
+    tail -f ~/.agent-adda/logs/daily_refresh.log
+
+  Trigger manually (without waiting for schedule):
+    launchctl start com.agentadda.daily_refresh
 
   Uninstall:
     launchctl unload ~/Library/LaunchAgents/com.agentadda.daily_refresh.plist
@@ -23,71 +27,81 @@
 -->
 <plist version="1.0">
 <dict>
+
     <key>Label</key>
     <string>com.agentadda.daily_refresh</string>
 
     <key>ProgramArguments</key>
     <array>
-        <string>/Users/pgorai/Documents/Projects/Unified-NSE-Analysis/.venv/bin/python3</string>
-        <string>/Users/pgorai/Documents/Projects/Unified-NSE-Analysis/daily_refresh.py</string>
+        <string>/Users/pradeepgorai/Documents/Projects/finance/Unified-NSE-Analysis/.venv/bin/python3</string>
+        <string>/Users/pradeepgorai/Documents/Projects/finance/Unified-NSE-Analysis/daily_refresh.py</string>
+        <string>--email-send</string>
     </array>
 
     <key>WorkingDirectory</key>
-    <string>/Users/pgorai/Documents/Projects/Unified-NSE-Analysis</string>
+    <string>/Users/pradeepgorai/Documents/Projects/finance/Unified-NSE-Analysis</string>
 
-    <!-- 16:15 IST = 10:45 UTC. Weekdays only (Mon=1 … Fri=5) -->
+    <!--
+      18:00 IST = 12:30 UTC.
+      launchd uses local machine time, so this is 18:00 if the Mac is set to IST,
+      or 12:30 if set to UTC. Adjust Hour/Minute to match your Mac's timezone.
+      Weekday: 1=Monday … 5=Friday (0 and 7 = Sunday in launchd).
+    -->
     <key>StartCalendarInterval</key>
     <array>
         <dict>
-            <key>Hour</key>   <integer>10</integer>
-            <key>Minute</key> <integer>45</integer>
-            <key>Weekday</key><integer>1</integer>
+            <key>Hour</key>    <integer>18</integer>
+            <key>Minute</key>  <integer>0</integer>
+            <key>Weekday</key> <integer>1</integer>
         </dict>
         <dict>
-            <key>Hour</key>   <integer>10</integer>
-            <key>Minute</key> <integer>45</integer>
-            <key>Weekday</key><integer>2</integer>
+            <key>Hour</key>    <integer>18</integer>
+            <key>Minute</key>  <integer>0</integer>
+            <key>Weekday</key> <integer>2</integer>
         </dict>
         <dict>
-            <key>Hour</key>   <integer>10</integer>
-            <key>Minute</key> <integer>45</integer>
-            <key>Weekday</key><integer>3</integer>
+            <key>Hour</key>    <integer>18</integer>
+            <key>Minute</key>  <integer>0</integer>
+            <key>Weekday</key> <integer>3</integer>
         </dict>
         <dict>
-            <key>Hour</key>   <integer>10</integer>
-            <key>Minute</key> <integer>45</integer>
-            <key>Weekday</key><integer>4</integer>
+            <key>Hour</key>    <integer>18</integer>
+            <key>Minute</key>  <integer>0</integer>
+            <key>Weekday</key> <integer>4</integer>
         </dict>
         <dict>
-            <key>Hour</key>   <integer>10</integer>
-            <key>Minute</key> <integer>45</integer>
-            <key>Weekday</key><integer>5</integer>
+            <key>Hour</key>    <integer>18</integer>
+            <key>Minute</key>  <integer>0</integer>
+            <key>Weekday</key> <integer>5</integer>
         </dict>
     </array>
 
+    <!-- Stdout + stderr to persistent log file -->
     <key>StandardOutPath</key>
-    <string>/tmp/agentadda_daily_refresh.log</string>
+    <string>/Users/pradeepgorai/.agent-adda/logs/daily_refresh.log</string>
 
     <key>StandardErrorPath</key>
-    <string>/tmp/agentadda_daily_refresh_err.log</string>
+    <string>/Users/pradeepgorai/.agent-adda/logs/daily_refresh_err.log</string>
 
-    <!-- Retry once if it fails -->
-    <key>StartInterval</key>
-    <integer>0</integer>
-
-    <!-- Don't run if on battery to save power -->
     <key>ProcessType</key>
     <string>Background</string>
 
-    <!-- Environment: ensure correct locale and PATH -->
     <key>EnvironmentVariables</key>
     <dict>
         <key>PATH</key>
-        <string>/Users/pgorai/Documents/Projects/Unified-NSE-Analysis/.venv/bin:/usr/local/bin:/usr/bin:/bin</string>
+        <string>/Users/pradeepgorai/Documents/Projects/finance/Unified-NSE-Analysis/.venv/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+
         <key>PYTHONPATH</key>
-        <string>/Users/pgorai/Documents/Projects/Unified-NSE-Analysis</string>
+        <string>/Users/pradeepgorai/Documents/Projects/finance/Unified-NSE-Analysis</string>
+
         <key>PYTHONUNBUFFERED</key>
         <string>1</string>
+
+
+        <!-- Gmail SMTP provider for email_dispatcher -->
+        <key>AGENT_ADDA_EMAIL_PROVIDER</key>
+        <string>gmail</string>
     </dict>
+
 </dict>
 </plist>

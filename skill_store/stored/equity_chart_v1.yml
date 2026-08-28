@@ -1,0 +1,143 @@
+# skill_store/stored/equity_chart_v1.yml
+# Comprehensive equity chart skill for Agent Adda.
+# Renders: SMA 20/50/200, EMA9, RSI14, Supertrend(10,3),
+#          Swing S/R clusters, RS vs Nifty50 + sector index.
+# Output:  Self-contained HTML at reports/latest/charts/{SYMBOL}_chart.html
+
+id: equity_chart_v1
+version: 1
+status: production
+domain: market_analysis
+description: >
+  Generate a comprehensive interactive equity chart for any NSE symbol.
+  Includes candlestick (daily 6M + intraday 15m), SMA 20/50/200, EMA9 (intraday),
+  RSI 14, Supertrend(10,3), swing-pivot S/R levels, and a dedicated Relative Strength
+  tab showing stock performance vs Nifty 50 and its sector index.
+
+input_patterns:
+  - "show chart of {symbol}"
+  - "chart {symbol}"
+  - "{symbol} chart"
+  - "technical chart {symbol}"
+  - "draw chart {symbol}"
+  - "open chart {symbol}"
+  - "display chart {symbol}"
+  - "show me {symbol} chart"
+  - "{symbol} technical analysis chart"
+  - "chart analysis {symbol}"
+  - "show {symbol} technically"
+  - "show {symbol} on chart"
+  - "{symbol} candlestick chart"
+  - "show supertrend {symbol}"
+  - "show support resistance {symbol}"
+  - "rs chart {symbol}"
+  - "relative strength {symbol}"
+  - "chart with indicators {symbol}"
+
+evidence_required:
+  tables:
+    - market.equity_eod
+    - ref.instruments
+  python_module: terminal.chart_engine
+  notes: >
+    All data is fetched live from yfinance. market.equity_eod and ref.instruments
+    are used as fallback / sector lookup when yfinance info is unavailable.
+    No PostgreSQL query is required for basic chart generation.
+
+tool_plan_template:
+  - step: 1
+    action: resolve_symbol
+    notes: >
+      Extract the NSE symbol from the user query. Strip common suffixes (.NS, .NSE).
+      Normalize to uppercase. Handle aliases (NIFTY→^NSEI, BANKNIFTY→^NSEBANK).
+  - step: 2
+    action: run_chart_engine
+    command: "python -m terminal.chart_engine {SYMBOL} --months 6 --intra-days 5 --open"
+    notes: >
+      Calls terminal.chart_engine.main(). Downloads daily + intraday OHLCV,
+      computes SMA20/50/200, EMA9, RSI14, Supertrend(10,3), swing S/R,
+      RS vs Nifty50, RS vs sector index. Saves HTML to
+      reports/latest/charts/{SYMBOL}_chart.html and opens in browser.
+  - step: 3
+    action: surface_key_stats
+    notes: >
+      After chart opens, surface a brief text summary with:
+      last price, chg%, RSI (oversold/neutral/overbought tag),
+      Supertrend signal (BULL/BEAR), distance from SMA200,
+      and nearest S/R levels above and below current price.
+  - step: 4
+    action: educational_disclaimer
+    notes: >
+      Always append: "This chart is for research purposes only — not investment advice."
+
+output_contract:
+  - field: chart_path
+    type: string
+    description: Absolute path to the saved HTML chart file
+  - field: symbol
+    type: string
+    description: Resolved NSE symbol
+  - field: last_price
+    type: float
+    description: Last closing price
+  - field: chg_pct
+    type: float
+    description: Daily change percentage
+  - field: rsi
+    type: float
+    description: RSI 14 value
+  - field: rsi_signal
+    type: string
+    enum: [oversold, neutral, overbought]
+    description: RSI region (oversold <30, overbought >70)
+  - field: supertrend
+    type: string
+    enum: [BULL, BEAR]
+    description: Supertrend(10,3) direction
+  - field: sma20
+    type: float
+    nullable: true
+  - field: sma50
+    type: float
+    nullable: true
+  - field: sma200
+    type: float
+    nullable: true
+  - field: sr_levels
+    type: array
+    description: >
+      List of S/R clusters [{price, label (S|R), strength}],
+      sorted ascending by price
+  - field: note
+    type: string
+    value: "Educational only — not investment advice"
+
+validation_rules:
+  - rule: symbol_required
+    check: symbol is not null and len(symbol) >= 1
+    severity: HIGH
+  - rule: no_advice_guardrail
+    check: output always includes educational disclaimer
+    severity: HIGH
+  - rule: rsi_range
+    check: rsi is null or (0 <= rsi <= 100)
+    severity: MEDIUM
+  - rule: supertrend_enum
+    check: supertrend in ['BULL', 'BEAR']
+    severity: MEDIUM
+
+metadata:
+  created: "2026-08-24"
+  author: "agent-adda"
+  tags:
+    - charting
+    - technical_analysis
+    - supertrend
+    - support_resistance
+    - relative_strength
+    - sma
+    - rsi
+    - candlestick
+  python_entry: "terminal.chart_engine"
+  cli: "python -m terminal.chart_engine {SYMBOL}"
+  output_path: "reports/latest/charts/{SYMBOL}_chart.html"

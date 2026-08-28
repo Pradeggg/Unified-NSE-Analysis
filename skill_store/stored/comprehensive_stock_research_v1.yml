@@ -1,0 +1,211 @@
+id: comprehensive_stock_research_v1
+version: 1
+status: validated
+created_at: '2026-08-24T00:00:00'
+created_by: hand_crafted
+generation_model: null
+domain: stock_research
+title: Comprehensive Stock Research Report
+description: >
+  Build a comprehensive Agent Adda stock research report for an NSE/BSE listed
+  equity. The workflow resolves the symbol, gathers fundamentals, sector context,
+  latest filings/news, broker web research, live price, technical setup, and the
+  equity_chart_v1 chart, then writes a source-grounded Markdown/HTML report under
+  reports/fundamental.
+tags:
+  - stock_research
+  - fundamentals
+  - sector_analysis
+  - news_analysis
+  - technical_analysis
+  - broker_research
+  - concall_analysis
+  - multi_timeframe_analysis
+  - weinstein_stage_analysis
+  - oneil_canslim_analysis
+  - valuation
+  - equity_chart_v1
+  - report_generation
+input_patterns:
+  - "comprehensive stock research report for {symbol}"
+  - "{symbol} fundamental sector news technical chart analysis"
+  - "build Agent Adda research report for {symbol}"
+  - "{symbol} full stock research with equity_chart_v1"
+  - "deep stock report {symbol}"
+  - "stock research report with fundamentals and charts"
+evidence_required:
+  description: >
+    Use source-prioritized evidence. Exchange/company filings and investor
+    releases override secondary scraped data. PG/Screener caches are acceptable
+    for structured history when the source trail is preserved and the as-of date
+    is explicit.
+  tables:
+    - scores.stage_snapshots
+    - market.equity_eod
+    - scores.quarterly_results
+    - scores.annual_results
+    - scores.balance_sheet
+    - scores.cash_flow
+    - breadth.sector_daily
+  tools:
+    - resolve_symbol
+    - get_symbol_snapshot
+    - get_technical_setup
+    - get_cached_financials
+    - scrape_screener_in
+    - search_nse_announcements
+    - web_search
+    - tools/live_prices.py
+    - terminal.chart_engine
+  related_skills:
+    - equity_chart_v1
+tool_plan_template:
+  - name: resolve_entity
+    tool_name: resolve_symbol
+    params:
+      query: "{symbol_or_company_name}"
+    description: Resolve the user phrase to the exact listed symbol before analysis.
+    notes: >
+      If a brand/query alias fails but maps to a listed parent company through
+      filings or public evidence, state the alias resolution explicitly.
+  - name: fetch_stage_snapshot
+    tool_name: get_symbol_snapshot
+    params:
+      symbol: "{resolved_symbol}"
+    description: Fetch the latest Agent Adda stage, score, and signal snapshot.
+    notes: Preserve snapshot_date and missing evidence fields.
+  - name: fetch_technical_setup
+    tool_name: get_technical_setup
+    params:
+      symbol: "{resolved_symbol}"
+    description: Fetch EOD technical setup from local market history.
+    notes: Preserve the EOD as-of date and call out conflicts with live/chart readings.
+  - name: collect_cached_financials
+    tool_name: get_cached_financials
+    params:
+      symbol: "{resolved_symbol}"
+    description: Fetch PG cached financial statements and Screener consolidated data.
+    notes: >
+      Prefer PG cached quarterly/annual/balance-sheet/cash-flow rows for structured history.
+  - name: collect_screener_context
+    tool_name: scrape_screener_in
+    params:
+      symbol: "{resolved_symbol}"
+    description: Fetch Screener consolidated ratios, shareholding, concalls, BSE links, and cross-checks.
+    notes: Use as secondary structured evidence behind filings/company releases.
+  - name: collect_filings_and_news
+    tool_name: search_nse_announcements
+    params:
+      symbol: "{resolved_symbol}"
+      max_results: 15
+    description: Fetch recent NSE/BSE announcements, company releases, transcripts, and rating rationale when available.
+    notes: >
+      Summarize only supported claims. Distinguish direct filing evidence from
+      inference and label unresolved/news gaps.
+  - name: collect_broker_web_research
+    tool_name: web_search
+    params:
+      queries:
+        - "{resolved_symbol} broker research target price latest"
+        - "{company_name} Motilal Oswal Geojit ICICI Securities JM Financial target"
+        - "{company_name} earnings call transcript latest quarter"
+    description: Search public broker summaries, consensus target pages, news, and transcript references.
+    notes: >
+      Use broker views as market context only. Preserve dates, recommendation,
+      target price, source URL, and whether the view was before or after the
+      latest price move.
+  - name: collect_live_price
+    tool_name: shell
+    params:
+      command: ".venv/bin/python tools/live_prices.py --no-open --symbols {resolved_symbol}"
+    description: Fetch latest live/delayed quote, EOD technical setup, stage snapshot, and chart artifacts.
+    notes: >
+      Treat yfinance/live quote output as delayed and preserve the refresh timestamp.
+  - name: build_equity_chart_v1
+    tool_name: shell
+    params:
+      command: ".venv/bin/python -m terminal.chart_engine {resolved_symbol} --months 6 --intra-days 5"
+    description: Generate the equity_chart_v1 HTML report.
+    notes: Output should land under reports/latest/charts/{resolved_symbol}_chart.html.
+  - name: collect_sector_and_peer_context
+    tool_name: sql
+    params:
+      query: "Use latest breadth.sector_daily and selected peer snapshots for sector-relative context."
+    description: Compare the stock against sector breadth and close peers where available.
+    notes: >
+      Use breadth.sector_daily or local sector_breadth.csv for sector strength/
+      weakness. If sector mapping is generic, state the economic sector separately.
+  - name: build_deep_technical_frameworks
+    tool_name: analysis
+    params:
+      methods:
+        - Weinstein stage analysis
+        - William O'Neil CAN SLIM / pivot discipline
+        - candlestick analysis
+        - daily weekly monthly multi-timeframe analysis
+        - support resistance and invalidation levels
+    description: Convert chart and market-history evidence into a disciplined technical read.
+    notes: >
+      Do not overstate a single intraday spike as confirmed Stage 2. Separate
+      trend quality from entry quality, and call out overbought or failed-breakout risk.
+  - name: write_report_artifacts
+    tool_name: filesystem
+    params:
+      markdown_path: "reports/fundamental/{symbol_lower}_{yyyy-mm-dd}.md"
+      html_path: "reports/fundamental/{symbol_lower}_{yyyy-mm-dd}.html"
+    description: Write Markdown and HTML research artifacts under reports/fundamental.
+    notes: >
+      Include executive verdict, snapshot, latest quarter, financial history,
+      balance sheet, cash flow, shareholding, sector, news, technicals, valuation
+      scenarios, broker view, competitive landscape, monitorables, embedded
+      equity_chart_v1 chart, source trail, and research-only disclaimer. HTML
+      should use AgentAdda typography and theme, with a publishable dark-layout
+      variant when the report is intended for posting.
+output_contract:
+  - symbol
+  - company_name
+  - query_alias
+  - as_of_live
+  - as_of_eod
+  - report_markdown_path
+  - report_html_path
+  - chart_path
+  - tradingview_chart_path
+  - executive_verdict
+  - valuation_scenarios
+  - technical_summary
+  - fundamental_summary
+  - sector_summary
+  - news_summary
+  - broker_summary
+  - competitive_landscape
+  - evidence_gaps
+  - source_trail
+validation_rules:
+  - Resolve the listed symbol before fetching stock-specific evidence.
+  - Include explicit live and EOD as-of timestamps when both are used.
+  - State consolidated versus standalone scope for financials.
+  - Include at least three full fiscal years and the latest quarter when available.
+  - Do not hide evidence conflicts; call out differences between live, EOD, Screener, and filing sources.
+  - Include at least three valuation scenarios rather than a single target.
+  - Include links to chart artifacts when generated, and embed equity_chart_v1 in HTML when practical.
+  - Include broker target dates and distinguish pre-move versus post-move target relevance.
+  - Include Weinstein, O'Neil, candlestick, and multi-timeframe technical analysis when price history exists.
+  - End with a research-only, not-investment-advice disclaimer.
+synthesis_guidance:
+  - Lead with a concise verdict and entry-risk view.
+  - Separate business quality from entry timing.
+  - Prefer tables for financials, valuation, peer context, and technical levels.
+  - >
+    Make the HTML output post-ready: branded header, dark AgentAdda visual
+    system, score bars or financial visuals, embedded chart, source trail, and
+    concise narrative blocks.
+  - Highlight unsupported or stale evidence as a gap, not as a conclusion.
+  - Keep recommendations framed as research stance, not instructions to buy or sell.
+review:
+  status: pass
+  findings: []
+  rationale: >
+    Hand-crafted reusable Agent Adda skill card based on the LTFOODS/Daawat
+    comprehensive report workflow. YAML validation and SkillCard schema load pass.
+  attempts: 1

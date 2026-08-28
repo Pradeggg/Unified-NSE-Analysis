@@ -279,6 +279,175 @@
       max-width: 100%;
     }
 
+    .stock-summary {
+      display: grid;
+      gap: 14px;
+    }
+
+    .stock-summary-head {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 12px;
+      align-items: start;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .stock-summary-title {
+      display: grid;
+      gap: 3px;
+      min-width: 0;
+    }
+
+    .stock-summary-title strong {
+      color: var(--text);
+      font-size: 15px;
+      line-height: 1.25;
+    }
+
+    .stock-summary-title span {
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 650;
+      text-transform: uppercase;
+    }
+
+    .stock-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      justify-content: flex-end;
+    }
+
+    .stock-badge {
+      display: inline-flex;
+      align-items: center;
+      min-height: 26px;
+      padding: 0 9px;
+      border-radius: 999px;
+      background: var(--panel-2);
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 750;
+      white-space: nowrap;
+    }
+
+    .stock-badge.good { background: #DCFCE7; color: #15803D; }
+    .stock-badge.warn { background: #FEF9C3; color: #92400E; }
+    .stock-badge.bad { background: #FEE2E2; color: #B91C1C; }
+
+    .stock-verdict {
+      display: grid;
+      gap: 5px;
+      padding: 10px 12px;
+      border: 1px solid #BAE6FD;
+      border-radius: 10px;
+      background: #F0F9FF;
+      color: #0C4A6E;
+    }
+
+    .stock-verdict strong {
+      color: #075985;
+    }
+
+    .stock-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .stock-card {
+      min-width: 0;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      overflow: hidden;
+      background: var(--panel);
+    }
+
+    .stock-card-head {
+      padding: 9px 10px;
+      background: #FAFAF9;
+      border-bottom: 1px solid var(--line);
+      color: var(--text);
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .stock-metrics {
+      width: 100%;
+      min-width: 0;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+
+    .stock-metrics th,
+    .stock-metrics td {
+      white-space: normal;
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .stock-metrics th {
+      width: 48%;
+      color: var(--muted);
+      background: transparent;
+      font-size: 11px;
+      text-transform: none;
+      letter-spacing: 0;
+    }
+
+    .stock-metrics td {
+      color: var(--text);
+      font-weight: 650;
+      text-align: right;
+    }
+
+    .compare-summary {
+      display: grid;
+      gap: 14px;
+    }
+
+    .compare-mini-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 10px;
+    }
+
+    .compare-mini-card {
+      display: grid;
+      gap: 7px;
+      min-width: 0;
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #FAFAF9;
+    }
+
+    .compare-mini-card strong {
+      color: var(--text);
+      font-size: 13px;
+      line-height: 1.25;
+    }
+
+    .compare-mini-card span {
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 650;
+    }
+
+    .compare-table th:first-child,
+    .compare-table td:first-child {
+      position: sticky;
+      left: 0;
+      z-index: 1;
+    }
+
+    .compare-table td:first-child {
+      background: var(--panel);
+      color: var(--muted);
+      font-weight: 750;
+    }
+
     .message.user .bubble {
       border-color: #BAE6FD;
       background: #F0F9FF;
@@ -1161,6 +1330,15 @@
       .ric-kv {
         align-items: flex-start;
       }
+
+      .stock-summary-head,
+      .stock-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .stock-badges {
+        justify-content: flex-start;
+      }
     }
 
     @media (max-width: 420px) {
@@ -1940,6 +2118,250 @@
       return out + suffix;
     }
 
+    function fmtMoney(value) {
+      if (value === null || value === undefined || value === "") return "n/a";
+      const num = Number(value);
+      if (!Number.isFinite(num)) return "n/a";
+      return "₹" + num.toLocaleString("en-IN", { maximumFractionDigits: 2 });
+    }
+
+    function fmtPct(value) {
+      const num = Number(value);
+      if (!Number.isFinite(num)) return "n/a";
+      return (num > 0 ? "+" : "") + num.toFixed(2).replace(/\.00$/, "") + "%";
+    }
+
+    function fmtAbsPct(value) {
+      const num = Number(value);
+      if (!Number.isFinite(num)) return "n/a";
+      return num.toFixed(2).replace(/\.00$/, "") + "%";
+    }
+
+    function stockBadgeClass(value) {
+      const text = String(value || "").toUpperCase();
+      if (text.includes("STRONG_BULLISH") || text.includes("STRONG_BUY") || text === "BUY" || text.includes("STAGE_2")) return "good";
+      if (text.includes("BEARISH") || text === "SELL" || text.includes("STAGE_4")) return "bad";
+      return "warn";
+    }
+
+    function evidenceValue(response, source) {
+      const item = (response.evidence || []).find(entry => entry.source === source && entry.value && typeof entry.value === "object");
+      return item ? item.value : {};
+    }
+
+    function metricRows(rows) {
+      return rows
+        .filter(row => row[1] !== undefined && row[1] !== null && row[1] !== "")
+        .map(row => `<tr><th>${escapeHtml(row[0])}</th><td>${escapeHtml(row[1])}</td></tr>`)
+        .join("");
+    }
+
+    function renderStockCard(title, rows) {
+      const body = metricRows(rows);
+      if (!body) return "";
+      return `
+        <div class="stock-card">
+          <div class="stock-card-head">${escapeHtml(title)}</div>
+          <table class="stock-metrics"><tbody>${body}</tbody></table>
+        </div>
+      `;
+    }
+
+    function renderStockResearchSummary(response) {
+      const row = response.comparison && response.comparison.length === 1 ? response.comparison[0] : null;
+      if (!row || !row.symbol || !["stock_brief", "stock_deep_dive", "financials_review"].includes(response.intent)) return "";
+
+      const technicals = evidenceValue(response, "get_technical_setup");
+      const fundScore = row.enhanced_fund_score ?? row.fundamental_score ?? row.investment_score;
+      const techScore = row.technical_score ?? technicals.technical_score;
+      const technicalWeak = String(row.trend_signal || row.trading_signal || row.stage || "").toUpperCase().match(/BEARISH|SELL|STAGE_4/);
+      const fundamentalText = row.fundamental_assessment || "fundamental profile unavailable";
+      const technicalText = row.technical_assessment || "technical setup unavailable";
+      const verdict = technicalWeak
+        ? `${row.symbol} has ${fundamentalText}, but the current technical setup is weak. Treat this as a watchlist/recovery candidate until trend confirmation improves.`
+        : `${row.symbol} has ${fundamentalText} with ${technicalText}. Validate price action and evidence freshness before acting.`;
+
+      const badges = [
+        ["Stage", row.stage],
+        ["Trend", row.trend_signal],
+        ["Signal", row.trading_signal],
+        ["Supertrend", row.supertrend || technicals.supertrend],
+      ].filter(item => item[1]).map(([label, value]) =>
+        `<span class="stock-badge ${stockBadgeClass(value)}">${escapeHtml(label)}: ${escapeHtml(value)}</span>`
+      ).join("");
+
+      return `
+        <div class="stock-summary">
+          <div class="stock-summary-head">
+            <div class="stock-summary-title">
+              <strong>${escapeHtml(row.company || row.symbol)}</strong>
+              <span>${escapeHtml(row.symbol)} · ${escapeHtml(row.sector || "sector n/a")} · as of ${escapeHtml(row.as_of || technicals.as_of || "n/a")}</span>
+            </div>
+            <div class="stock-badges">${badges}</div>
+          </div>
+
+          <div class="stock-verdict">
+            <strong>Research View</strong>
+            <span>${escapeHtml(verdict)}</span>
+          </div>
+
+          <div class="stock-grid">
+            ${renderStockCard("Fundamentals", [
+              ["Market price", fmtMoney(row.price)],
+              ["Fundamental view", fundamentalText],
+              ["Enhanced fund score", fmt(fundScore)],
+              ["Earnings quality", fmt(row.earnings_quality)],
+              ["Sales growth", fmt(row.sales_growth)],
+              ["Financial strength", fmt(row.financial_strength)],
+              ["Institutional backing", fmt(row.institutional_backing)],
+              ["Investment score", fmt(row.investment_score)],
+            ])}
+            ${renderStockCard("Technicals", [
+              ["RSI", fmt(row.rsi)],
+              ["Technical score", fmt(techScore)],
+              ["Trend signal", row.trend_signal || "n/a"],
+              ["Trading signal", row.trading_signal || "n/a"],
+              ["Supertrend", row.supertrend || technicals.supertrend || "n/a"],
+              ["1D change", fmtPct(row.change_1d_pct)],
+              ["1W change", fmtPct(row.change_1w_pct)],
+              ["1M change", fmtPct(row.change_1m_pct)],
+            ])}
+            ${renderStockCard("Moving Averages & Volume", [
+              ["SMA 20", fmtMoney(technicals.sma20)],
+              ["SMA 50", fmtMoney(technicals.sma50)],
+              ["SMA 200", fmtMoney(technicals.sma200)],
+              ["Above SMA20", technicals.above_sma20 === true ? "Yes" : technicals.above_sma20 === false ? "No" : "n/a"],
+              ["Above SMA50", technicals.above_sma50 === true ? "Yes" : technicals.above_sma50 === false ? "No" : "n/a"],
+              ["Last volume", technicals.vol_last ? Number(technicals.vol_last).toLocaleString("en-IN") : "n/a"],
+              ["20D avg volume", technicals.vol_avg_20d ? Number(technicals.vol_avg_20d).toLocaleString("en-IN") : "n/a"],
+              ["Volume ratio", fmt(technicals.vol_ratio) + "x"],
+            ])}
+            ${renderStockCard("Levels & Risk", [
+              ["Support", fmtMoney(row.support)],
+              ["Resistance", fmtMoney(row.resistance)],
+              ["52W high", fmtMoney(technicals["52w_high"])],
+              ["52W low", fmtMoney(technicals["52w_low"])],
+              ["From 52W high", fmtPct(technicals.pct_from_52h)],
+              ["Assessment", technicalText],
+            ])}
+          </div>
+
+          <p>Research only. Not investment advice.</p>
+        </div>
+      `;
+    }
+
+    function rowScore(row) {
+      const tech = Number(row.technical_score);
+      const invest = Number(row.investment_score);
+      const fund = Number(row.enhanced_fund_score ?? row.fundamental_score);
+      const rs = Number(row.rs_pct ?? row.relative_strength);
+      return (
+        (Number.isFinite(tech) ? tech : 0) * 0.45 +
+        (Number.isFinite(invest) ? invest : 0) * 0.35 +
+        (Number.isFinite(fund) ? fund : Number.isFinite(rs) ? rs : 0) * 0.20
+      );
+    }
+
+    function comparisonRows(response) {
+      const direct = Array.isArray(response.comparison) ? response.comparison.filter(row => row && row.symbol) : [];
+      if (direct.length >= 2) return direct;
+      const compareEvidence = evidenceValue(response, "compare_stocks");
+      const details = Array.isArray(compareEvidence.stock_details) ? compareEvidence.stock_details : [];
+      return details
+        .filter(row => row && row.symbol)
+        .map(row => ({
+          ...row,
+          price: row.price ?? row.db_price ?? row.current_price,
+          enhanced_fund_score: row.enhanced_fund_score ?? row.fundamental_score,
+        }));
+    }
+
+    function renderComparisonSummary(response) {
+      const rows = comparisonRows(response);
+      if (rows.length < 2) return "";
+
+      const leader = rows.reduce((best, row) => rowScore(row) > rowScore(best) ? row : best, rows[0]);
+      const title = rows.map(row => row.symbol).join(" vs ");
+      const verdict = `${leader.symbol} currently screens stronger on the combined technical, investment, and fundamental score view. Use the table to separate trend quality from fundamental strength; this is research only, not a buy/sell recommendation.`;
+      const cols = rows.map(row => `<th>${escapeHtml(row.symbol)}<br><span style="font-size:10px;color:#D6D3D1;text-transform:none">${escapeHtml(row.company || "")}</span></th>`).join("");
+      const metric = (label, formatter) => `
+        <tr>
+          <td>${escapeHtml(label)}</td>
+          ${rows.map(row => `<td>${escapeHtml(formatter(row))}</td>`).join("")}
+        </tr>
+      `;
+
+      const cards = rows.map(row => `
+        <div class="compare-mini-card">
+          <strong>${escapeHtml(row.symbol)}</strong>
+          <span>${escapeHtml(row.company || row.sector || "Company")}</span>
+          <div class="stock-badges" style="justify-content:flex-start">
+            ${row.stage ? `<span class="stock-badge ${stockBadgeClass(row.stage)}">${escapeHtml(row.stage)}</span>` : ""}
+            ${row.trend_signal ? `<span class="stock-badge ${stockBadgeClass(row.trend_signal)}">${escapeHtml(row.trend_signal)}</span>` : ""}
+            ${row.trading_signal ? `<span class="stock-badge ${stockBadgeClass(row.trading_signal)}">${escapeHtml(row.trading_signal)}</span>` : ""}
+          </div>
+        </div>
+      `).join("");
+
+      return `
+        <div class="compare-summary">
+          <div class="stock-summary-head">
+            <div class="stock-summary-title">
+              <strong>Comparison: ${escapeHtml(title)}</strong>
+              <span>${rows.length} stocks · structured research view</span>
+            </div>
+            <div class="stock-badges">
+              <span class="stock-badge good">Leader: ${escapeHtml(leader.symbol)}</span>
+            </div>
+          </div>
+
+          <div class="stock-verdict">
+            <strong>Summary</strong>
+            <span>${escapeHtml(verdict)}</span>
+          </div>
+
+          <div class="compare-mini-grid">${cards}</div>
+
+          <div class="table-wrap">
+            <table class="compare-table">
+              <thead><tr><th>Metric</th>${cols}</tr></thead>
+              <tbody>
+                ${metric("Price", row => fmtMoney(row.price))}
+                ${metric("Stage", row => row.stage || "n/a")}
+                ${metric("Sector", row => row.sector || "n/a")}
+                ${metric("RSI", row => fmt(row.rsi))}
+                ${metric("Technical score", row => fmt(row.technical_score))}
+                ${metric("Investment score", row => fmt(row.investment_score))}
+                ${metric("Enhanced fund score", row => fmt(row.enhanced_fund_score ?? row.fundamental_score))}
+                ${metric("Trend signal", row => row.trend_signal || "n/a")}
+                ${metric("Trading signal", row => row.trading_signal || "n/a")}
+                ${metric("1D change", row => fmtPct(row.change_1d_pct))}
+                ${metric("1W change", row => fmtPct(row.change_1w_pct))}
+                ${metric("1M change", row => fmtPct(row.change_1m_pct))}
+                ${metric("Sales growth", row => fmtAbsPct(row.sales_growth))}
+                ${metric("Financial strength", row => fmt(row.financial_strength))}
+                ${metric("Institutional backing", row => fmt(row.institutional_backing))}
+              </tbody>
+            </table>
+          </div>
+
+          <p>Research only. Not investment advice.</p>
+        </div>
+      `;
+    }
+
+    function renderResponseBody(response) {
+      const template = response.response_template || response.model_route?.response_template || "";
+      if (template === "comparison_matrix") {
+        return renderComparisonSummary(response) || renderMarkdown(response.answer);
+      }
+      if (template === "stock_research_card") {
+        return renderStockResearchSummary(response) || renderMarkdown(response.answer);
+      }
+      return renderComparisonSummary(response) || renderStockResearchSummary(response) || renderMarkdown(response.answer);
+    }
+
     function addMessage(role, text) {
       const node = document.createElement("div");
       node.className = "message " + (role === "You" ? "user" : "agent");
@@ -2288,6 +2710,7 @@
             <div>Intent: ${escapeHtml(response.intent)}</div>
             <div>Router: ${escapeHtml(response.model_route?.router || "gpt-5-nano")}</div>
             <div>Synthesis: ${escapeHtml(response.model_route?.synthesis || "local")}</div>
+            <div>Template: ${escapeHtml(response.model_route?.response_template_label || response.response_template || "narrative")}</div>
             <div>Cost: $${Number(response.cost_usd || 0).toFixed(6)}</div>
           </div>
         </div>
@@ -2326,7 +2749,7 @@
         const data = await res.json();
         if (!res.ok) throw new Error(data.detail || `HTTP ${res.status}`);
         state.lastResponse = data;
-        pending.querySelector(".bubble").innerHTML = renderMarkdown(data.answer);
+        pending.querySelector(".bubble").innerHTML = renderResponseBody(data);
         renderEvidence(data);
         renderActions(data.next_actions);
         el.modelStatus.textContent = data.model_route?.synthesis || "local";

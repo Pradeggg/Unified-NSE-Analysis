@@ -399,6 +399,8 @@ def _parse_questions(raw: list) -> tuple[ClarificationQuestion, ...]:
 def _tool_plan_has_required_args(tool_plan: list[tuple[str, dict[str, Any]]]) -> bool:
     """Reject structurally invalid LLM-generated tool calls."""
     for tool, args in tool_plan:
+        if not _tool_args_have_real_symbols(tool, args):
+            return False
         if tool == "scan_symbols_intraday":
             symbols = args.get("symbols")
             if not isinstance(symbols, list) or not symbols:
@@ -407,6 +409,46 @@ def _tool_plan_has_required_args(tool_plan: list[tuple[str, dict[str, Any]]]) ->
             args.get("path") or args.get("file") or args.get("report_path")
         ):
             return False
+    return True
+
+
+_SYMBOL_ARG_TOOLS = frozenset({
+    "resolve_symbol",
+    "get_symbol_snapshot",
+    "get_symbol_quick_analysis",
+    "get_technical_setup",
+    "get_sector_context",
+    "get_cached_financials",
+    "scrape_screener_in",
+    "get_latest_results",
+    "search_nse_announcements",
+    "search_bse_filings",
+    "search_latest_catalysts",
+})
+
+def _looks_like_placeholder_symbol(value: Any) -> bool:
+    text = str(value or "").strip()
+    normalized = re.sub(r"[^A-Z0-9]+", "_", text.upper()).strip("_")
+    return (
+        not text
+        or "<" in text
+        or ">" in text
+        or normalized in {"SYMBOL", "NSE_SYMBOL", "RESOLVED_SYMBOL", "RESOLVED_NSE_SYMBOL", "TICKER"}
+    )
+
+
+def _tool_args_have_real_symbols(tool: str, args: dict[str, Any]) -> bool:
+    if tool == "resolve_symbol":
+        query = args.get("query") or args.get("symbol") or args.get("ticker")
+        return not _looks_like_placeholder_symbol(query)
+    if tool in _SYMBOL_ARG_TOOLS:
+        symbol = args.get("symbol") or args.get("ticker")
+        if symbol is None:
+            return False
+        return not _looks_like_placeholder_symbol(symbol)
+    symbols = args.get("symbols")
+    if isinstance(symbols, list):
+        return bool(symbols) and all(not _looks_like_placeholder_symbol(item) for item in symbols)
     return True
 
 

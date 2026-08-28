@@ -1,0 +1,116 @@
+id: swing_playbook_report_v1
+version: 1
+status: production
+domain: market_analysis
+description: >
+  Generate the Agent Adda dark-terminal themed Swing Playbook HTML report.
+  Runs the full pipeline: pulls candidates from PostgreSQL, checks overextension
+  signals (RSI > 72 or price > 7% above SMA20), fetches live market context,
+  and renders the themed HTML with sparklines, TradingView + Screener.in links,
+  R:R badges, and a full SEBI disclaimer.
+
+input_patterns:
+  - "/swing-playbook-report"
+  - "generate swing playbook report"
+  - "render swing playbook"
+  - "swing playbook html"
+  - "refresh swing playbook report"
+  - "run swing playbook report"
+  - "swing report"
+
+evidence_required:
+  tables:
+    - scores.daily_scores
+    - market.index_eod
+    - breadth.market_daily
+  python_module: scripts.generate_swing_playbook_report
+  notes: >
+    Requires PostgreSQL running. Reads candidates from scores.daily_scores
+    via terminal.swing_playbook.run_playbook(). Falls back to existing
+    swing_playbook_candidates.csv if DB unavailable.
+
+tool_plan_template:
+  - step: 1
+    action: check_prerequisites
+    notes: >
+      Ensure PostgreSQL is running (./postgres/start_pg.sh status).
+      Check that daily pipeline has run today (scores.daily_scores has today's date).
+      If not, warn user and offer to run with --from-csv to re-render from existing data.
+  - step: 2
+    action: run_report_generator
+    command: "python scripts/generate_swing_playbook_report.py --fresh"
+    flags:
+      "--fresh":    "Re-pull from DB (use after daily pipeline)"
+      "--from-csv": "Re-render from existing CSV (fast, no DB query)"
+      "--top-n N":  "Candidates per sleeve (default 10)"
+      "--no-open":  "Skip browser open (for pipeline/cron use)"
+    notes: >
+      Script runs 8 steps: data pipeline → CSV read → overextension check →
+      market context → narrative build → HTML render → file write → browser open.
+  - step: 3
+    action: surface_summary
+    notes: >
+      After completion, report: tactical count, position count, top candidate,
+      overextended symbols, NIFTY level + regime, output path.
+  - step: 4
+    action: educational_disclaimer
+    notes: >
+      Always append: "This report is for research purposes only — not investment advice.
+      Overextended setups carry higher reversal risk; reduce position size accordingly."
+
+output_contract:
+  - field: html_path
+    type: string
+    description: "reports/latest/swing_playbook.html"
+  - field: tactical_count
+    type: int
+    description: Number of tactical candidates
+  - field: position_count
+    type: int
+    description: Number of position candidates
+  - field: top_candidate
+    type: string
+    description: Symbol with highest composite score
+  - field: top_score
+    type: float
+    description: Highest composite score
+  - field: overextended_symbols
+    type: array
+    description: Symbols flagged as overextended (RSI > 72 or > 7% above SMA20)
+  - field: regime
+    type: string
+    enum: [BULL_TREND, ROTATION, CHOP, BEAR_TREND]
+  - field: note
+    type: string
+    value: "Educational only — not investment advice"
+
+validation_rules:
+  - rule: candidates_required
+    check: tactical_count > 0 or position_count > 0
+    severity: HIGH
+    remediation: "Run daily pipeline first: python daily_refresh.py --skip-analysis"
+  - rule: overextension_sourced
+    check: overextension data sourced from scores.daily_scores, not inferred
+    severity: MEDIUM
+  - rule: no_advice_guardrail
+    check: output always includes SEBI disclaimer
+    severity: HIGH
+  - rule: market_open_language
+    check: narrative says "trading at" not "closed at" when market is open (09:15–15:30 IST)
+    severity: MEDIUM
+
+metadata:
+  created: "2026-08-24"
+  author: "agent-adda"
+  tags:
+    - swing_trading
+    - html_report
+    - themed_report
+    - overextension
+    - risk_management
+    - sebi_disclaimer
+  python_entry: "scripts.generate_swing_playbook_report"
+  cli: "python scripts/generate_swing_playbook_report.py"
+  output_path: "reports/latest/swing_playbook.html"
+  archive_path: "reports/swing_playbook/{YEAR}/Swing_Playbook_{YYYYMMDD}_themed.html"
+  skill_file: ".claude/skills/swing-playbook-report/SKILL.md"

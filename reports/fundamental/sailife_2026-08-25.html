@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Agent Adda Research | SAI LIFE SCIENCES LIMITED (SAILIFE) | Offline cache mode (no live web fetch)</title>
+  <style>
+    
+    
+    :root{
+      --bg:#0d1117;--bg2:#111820;--panel:#161b22;--line:#30363d;
+      --ink:#f8faff;--muted:#a8b3bf;--subtle:#788391;
+      --sky:#0ea5e9;--sky2:#38bdf8;--green:#22c55e;--amber:#f59e0b;--red:#f43f5e;
+      --display:"Playfair Display",Georgia,"Times New Roman",serif;
+      --sans:"Plus Jakarta Sans",Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+      --mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace;
+    }
+    *{box-sizing:border-box} html{scroll-behavior:smooth}
+    body{margin:0;background:linear-gradient(180deg,var(--bg),var(--bg2) 36%,var(--bg));color:var(--ink);font:14px/1.65 var(--sans);-webkit-font-smoothing:antialiased}
+    a{color:var(--sky2);text-decoration:none} a:hover{text-decoration:underline}
+    .page{max-width:1240px;margin:0 auto;padding:26px 24px 64px}
+    .topbar{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:10px 0 22px;border-bottom:1px solid var(--line)}
+    .brand{display:flex;align-items:center;gap:12px;font-weight:700;color:var(--ink)}
+    .mark{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:#f8faff;color:#0d1117;font:700 14px var(--sans)}
+    .nav{display:flex;gap:10px;flex-wrap:wrap;color:var(--muted);font-size:12px}
+    .nav a,.status-pill{color:var(--muted);padding:6px 10px;border:1px solid var(--line);border-radius:999px;background:#ffffff08}
+    .status-pill{color:#fde68a;border-color:#f59e0b66;background:#f59e0b14;font-weight:800;text-transform:uppercase;letter-spacing:.06em}
+    .hero{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(310px,.75fr);gap:28px;padding:44px 0 30px;align-items:end}
+    .eyebrow{display:inline-flex;align-items:center;gap:8px;color:var(--sky2);font-weight:700;text-transform:uppercase;font-size:11px;letter-spacing:.12em;margin-bottom:16px}
+    .dot{width:8px;height:8px;border-radius:50%;background:var(--sky)}
+    h1,h2,h3{font-family:var(--display);line-height:1.12;margin:0;color:var(--ink);letter-spacing:0}
+    h1{font-size:clamp(39px,6vw,74px);font-weight:700} h1 span{color:var(--sky2)}
+    h2{font-size:32px} h3{font-size:20px;margin:4px 0 10px}
+    .subtitle{max-width:780px;margin:18px 0 0;color:#d6d3d1;font-size:17px;line-height:1.7}
+    .meta{margin-top:18px;color:var(--subtle);font-size:12px}
+    .hero-panel,.card{background:linear-gradient(180deg,var(--panel),#111820);border:1px solid var(--line);border-radius:8px;padding:16px}
+    .hero-panel{padding:18px;box-shadow:0 20px 70px #00000055}
+    .price{font:700 42px/1 var(--sans);letter-spacing:0;color:var(--ink)}
+    .move{font:700 16px var(--mono);color:var(--green);margin-top:8px}
+    .verdict{margin-top:18px;padding-top:18px;border-top:1px solid var(--line);color:#d6d3d1}
+    .badge-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px}
+    .badge{font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sky2);border:1px solid #0ea5e955;background:#0ea5e912;border-radius:999px;padding:5px 9px}
+    section{padding:28px 0;border-top:1px solid var(--line)}
+    .section-head{display:flex;align-items:end;justify-content:space-between;gap:18px;margin-bottom:18px}
+    .section-note{max-width:590px;color:var(--muted);font-size:13px}
+    p{margin:0 0 14px;color:#d6d3d1}
+    .grid{display:grid;gap:14px}.grid.cols-4{grid-template-columns:repeat(4,minmax(0,1fr))}.grid.cols-3{grid-template-columns:repeat(3,minmax(0,1fr))}.grid.cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .metric-label{color:var(--subtle);font-size:11px;text-transform:uppercase;font-weight:700;letter-spacing:.08em}
+    .metric-value{display:block;font-size:24px;font-weight:800;line-height:1.15;margin-top:7px;color:var(--ink)}
+    .metric-detail{display:block;color:var(--muted);font-size:12px;margin-top:6px}
+    .green{color:var(--green)}.amber{color:var(--amber)}.red{color:var(--red)}.muted{color:var(--muted)}
+    .table-wrap{overflow-x:visible;border:1px solid var(--line);border-radius:8px;background:#0d1117;margin-bottom:14px}
+    table{width:100%;border-collapse:collapse;table-layout:fixed;min-width:0}
+    th,td{padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top;text-align:right;white-space:normal;overflow-wrap:anywhere;word-break:normal;font-size:12px;line-height:1.35}
+    th:first-child,td:first-child{text-align:left;width:23%}
+    th{font-size:9.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);background:#161b22;font-weight:800}
+    td{color:#d6d3d1}tr:last-child td{border-bottom:0}
+    .narrative{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:18px}
+    .pullquote{font-family:var(--display);font-size:28px;line-height:1.25;color:var(--ink);border-left:4px solid var(--sky);padding-left:18px;margin:0 0 18px}
+    .callout{border-left:4px solid var(--sky);background:#0ea5e912;border-radius:8px;padding:14px 16px;color:#d6d3d1}
+    .risk-callout{border-left-color:var(--red);background:#f43f5e12}
+    .chart-frame{border:1px solid var(--line);border-radius:8px;overflow:hidden;background:#0b1220;box-shadow:0 20px 70px #00000055}
+    .chart-image{display:block;width:100%;height:auto;background:#0b1220}
+    .score{display:grid;grid-template-columns:160px 1fr 58px;gap:12px;align-items:center;margin:12px 0}
+    .score-name{color:var(--muted);font-size:12px;display:flex;align-items:center;gap:8px}
+    .swatch{width:9px;height:9px;border-radius:50%;display:inline-block;background:var(--score-color)}
+    .score-track{height:14px;border-radius:999px;background:#27313d;overflow:hidden;border:1px solid #ffffff10}
+    .score-fill{display:block;height:100%;border-radius:999px;background:var(--score-color);box-shadow:0 0 18px var(--score-glow)}
+    .score-num{font:800 12px var(--mono);color:var(--score-color);text-align:center;border:1px solid var(--score-glow);background:#ffffff08;border-radius:999px;padding:3px 0}
+    .score.fund{--score-color:#22c55e;--score-glow:#22c55e66}.score.invest{--score-color:#38bdf8;--score-glow:#38bdf866}.score.earnings{--score-color:#a78bfa;--score-glow:#a78bfa66}.score.growth{--score-color:#34d399;--score-glow:#34d39966}.score.strength{--score-color:#f59e0b;--score-glow:#f59e0b66}.score.institutional{--score-color:#fb7185;--score-glow:#fb718566}.score.tech{--score-color:#06b6d4;--score-glow:#06b6d466}
+    .mini-bars{display:grid;grid-template-columns:repeat(5,minmax(46px,1fr));align-items:end;gap:10px;height:190px;padding:14px;border:1px solid var(--line);border-radius:8px;background:#0d1117}
+    .bar{display:flex;flex-direction:column;justify-content:end;gap:7px;height:100%;min-width:0}.bar span:first-child{display:block;background:linear-gradient(180deg,var(--sky2),#0369a1);border-radius:6px 6px 0 0;min-height:12px}.bar b{font:700 11px var(--mono);color:#d6d3d1;text-align:center}.bar small{color:var(--subtle);font-size:10px;text-align:center}
+    ul{margin:0;padding-left:18px;color:#d6d3d1}li{margin:7px 0}
+    .source-list{columns:2;column-gap:24px}.source-list li{break-inside:avoid;color:var(--muted)}
+    .footer{margin-top:28px;padding:18px;border:1px solid #f43f5e55;background:#f43f5e12;border-radius:8px;color:#fecdd3}
+    code,.mono{font-family:var(--mono)}
+    @media(max-width:980px){.hero,.narrative{grid-template-columns:1fr}.grid.cols-4,.grid.cols-3,.grid.cols-2{grid-template-columns:1fr}.source-list{columns:1}}
+    @media(max-width:620px){.page{padding:18px 14px 44px}.topbar,.section-head{align-items:flex-start;flex-direction:column}.price{font-size:34px}.score{grid-template-columns:125px 1fr 48px}th,td{padding:5px 4px;font-size:10px;line-height:1.25}th{font-size:8.5px;letter-spacing:0;text-transform:none}th:first-child,td:first-child{width:24%}}
+  </style>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Playfair+Display:wght@400;700&display=swap">
+</head>
+<body>
+<div class="page">
+  <header class="topbar">
+    <div class="brand"><div class="mark">AA</div><span>AgentAdda Market Intelligence</span></div>
+    <nav class="nav" aria-label="Report sections"><span class="status-pill">Offline cache mode (no live web fetch)</span><a href="#fundamentals">Fundamentals</a><a href="#chart">Chart</a><a href="#technicals">Technicals</a><a href="#brokers">Brokers</a><a href="#risks">Risks</a></nav>
+  </header>
+
+  <section class="hero">
+    <div>
+      <div class="eyebrow"><span class="dot"></span> Comprehensive stock research | SAILIFE</div>
+      <h1>SAI LIFE SCIENCES LIMITED <span>(SAILIFE)</span></h1>
+      <p class="subtitle">SAI LIFE SCIENCES LIMITED is an integrated CRDMO (CRO + CDMO) with FY26 revenue 2,192 Cr and PAT 349 Cr; execution on FY27 capacity/capability capex is the key swing factor.</p>
+      <p class="meta">Data refreshed 25 Aug 2026. Technical snapshot: 2026-08-17. Financials in INR crore unless stated. Financials in INR crore unless stated.</p>
+    </div>
+    <aside class="hero-panel">
+      <div class="metric-label">Live delayed price</div><div class="price">INR 1,416</div><div class="move"><span class="red">-1.48%</span> vs prior close | RSI 59.8 | Vol 0.48x avg</div>
+      <div class="verdict"><strong>Research stance:</strong> Business quality and earnings trend matter more than day-to-day price noise. Technicals: Stage 2, RSI 59.8, ADX 32.0. Fundamentals: FY sales YoY +29.3% | Jun 2026 sales YoY +11.7% | Jun 2026 PAT YoY +21.7%.</div>
+      <div class="badge-row"><span class="badge">EFS 85.1</span><span class="badge">Tech 44.7</span><span class="badge">RSI 59.8</span><span class="badge">Stage 2</span></div>
+    </aside>
+  </section>
+
+  <section>
+    <div class="grid cols-4"><div class="card"><span class="metric-label">Market cap</span><strong class="metric-value">INR 30,069 Cr</strong><span class="metric-detail">Cached fundamentals</span></div><div class="card"><span class="metric-label">P/E</span><strong class="metric-value">81.8x</strong><span class="metric-detail">Trailing</span></div><div class="card"><span class="metric-label">Jun 2026 revenue</span><strong class="metric-value class="green"">554 Cr</strong><span class="metric-detail">YoY +11.7%</span></div><div class="card"><span class="metric-label">Jun 2026 PAT</span><strong class="metric-value class="green"">73 Cr</strong><span class="metric-detail">YoY +21.7%</span></div><div class="card"><span class="metric-label">ROCE</span><strong class="metric-value">19.6%</strong><span class="metric-detail">Screener/cached</span></div><div class="card"><span class="metric-label">ROE</span><strong class="metric-value">15.4%</strong><span class="metric-detail">Screener/cached</span></div><div class="card"><span class="metric-label">Book value</span><strong class="metric-value">INR 117</strong><span class="metric-detail">Per share</span></div><div class="card"><span class="metric-label">Vol ratio (EOD)</span><strong class="metric-value">0.48x</strong><span class="metric-detail">Vs 20D avg</span></div></div>
+  </section>
+
+  <section>
+    <div class="section-head"><h2>Investment Read</h2><p class="section-note">Separate the company from the entry. Integrated CRDMO businesses can compound for years, but execution (regulatory/quality, capacity ramp, talent) matters more than one-quarter noise.</p></div>
+    <div class="narrative">
+      <div class="card"><p class="pullquote">FY26 delivered ~30% sales growth with margin expansion; the question is whether FY27 capex ramps translate into sustained growth without execution slippage.</p><p>Sai Life Sciences is an integrated CRDMO combining <strong>CRO (Discovery Services)</strong> and <strong>CDMO (CMC Services)</strong>. The model benefits from cross-sell (discovery → development → manufacturing), repeat programs, and deeper customer relationships when delivery and compliance are strong.</p><p>FY26 sales were <strong>2,192 Cr</strong> (+29.3% YoY vs FY25) with PAT <strong>349 Cr</strong>. Balance-sheet risk looks low given post-IPO deleveraging (net debt ratios in the snapshot are minimal).</p><p>Key watch items: execution of the planned capacity/capability capex program, outcomes of regulatory/customer audits, customer concentration and pricing power, and ability to attract/retain scientific talent while scaling.</p></div>
+      <div class="card"><h3>Decision Frame</h3><ul><li><strong>Business:</strong> integrated CRDMO; wins scale with quality + execution.</li><li><strong>FY26 trend:</strong> sales 2,192 Cr; PAT 349 Cr.</li><li><strong>Technical:</strong> Stage 2, RSI 59.8, ADX 32.0.</li><li><strong>Action bias:</strong> prefer adds on constructive consolidation; avoid chasing extended candles.</li><li><strong>Invalidation:</strong> repeated quality/compliance issues or a sustained breakdown below key moving averages.</li></ul></div>
+    </div>
+  </section>
+
+  <section id="fundamentals">
+    <div class="section-head"><h2>Fundamental Scores</h2><p class="section-note">Agent Adda scores from snapshot (ric_sherlock_cache). Useful ranking signals — not standalone buy/sell rules.</p></div>
+    <div class="grid cols-2">
+      <div class="card"><div class="score fund"><span class="score-name"><span class="swatch"></span>Enhanced fund score</span><span class="score-track"><span class="score-fill" style="width:85%"></span></span><span class="score-num">85.1</span></div><div class="score invest"><span class="score-name"><span class="swatch"></span>Investment score</span><span class="score-track"><span class="score-fill" style="width:65%"></span></span><span class="score-num">64.8</span></div><div class="score earnings"><span class="score-name"><span class="swatch"></span>Earnings quality</span><span class="score-track"><span class="score-fill" style="width:91%"></span></span><span class="score-num">91.2</span></div><div class="score growth"><span class="score-name"><span class="swatch"></span>Sales growth</span><span class="score-track"><span class="score-fill" style="width:90%"></span></span><span class="score-num">90.0</span></div><div class="score strength"><span class="score-name"><span class="swatch"></span>Financial strength</span><span class="score-track"><span class="score-fill" style="width:74%"></span></span><span class="score-num">73.5</span></div><div class="score institutional"><span class="score-name"><span class="swatch"></span>Institutional bias</span><span class="score-track"><span class="score-fill" style="width:76%"></span></span><span class="score-num">76.0</span></div><div class="score tech"><span class="score-name"><span class="swatch"></span>Technical score</span><span class="score-track"><span class="score-fill" style="width:45%"></span></span><span class="score-num">44.7</span></div></div>
+      <div class="card"><h3>Score Interpretation</h3><div class="callout">EFS 85.1 and Investment Score 64.8 are snapshot signals; validate with audited numbers and operating-quality checks.</div></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head"><h2>Company Overview</h2><p class="section-note">Integrated CRDMO: CRO (Discovery) + CDMO (CMC) with cross-sell and quality/regulatory execution as the moat.</p></div>
+    <div class="grid cols-3"><div class="card"><h3>What they do</h3><p>Integrated drug discovery + development + manufacturing services for global pharma and biotech customers.</p></div><div class="card"><h3>Operating model</h3><p>CRO (discovery) + CDMO (CMC) platform; integrated programs improve stickiness and lifetime value per customer.</p></div><div class="card"><h3>Key swing factors</h3><p>Capacity ramp execution, audit outcomes, talent retention, and customer mix (large pharma vs biotech).</p></div></div>
+  </section>
+
+  <section>
+    <div class="section-head"><h2>Historical P&amp;L</h2><p class="section-note">Annual P&L from cached Screener fundamentals.</p></div>
+    <div class="table-wrap"><table><thead><tr><th>Period</th><th>Revenue</th><th>Op. Profit</th><th>OPM</th><th>PAT</th><th>EPS</th><th>Payout</th></tr></thead><tbody><tr><td>Mar 2023</td><td>1,217</td><td>169</td><td>14%</td><td>10</td><td></td><td>676%</td></tr><tr><td>Mar 2024</td><td>1,465</td><td>287</td><td>20%</td><td>83</td><td></td><td>0%</td></tr><tr><td>Mar 2025</td><td>1,695</td><td>410</td><td>24%</td><td>170</td><td>8.16</td><td>0%</td></tr><tr><td>Mar 2026</td><td>2,192</td><td>631</td><td>29%</td><td>349</td><td>16.48</td><td>0%</td></tr><tr><td>TTM</td><td>2,250</td><td>658</td><td>29%</td><td>362</td><td>17.12</td><td></td></tr></tbody></table></div>
+    <div class="mini-bars"><div class="bar"><span style="height:59%"></span><b>1,217</b><small>Mar 2023</small></div><div class="bar"><span style="height:69%"></span><b>1,465</b><small>Mar 2024</small></div><div class="bar"><span style="height:78%"></span><b>1,695</b><small>Mar 2025</small></div><div class="bar"><span style="height:98%"></span><b>2,192</b><small>Mar 2026</small></div><div class="bar"><span style="height:100%"></span><b>2,250</b><small>TTM</small></div></div>
+  </section>
+
+  <section>
+    <div class="section-head"><h2>Quarterly Results</h2><p class="section-note">Last 6 quarters from cached fundamentals.</p></div>
+    <div class="table-wrap"><table><thead><tr><th>Quarter</th><th>Revenue</th><th>Op. Profit</th><th>OPM</th><th>PAT</th><th>EPS</th></tr></thead><tbody><tr><td>Mar 2025</td><td>580</td><td>158</td><td>27%</td><td>88</td><td>4.24</td></tr><tr><td>Jun 2025</td><td>496</td><td>121</td><td>24%</td><td>60</td><td>2.90</td></tr><tr><td>Sep 2025</td><td>537</td><td>146</td><td>27%</td><td>84</td><td>4.00</td></tr><tr><td>Dec 2025</td><td>556</td><td>188</td><td>34%</td><td>100</td><td>4.75</td></tr><tr><td>Mar 2026</td><td>602</td><td>177</td><td>29%</td><td>104</td><td>4.92</td></tr><tr><td>Jun 2026</td><td>554</td><td>148</td><td>27%</td><td>73</td><td>3.45</td></tr></tbody></table></div>
+  </section>
+
+  <section>
+    <div class="section-head"><h2>Balance Sheet And Cash Flow</h2><p class="section-note">Balance sheet and cash flow from cached fundamentals.</p></div>
+    <div class="grid cols-2"><div class="table-wrap"><table><thead><tr><th>Balance sheet item</th><th>Mar 2024</th><th>Mar 2025</th><th>Mar 2026</th></tr></thead><tbody><tr><td>Equity Capital</td><td>18</td><td>21</td><td>21</td></tr><tr><td>Reserves</td><td>957</td><td>2,108</td><td>2,463</td></tr><tr><td>Borrowings+</td><td>928</td><td>352</td><td>288</td></tr><tr><td>Total Liabilities</td><td>2,262</td><td>3,146</td><td>3,626</td></tr><tr><td>Fixed Assets+</td><td>1,180</td><td>1,488</td><td>1,815</td></tr><tr><td>Total Assets</td><td>2,262</td><td>3,146</td><td>3,626</td></tr></tbody></table></div><div class="table-wrap"><table><thead><tr><th>Cash flow item</th><th>Mar 2024</th><th>Mar 2025</th><th>Mar 2026</th></tr></thead><tbody><tr><td>CFO</td><td>263</td><td>314</td><td>509</td></tr><tr><td>CFI</td><td>-191</td><td>-536</td><td>-395</td></tr><tr><td>CFF</td><td>-95</td><td>301</td><td>-124</td></tr><tr><td>FCF</td><td>82</td><td>-55</td><td>-83</td></tr><tr><td>Net Cash</td><td>-24</td><td>79</td><td>-10</td></tr></tbody></table></div></div>
+    <div class="callout risk-callout">Validate CFO vs PAT and working capital trend from annual report/filings.</div>
+  </section>
+
+  <section>
+    <div class="section-head"><h2>Concall, Filings And News</h2><p class="section-note">Cached concalls: 8 | cached announcements: 6. Web news not fetched in offline mode.</p></div>
+    <div class="grid cols-3"><div class="card"><h3>Concall summary (offline)</h3><ul><li><strong>Quarter context (Jun 2026):</strong> Revenue 554 Cr (+11.7% YoY), OP 148 Cr (+22.3% YoY), PAT 73 Cr (+21.7% YoY).</li><li><strong>FY26 baseline:</strong> Revenue 2,192 Cr, EBITDA/Op profit 631 Cr, PAT 349 Cr (Integrated AR FY 2025–26).</li><li><strong>Listen for:</strong> FY27 capex ramp + utilisation, margin bridge (mix/operating leverage), customer mix (large pharma vs biotech), audit/quality updates, and hiring/attrition in scientific roles.</li><li><details><summary><strong>SAILIFE_Aug-2026_transcript</strong></summary><ul><li><strong>Revenue / growth:</strong> ntum we are seeing across our business. Revenue for the quarter grew by 12% year-over-year, supported by growth across two businesses, particularly in the CRO, which grew by 26% year-overyear. The Q1 performance has…</li><li><strong>Mix (CRO/CDMO):</strong> 2% year-over-year, supported by growth across two businesses, particularly in the CRO, which grew by 26% year-overyear. The Q1 performance has been in line with our expectations and we remain confident of our growth…</li><li><strong>Margins / EBITDA:</strong> growth guidance of 15% to 20%, and the EBITDA range of 28% to 30%. With that, we&#x27;ll be happy to take your questions. Moderator: Thank you very much. We will now begin with the question-and answer-session. Your first…</li><li><strong>Capex / capacity:</strong> l, we expect a stronger H2 with planned capacity expansion going live in the second half of the year. As we look ahead, we believe Sai is at an important point in evolution from being a strong small molecule CRDMO to…</li><li><strong>Guidance / outlook:</strong> been in line with our expectations and we remain confident of our growth trajectory and prospects. As we have discussed in the previous earnings call, we expect a stronger H2 with planned capacity expansion going live…</li></ul></details></li><li><details><summary><strong>SAILIFE_May-2025_transcript</strong></summary><ul><li><strong>Revenue / growth:</strong> across both our CDMO and CRO segments. Revenue grew in double digits year-overyear with the CDMO and CRO contributing 63% and 37% of revenues respectively. EBITDA grew by 42% with margin expansion of 458 basis points.…</li><li><strong>Mix (CRO/CDMO):</strong> in double digits year-overyear with the CDMO and CRO contributing 63% and 37% of revenues respectively. EBITDA grew by 42% with margin expansion of 458 basis points. Our PAT saw a 105% increase over the previous year…</li><li><strong>Margins / EBITDA:</strong> g 63% and 37% of revenues respectively. EBITDA grew by 42% with margin expansion of 458 basis points. Our PAT saw a 105% increase over the previous year driven by operating leverage and improved efficiencies. Looking at…</li><li><strong>Capex / capacity:</strong> ess across multiple fronts. We expanded capacity at key facilities, onboard high-quality scientific talent, and deepened our relations with customers across the US, UK, and EU and Japan, including 18 of the top 25…</li><li><strong>Guidance / outlook:</strong> ty profile moving closer to a long-term guidance of 28% to 30% EBITDA margin. Profit after tax for FY25 stood at INR170 crores, compared to INR83 crores in FY24, makes a strong 105% year-on-year increase. This growth…</li></ul></details></li></ul></div><div class="card"><h3>Recent announcements (titles)</h3><ul><li>All</li><li>Announcement under Regulation 30 (LODR)-Earnings Call Transcript12 Aug- Transcript of Earnings Conference Call organised</li><li>Announcement under Regulation 30 (LODR)-Newspaper Publication8 Aug- Newspaper publication for Un-audited Financial Resul</li><li>Announcement under Regulation 30 (LODR)-Analyst / Investor Meet - Outcome7 Aug- Recording of Q1 FY27 earnings call for u</li><li>Announcement under Regulation 30 (LODR)-Investor Presentation7 Aug- Investor Presentation for the quarter ended on 30 Ju</li><li>Announcement under Regulation 30 (LODR)-Allotment6 Aug- Sai Life Sciences allotted 18,700 equity shares on 06 August 202</li></ul></div></div>
+    <div class="callout">Offline mode: announcements and concall artifacts are shown above. Run without `--no-web` (or inject web results) to add news context.</div>
+  </section>
+
+  <section>
+    <div class="section-head"><h2>Sector And Competitive Context</h2><p class="section-note">Peer context requires DB snapshot or web-enriched data.</p></div>
+    <div class="table-wrap"><table><thead><tr><th>Item</th><th>Value</th></tr></thead><tbody><tr><td>Sector</td><td>Other</td></tr></tbody></table></div>
+    <div class="table-wrap"><table><thead><tr><th>Symbol</th><th>Stage</th><th>Tech Score</th><th>RS</th><th>Fund Score</th><th>Signal</th></tr></thead><tbody><tr><td>SAILIFE</td><td>Stage 2</td><td>44.7</td><td>86.7</td><td>85.1</td><td>BUY</td></tr></tbody></table></div>
+  </section>
+
+  <section id="chart">
+    <div class="section-head"><h2>Equity Chart V1</h2><p class="section-note">EOD chart from local cache (130 bars). Range: 2026-02-10 → 2026-08-17.</p></div>
+    <div class="chart-frame"><img class="chart-image" src="sailife_2026-08-25_chart_embed.svg" alt="SAILIFE equity chart (cached EOD)"></div>
+    <p class="meta">Open interactive: <a href="../latest/charts/SAILIFE_chart.html">charts/SAILIFE_chart.html</a>. Generated from local cache.</p>
+  </section>
+
+  <section id="technicals">
+    <div class="section-head"><h2>Technical Analysis</h2><p class="section-note">Technical setup from cached snapshot (if available).</p></div>
+    <div class="grid cols-2"><div class="table-wrap"><table><thead><tr><th>Indicator</th><th>Value</th><th>Note</th></tr></thead><tbody><tr><td>Stage</td><td>Stage 2</td><td>Weinstein stage</td></tr><tr><td>Signal</td><td>BUY</td><td>Snapshot</td></tr><tr><td>RSI</td><td>59.8</td><td>Momentum</td></tr><tr><td>ADX</td><td>32.0</td><td>Trend strength</td></tr><tr><td>SMA20/50/200</td><td>1399.92 / 1304.65 / None</td><td>Trend context</td></tr><tr><td>Supertrend</td><td>SELL</td><td>Trend filter</td></tr></tbody></table></div><div class="table-wrap"><table><thead><tr><th>Ratio</th><th>Value</th></tr></thead><tbody><tr><td>Market cap</td><td>INR 30,069 Cr</td></tr><tr><td>P/E</td><td>81.8x</td></tr><tr><td>ROCE</td><td>19.6%</td></tr><tr><td>ROE</td><td>15.4%</td></tr><tr><td>Book value</td><td>INR 117</td></tr><tr><td>High / Low</td><td>1,476</td></tr><tr><td>Dividend yield</td><td>0.00%</td></tr></tbody></table></div></div>
+    <div class="card"><h3>Weinstein And O'Neil Read</h3><h3>Stan Weinstein Stage</h3><p>Snapshot stage: <strong>Stage 2</strong> (Stage 2 uptrend). RSI 59.8; ADX 32.0. Treat stage as a context label, not a trade signal.</p><div class="callout">Stage 2 confirmation is about sustained trend + retests, not one strong candle.</div><h3 style='margin-top:14px'>O'Neil / CAN SLIM Lens</h3><p>Prefer strong earnings/ sales acceleration plus relative strength leadership, with a definable risk point.</p></div>
+  </section>
+
+  <section id="brokers">
+    <div class="section-head"><h2>Broker And Market View</h2><p class="section-note">Broker targets and analyst view require web search injection.</p></div>
+    <div class="card"><div class="callout">No broker/analyst web data included (offline mode).</div></div>
+  </section>
+
+  <section>
+    <div class="section-head"><h2>Valuation Scenarios</h2><p class="section-note">Illustrative valuation from TTM EPS and P/E multiples (not a recommendation).</p></div>
+    <div class="table-wrap"><table><thead><tr><th>Scenario</th><th>TTM EPS</th><th>P/E</th><th>Implied value</th><th>vs current</th><th>Condition required</th></tr></thead><tbody><tr><td>Bear (multiple compression)</td><td>17.12</td><td>57x</td><td>980</td><td class="red">-31%</td><td>Risk-off, slower growth, lower multiple.</td></tr><tr><td>Base (current multiple)</td><td>17.12</td><td>82x</td><td>1400</td><td class="red">-1%</td><td>Steady execution; multiple holds.</td></tr><tr><td>Bull (multiple expansion)</td><td>17.12</td><td>98x</td><td>1680</td><td class="green">+19%</td><td>Sustained growth + quality premium.</td></tr></tbody></table></div>
+  </section>
+
+  <section id="risks">
+    <div class="section-head"><h2>Issues And Risks</h2><p class="section-note">High-level risks; validate with annual report risk section.</p></div>
+    <div class="table-wrap"><table><thead><tr><th>Risk</th><th>Why it matters</th><th>Severity</th><th>What to monitor</th></tr></thead><tbody><tr><td>Regulatory / quality</td><td>CRDMO is audit-driven; any GMP/quality lapse can disrupt programs.</td><td class="red">High</td><td>Track inspection/audit outcomes and remediation.</td></tr><tr><td>Execution of capex</td><td>Capacity/capability expansion can face delays, cost overruns, or slow ramp.</td><td class="red">High</td><td>Watch utilisation, milestones, and hiring.</td></tr><tr><td>Customer concentration</td><td>Large-pharma mix can be sticky but concentrated; project delays hit growth.</td><td class="amber">Medium</td><td>Monitor customer mix and repeat programs.</td></tr><tr><td>Talent</td><td>Scientific talent is a bottleneck; attrition impacts delivery.</td><td class="amber">Medium</td><td>Attrition and hiring pace.</td></tr><tr><td>FX / geopolitics</td><td>Global customer base implies currency and demand cyclicality.</td><td class="amber">Medium</td><td>Hedges and exposure notes.</td></tr></tbody></table></div>
+  </section>
+
+  <section>
+    <div class="section-head"><h2>Evidence Trail</h2><p class="section-note">Source-first trail for review.</p></div>
+    <ul class="source-list"><li>Local cache: reports/portfolio/ric_sherlock_cache/SAILIFE.json</li><li><a href="https://www.screener.in/company/SAILIFE/consolidated/">Screener consolidated page</a>.</li><li><a href="https://crimg.kfintech.com/bmails/Files/24967SLSL_Integrated_AR_FY_2025-26.pdf">Integrated Annual Report FY 2025–26</a>.</li></ul>
+    <div class="footer"><strong>Research-only disclaimer:</strong> This Agent Adda report is independent research for review, not personalized investment advice and not a buy/sell recommendation. Markets involve risk, including loss of capital. Verify all figures against company filings, exchange disclosures, and current market data before acting. SEBI-registered intermediaries may have suitability, risk-profiling, and disclosure obligations; this note is not a substitute for advice from a SEBI-registered investment adviser or research analyst.</div>
+  </section>
+</div>
+</body>
+</html>

@@ -1,0 +1,926 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Smallcap Super Performers Portfolio - Policy Gate</title>
+  <style>
+    :root {
+      --ink:#172129; --muted:#5e6d78; --line:#d7e0e6; --paper:#fff;
+      --soft:#f5f8f9; --ready:#0d6b52; --refresh:#2d6f8c; --retest:#9a6a00; --reject:#9a332b;
+    }
+    * { box-sizing:border-box; }
+    body { margin:0; font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif; color:var(--ink); background:#fbfcfc; }
+    header, main, footer { padding:24px 32px; }
+    header, footer { background:var(--paper); border-bottom:1px solid var(--line); }
+    footer { border-top:1px solid var(--line); border-bottom:0; color:var(--muted); }
+    h1 { margin:0 0 8px; font-size:27px; letter-spacing:0; }
+    h2 { margin:26px 0 12px; font-size:18px; letter-spacing:0; }
+    h3 { margin:0 0 4px; font-size:18px; letter-spacing:0; }
+    p { margin:0; color:var(--muted); }
+    .meta, .summary { display:flex; flex-wrap:wrap; gap:10px; margin-top:14px; }
+    .pill, .metric { border:1px solid var(--line); background:var(--soft); border-radius:8px; padding:9px 11px; }
+    .metric b { display:block; font-size:24px; color:var(--ink); }
+    .grid { display:grid; grid-template-columns:repeat(2,minmax(260px,1fr)); gap:12px; }
+    article { background:var(--paper); border:1px solid var(--line); border-left:5px solid var(--ready); border-radius:8px; padding:14px; }
+    article.retest-card { border-left-color:var(--retest); }
+    dl { display:grid; grid-template-columns:repeat(4,minmax(90px,1fr)); gap:8px; margin:12px 0; }
+    dt { font-size:12px; color:var(--muted); }
+    dd { margin:0; }
+    .table-wrap { overflow:auto; border:1px solid var(--line); border-radius:8px; background:var(--paper); }
+    table { border-collapse:collapse; width:100%; min-width:2100px; }
+    th, td { border-bottom:1px solid var(--line); padding:9px 8px; vertical-align:top; text-align:left; }
+    th { background:#eef3f5; color:#30404a; position:sticky; top:0; z-index:1; font-size:12px; }
+    td span, small { display:block; color:var(--muted); }
+    .ready { color:var(--ready); font-weight:700; }
+    .refresh { color:var(--refresh); font-weight:700; }
+    .retest { color:var(--retest); font-weight:700; }
+    .research { color:#52606a; font-weight:700; }
+    .reject { color:var(--reject); font-weight:700; }
+    .hold { color:#52606a; font-weight:700; }
+    .note { border-left:4px solid var(--retest); background:#fff8e8; padding:12px; border-radius:8px; color:#463604; }
+    @media (max-width: 900px) {
+      header, main, footer { padding-left:16px; padding-right:16px; }
+      .grid { grid-template-columns:1fr; }
+      h1 { font-size:23px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Smallcap Super Performers Portfolio - Policy Gate</h1>
+    <p>Application of the 2026-08-06 portfolio policy to the Agent Adda small-cap preselection scores.</p>
+    <div class="meta">
+      <span class="pill">Generated: 2026-08-06 19:28 IST</span>
+      <span class="pill">Corpus: Rs. 5,00,000 paper capital</span>
+      <span class="pill">Phase 1 exposure cap: Rs. 2,00,000</span>
+      <span class="pill">Risk per trade: Rs. 3,750</span>
+      <span class="pill">Research only; no live recommendation</span>
+    </div>
+  </header>
+  <main>
+    <section class="summary">
+      <div class="metric"><b>30</b><span>Policy-scored names</span></div>
+      <div class="metric"><b>5</b><span>Clean trigger-map names</span></div>
+      <div class="metric"><b>5</b><span>Retest trigger-map names</span></div>
+      <div class="metric"><b>6</b><span>Refresh before Phase 1</span></div>
+      <div class="metric"><b>Rs. 79,014</b><span>Modelled trigger-map exposure</span></div>
+      <div class="metric"><b>Rs. 7,054</b><span>Modelled risk to stop</span></div>
+    </section>
+
+    <h2>Policy Decision</h2>
+    <p class="note">No automatic paper buy is created. The policy requires governance/filing review, a defined entry trigger, liquidity pass, and stop-risk sizing before any order. Current output is a Phase 1 trigger map and evidence backlog.</p>
+
+    <h2>Phase 1 Trigger Map</h2>
+    <section class="grid">
+        <article>
+          <h3>SYRMA</h3>
+          <p>Syrma SGS Technology Ltd</p>
+          <dl>
+            <div><dt>Policy Score</dt><dd>80.8</dd></div>
+            <div><dt>Slot</dt><dd>Rs. 19,852</dd></div>
+            <div><dt>Risk</dt><dd>Rs. 1,418</dd></div>
+            <div><dt>Gate</dt><dd>PENDING_OFFICIAL_REVIEW</dd></div>
+          </dl>
+          <p>Break above 1532.88 with volume, or retest-hold near 1379.22; skip if &gt;5% above planned trigger.</p>
+        </article>
+
+
+        <article>
+          <h3>AEGISVOPAK</h3>
+          <p>Aegis Vopak Terminals Limited</p>
+          <dl>
+            <div><dt>Policy Score</dt><dd>73.2</dd></div>
+            <div><dt>Slot</dt><dd>Rs. 14,724</dd></div>
+            <div><dt>Risk</dt><dd>Rs. 1,472</dd></div>
+            <div><dt>Gate</dt><dd>PENDING_OFFICIAL_REVIEW</dd></div>
+          </dl>
+          <p>Break above 314.60 with volume, or retest-hold near 289.32; skip if &gt;5% above planned trigger.</p>
+        </article>
+
+
+        <article>
+          <h3>KARURVYSYA</h3>
+          <p>Karur Vysya Bank Limited</p>
+          <dl>
+            <div><dt>Policy Score</dt><dd>71.5</dd></div>
+            <div><dt>Slot</dt><dd>Rs. 14,850</dd></div>
+            <div><dt>Risk</dt><dd>Rs. 1,522</dd></div>
+            <div><dt>Gate</dt><dd>PENDING_OFFICIAL_REVIEW</dd></div>
+          </dl>
+          <p>Break above 355.32 with volume, or retest-hold near 327.74; skip if &gt;5% above planned trigger.</p>
+        </article>
+
+
+        <article>
+          <h3>VMART</h3>
+          <p>V-Mart Retail Ltd.</p>
+          <dl>
+            <div><dt>Policy Score</dt><dd>67.1</dd></div>
+            <div><dt>Slot</dt><dd>Rs. 14,650</dd></div>
+            <div><dt>Risk</dt><dd>Rs. 1,326</dd></div>
+            <div><dt>Gate</dt><dd>PENDING_OFFICIAL_REVIEW</dd></div>
+          </dl>
+          <p>Break above 896.88 with volume, or retest-hold near 762.24; skip if &gt;5% above planned trigger.</p>
+        </article>
+
+
+        <article>
+          <h3>FIVESTAR</h3>
+          <p>Five Star Business Finance Ltd</p>
+          <dl>
+            <div><dt>Policy Score</dt><dd>65.7</dd></div>
+            <div><dt>Slot</dt><dd>Rs. 14,938</dd></div>
+            <div><dt>Risk</dt><dd>Rs. 1,315</dd></div>
+            <div><dt>Gate</dt><dd>PENDING_OFFICIAL_REVIEW</dd></div>
+          </dl>
+          <p>Break above 802.39 with volume, or retest-hold near 550.36; skip if &gt;5% above planned trigger.</p>
+        </article>
+        </section>
+
+    <h2>Retest Trigger Map</h2>
+    <section class="grid">
+        <article class="retest-card">
+          <h3>SONACOMS</h3>
+          <p>Sona BLW Precision Forgings Limited</p>
+          <dl>
+            <div><dt>Policy Score</dt><dd>74.0</dd></div>
+            <div><dt>No-Chase Gate</dt><dd>WATCH_EXTENDED_FROM_20DMA</dd></div>
+            <div><dt>RS / Momentum / Setup</dt><dd>7.5 / 5.9 / 6.6</dd></div>
+            <div><dt>Risk</dt><dd>Rs. 1,426</dd></div>
+          </dl>
+          <p>Break above 832.85 with volume, or retest-hold near 727.07; skip if &gt;5% above planned trigger.</p>
+        </article>
+
+
+        <article class="retest-card">
+          <h3>NETWEB</h3>
+          <p>Netweb Technologies India Limited</p>
+          <dl>
+            <div><dt>Policy Score</dt><dd>73.0</dd></div>
+            <div><dt>No-Chase Gate</dt><dd>WATCH_EXTENDED_FROM_20DMA</dd></div>
+            <div><dt>RS / Momentum / Setup</dt><dd>5.0 / 6.7 / 6.2</dd></div>
+            <div><dt>Risk</dt><dd>Rs. 1,004</dd></div>
+          </dl>
+          <p>Break above 5296.44 with volume, or retest-hold near 4402.31; skip if &gt;5% above planned trigger.</p>
+        </article>
+
+
+        <article class="retest-card">
+          <h3>WELCORP</h3>
+          <p>Welspun Corp Limited</p>
+          <dl>
+            <div><dt>Policy Score</dt><dd>72.3</dd></div>
+            <div><dt>No-Chase Gate</dt><dd>WATCH_RSI_EXTENDED</dd></div>
+            <div><dt>RS / Momentum / Setup</dt><dd>7.5 / 5.8 / 6.6</dd></div>
+            <div><dt>Risk</dt><dd>Rs. 1,456</dd></div>
+          </dl>
+          <p>Break above 1880.62 with volume, or retest-hold near 1661.64; skip if &gt;5% above planned trigger.</p>
+        </article>
+
+
+        <article class="retest-card">
+          <h3>RAINBOW</h3>
+          <p>Rainbow Childrens Medicare Limited</p>
+          <dl>
+            <div><dt>Policy Score</dt><dd>68.9</dd></div>
+            <div><dt>No-Chase Gate</dt><dd>WATCH_AGENT_ADDA_EXTENDED</dd></div>
+            <div><dt>RS / Momentum / Setup</dt><dd>5.5 / 8.6 / 4.8</dd></div>
+            <div><dt>Risk</dt><dd>Rs. 1,297</dd></div>
+          </dl>
+          <p>Break above 1626.10 with volume, or retest-hold near 1505.28; skip if &gt;5% above planned trigger.</p>
+        </article>
+
+
+        <article class="retest-card">
+          <h3>WEWORK</h3>
+          <p>Wework India Management Limited</p>
+          <dl>
+            <div><dt>Policy Score</dt><dd>66.9</dd></div>
+            <div><dt>No-Chase Gate</dt><dd>WATCH_AGENT_ADDA_EXTENDED</dd></div>
+            <div><dt>RS / Momentum / Setup</dt><dd>7.5 / 8.6 / 5.8</dd></div>
+            <div><dt>Risk</dt><dd>Rs. 1,460</dd></div>
+          </dl>
+          <p>Break above 802.45 with volume, or retest-hold near 720.66; skip if &gt;5% above planned trigger.</p>
+        </article>
+        </section>
+
+    <h2>Refresh Backlog</h2>
+    <ul><li><b>SKYGOLD</b> - Refresh latest quarterly result and source trail before any Phase 1 paper slot.</li>
+<li><b>CPPLUS</b> - Refresh latest quarterly result and source trail before any Phase 1 paper slot.</li>
+<li><b>GLAND</b> - Refresh latest quarterly result and source trail before any Phase 1 paper slot.</li>
+<li><b>WABAG</b> - Refresh latest quarterly result and source trail before any Phase 1 paper slot.</li>
+<li><b>JAMNAAUTO</b> - Refresh latest quarterly result and source trail before any Phase 1 paper slot.</li>
+<li><b>MINDACORP</b> - Refresh latest quarterly result and source trail before any Phase 1 paper slot.</li>
+<li><b>RUBICON</b> - Refresh latest result and wait for retest/reset; no chase.</li>
+<li><b>SANSERA</b> - Refresh latest result and wait for retest/reset; no chase.</li>
+<li><b>SHAILY</b> - Refresh latest result and wait for retest/reset; no chase.</li></ul>
+
+    <h2>Full Policy Gate Table</h2>
+    <section class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Stock</th><th>Rating</th><th>Phase Status</th><th>Theme</th><th>Theme</th><th>Fundamental</th><th>Tech</th><th>RS</th><th>Momentum</th><th>Setup</th><th>Liquidity</th><th>Governance</th><th>RR</th>
+            <th>Setup</th><th>Entry Trigger</th><th>Stop</th><th>Policy Slot</th><th>Blockers</th><th>Next Action</th>
+          </tr>
+        </thead>
+        <tbody>
+      <tr>
+        <td><b>SYRMA</b><span>Syrma SGS Technology Ltd</span></td>
+        <td>Core Candidate<br><small>80.8/100</small></td>
+        <td class="ready">PHASE1_TRIGGER_MAP_GOVERNANCE_PENDING</td>
+        <td>Capital goods / industrial manufacturing<br><small>CONFIRMED</small></td>
+        <td>13.0<br><small>Theme</small></td>
+        <td>18.7<br><small>Fundamental</small></td>
+        <td>20.1<br><small>Tech</small></td>
+        <td>8.5<br><small>RS</small></td>
+        <td>7.9<br><small>Momentum</small></td>
+        <td>7.7<br><small>Setup</small></td>
+        <td>15.0<br><small>200.8 cr</small></td>
+        <td>6.0<br><small>PENDING_OFFICIAL_REVIEW</small></td>
+        <td>8.0<br><small>PASS_2R_MODELLED</small></td>
+        <td>1418.0<br><small>STAGE_2 / RSI 57.6</small></td>
+        <td>Break above 1532.88 with volume, or retest-hold near 1379.22; skip if &gt;5% above planned trigger.</td>
+        <td>1316.7<br><small>7.1%</small></td>
+        <td>Rs. 19,852<br><small>14 sh / risk Rs. 1,418</small></td>
+        <td>GOVERNANCE_REVIEW_PENDING</td>
+        <td>Complete governance/filing review, then wait for breakout-retest or pullback trigger.</td>
+      </tr>
+
+
+      <tr>
+        <td><b>AEGISVOPAK</b><span>Aegis Vopak Terminals Limited</span></td>
+        <td>Active Watch<br><small>73.2/100</small></td>
+        <td class="ready">PHASE1_TRIGGER_MAP_GOVERNANCE_PENDING</td>
+        <td>Infrastructure / terminals<br><small>CONFIRMED</small></td>
+        <td>14.0<br><small>Theme</small></td>
+        <td>14.8<br><small>Fundamental</small></td>
+        <td>17.9<br><small>Tech</small></td>
+        <td>8.5<br><small>RS</small></td>
+        <td>6.9<br><small>Momentum</small></td>
+        <td>6.2<br><small>Setup</small></td>
+        <td>15.0<br><small>64.7 cr</small></td>
+        <td>3.5<br><small>PENDING_OFFICIAL_REVIEW</small></td>
+        <td>8.0<br><small>PASS_2R_MODELLED</small></td>
+        <td>288.7<br><small>STAGE_2 / RSI 59.5</small></td>
+        <td>Break above 314.60 with volume, or retest-hold near 289.32; skip if &gt;5% above planned trigger.</td>
+        <td>259.8<br><small>10.0%</small></td>
+        <td>Rs. 14,724<br><small>51 sh / risk Rs. 1,472</small></td>
+        <td>GOVERNANCE_REVIEW_PENDING</td>
+        <td>Complete governance/filing review, then wait for breakout-retest or pullback trigger.</td>
+      </tr>
+
+
+      <tr>
+        <td><b>KARURVYSYA</b><span>Karur Vysya Bank Limited</span></td>
+        <td>Active Watch<br><small>71.5/100</small></td>
+        <td class="ready">PHASE1_TRIGGER_MAP_GOVERNANCE_PENDING</td>
+        <td>Financial services<br><small>BUILDING</small></td>
+        <td>12.0<br><small>Theme</small></td>
+        <td>17.3<br><small>Fundamental</small></td>
+        <td>15.7<br><small>Tech</small></td>
+        <td>4.0<br><small>RS</small></td>
+        <td>6.8<br><small>Momentum</small></td>
+        <td>7.8<br><small>Setup</small></td>
+        <td>13.0<br><small>247.4 cr</small></td>
+        <td>6.0<br><small>PENDING_OFFICIAL_REVIEW</small></td>
+        <td>7.5<br><small>PASS_2R_MODELLED</small></td>
+        <td>337.5<br><small>STAGE_2 / RSI 68.3</small></td>
+        <td>Break above 355.32 with volume, or retest-hold near 327.74; skip if &gt;5% above planned trigger.</td>
+        <td>302.9<br><small>10.3%</small></td>
+        <td>Rs. 14,850<br><small>44 sh / risk Rs. 1,522</small></td>
+        <td>GOVERNANCE_REVIEW_PENDING; WATCH_THIN_CURRENT_VOLUME</td>
+        <td>Complete governance/filing review, then wait for breakout-retest or pullback trigger.</td>
+      </tr>
+
+
+      <tr>
+        <td><b>VMART</b><span>V-Mart Retail Ltd.</span></td>
+        <td>Active Watch<br><small>67.1/100</small></td>
+        <td class="ready">PHASE1_TRIGGER_MAP_GOVERNANCE_PENDING</td>
+        <td>Consumer / retail<br><small>BUILDING</small></td>
+        <td>12.0<br><small>Theme</small></td>
+        <td>16.5<br><small>Fundamental</small></td>
+        <td>16.1<br><small>Tech</small></td>
+        <td>5.5<br><small>RS</small></td>
+        <td>7.9<br><small>Momentum</small></td>
+        <td>6.0<br><small>Setup</small></td>
+        <td>11.0<br><small>13.6 cr</small></td>
+        <td>3.5<br><small>PENDING_OFFICIAL_REVIEW</small></td>
+        <td>8.0<br><small>PASS_2R_MODELLED</small></td>
+        <td>813.9<br><small>STAGE_2 / RSI 65.6</small></td>
+        <td>Break above 896.88 with volume, or retest-hold near 762.24; skip if &gt;5% above planned trigger.</td>
+        <td>740.2<br><small>9.0%</small></td>
+        <td>Rs. 14,650<br><small>18 sh / risk Rs. 1,326</small></td>
+        <td>GOVERNANCE_REVIEW_PENDING</td>
+        <td>Complete governance/filing review, then wait for breakout-retest or pullback trigger.</td>
+      </tr>
+
+
+      <tr>
+        <td><b>FIVESTAR</b><span>Five Star Business Finance Ltd</span></td>
+        <td>Active Watch<br><small>65.7/100</small></td>
+        <td class="ready">PHASE1_TRIGGER_MAP_GOVERNANCE_PENDING</td>
+        <td>Financial services<br><small>BUILDING</small></td>
+        <td>11.0<br><small>Theme</small></td>
+        <td>15.2<br><small>Fundamental</small></td>
+        <td>14.5<br><small>Tech</small></td>
+        <td>3.5<br><small>RS</small></td>
+        <td>5.8<br><small>Momentum</small></td>
+        <td>7.8<br><small>Setup</small></td>
+        <td>11.0<br><small>41.3 cr</small></td>
+        <td>6.0<br><small>PENDING_OFFICIAL_REVIEW</small></td>
+        <td>8.0<br><small>PASS_2R_MODELLED</small></td>
+        <td>553.2<br><small>STAGE_2 / RSI 48.2</small></td>
+        <td>Break above 802.39 with volume, or retest-hold near 550.36; skip if &gt;5% above planned trigger.</td>
+        <td>504.5<br><small>8.8%</small></td>
+        <td>Rs. 14,938<br><small>27 sh / risk Rs. 1,315</small></td>
+        <td>GOVERNANCE_REVIEW_PENDING</td>
+        <td>Complete governance/filing review, then wait for breakout-retest or pullback trigger.</td>
+      </tr>
+
+
+      <tr>
+        <td><b>SKYGOLD</b><span>Sky Gold And Diamonds Limited</span></td>
+        <td>Core Candidate<br><small>76.3/100</small></td>
+        <td class="refresh">REFRESH_RESULTS_BEFORE_PHASE1</td>
+        <td>Consumer / premiumization<br><small>CONFIRMED</small></td>
+        <td>14.0<br><small>Theme</small></td>
+        <td>15.9<br><small>Fundamental</small></td>
+        <td>18.9<br><small>Tech</small></td>
+        <td>8.5<br><small>RS</small></td>
+        <td>7.3<br><small>Momentum</small></td>
+        <td>7.0<br><small>Setup</small></td>
+        <td>15.0<br><small>63.7 cr</small></td>
+        <td>4.5<br><small>PENDING_OFFICIAL_REVIEW</small></td>
+        <td>8.0<br><small>PASS_2R_MODELLED</small></td>
+        <td>691.1<br><small>STAGE_2 / RSI 66.0</small></td>
+        <td>Break above 707.00 with volume, or retest-hold near 651.98; skip if &gt;5% above planned trigger.</td>
+        <td>622.0<br><small>10.0%</small></td>
+        <td>Rs. 19,352<br><small>28 sh / risk Rs. 1,935</small></td>
+        <td>REFRESH_REQUIRED; GOVERNANCE_REVIEW_PENDING</td>
+        <td>Refresh latest quarterly result and source trail before any Phase 1 paper slot.</td>
+      </tr>
+
+
+      <tr>
+        <td><b>CPPLUS</b><span>Aditya Infotech Limited</span></td>
+        <td>Core Candidate<br><small>76.0/100</small></td>
+        <td class="refresh">REFRESH_RESULTS_BEFORE_PHASE1</td>
+        <td>Technology / digital infrastructure<br><small>CONFIRMED</small></td>
+        <td>14.0<br><small>Theme</small></td>
+        <td>15.2<br><small>Fundamental</small></td>
+        <td>19.3<br><small>Tech</small></td>
+        <td>8.5<br><small>RS</small></td>
+        <td>7.8<br><small>Momentum</small></td>
+        <td>7.0<br><small>Setup</small></td>
+        <td>15.0<br><small>63.8 cr</small></td>
+        <td>4.5<br><small>PENDING_OFFICIAL_REVIEW</small></td>
+        <td>8.0<br><small>PASS_2R_MODELLED</small></td>
+        <td>3656.2<br><small>STAGE_2 / RSI 51.9</small></td>
+        <td>Break above 3904.66 with volume, or retest-hold near 3546.06; skip if &gt;5% above planned trigger.</td>
+        <td>3290.6<br><small>10.0%</small></td>
+        <td>Rs. 18,281<br><small>5 sh / risk Rs. 1,828</small></td>
+        <td>REFRESH_REQUIRED; GOVERNANCE_REVIEW_PENDING</td>
+        <td>Refresh latest quarterly result and source trail before any Phase 1 paper slot.</td>
+      </tr>
+
+
+      <tr>
+        <td><b>GLAND</b><span>Gland Pharma Limited</span></td>
+        <td>Core Candidate<br><small>75.5/100</small></td>
+        <td class="refresh">REFRESH_RESULTS_BEFORE_PHASE1</td>
+        <td>Healthcare / pharma<br><small>BUILDING</small></td>
+        <td>10.0<br><small>Theme</small></td>
+        <td>19.6<br><small>Fundamental</small></td>
+        <td>18.4<br><small>Tech</small></td>
+        <td>4.5<br><small>RS</small></td>
+        <td>8.6<br><small>Momentum</small></td>
+        <td>8.8<br><small>Setup</small></td>
+        <td>15.0<br><small>115.1 cr</small></td>
+        <td>4.5<br><small>PENDING_OFFICIAL_REVIEW</small></td>
+        <td>8.0<br><small>PASS_2R_MODELLED</small></td>
+        <td>2608.3<br><small>STAGE_2 / RSI 65.1</small></td>
+        <td>Break above 2660.64 with volume, or retest-hold near 2487.26; skip if &gt;5% above planned trigger.</td>
+        <td>2362.4<br><small>9.4%</small></td>
+        <td>Rs. 18,258<br><small>7 sh / risk Rs. 1,721</small></td>
+        <td>REFRESH_REQUIRED; GOVERNANCE_REVIEW_PENDING</td>
+        <td>Refresh latest quarterly result and source trail before any Phase 1 paper slot.</td>
+      </tr>
+
+
+      <tr>
+        <td><b>WABAG</b><span>VA Tech Wabag Ltd</span></td>
+        <td>Active Watch<br><small>69.8/100</small></td>
+        <td class="refresh">REFRESH_RESULTS_BEFORE_PHASE1</td>
+        <td>Infrastructure / utilities<br><small>CONFIRMED</small></td>
+        <td>13.0<br><small>Theme</small></td>
+        <td>16.1<br><small>Fundamental</small></td>
+        <td>15.2<br><small>Tech</small></td>
+        <td>7.5<br><small>RS</small></td>
+        <td>4.7<br><small>Momentum</small></td>
+        <td>6.0<br><small>Setup</small></td>
+        <td>13.0<br><small>135.7 cr</small></td>
+        <td>4.5<br><small>PENDING_OFFICIAL_REVIEW</small></td>
+        <td>8.0<br><small>PASS_2R_MODELLED</small></td>
+        <td>1990.7<br><small>STAGE_2 / RSI 50.0</small></td>
+        <td>Break above 2276.03 with volume, or retest-hold near 2032.62; skip if &gt;5% above planned trigger.</td>
+        <td>1791.6<br><small>10.0%</small></td>
+        <td>Rs. 13,935<br><small>7 sh / risk Rs. 1,393</small></td>
+        <td>REFRESH_REQUIRED; GOVERNANCE_REVIEW_PENDING; WATCH_THIN_CURRENT_VOLUME</td>
+        <td>Refresh latest quarterly result and source trail before any Phase 1 paper slot.</td>
+      </tr>
+
+
+      <tr>
+        <td><b>JAMNAAUTO</b><span>Jamna Auto Industries Limited</span></td>
+        <td>Active Watch<br><small>69.5/100</small></td>
+        <td class="refresh">REFRESH_RESULTS_BEFORE_PHASE1</td>
+        <td>Auto components / EV ancillaries<br><small>BUILDING</small></td>
+        <td>11.0<br><small>Theme</small></td>
+        <td>17.5<br><small>Fundamental</small></td>
+        <td>15.5<br><small>Tech</small></td>
+        <td>4.0<br><small>RS</small></td>
+        <td>8.6<br><small>Momentum</small></td>
+        <td>6.0<br><small>Setup</small></td>
+        <td>13.0<br><small>25.5 cr</small></td>
+        <td>4.5<br><small>PENDING_OFFICIAL_REVIEW</small></td>
+        <td>8.0<br><small>PASS_2R_MODELLED</small></td>
+        <td>144.0<br><small>STAGE_2 / RSI 68.9</small></td>
+        <td>Break above 154.13 with volume, or retest-hold near 134.79; skip if &gt;5% above planned trigger.</td>
+        <td>129.7<br><small>9.9%</small></td>
+        <td>Rs. 14,973<br><small>104 sh / risk Rs. 1,488</small></td>
+        <td>REFRESH_REQUIRED; GOVERNANCE_REVIEW_PENDING</td>
+        <td>Refresh latest quarterly result and source trail before any Phase 1 paper slot.</td>
+      </tr>
+
+
+      <tr>
+        <td><b>MINDACORP</b><span>MINDA CORPORATION LIMITED</span></td>
+        <td>Active Watch<br><small>67.9/100</small></td>
+        <td class="refresh">REFRESH_RESULTS_BEFORE_PHASE1</td>
+        <td>Auto components / EV ancillaries<br><small>BUILDING</small></td>
+        <td>11.0<br><small>Theme</small></td>
+        <td>16.5<br><small>Fundamental</small></td>
+        <td>16.9<br><small>Tech</small></td>
+        <td>5.0<br><small>RS</small></td>
+        <td>7.4<br><small>Momentum</small></td>
+        <td>7.7<br><small>Setup</small></td>
+        <td>11.0<br><small>17.7 cr</small></td>
+        <td>4.5<br><small>PENDING_OFFICIAL_REVIEW</small></td>
+        <td>8.0<br><small>PASS_2R_MODELLED</small></td>
+        <td>716.9<br><small>STAGE_2 / RSI 63.6</small></td>
+        <td>Break above 743.26 with volume, or retest-hold near 692.16; skip if &gt;5% above planned trigger.</td>
+        <td>666.3<br><small>7.1%</small></td>
+        <td>Rs. 14,338<br><small>20 sh / risk Rs. 1,013</small></td>
+        <td>REFRESH_REQUIRED; GOVERNANCE_REVIEW_PENDING</td>
+        <td>Refresh latest quarterly result and source trail before any Phase 1 paper slot.</td>
+      </tr>
+
+
+      <tr>
+        <td><b>SONACOMS</b><span>Sona BLW Precision Forgings Limited</span></td>
+        <td>Active Watch<br><small>74.0/100</small></td>
+        <td class="retest">PHASE1_RETEST_TRIGGER_MAP_GOVERNANCE_PENDING</td>
+        <td>Auto components / EV ancillaries<br><small>CROWDED</small></td>
+        <td>11.0<br><small>Theme</small></td>
+        <td>18.8<br><small>Fundamental</small></td>
+        <td>16.7<br><small>Tech</small></td>
+        <td>7.5<br><small>RS</small></td>
+        <td>5.9<br><small>Momentum</small></td>
+        <td>6.6<br><small>Setup</small></td>
+        <td>15.0<br><small>250.1 cr</small></td>
+        <td>6.0<br><small>PENDING_OFFICIAL_REVIEW</small></td>
+        <td>6.5<br><small>PASS_2R_MODELLED</small></td>
+        <td>792.0<br><small>STAGE_2 / RSI 74.5</small></td>
+        <td>Break above 832.85 with volume, or retest-hold near 727.07; skip if &gt;5% above planned trigger.</td>
+        <td>712.8<br><small>10.0%</small></td>
+        <td>Rs. 14,256<br><small>18 sh / risk Rs. 1,426</small></td>
+        <td>GOVERNANCE_REVIEW_PENDING; WATCH_EXTENDED_FROM_20DMA</td>
+        <td>Complete governance/filing review; retest-only because current setup is extended or flagged no-chase.</td>
+      </tr>
+
+
+      <tr>
+        <td><b>RUBICON</b><span>Rubicon Research Limited</span></td>
+        <td>Active Watch<br><small>73.8/100</small></td>
+        <td class="retest">RETEST_AND_REFRESH_BEFORE_PHASE1</td>
+        <td>Healthcare / pharma<br><small>CROWDED</small></td>
+        <td>12.0<br><small>Theme</small></td>
+        <td>19.9<br><small>Fundamental</small></td>
+        <td>18.4<br><small>Tech</small></td>
+        <td>9.5<br><small>RS</small></td>
+        <td>7.0<br><small>Momentum</small></td>
+        <td>5.8<br><small>Setup</small></td>
+        <td>13.0<br><small>37.8 cr</small></td>
+        <td>4.5<br><small>PENDING_OFFICIAL_REVIEW</small></td>
+        <td>6.0<br><small>PASS_2R_MODELLED</small></td>
+        <td>1533.4<br><small>STAGE_2 / RSI 61.2</small></td>
+        <td>Break above 1605.60 with volume, or retest-hold near 1497.34; skip if &gt;5% above planned trigger.</td>
+        <td>1366.2<br><small>10.9%</small></td>
+        <td>Rs. 13,801<br><small>9 sh / risk Rs. 1,504</small></td>
+        <td>REFRESH_REQUIRED; GOVERNANCE_REVIEW_PENDING; WATCH_AGENT_ADDA_EXTENDED</td>
+        <td>Refresh latest result and wait for retest/reset; no chase.</td>
+      </tr>
+
+
+      <tr>
+        <td><b>RRKABEL</b><span>R R KABEL LTD</span></td>
+        <td>Active Watch<br><small>73.4/100</small></td>
+        <td class="retest">RETEST_ONLY_NO_CHASE</td>
+        <td>Capital goods / industrial suppliers<br><small>CROWDED</small></td>
+        <td>13.0<br><small>Theme</small></td>
+        <td>19.1<br><small>Fundamental</small></td>
+        <td>15.3<br><small>Tech</small></td>
+        <td>8.5<br><small>RS</small></td>
+        <td>4.2<br><small>Momentum</small></td>
+        <td>5.7<br><small>Setup</small></td>
+        <td>15.0<br><small>222.6 cr</small></td>
+        <td>6.0<br><small>PENDING_OFFICIAL_REVIEW</small></td>
+        <td>5.0<br><small>PASS_2R_MODELLED</small></td>
+        <td>2764.4<br><small>STAGE_2 / RSI 85.0</small></td>
+        <td>Break above 2843.15 with volume, or retest-hold near 2478.67; skip if &gt;5% above planned trigger.</td>
+        <td>2488.0<br><small>10.0%</small></td>
+        <td>Rs. 13,822<br><small>5 sh / risk Rs. 1,382</small></td>
+        <td>GOVERNANCE_REVIEW_PENDING; FAIL_RSI_EXTENDED</td>
+        <td>No chase; wait for RSI/distance reset and retest hold.</td>
+      </tr>
+
+
+      <tr>
+        <td><b>NETWEB</b><span>Netweb Technologies India Limited</span></td>
+        <td>Active Watch<br><small>73.0/100</small></td>
+        <td class="retest">PHASE1_RETEST_TRIGGER_MAP_GOVERNANCE_PENDING</td>
+        <td>Technology / digital infrastructure<br><small>CROWDED</small></td>
+        <td>10.0<br><small>Theme</small></td>
+        <td>20.6<br><small>Fundamental</small></td>
+        <td>14.9<br><small>Tech</small></td>
+        <td>5.0<br><small>RS</small></td>
+        <td>6.7<br><small>Momentum</small></td>
+        <td>6.2<br><small>Setup</small></td>
+        <td>15.0<br><small>563.5 cr</small></td>
+        <td>6.0<br><small>PENDING_OFFICIAL_REVIEW</small></td>
+        <td>6.5<br><small>PASS_2R_MODELLED</small></td>
+        <td>4816.0<br><small>STAGE_2 / RSI 68.7</small></td>
+        <td>Break above 5296.44 with volume, or retest-hold near 4402.31; skip if &gt;5% above planned trigger.</td>
+        <td>4481.3<br><small>6.9%</small></td>
+        <td>Rs. 14,448<br><small>3 sh / risk Rs. 1,004</small></td>
+        <td>GOVERNANCE_REVIEW_PENDING; WATCH_EXTENDED_FROM_20DMA</td>
+        <td>Complete governance/filing review; retest-only because current setup is extended or flagged no-chase.</td>
+      </tr>
+
+
+      <tr>
+        <td><b>WELCORP</b><span>Welspun Corp Limited</span></td>
+        <td>Active Watch<br><small>72.3/100</small></td>
+        <td class="retest">PHASE1_RETEST_TRIGGER_MAP_GOVERNANCE_PENDING</td>
+        <td>Capital goods / industrial suppliers<br><small>CROWDED</small></td>
+        <td>11.0<br><small>Theme</small></td>
+        <td>17.2<br><small>Fundamental</small></td>
+        <td>16.6<br><small>Tech</small></td>
+        <td>7.5<br><small>RS</small></td>
+        <td>5.8<br><small>Momentum</small></td>
+        <td>6.6<br><small>Setup</small></td>
+        <td>15.0<br><small>189.5 cr</small></td>
+        <td>6.0<br><small>PENDING_OFFICIAL_REVIEW</small></td>
+        <td>6.5<br><small>PASS_2R_MODELLED</small></td>
+        <td>1819.6<br><small>STAGE_2 / RSI 80.0</small></td>
+        <td>Break above 1880.62 with volume, or retest-hold near 1661.64; skip if &gt;5% above planned trigger.</td>
+        <td>1637.6<br><small>10.0%</small></td>
+        <td>Rs. 14,557<br><small>8 sh / risk Rs. 1,456</small></td>
+        <td>GOVERNANCE_REVIEW_PENDING; WATCH_RSI_EXTENDED</td>
+        <td>Complete governance/filing review; retest-only because current setup is extended or flagged no-chase.</td>
+      </tr>
+
+
+      <tr>
+        <td><b>RAINBOW</b><span>Rainbow Childrens Medicare Limited</span></td>
+        <td>Active Watch<br><small>68.9/100</small></td>
+        <td class="retest">PHASE1_RETEST_TRIGGER_MAP_GOVERNANCE_PENDING</td>
+        <td>Healthcare / specialty services<br><small>CROWDED</small></td>
+        <td>11.0<br><small>Theme</small></td>
+        <td>17.8<br><small>Fundamental</small></td>
+        <td>15.6<br><small>Tech</small></td>
+        <td>5.5<br><small>RS</small></td>
+        <td>8.6<br><small>Momentum</small></td>
+        <td>4.8<br><small>Setup</small></td>
+        <td>11.0<br><small>14.7 cr</small></td>
+        <td>6.0<br><small>PENDING_OFFICIAL_REVIEW</small></td>
+        <td>7.5<br><small>PASS_2R_MODELLED</small></td>
+        <td>1573.2<br><small>STAGE_2 / RSI 66.5</small></td>
+        <td>Break above 1626.10 with volume, or retest-hold near 1505.28; skip if &gt;5% above planned trigger.</td>
+        <td>1429.1<br><small>9.2%</small></td>
+        <td>Rs. 14,159<br><small>9 sh / risk Rs. 1,297</small></td>
+        <td>GOVERNANCE_REVIEW_PENDING; WATCH_AGENT_ADDA_EXTENDED</td>
+        <td>Complete governance/filing review; retest-only because current setup is extended or flagged no-chase.</td>
+      </tr>
+
+
+      <tr>
+        <td><b>SANSERA</b><span>Sansera Engineering Ltd.</span></td>
+        <td>Active Watch<br><small>68.8/100</small></td>
+        <td class="retest">RETEST_AND_REFRESH_BEFORE_PHASE1</td>
+        <td>Auto components / EV ancillaries<br><small>CROWDED</small></td>
+        <td>12.0<br><small>Theme</small></td>
+        <td>18.3<br><small>Fundamental</small></td>
+        <td>13.0<br><small>Tech</small></td>
+        <td>7.5<br><small>RS</small></td>
+        <td>4.2<br><small>Momentum</small></td>
+        <td>4.0<br><small>Setup</small></td>
+        <td>15.0<br><small>94.6 cr</small></td>
+        <td>4.5<br><small>PENDING_OFFICIAL_REVIEW</small></td>
+        <td>6.0<br><small>PASS_2R_MODELLED</small></td>
+        <td>3787.3<br><small>STAGE_2 / RSI 76.8</small></td>
+        <td>Break above 3908.70 with volume, or retest-hold near 3328.26; skip if &gt;5% above planned trigger.</td>
+        <td>3408.6<br><small>10.0%</small></td>
+        <td>Rs. 11,362<br><small>3 sh / risk Rs. 1,136</small></td>
+        <td>REFRESH_REQUIRED; GOVERNANCE_REVIEW_PENDING; FAIL_TOO_FAR_FROM_20DMA</td>
+        <td>Refresh latest result and wait for retest/reset; no chase.</td>
+      </tr>
+
+
+      <tr>
+        <td><b>PRICOLLTD</b><span>Pricol Ltd</span></td>
+        <td>Active Watch<br><small>67.8/100</small></td>
+        <td class="retest">RETEST_ONLY_NO_CHASE</td>
+        <td>Auto components / EV ancillaries<br><small>CROWDED</small></td>
+        <td>11.0<br><small>Theme</small></td>
+        <td>18.3<br><small>Fundamental</small></td>
+        <td>12.5<br><small>Tech</small></td>
+        <td>8.5<br><small>RS</small></td>
+        <td>2.6<br><small>Momentum</small></td>
+        <td>4.0<br><small>Setup</small></td>
+        <td>15.0<br><small>53.4 cr</small></td>
+        <td>6.0<br><small>PENDING_OFFICIAL_REVIEW</small></td>
+        <td>5.0<br><small>PASS_2R_MODELLED</small></td>
+        <td>761.5<br><small>STAGE_2 / RSI 89.2</small></td>
+        <td>Break above 790.33 with volume, or retest-hold near 660.23; skip if &gt;5% above planned trigger.</td>
+        <td>685.3<br><small>10.0%</small></td>
+        <td>Rs. 14,468<br><small>19 sh / risk Rs. 1,447</small></td>
+        <td>GOVERNANCE_REVIEW_PENDING; FAIL_RSI_EXTENDED</td>
+        <td>No chase; wait for RSI/distance reset and retest hold.</td>
+      </tr>
+
+
+      <tr>
+        <td><b>WEWORK</b><span>Wework India Management Limited</span></td>
+        <td>Active Watch<br><small>66.9/100</small></td>
+        <td class="retest">PHASE1_RETEST_TRIGGER_MAP_GOVERNANCE_PENDING</td>
+        <td>Business services<br><small>CROWDED</small></td>
+        <td>11.0<br><small>Theme</small></td>
+        <td>14.8<br><small>Fundamental</small></td>
+        <td>18.1<br><small>Tech</small></td>
+        <td>7.5<br><small>RS</small></td>
+        <td>8.6<br><small>Momentum</small></td>
+        <td>5.8<br><small>Setup</small></td>
+        <td>13.0<br><small>35.7 cr</small></td>
+        <td>3.5<br><small>PENDING_OFFICIAL_REVIEW</small></td>
+        <td>6.5<br><small>PASS_2R_MODELLED</small></td>
+        <td>748.2<br><small>STAGE_2 / RSI 71.7</small></td>
+        <td>Break above 802.45 with volume, or retest-hold near 720.66; skip if &gt;5% above planned trigger.</td>
+        <td>675.2<br><small>9.8%</small></td>
+        <td>Rs. 14,964<br><small>20 sh / risk Rs. 1,460</small></td>
+        <td>GOVERNANCE_REVIEW_PENDING; WATCH_AGENT_ADDA_EXTENDED</td>
+        <td>Complete governance/filing review; retest-only because current setup is extended or flagged no-chase.</td>
+      </tr>
+
+
+      <tr>
+        <td><b>SHAILY</b><span>Shaily Engineering Plastics Limited</span></td>
+        <td>Active Watch<br><small>66.5/100</small></td>
+        <td class="retest">RETEST_AND_REFRESH_BEFORE_PHASE1</td>
+        <td>Capital goods / industrial suppliers<br><small>CROWDED</small></td>
+        <td>11.0<br><small>Theme</small></td>
+        <td>18.0<br><small>Fundamental</small></td>
+        <td>13.0<br><small>Tech</small></td>
+        <td>6.0<br><small>RS</small></td>
+        <td>4.6<br><small>Momentum</small></td>
+        <td>5.0<br><small>Setup</small></td>
+        <td>15.0<br><small>69.0 cr</small></td>
+        <td>4.5<br><small>PENDING_OFFICIAL_REVIEW</small></td>
+        <td>5.0<br><small>PASS_2R_MODELLED</small></td>
+        <td>3366.3<br><small>STAGE_2 / RSI 94.1</small></td>
+        <td>Break above 3468.34 with volume, or retest-hold near 2940.91; skip if &gt;5% above planned trigger.</td>
+        <td>3029.7<br><small>10.0%</small></td>
+        <td>Rs. 13,465<br><small>4 sh / risk Rs. 1,347</small></td>
+        <td>REFRESH_REQUIRED; GOVERNANCE_REVIEW_PENDING; FAIL_RSI_EXTENDED</td>
+        <td>Refresh latest result and wait for retest/reset; no chase.</td>
+      </tr>
+
+
+      <tr>
+        <td><b>KIRLOSBROS</b><span>Kirloskar Brothers Limited</span></td>
+        <td>Research Watch<br><small>64.4/100</small></td>
+        <td class="research">RESEARCH_WATCH_NO_CAPITAL</td>
+        <td>Capital goods / industrial suppliers<br><small>BUILDING</small></td>
+        <td>10.0<br><small>Theme</small></td>
+        <td>13.1<br><small>Fundamental</small></td>
+        <td>16.8<br><small>Tech</small></td>
+        <td>3.5<br><small>RS</small></td>
+        <td>7.7<br><small>Momentum</small></td>
+        <td>8.7<br><small>Setup</small></td>
+        <td>13.0<br><small>20.4 cr</small></td>
+        <td>3.5<br><small>PENDING_OFFICIAL_REVIEW</small></td>
+        <td>8.0<br><small>PASS_2R_MODELLED</small></td>
+        <td>1959.4<br><small>STAGE_2 / RSI 60.2</small></td>
+        <td>Break above 2444.20 with volume, or retest-hold near 1890.97; skip if &gt;5% above planned trigger.</td>
+        <td>1831.3<br><small>6.5%</small></td>
+        <td>Rs. 0<br><small>0 sh / risk Rs. 0</small></td>
+        <td>GOVERNANCE_REVIEW_PENDING</td>
+        <td>Track only; score is below active-capital threshold.</td>
+      </tr>
+
+
+      <tr>
+        <td><b>SUDARSCHEM</b><span>Sudarshan Chemical Industries Limited</span></td>
+        <td>Research Watch<br><small>63.8/100</small></td>
+        <td class="research">RESEARCH_WATCH_NO_CAPITAL</td>
+        <td>Chemicals / specialty materials<br><small>BUILDING</small></td>
+        <td>11.0<br><small>Theme</small></td>
+        <td>11.2<br><small>Fundamental</small></td>
+        <td>16.1<br><small>Tech</small></td>
+        <td>4.0<br><small>RS</small></td>
+        <td>9.4<br><small>Momentum</small></td>
+        <td>6.0<br><small>Setup</small></td>
+        <td>13.0<br><small>31.8 cr</small></td>
+        <td>4.5<br><small>PENDING_OFFICIAL_REVIEW</small></td>
+        <td>8.0<br><small>PASS_2R_MODELLED</small></td>
+        <td>1115.6<br><small>STAGE_2 / RSI 63.2</small></td>
+        <td>Break above 1329.77 with volume, or retest-hold near 1046.59; skip if &gt;5% above planned trigger.</td>
+        <td>1004.0<br><small>10.0%</small></td>
+        <td>Rs. 0<br><small>0 sh / risk Rs. 0</small></td>
+        <td>REFRESH_REQUIRED; GOVERNANCE_REVIEW_PENDING</td>
+        <td>Track only; score is below active-capital threshold.</td>
+      </tr>
+
+
+      <tr>
+        <td><b>SFL</b><span>Sheela Foam Ltd</span></td>
+        <td>Research Watch<br><small>63.8/100</small></td>
+        <td class="reject">NO_TRADE_STAGE_FAIL</td>
+        <td>Consumer / premiumization<br><small>IDEA</small></td>
+        <td>8.0<br><small>Theme</small></td>
+        <td>19.7<br><small>Fundamental</small></td>
+        <td>9.1<br><small>Tech</small></td>
+        <td>4.5<br><small>RS</small></td>
+        <td>3.5<br><small>Momentum</small></td>
+        <td>3.0<br><small>Setup</small></td>
+        <td>13.0<br><small>23.9 cr</small></td>
+        <td>6.0<br><small>PENDING_OFFICIAL_REVIEW</small></td>
+        <td>8.0<br><small>PASS_2R_MODELLED</small></td>
+        <td>697.0<br><small>STAGE_1 / RSI 33.4</small></td>
+        <td>Break above 840.77 with volume, or retest-hold near 768.07; skip if &gt;5% above planned trigger.</td>
+        <td>627.4<br><small>10.0%</small></td>
+        <td>Rs. 0<br><small>0 sh / risk Rs. 0</small></td>
+        <td>GOVERNANCE_REVIEW_PENDING</td>
+        <td>No capital until failed gate is fixed.</td>
+      </tr>
+
+
+      <tr>
+        <td><b>GABRIEL</b><span>Gabriel India Limited</span></td>
+        <td>Research Watch<br><small>63.7/100</small></td>
+        <td class="research">RESEARCH_WATCH_NO_CAPITAL</td>
+        <td>Auto components / EV ancillaries<br><small>CROWDED</small></td>
+        <td>11.0<br><small>Theme</small></td>
+        <td>13.6<br><small>Fundamental</small></td>
+        <td>16.1<br><small>Tech</small></td>
+        <td>8.5<br><small>RS</small></td>
+        <td>6.2<br><small>Momentum</small></td>
+        <td>4.8<br><small>Setup</small></td>
+        <td>13.0<br><small>143.0 cr</small></td>
+        <td>3.5<br><small>PENDING_OFFICIAL_REVIEW</small></td>
+        <td>6.5<br><small>PASS_2R_MODELLED</small></td>
+        <td>1531.8<br><small>STAGE_2 / RSI 64.7</small></td>
+        <td>Break above 1616.00 with volume, or retest-hold near 1407.14; skip if &gt;5% above planned trigger.</td>
+        <td>1378.6<br><small>10.0%</small></td>
+        <td>Rs. 0<br><small>0 sh / risk Rs. 0</small></td>
+        <td>GOVERNANCE_REVIEW_PENDING; WATCH_EXTENDED_FROM_20DMA</td>
+        <td>Track only; score is below active-capital threshold.</td>
+      </tr>
+
+
+      <tr>
+        <td><b>VARROC</b><span>Varroc Engineering Limited</span></td>
+        <td>Research Watch<br><small>62.6/100</small></td>
+        <td class="research">RESEARCH_WATCH_NO_CAPITAL</td>
+        <td>Auto components / EV ancillaries<br><small>CROWDED</small></td>
+        <td>11.0<br><small>Theme</small></td>
+        <td>14.6<br><small>Fundamental</small></td>
+        <td>15.0<br><small>Tech</small></td>
+        <td>7.5<br><small>RS</small></td>
+        <td>5.8<br><small>Momentum</small></td>
+        <td>4.8<br><small>Setup</small></td>
+        <td>11.0<br><small>16.8 cr</small></td>
+        <td>4.5<br><small>PENDING_OFFICIAL_REVIEW</small></td>
+        <td>6.5<br><small>PASS_2R_MODELLED</small></td>
+        <td>737.9<br><small>STAGE_2 / RSI 77.5</small></td>
+        <td>Break above 765.02 with volume, or retest-hold near 667.25; skip if &gt;5% above planned trigger.</td>
+        <td>664.1<br><small>10.0%</small></td>
+        <td>Rs. 0<br><small>0 sh / risk Rs. 0</small></td>
+        <td>REFRESH_REQUIRED; GOVERNANCE_REVIEW_PENDING; WATCH_RSI_EXTENDED</td>
+        <td>Track only; score is below active-capital threshold.</td>
+      </tr>
+
+
+      <tr>
+        <td><b>BALRAMCHIN</b><span>Balrampur Chini Mills Ltd.</span></td>
+        <td>Research Watch<br><small>62.3/100</small></td>
+        <td class="research">RESEARCH_WATCH_NO_CAPITAL</td>
+        <td>Agri / commodity processing<br><small>BUILDING</small></td>
+        <td>11.0<br><small>Theme</small></td>
+        <td>10.8<br><small>Fundamental</small></td>
+        <td>16.5<br><small>Tech</small></td>
+        <td>4.5<br><small>RS</small></td>
+        <td>7.4<br><small>Momentum</small></td>
+        <td>7.7<br><small>Setup</small></td>
+        <td>13.0<br><small>56.5 cr</small></td>
+        <td>4.5<br><small>PENDING_OFFICIAL_REVIEW</small></td>
+        <td>6.5<br><small>PASS_2R_MODELLED</small></td>
+        <td>629.3<br><small>STAGE_2 / RSI 57.1</small></td>
+        <td>Break above 672.15 with volume, or retest-hold near 609.10; skip if &gt;5% above planned trigger.</td>
+        <td>564.6<br><small>10.3%</small></td>
+        <td>Rs. 0<br><small>0 sh / risk Rs. 0</small></td>
+        <td>REFRESH_REQUIRED; GOVERNANCE_REVIEW_PENDING</td>
+        <td>Track only; score is below active-capital threshold.</td>
+      </tr>
+
+
+      <tr>
+        <td><b>AVL</b><span>Aditya Vision Ltd</span></td>
+        <td>Research Watch<br><small>58.4/100</small></td>
+        <td class="research">RESEARCH_WATCH_NO_CAPITAL</td>
+        <td>Consumer / retail<br><small>BUILDING</small></td>
+        <td>11.0<br><small>Theme</small></td>
+        <td>12.0<br><small>Fundamental</small></td>
+        <td>11.9<br><small>Tech</small></td>
+        <td>3.5<br><small>RS</small></td>
+        <td>4.6<br><small>Momentum</small></td>
+        <td>6.0<br><small>Setup</small></td>
+        <td>11.0<br><small>12.5 cr</small></td>
+        <td>4.5<br><small>PENDING_OFFICIAL_REVIEW</small></td>
+        <td>8.0<br><small>PASS_2R_MODELLED</small></td>
+        <td>629.7<br><small>STAGE_2 / RSI 47.9</small></td>
+        <td>Break above 712.05 with volume, or retest-hold near 630.09; skip if &gt;5% above planned trigger.</td>
+        <td>566.7<br><small>10.0%</small></td>
+        <td>Rs. 0<br><small>0 sh / risk Rs. 0</small></td>
+        <td>REFRESH_REQUIRED; GOVERNANCE_REVIEW_PENDING</td>
+        <td>Track only; score is below active-capital threshold.</td>
+      </tr>
+
+
+      <tr>
+        <td><b>GOKEX</b><span>Gokaldas Exports Ltd</span></td>
+        <td>Research Watch<br><small>57.2/100</small></td>
+        <td class="research">RESEARCH_WATCH_NO_CAPITAL</td>
+        <td>Export / branded manufacturing<br><small>BUILDING</small></td>
+        <td>11.0<br><small>Theme</small></td>
+        <td>8.0<br><small>Fundamental</small></td>
+        <td>12.7<br><small>Tech</small></td>
+        <td>4.0<br><small>RS</small></td>
+        <td>5.1<br><small>Momentum</small></td>
+        <td>6.0<br><small>Setup</small></td>
+        <td>13.0<br><small>21.8 cr</small></td>
+        <td>4.5<br><small>PENDING_OFFICIAL_REVIEW</small></td>
+        <td>8.0<br><small>PASS_2R_MODELLED</small></td>
+        <td>796.7<br><small>STAGE_2 / RSI 42.6</small></td>
+        <td>Break above 984.75 with volume, or retest-hold near 821.73; skip if &gt;5% above planned trigger.</td>
+        <td>717.0<br><small>10.0%</small></td>
+        <td>Rs. 0<br><small>0 sh / risk Rs. 0</small></td>
+        <td>REFRESH_REQUIRED; GOVERNANCE_REVIEW_PENDING</td>
+        <td>Track only; score is below active-capital threshold.</td>
+      </tr>
+
+
+      <tr>
+        <td><b>MANAPPURAM</b><span>Manappuram Finance Limited</span></td>
+        <td>Research Watch<br><small>55.6/100</small></td>
+        <td class="research">RESEARCH_WATCH_NO_CAPITAL</td>
+        <td>Financial services<br><small>CROWDED</small></td>
+        <td>9.0<br><small>Theme</small></td>
+        <td>7.4<br><small>Fundamental</small></td>
+        <td>13.2<br><small>Tech</small></td>
+        <td>2.0<br><small>RS</small></td>
+        <td>6.3<br><small>Momentum</small></td>
+        <td>7.3<br><small>Setup</small></td>
+        <td>15.0<br><small>202.2 cr</small></td>
+        <td>4.5<br><small>PENDING_OFFICIAL_REVIEW</small></td>
+        <td>6.5<br><small>PASS_2R_MODELLED</small></td>
+        <td>364.0<br><small>STAGE_2 / RSI 75.4</small></td>
+        <td>Break above 385.37 with volume, or retest-hold near 350.27; skip if &gt;5% above planned trigger.</td>
+        <td>327.7<br><small>10.0%</small></td>
+        <td>Rs. 0<br><small>0 sh / risk Rs. 0</small></td>
+        <td>REFRESH_REQUIRED; GOVERNANCE_REVIEW_PENDING; WATCH_RSI_EXTENDED</td>
+        <td>Track only; score is below active-capital threshold.</td>
+      </tr>
+    </tbody>
+      </table>
+    </section>
+  </main>
+  <footer>
+    Inputs: docs/fund_policies/2026-08-06-smallcap-super-performers-fund-policy.md, Mutual Funds/extracted/agent_adda_smallcap_preselection_scores_20260806.csv, local technical setup snapshots.
+    Governance review remains pending for all names; policy scores are pre-order research gates, not executable orders.
+  </footer>
+</body>
+</html>

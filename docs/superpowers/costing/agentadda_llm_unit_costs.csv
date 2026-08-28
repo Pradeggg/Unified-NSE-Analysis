@@ -1,0 +1,9 @@
+Model,Input USD per 1M,Output USD per 1M,Cost per Query USD,Cost per Query INR,5 q/day/user INR,10 q/day/user INR,20 q/day/user INR,50 q/day/user INR,Recommendation
+gpt-5-nano,0.05,0.40,0.00098,0.094,10,21,41,103,Best for routing and cheap summaries
+gpt-4o-mini,0.15,0.60,0.00222,0.212,23,47,93,234,Best low-cost default for normal paid chat
+gpt-5.6-luna,0.20,1.20,0.00344,0.329,36,72,145,362,Better synthesis for Plus/Pro deep work
+gpt-5.6-terra,2.00,12.00,0.03440,3.291,362,724,1448,3620,Premium research only
+gpt-4o,2.50,10.00,0.03700,3.540,389,779,1557,3893,Avoid for routine use
+gpt-4,30.00,60.00,0.37200,35.592,4092,8184,16368,40920,Not viable for subscriptions
+deepseek-v4-flash-offpeak,0.22,0.66,0.00299,0.286,31,63,126,315,Batch/offline fallback
+

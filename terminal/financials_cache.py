@@ -337,6 +337,7 @@ def build_cash_flow_rows(
         "investing_cf": ("cash from investing activity",),
         "financing_cf": ("cash from financing activity",),
         "net_cf":       ("net cash flow",),
+        "free_cash_flow": ("free cash flow", "fcf"),
     }
     parsed: dict[str, list[float | None]] = {}
     for col, aliases in field_map.items():
@@ -534,6 +535,7 @@ _CF_COL_LABELS = [
     ("Cash from Investing Activity+", "investing_cf"),
     ("Cash from Financing Activity+", "financing_cf"),
     ("Net Cash Flow", "net_cf"),
+    ("Free Cash Flow", "free_cash_flow"),
 ]
 
 

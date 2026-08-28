@@ -8,14 +8,18 @@ from sector_rotation_tracker import (
     _backfill_snapshot_dates,
     _tradingview_symbols,
     _stage2_rs_trading_signal,
+    _apply_stage2_rs_signals,
+    _is_confirmed_vcp_setup,
     _history_as_of,
     _latest_eod_close_date,
     _load_fundamental_score_lookup,
     _vcp_pick_pg_rows,
     _should_skip_unknown_snapshot_overwrite,
+    _strategy_lab_report_url,
     _text_or_none,
     backfill_vcp_picks_to_pg,
     build_html_report,
+    ROOT,
     write_tradingview_watchlist,
 )
 
@@ -25,7 +29,7 @@ class SectorRotationTrackerTests(unittest.TestCase):
         strong_rs = {
             "stage": "STAGE_2",
             "technical_score": 72,
-            "relative_strength": 42,
+            "relative_strength": 92,
             "minervini_score": 18,
             "enhanced_fund_score": 74,
             "trend_signal": "STRONG_BULLISH",
@@ -33,11 +37,51 @@ class SectorRotationTrackerTests(unittest.TestCase):
         }
         weak_rs = {
             **strong_rs,
-            "relative_strength": -18,
+            "relative_strength": 35,
         }
 
         self.assertEqual(_stage2_rs_trading_signal(strong_rs), "STRONG_BUY")
         self.assertEqual(_stage2_rs_trading_signal(weak_rs), "HOLD")
+
+    def test_missing_fundamentals_do_not_receive_neutral_points_or_fund_buy(self):
+        row = {
+            "stage": "STAGE_2",
+            "technical_score": 98,
+            "relative_strength": 99,
+            "stage_score": 99,
+            "trend_signal": "STRONG_BULLISH",
+        }
+        result = _apply_stage2_rs_signals([row])[0]
+
+        self.assertEqual(result["technical_signal"], "STRONG_BUY")
+        self.assertEqual(result["fund_action"], "RESEARCH_REQUIRED")
+        self.assertEqual(result["fundamental_coverage"], 0)
+        self.assertLess(result["investment_score"], 100)
+
+    def test_weak_fundamentals_cap_fund_action_despite_strong_technical_setup(self):
+        row = {
+            "stage": "STAGE_2",
+            "technical_score": 98,
+            "relative_strength": 99,
+            "stage_score": 99,
+            "trend_signal": "STRONG_BULLISH",
+            "fundamental_score": 10,
+            "earnings_quality": 35,
+            "sales_growth": 60,
+            "financial_strength": 45,
+        }
+        result = _apply_stage2_rs_signals([row])[0]
+
+        self.assertEqual(result["technical_signal"], "STRONG_BUY")
+        self.assertEqual(result["fund_action"], "AVOID")
+
+    def test_vcp_requires_explicit_pattern_measurements(self):
+        self.assertFalse(_is_confirmed_vcp_setup({"technical_score": 99, "investment_score": 99}))
+        self.assertTrue(_is_confirmed_vcp_setup({
+            "vcp_score": 82,
+            "vcp_contraction_pct": 12,
+            "vcp_breakout_pct": 2.5,
+        }))
 
     def test_tradingview_symbols_are_nse_prefixed_and_deduplicated(self):
         rows = [
@@ -56,21 +100,22 @@ class SectorRotationTrackerTests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
+            ready = {
+                "stage": "STAGE_2", "technical_score": 90, "relative_strength": 90,
+                "trend_signal": "STRONG_BULLISH", "enhanced_fund_score": 72,
+                "earnings_quality": 74, "sales_growth": 70, "financial_strength": 66,
+            }
             dated, latest = write_tradingview_watchlist(
                 {
                     "snap_date": "2026-05-29",
                     "vcp_breakout_picks": [
-                        {"symbol": "VCPONLY", "trading_signal": "HOLD", "enhanced_fund_score": 75},
-                        {"symbol": "LOWFUNDVCP", "trading_signal": "HOLD", "enhanced_fund_score": 50},
-                        {"symbol": "RELIANCE", "trading_signal": "BUY", "enhanced_fund_score": 65},
+                        {**ready, "symbol": "VCPONLY", "vcp_score": 80, "vcp_contraction_pct": 10, "vcp_breakout_pct": 2},
                     ],
                     "stage2_now": [
-                        {"symbol": "RELIANCE", "trading_signal": "BUY", "enhanced_fund_score": 65},
-                        {"symbol": "TCS", "trading_signal": "STRONG_BUY", "enhanced_fund_score": 72},
-                        {"symbol": "INFY", "trading_signal": "HOLD", "enhanced_fund_score": 80},
-                        {"symbol": "WIPRO", "trading_signal": "BUY", "enhanced_fund_score": 64.9},
-                        {"symbol": "HDFCBANK", "trading_signal": "BUY", "fundamental_score": 70},
-                        {"symbol": "SBIN", "trading_signal": "BUY", "enhanced_fund_score": 0},
+                        {**ready, "symbol": "RELIANCE"},
+                        {**ready, "symbol": "TCS"},
+                        {**ready, "symbol": "WIPRO", "enhanced_fund_score": 64.9},
+                        {"symbol": "MISSING", "stage": "STAGE_2", "technical_score": 99, "relative_strength": 99},
                     ],
                 },
                 reports_dir=root / "reports" / "sector_rotation",
@@ -80,7 +125,7 @@ class SectorRotationTrackerTests(unittest.TestCase):
             self.assertEqual(dated.name, "stage2_buy_tradingview_2026-05-29.txt")
             self.assertEqual(
                 dated.read_text(encoding="utf-8"),
-                "NSE:RELIANCE,NSE:TCS,NSE:HDFCBANK,NSE:VCPONLY\n",
+                "NSE:RELIANCE,NSE:TCS,NSE:VCPONLY\n",
             )
             self.assertEqual(latest.name, "stage2_buy_tradingview.txt")
             self.assertEqual(latest.read_text(encoding="utf-8"), dated.read_text(encoding="utf-8"))
@@ -163,10 +208,9 @@ class SectorRotationTrackerTests(unittest.TestCase):
 
             saved = backfill_vcp_picks_to_pg(start_date="2026-01-01")
 
-        self.assertEqual(saved, 1)
+        self.assertEqual(saved, 0)
         self.assertEqual(reports[0]["snap_date"], "2026-05-29")
-        self.assertEqual(reports[0]["vcp_breakout_picks"][0]["symbol"], "AAA")
-        self.assertGreater(reports[0]["vcp_breakout_picks"][0]["vcp_score"], 0)
+        self.assertEqual(reports[0]["vcp_breakout_picks"], [])
 
     def test_latest_eod_close_date_uses_price_history_timestamp(self):
         hist = pd.DataFrame(
@@ -178,6 +222,16 @@ class SectorRotationTrackerTests(unittest.TestCase):
         )
 
         self.assertEqual(_latest_eod_close_date(hist), "2026-05-06")
+
+    def test_strategy_lab_report_url_is_share_safe(self):
+        self.assertEqual(
+            _strategy_lab_report_url(ROOT / "reports" / "latest" / "portfolio_strategy_lab.html"),
+            "portfolio_strategy_lab.html",
+        )
+        self.assertEqual(
+            _strategy_lab_report_url(ROOT / "portfolio" / "data" / "nse_pg_strategy_lab" / "latest" / "runs" / "x.md"),
+            "",
+        )
 
     def test_apply_latest_history_prices_overrides_stale_analysis_close(self):
         candidates = pd.DataFrame(
@@ -208,7 +262,7 @@ class SectorRotationTrackerTests(unittest.TestCase):
             {
                 "snap_date": "2026-05-07",
                 "prev_date": None,
-                "week_snap": None,
+                "week_snap": "2026-05-01",
                 "summary": {"stage_counts": {"STAGE_1": 0, "STAGE_2": 1, "STAGE_3": 0, "STAGE_4": 0}},
                 "snapshot_history": [
                     {"snapshot_date": "2026-05-07", "total_stocks": 1, "stage2_count": 1},
@@ -242,7 +296,13 @@ class SectorRotationTrackerTests(unittest.TestCase):
         )
 
         self.assertIn("Close 2026-05-06", html)
-        self.assertIn("EOD Close: <strong>2026-05-06</strong>", html)
+        self.assertIn("EOD Close: <strong>EOD Wednesday, 06 May 2026</strong>", html)
+        self.assertIn("Week vs: <strong>EOD Friday, 01 May 2026</strong>", html)
+        self.assertIn("Weekly View (EOD Friday, 01 May 2026)", html)
+        self.assertIn(
+            "Source: <strong>PostgreSQL/scores.stage_snapshots + market.equity_eod; SQLite stage_changes for transition diffs</strong>",
+            html,
+        )
         self.assertIn("Daily Stage Transitions", html)
         self.assertIn("No stage transitions in the latest comparison", html)
         self.assertIn("2026-05-06", html)
@@ -294,6 +354,55 @@ class SectorRotationTrackerTests(unittest.TestCase):
         self.assertIn("tbody.appendChild(detail)", html)
         self.assertIn("₹,%▲▼,", html)
 
+    def test_stage2_table_hides_missing_supertrend_values(self):
+        html = build_html_report(
+            {
+                "snap_date": "2026-06-02",
+                "prev_date": None,
+                "week_snap": None,
+                "summary": {"stage_counts": {"STAGE_1": 0, "STAGE_2": 1, "STAGE_3": 0, "STAGE_4": 0}},
+                "snapshot_history": [],
+                "stage2_now": [
+                    {
+                        "symbol": "TEST",
+                        "company_name": "Test Ltd",
+                        "stage": "STAGE_2",
+                        "price": 100,
+                        "supertrend_state": "BEARISH",
+                        "supertrend_value": math.nan,
+                    }
+                ],
+                "top_picks": [],
+            }
+        )
+
+        self.assertNotIn("₹nan", html)
+        self.assertNotIn(">nan<", html)
+        self.assertIn("↓ BEARISH", html)
+
+    def test_top_pick_modal_json_hides_nan_text_fields(self):
+        html = build_html_report(
+            {
+                "snap_date": "2026-06-02",
+                "prev_date": None,
+                "week_snap": None,
+                "summary": {"stage_counts": {"STAGE_1": 0, "STAGE_2": 1, "STAGE_3": 0, "STAGE_4": 0}},
+                "snapshot_history": [],
+                "stage2_now": [],
+                "top_picks": [
+                    {
+                        "symbol": "TEST",
+                        "company_name": "Test Ltd",
+                        "sector": math.nan,
+                        "investment_score": 75,
+                    }
+                ],
+            }
+        )
+
+        self.assertNotIn('"sector": "nan"', html)
+        self.assertIn('"sector": "N/A"', html)
+
     def test_top_picks_section_shows_tradingview_link_and_vcp_fundamentals(self):
         html = build_html_report(
             {
@@ -339,7 +448,7 @@ class SectorRotationTrackerTests(unittest.TestCase):
             }
         )
 
-        top_idx = html.index("Top Investment Picks")
+        top_idx = html.index("Fund-Ready Stage 2 Candidates")
         link_idx = html.index("stage2_buy_tradingview.txt", top_idx)
         self.assertGreater(link_idx, top_idx)
         vcp_idx = html.index('id="t-vcp"')

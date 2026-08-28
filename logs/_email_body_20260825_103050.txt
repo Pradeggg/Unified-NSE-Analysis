@@ -1,0 +1,63 @@
+Agent Adda
+      Tue, 25 Aug 2026 · 10:30 IST
+
+        Report · morning_market.html · mode: both
+
+    Market read: Risk-off open; weak breadth; Bank Nifty lagging — confirm participation in the first 15–30 minutes.
+
+  Agent Adda Morning Market — 25 Aug 2026
+
+  Published to Agent Adda Market Intelligence at 10:30 IST. Research-only note; not investment advice. Live report URL (text): https://agentadda.in/stocks/reports/morning-market-2026-08-25
+
+        NIFTY 50
+24,126 (-0.38%)
+        Bank Nifty
+57,409 (-0.20%)
+        Smallcap 250
+18,311 (-0.35%)
+        India VIX
+11.42 (-0.91%)
+
+  Key takeaways
+
+    Headline and sector breadth are weak; risk-off open despite a risk-on global backdrop.
+
+    Bank Nifty is not confirming yet; treat early strength as provisional until breadth/price acceptance confirm.
+
+    Leaders: NIFTY SME Emerge, India Internet, Capital Markets, Media; Weak pockets: Metals, Defence, Shariah 25, Momentum Quality 50, IT, Energy, Auto.
+
+    Movers: FACT +13.04% (top gainer); VMM +9.74%, MUTHOOTFIN +6.19%, SAIL +3.57%; HINDCOPPER -6.62% (top loser); COROMANDEL -3.48%, TATATECH -2.83%.
+
+    F&O context neutral; NIFTY PCR OI 0.69, BANKNIFTY 0.70 with long unwinding; use with price/OR/VWAP confirmation.
+
+    Global cues supportive: US +0.43%, Asia +0.45%, Commodities +1.12%; FX mixed (DXY -0.10%, USDINR -0.06%).
+
+  What to watch
+
+    First 15–30 minutes: NIFTY to hold above opening-range high; Bank Nifty to stop lagging or Financial Services to absorb weakness; small/microcap firmness without VIX uptick.
+
+    Sectors: Capital Markets, IT, Metals, Realty, and broad-market quality momentum; if weakness persists, monitor Consumer Durables, PSU Banks, Pharma, Defence, and Auto.
+
+    Momentum watchlist (not signals): RBA, KABRAEXTRU, UTTAMSUGAR, EMIL, STYLEBAAZA — look for price above OR, improving breadth, and volume confirmation.
+
+    Macro/risk tone: Crude, USDINR, DXY, and confirmation from FII/DII flows.
+
+  How to use this
+
+      Treat strength as provisional until breadth and price acceptance confirm after the open.
+
+      Avoid chasing sharp movers, especially with RSI > 80 or large one-day gaps; check volume, support distance, and position sizing.
+
+      Keep F&O read neutral unless PCR, OI buildup, and price align with VWAP/opening-range signals.
+
+      Prioritise watchlist refinement and risk control over immediate action; this is educational market research, not investment advice.
+
+  Disclaimer: For education and general market research only. Not personalised advice, not a recommendation or solicitation. Markets involve risk, including capital loss. Verify independently and consult a SEBI-registered investment adviser/qualified professional before acting.
+
+  Regards,
+
+  Agent Adda
+
+  ShunyaAI · NSE Market Intelligence
+
+Not investment advice. For research and learning only. NSE EOD + live snapshot data.

@@ -4178,150 +4178,470 @@ def _market_dashboard_renderable(snapshot: dict, *, width: int | None = None, he
 
 
 def _render_market_dashboard_html(snapshot: dict, *, drilldown: bool = False) -> str:
+    """Render a terminal-faithful market dashboard HTML.
+
+    Matches the Rich-panel style of the intraday alerts terminal:
+    - Monospace font, colored panel borders, ─── Title ─── headers.
+    - CSS mini-bars (no REPL commands, no Action Board).
+    - Compact row spacing, table-based data layout.
+    """
+
     live = snapshot.get("get_live_market_overview") or {}
     indices = live.get("indices") or {}
     focus = html.escape(str(snapshot.get("focus") or "whole market"))
     fetched_at = html.escape(str(snapshot.get("fetched_at") or datetime.now(_IST).strftime("%Y-%m-%d %H:%M:%S")))
-    # PG-DASHLIVE: surface provenance in header + source panel.
     data_source = html.escape(str(snapshot.get("data_source") or "unknown"))
-    degraded_flag_str = "true" if snapshot.get("degraded") else "false"
-    degraded_badge = (
-        '<b class="warning">[DEGRADED — yfinance fallback]</b>'
-        if snapshot.get("degraded")
-        else '<b class="positive">[LIVE]</b>'
-    )
+    degraded_flag = bool(snapshot.get("degraded"))
+    degraded_flag_str = "true" if degraded_flag else "false"
     source_chain_text = html.escape(" → ".join(snapshot.get("source_chain") or ["unknown"]))
 
-    def esc(value) -> str:
-        return html.escape(str(value if value is not None else ""))
+    def esc(v) -> str:
+        return html.escape(str(v if v is not None else "—"))
 
-    def card(title: str, body: str, cls: str = "") -> str:
-        return f'<section class="panel {cls}"><h2>{esc(title)}</h2>{body}</section>'
+    def pct_cls(v) -> str:
+        try:
+            return "g" if float(v) >= 0 else "r"
+        except (TypeError, ValueError):
+            return "dim"
 
-    pulse_rows = []
-    for name, row in indices.items():
-        if name.upper() in {"NIFTY 50", "NIFTY BANK", "INDIA VIX"} or name in _DASHBOARD_SECTOR_NAMES:
-            pct = row.get("pct_change", row.get("chg_pct"))
-            pulse_rows.append(
-                f'<div class="metric"><span>{esc(name)}</span><b>{esc(_dashboard_fmt_num(row.get("last", row.get("close")), 0))}</b><em>{esc(_dashboard_fmt_pct(pct))}</em></div>'
-            )
-    pulse = card("Market Pulse", "".join(pulse_rows[:12]) or "<p>Market pulse unavailable.</p>")
-
-    reactions = "".join(
-        f'<li class="{esc(r.get("severity"))}"><b>{esc(r.get("label"))}</b><span>{esc(r.get("evidence"))}</span><code>{esc(r.get("command"))}</code></li>'
-        for r in _dashboard_reactions(snapshot)
-    )
-    reaction_panel = card("Reaction Engine", f"<ul>{reactions}</ul>")
-
-    actions = "".join(
-        f'<li><b>{esc(a.get("title"))}</b><code>{esc(a.get("command"))}</code><span>{esc(a.get("why"))}</span><small>{esc(a.get("risk"))}</small></li>'
-        for a in _dashboard_action_cards(snapshot)
-    )
-    action_panel = card("Action Board", f"<ul>{actions}</ul>")
-
-    opportunities = "".join(
-        f'<li><b>{esc(o.get("label"))} · {esc(o.get("symbol"))}</b><span>{esc(", ".join(o.get("setup_tags") or []))}</span><p>{esc(o.get("evidence"))}</p><code>{esc(o.get("command"))}</code><small>{esc(o.get("risk"))}</small></li>'
-        for o in _dashboard_opportunity_radar(snapshot)
-    )
-    opportunity_panel = card("Opportunity Radar", f"<ul>{opportunities}</ul>", "wide")
-
-    fno_rows = "".join(
-        f'<tr><td>{esc(symbol)}</td><td>{esc(row.get("pcr"))}</td><td>{esc(row.get("support"))}</td><td>{esc(row.get("resistance"))}</td><td>{esc(row.get("basis"))} / {esc(row.get("basis_pct"))}%</td><td>{esc(row.get("status"))}</td></tr>'
-        for symbol, row in _dashboard_fno_details(snapshot).items()
-    )
-    fno_panel = card("F&O Control", f"<table><thead><tr><th>Symbol</th><th>PCR</th><th>Support</th><th>Resistance</th><th>Basis</th><th>Status</th></tr></thead><tbody>{fno_rows}</tbody></table>", "wide")
-
-    drill = []
-    for row in _dashboard_top_index_drilldown(snapshot):
-        stocks = "".join(
-            f'<li><b>{esc(stock.get("symbol"))}</b><span>{esc(_dashboard_fmt_pct(stock.get("pct_change")))}</span><code>{esc(" · ".join(stock.get("actions") or []))}</code></li>'
-            for stock in row.get("stocks") or []
+    def bar(pct_val, width_px: int = 80) -> str:
+        """CSS mini-bar matching terminal block-char style."""
+        try:
+            v = float(pct_val)
+        except (TypeError, ValueError):
+            return '<span class="bar"></span>'
+        fill = min(100.0, abs(v) / 5.0 * 100)
+        color = "#38d188" if v >= 0 else "#ff5f6d"
+        side = "left" if v >= 0 else "right"
+        return (
+            f'<span class="bar" style="width:{width_px}px">'
+            f'<span class="bf" style="width:{fill:.0f}%;{side}:0;background:{color}"></span>'
+            f"</span>"
         )
-        open_attr = " open" if drilldown else ""
-        drill.append(
-            f'<details data-index-card{open_attr}><summary>{esc(row.get("index"))} {esc(_dashboard_fmt_pct(row.get("pct_change")))}</summary><ul>{stocks or "<li>Top stocks unavailable</li>"}</ul></details>'
-        )
-    drill_panel = card("Top Stocks in Top Indices", "".join(drill) or "<p>Drilldown unavailable.</p>", "wide")
 
+    def panel(title: str, body: str, color: str = "#1e5a8f") -> str:
+        dashes = "─" * 24
+        return (
+            f'<div class="panel" style="border-color:{color}">'
+            f'<div class="ptitle" style="color:{color}">{dashes} {title} {dashes}</div>'
+            f'<div class="pbody">{body}</div>'
+            f"</div>"
+        )
+
+    # ── Header context line ────────────────────────────────────────────────
+    n50 = indices.get("NIFTY 50") or {}
+    bank = indices.get("NIFTY BANK") or {}
+    vix = indices.get("INDIA VIX") or {}
+    brd_raw = snapshot.get("get_market_breadth") or {}
+    adv = brd_raw.get("advances") or brd_raw.get("advancers") or 0
+    dec = brd_raw.get("declines") or brd_raw.get("decliners") or 0
+    n50_p  = _dashboard_fmt_pct(n50.get("pct_change") or n50.get("chg_pct"))
+    bank_p = _dashboard_fmt_pct(bank.get("pct_change") or bank.get("chg_pct"))
+    vix_p  = _dashboard_fmt_pct(vix.get("pct_change") or vix.get("chg_pct"))
+    n50_cls  = pct_cls(n50.get("pct_change") or n50.get("chg_pct"))
+    bank_cls = pct_cls(bank.get("pct_change") or bank.get("chg_pct"))
+    vix_cls  = pct_cls(vix.get("pct_change") or vix.get("chg_pct"))
+    n50_last  = _dashboard_fmt_num(n50.get("last") or n50.get("close"), 0)
+    bank_last = _dashboard_fmt_num(bank.get("last") or bank.get("close"), 0)
+    vix_last  = _dashboard_fmt_num(vix.get("last") or vix.get("close"), 2)
+    status_badge = (
+        '<span class="badge-deg">DEGRADED</span>' if degraded_flag
+        else '<span class="badge-live">● LIVE</span>'
+    )
+    hdr = (
+        f'<div class="hdr">'
+        f'<span class="hdr-title">Agent Adda · Market Dashboard</span>'
+        f'<span class="hdr-sep">│</span>'
+        f'<span class="hdr-ts">{fetched_at}</span>'
+        f'<span class="hdr-sep">│</span>'
+        f'NIFTY 50 <b class="{n50_cls}">{n50_last} {n50_p}</b>'
+        f'<span class="hdr-sep">·</span>'
+        f'BANKNIFTY <b class="{bank_cls}">{bank_last} {bank_p}</b>'
+        f'<span class="hdr-sep">·</span>'
+        f'VIX <b class="{vix_cls}">{vix_last} {vix_p}</b>'
+        f'<span class="hdr-sep">·</span>'
+        f'breadth <b>{adv}A/{dec}D</b>'
+        f'<span class="hdr-sep">│</span>'
+        f'{status_badge}'
+        f'<span class="hdr-sep">│</span>'
+        f'<span class="dim">focus: {focus} · research-only</span>'
+        f"</div>"
+    )
+
+    # ── Tape Bias / Breadth Gauge ──────────────────────────────────────────
+    total_bd = (adv + dec) or 1
+    adv_pct = round(adv / total_bd * 100)
+    tape_bias_text = live.get("tape_bias") or live.get("bias") or (
+        "Bullish" if adv_pct >= 55 else ("Bearish" if adv_pct <= 40 else "Neutral / Mixed")
+    )
+    tape_bias_cls = "g" if adv_pct >= 55 else ("r" if adv_pct <= 40 else "y")
+    fii_data = snapshot.get("get_fii_dii_activity") or {}
+    fii_net = fii_data.get("fii_net") or fii_data.get("net_fii") or "n/a"
+    dii_net = fii_data.get("dii_net") or fii_data.get("net_dii") or "n/a"
+    action_cue = live.get("action_cue") or (
+        "Prefer confirmation: sector strength + breadth + F&O alignment before risk."
+        if adv_pct < 50
+        else "Momentum favours participation; confirm entry timing."
+    )
+    gauge_fill = min(100, adv_pct)
+    breadth_body = (
+        f'<table><colgroup><col style="width:130px"><col></colgroup>'
+        f'<tr><td class="lbl">Tape Bias</td><td><b class="{tape_bias_cls}">{esc(tape_bias_text)}</b></td></tr>'
+        f'<tr><td class="lbl">Breadth Gauge</td><td>'
+        f'<span class="gauge-wrap"><span class="gauge-fill" style="width:{gauge_fill}%"></span></span>'
+        f' <span class="{tape_bias_cls}">{adv}A/{dec}D</span>'
+        f' <span class="dim">· {adv_pct}% adv</span></td></tr>'
+        f'<tr><td class="lbl">FII / DII</td><td>'
+        f'FII <b class="{pct_cls(fii_net if fii_net != "n/a" else 0)}">{esc(str(fii_net))} Cr</b>'
+        f' &nbsp; DII <b class="{pct_cls(dii_net if dii_net != "n/a" else 0)}">{esc(str(dii_net))} Cr</b>'
+        f'</td></tr>'
+        f'<tr><td class="lbl">Action Cue</td><td class="dim">{esc(action_cue)}</td></tr>'
+        f"</table>"
+    )
+    tape_panel = panel("Tape Bias / Breadth Gauge", breadth_body, "#6a9a3a")
+
+    # ── Market Tape / Index Momentum ───────────────────────────────────────
+    idx_order = [
+        "NIFTY 50", "NIFTY BANK", "NIFTY IT", "NIFTY METAL",
+        "NIFTY FMCG", "NIFTY PHARMA", "NIFTY AUTO", "NIFTY REALTY",
+        "NIFTY MIDCAP 100", "NIFTY SMALLCAP 100", "INDIA VIX",
+    ]
+    idx_rows = ""
+    seen_idx: set = set()
+    for name in idx_order + list(indices.keys()):
+        if name in seen_idx or name not in indices:
+            continue
+        seen_idx.add(name)
+        row = indices[name]
+        pct = row.get("pct_change") or row.get("chg_pct")
+        last = row.get("last") or row.get("close")
+        short = name.replace("NIFTY ", "").replace(" INDEX", "").replace(" 100", "100")
+        cls = pct_cls(pct)
+        idx_rows += (
+            f"<tr>"
+            f'<td class="sym">{esc(short)}</td>'
+            f'<td class="num">{esc(_dashboard_fmt_num(last, 0))}</td>'
+            f'<td class="num {cls}">{esc(_dashboard_fmt_pct(pct))}</td>'
+            f'<td>{bar(pct, 70)}</td>'
+            f"</tr>"
+        )
+        if len(seen_idx) >= 10:
+            break
+    tape_idx = (
+        f"<table>"
+        f"<thead><tr><th>Index</th><th>Last</th><th>Chg%</th><th></th></tr></thead>"
+        f"<tbody>{idx_rows or '<tr><td colspan=4 class=dim>Index data unavailable</td></tr>'}</tbody>"
+        f"</table>"
+    )
+    idx_panel = panel("Market Tape / Index Momentum", tape_idx, "#1e5a8f")
+
+    # ── Mover Velocity / Top Gainers + Losers ─────────────────────────────
     movers = snapshot.get("get_top_gainers_losers") or {}
-    mover_rows = "".join(
-        f'<div class="metric"><span>{esc(row.get("symbol"))}</span><b>{esc(_dashboard_fmt_pct(row.get("pct_change")))}</b><em>{esc(row.get("last_price", ""))}</em></div>'
-        for row in ((movers.get("gainers") or [])[:4] + (movers.get("losers") or [])[:4])
+    gainers = (movers.get("gainers") or [])[:6]
+    losers  = (movers.get("losers")  or [])[:6]
+    mover_rows = ""
+    for g, l in zip(gainers, losers):
+        gp = g.get("pct_change")
+        lp = l.get("pct_change")
+        mover_rows += (
+            f"<tr>"
+            f'<td class="sym c">{esc(g.get("symbol",""))}</td>'
+            f'<td class="num g">{esc(_dashboard_fmt_pct(gp))}</td>'
+            f'<td>{bar(gp, 55)}</td>'
+            f'<td style="width:20px"></td>'
+            f'<td class="sym c">{esc(l.get("symbol",""))}</td>'
+            f'<td class="num r">{esc(_dashboard_fmt_pct(lp))}</td>'
+            f'<td>{bar(lp, 55)}</td>'
+            f"</tr>"
+        )
+    mover_body = (
+        f"<table>"
+        f'<thead><tr><th colspan=3 class="g">▲ Top Gainers</th><th></th>'
+        f'<th colspan=3 class="r">▼ Top Losers</th></tr></thead>'
+        f"<tbody>{mover_rows or '<tr><td colspan=7 class=dim>Movers unavailable</td></tr>'}</tbody>"
+        f"</table>"
     )
-    movers_panel = card("Movers", mover_rows or "<p>Movers unavailable.</p>")
-    news_panel = card("Catalyst Tape", f"<p>{esc(_dashboard_news_tape(snapshot, limit=4))}</p>")
-    rs_panel = card("RS Leaders", f"<p>{esc(_dashboard_rs_screener_line(snapshot, limit=6))}</p>")
-    # PG-DASHLIVE: surface real data provenance in the audit panel so a fixture
-    # or yfinance-fallback dashboard cannot masquerade as a live NSE pull.
-    data_source = esc(snapshot.get("data_source") or "unknown")
-    degraded_flag = bool(snapshot.get("degraded"))
-    badge_color = "warning" if degraded_flag else "positive"
-    badge_text = "DEGRADED" if degraded_flag else "LIVE"
-    source_chain_text = esc(" → ".join(snapshot.get("source_chain") or ["unknown"]))
-    source_panel = card(
-        "Source/Freshness Audit",
+    mover_panel = panel("Mover Velocity / Top Gainers / Top Losers", mover_body, "#8f7a1e")
+
+    # ── Sector Strength / Sectoral Heatmap ────────────────────────────────
+    sector_rows = ""
+    sector_data = []
+    for name in _DASHBOARD_SECTOR_NAMES:
+        row = indices.get(name) or {}
+        pct = row.get("pct_change") or row.get("chg_pct")
+        if pct is None:
+            continue
+        short = name.replace("NIFTY ", "").replace(" INDEX", "")
+        sector_data.append((short, pct))
+    sector_data.sort(key=lambda x: x[1], reverse=True)
+    for short, pct in sector_data:
+        cls = pct_cls(pct)
+        sector_rows += (
+            f"<tr>"
+            f'<td class="sym">{esc(short)}</td>'
+            f'<td class="num {cls}">{esc(_dashboard_fmt_pct(pct))}</td>'
+            f'<td>{bar(pct, 100)}</td>'
+            f"</tr>"
+        )
+    sector_body = (
+        f"<table><thead><tr><th>Sector</th><th>Chg%</th><th></th></tr></thead>"
+        f"<tbody>{sector_rows or '<tr><td colspan=3 class=dim>Sector data unavailable</td></tr>'}</tbody>"
+        f"</table>"
+    )
+    sector_panel = panel("Sector Strength / Sectoral Heatmap", sector_body, "#1e7a7a")
+
+    # ── Reaction Engine ────────────────────────────────────────────────────
+    react_rows = ""
+    for r in _dashboard_reactions(snapshot):
+        sev = r.get("severity") or "neutral"
+        dot_color = {"positive": "#38d188", "negative": "#ff5f6d", "warning": "#f7c948"}.get(sev, "#7a93ab")
+        cls_map = {"positive": "g", "negative": "r", "warning": "y"}
+        cls = cls_map.get(sev, "dim")
+        react_rows += (
+            f"<tr>"
+            f'<td style="width:10px"><span class="dot" style="background:{dot_color}"></span></td>'
+            f'<td class="sym {cls}" style="width:180px">{esc(r.get("label"))}</td>'
+            f'<td class="dim">{esc(r.get("evidence"))}</td>'
+            f"</tr>"
+        )
+    reaction_body = (
+        f"<table><tbody>"
+        f"{react_rows or '<tr><td colspan=3 class=dim>No reactions computed.</td></tr>'}"
+        f"</tbody></table>"
+    )
+    _react_items = _dashboard_reactions(snapshot)
+    _all_react_low = all(
+        (r.get("confidence") or "") in {"low", ""} and "unavailable" in (r.get("evidence") or "").lower()
+        for r in _react_items
+    )
+    reaction_panel = (
+        panel("Reaction Engine", reaction_body, "#8f4a1e")
+        if _react_items and not _all_react_low
+        else ""
+    )
+
+    # ── Opportunity Radar ──────────────────────────────────────────────────
+    opp_rows = ""
+    for o in _dashboard_opportunity_radar(snapshot):
+        tags = ", ".join(o.get("setup_tags") or [])
+        conf = esc(o.get("confidence") or "")
+        conf_span = f' <span class="conf">{conf}</span>' if conf else ""
+        tags_span = f' <span class="y">| {esc(tags)}</span>' if tags else ""
+        risk = o.get("risk") or ""
+        opp_rows += (
+            f'<div class="opp-item">'
+            f'<div class="opp-head">'
+            f'<span class="y">{esc(o.get("label"))}</span>'
+            f' <span class="sym-badge">{esc(o.get("symbol"))}</span>'
+            f"{conf_span}{tags_span}"
+            f"</div>"
+            f'<div class="dim opp-ev">{esc(o.get("evidence"))}</div>'
+            + (f'<div class="opp-risk">Risk: {esc(risk)}</div>' if risk else "")
+            + "</div>"
+        )
+    _opp_items = _dashboard_opportunity_radar(snapshot)
+    _all_opp_low = all(
+        (o.get("confidence") or "") in {"low", ""}
+        for o in _opp_items
+    )
+    opp_panel = (
+        panel("Opportunity Radar", opp_rows, "#7733aa")
+        if opp_rows and not _all_opp_low
+        else ""
+    )
+
+    # ── F&O Control ────────────────────────────────────────────────────────
+    fno_rows = ""
+    for sym, row in _dashboard_fno_details(snapshot).items():
+        pcr_v = row.get("pcr")
+        try:
+            pcr_cls = "g" if float(pcr_v) > 1 else ("r" if float(pcr_v) < 0.8 else "y")
+        except (TypeError, ValueError):
+            pcr_cls = "dim"
+        support    = esc(row.get("support") or "—")
+        resistance = esc(row.get("resistance") or "—")
+        basis      = esc(row.get("basis") or "—")
+        basis_pct  = esc(row.get("basis_pct") or "")
+        rollover   = esc(row.get("rollover") or row.get("status") or "—")
+        coc        = esc(row.get("coc") or row.get("cost_of_carry") or "n/a")
+        fno_rows += (
+            f"<tr>"
+            f'<td class="sym c">{esc(sym)}</td>'
+            f'<td class="num {pcr_cls}">{esc(str(pcr_v) if pcr_v is not None else "—")}</td>'
+            f'<td class="num">{support}</td>'
+            f'<td class="num">{resistance}</td>'
+            f'<td class="dim">Basis {basis} ({basis_pct}%) | CoC {coc} | Rollover {rollover}</td>'
+            f"</tr>"
+        )
+    fno_body = (
+        f"<table>"
+        f"<thead><tr><th>Symbol</th><th>PCR</th><th>Support</th><th>Resistance</th><th>Futures</th></tr></thead>"
+        f"<tbody>{fno_rows or '<tr><td colspan=5 class=dim>F&amp;O data unavailable</td></tr>'}</tbody>"
+        f"</table>"
+    )
+    fno_panel = panel("F&O Control", fno_body, "#5533aa")
+
+    # ── Top Stocks in Top Indices ──────────────────────────────────────────
+    drill_html = ""
+    for idx_row in _dashboard_top_index_drilldown(snapshot):
+        idx_name = esc(idx_row.get("index") or "")
+        idx_pct  = _dashboard_fmt_pct(idx_row.get("pct_change"))
+        i_cls    = pct_cls(idx_row.get("pct_change"))
+        stocks_html = ""
+        for stock in (idx_row.get("stocks") or []):
+            s_pct = stock.get("pct_change")
+            s_cls = pct_cls(s_pct)
+            stocks_html += (
+                f"<tr>"
+                f'<td class="sym c">{esc(stock.get("symbol",""))}</td>'
+                f'<td class="num {s_cls}">{esc(_dashboard_fmt_pct(s_pct))}</td>'
+                f"</tr>"
+            )
+        open_attr = " open" if drilldown else ""
+        drill_html += (
+            f"<details{open_attr}>"
+            f'<summary>{idx_name} <span class="{i_cls}">{idx_pct}</span></summary>'
+            f'<table class="drill-table"><tbody>{stocks_html}</tbody></table>'
+            f"</details>"
+        )
+    drill_panel = panel(
+        "Top Stocks in Top Indices",
+        drill_html or '<div class="dim">Drilldown unavailable.</div>',
+        "#2a3a5a",
+    )
+
+    # ── Catalyst Tape + RS Leaders (hidden when data unavailable) ─────────
+    _news_raw = _dashboard_news_tape(snapshot, limit=5)
+    _rs_raw   = _dashboard_rs_screener_line(snapshot, limit=8)
+    _SKIP_NEWS = {"news tape unavailable", ""}
+    _SKIP_RS   = {"RS screener pending", "RS screener unavailable", ""}
+    news_panel = (
+        panel("Catalyst Tape", f'<div class="tape-text">{esc(_news_raw)}</div>', "#1e5a4a")
+        if _news_raw not in _SKIP_NEWS and not _news_raw.startswith("RS screener unavailable")
+        else ""
+    )
+    rs_panel = (
+        panel("RS Leaders", f'<div class="tape-text">{esc(_rs_raw)}</div>', "#1e4a5a")
+        if _rs_raw not in _SKIP_RS
+        else ""
+    )
+
+    # ── Source Health ──────────────────────────────────────────────────────
+    badge_cls  = "badge-deg" if degraded_flag else "badge-live"
+    badge_text = "DEGRADED — yfinance fallback" if degraded_flag else "● LIVE — NSE data"
+    src_panel  = panel(
+        "Source Health",
         (
-            f"<p>Fetched {fetched_at}. "
-            f"<b class=\"{badge_color}\">[{badge_text}]</b> "
-            f"Data source: <b>{data_source}</b>. "
-            f"Source chain: {source_chain_text}. "
-            f"Missing data is labeled unavailable. Research only, not investment advice.</p>"
+            f'<div class="src-line">'
+            f'<span class="{badge_cls}">{badge_text}</span>'
+            f' &nbsp; fetched: <b>{fetched_at} IST</b>'
+            f' &nbsp; source: <b>{data_source}</b>'
+            f' &nbsp; chain: <span class="dim">{source_chain_text}</span>'
+            f"</div>"
+            f'<div class="dim src-disc">Research only — not investment advice. '
+            f'Missing data is labeled unavailable.</div>'
         ),
-        "wide",
+        "#2a3a4a",
     )
+
+    # ── CSS ────────────────────────────────────────────────────────────────
+    css = """
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0a0d12;color:#c8d8e8;font:12.5px/1.4 'JetBrains Mono','Cascadia Code','Fira Code','SF Mono',Consolas,monospace}
+/* Header */
+.hdr{background:#0c1018;border-bottom:1px solid #1e3a5f;padding:6px 12px 5px;font-size:12px;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.hdr-title{color:#51d6ff;font-weight:700;font-size:13px}
+.hdr-ts{color:#91a4b7}
+.hdr-sep{color:#2a4a6a;padding:0 2px}
+/* Panel */
+.panel{margin:4px 8px;border:1px solid #1e3a5f}
+.ptitle{text-align:center;font-size:11px;font-weight:600;letter-spacing:1.5px;padding:3px 8px;background:#0c1018;border-bottom:1px solid currentColor}
+.pbody{padding:6px 10px 8px}
+/* Table */
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{color:#51d6ff;font-weight:600;text-align:left;padding:3px 8px 4px;border-bottom:1px solid #1e3a5f;font-size:11px;letter-spacing:.5px}
+td{padding:2px 8px;vertical-align:middle}
+tr+tr td{border-top:1px solid rgba(255,255,255,0.04)}
+.sym{font-weight:600}
+.num{text-align:right;white-space:nowrap;min-width:60px}
+.lbl{color:#7a93ab;font-size:12px;padding-right:12px}
+/* Bar */
+.bar{display:inline-block;height:6px;background:#141e2a;position:relative;vertical-align:middle;flex-shrink:0}
+.bf{position:absolute;top:0;height:100%}
+/* Gauge */
+.gauge-wrap{display:inline-block;width:140px;height:8px;background:#141e2a;vertical-align:middle;position:relative}
+.gauge-fill{position:absolute;left:0;top:0;height:100%;background:linear-gradient(90deg,#2a8a50,#38d188)}
+/* Dot */
+.dot{display:inline-block;width:7px;height:7px;border-radius:50%;vertical-align:middle}
+/* Opportunity */
+.opp-item{padding:5px 0;border-top:1px solid rgba(255,255,255,0.05)}
+.opp-item:first-child{border-top:none}
+.opp-head{font-size:12px;margin-bottom:2px}
+.sym-badge{font-size:11px;font-weight:700;background:#0a1e2e;color:#7dd3fc;border:1px solid #1e4060;padding:0 5px;margin:0 4px}
+.conf{font-size:10px;color:#7a93ab;background:#111a24;padding:0 4px}
+.opp-ev{font-size:11.5px;padding-left:4px}
+.opp-risk{font-size:11px;color:#ffaa44;padding-left:4px;margin-top:1px}
+/* Drilldown */
+details{border-top:1px solid rgba(255,255,255,0.05);padding:4px 0}
+details:first-child{border-top:none}
+summary{cursor:pointer;font-size:12px;font-weight:600;padding:2px 4px;list-style:none;display:flex;gap:8px}
+summary::-webkit-details-marker{display:none}
+summary::before{content:"▶";font-size:9px;color:#7a93ab;margin-right:4px}
+details[open] summary::before{content:"▼"}
+.drill-table{margin:4px 0 2px 20px;width:calc(100% - 20px)}
+/* Tape text */
+.tape-text{font-size:12px;color:#91a4b7;line-height:1.6;white-space:pre-wrap}
+/* Source */
+.src-line{font-size:12px;padding:2px 0}
+.src-disc{font-size:11px;margin-top:4px}
+/* Badges */
+.badge-live{color:#38d188;font-weight:700}
+.badge-deg{color:#f7c948;font-weight:700}
+/* Colors */
+.g{color:#38d188}.r{color:#ff5f6d}.y{color:#f7c948}.c{color:#51d6ff}.m{color:#d97bff}.dim{color:#7a93ab}
+b{font-weight:700}
+/* Footer */
+footer{padding:6px 12px;border-top:1px solid #1a2a3a;font-size:11px;color:#4a6a8a;text-align:center;margin-top:6px}
+/* Scrollbar */
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:#0a0d12}
+::-webkit-scrollbar-thumb{background:#1e3a5f;border-radius:3px}
+"""
 
     return f"""<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Market Dashboard · {focus}</title>
-<style>
-:root {{ color-scheme: dark; --bg:#081018; --panel:#101a24; --line:#263746; --text:#e7eef5; --muted:#91a4b7; --green:#38d188; --red:#ff5f6d; --yellow:#f7c948; --cyan:#51d6ff; --mag:#d97bff; }}
-body {{ margin:0; background:var(--bg); color:var(--text); font:14px/1.45 Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }}
-header {{ padding:20px 24px 12px; border-bottom:1px solid var(--line); background:#0b141d; position:sticky; top:0; z-index:2; }}
-h1 {{ margin:0; font-size:22px; letter-spacing:0; }}
-.sub {{ color:var(--muted); margin-top:4px; }}
-.grid {{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; padding:16px; }}
-.panel {{ background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:14px; min-width:0; }}
-.wide {{ grid-column:span 3; }}
-h2 {{ margin:0 0 10px; font-size:15px; color:#d8f3ff; }}
-ul {{ list-style:none; padding:0; margin:0; display:grid; gap:8px; }}
-li {{ border-top:1px solid rgba(255,255,255,.07); padding-top:8px; }}
-code {{ display:inline-block; color:var(--cyan); background:#07131d; border:1px solid #1f4255; border-radius:5px; padding:2px 6px; margin:2px 6px 2px 0; }}
-small,.metric em,.metric span,p,li span {{ color:var(--muted); }}
-.metric {{ display:grid; grid-template-columns:1fr auto auto; gap:10px; align-items:center; border-top:1px solid rgba(255,255,255,.07); padding:7px 0; }}
-table {{ width:100%; border-collapse:collapse; }}
-th,td {{ text-align:left; border-top:1px solid rgba(255,255,255,.08); padding:8px; }}
-details {{ border:1px solid var(--line); border-radius:8px; padding:10px; margin:8px 0; background:#0b1520; }}
-summary {{ cursor:pointer; color:var(--cyan); font-weight:700; }}
-.positive {{ color:var(--green); }} .negative {{ color:var(--red); }} .warning {{ color:var(--yellow); }} .neutral {{ color:var(--muted); }}
-@media (max-width: 900px) {{ .grid {{ grid-template-columns:1fr; }} .wide {{ grid-column:span 1; }} }}
-</style>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Market Dashboard · Agent Adda · {focus}</title>
+<style>{css}</style>
 </head>
 <body>
-<header><h1>Market Dashboard Command Center</h1><div class="sub">focus: {focus} · fetched: {fetched_at} · source: {data_source} · {degraded_badge} · research-only opportunity radar</div></header>
 <!-- PG-DASHLIVE provenance: data_source={data_source} degraded={degraded_flag_str} chain={source_chain_text} -->
-<main class="grid">
-{pulse}
+{hdr}
+<main>
+{tape_panel}
+{idx_panel}
+{mover_panel}
+{sector_panel}
 {reaction_panel}
-{action_panel}
-{opportunity_panel}
+{opp_panel}
 {fno_panel}
 {drill_panel}
-{movers_panel}
 {news_panel}
 {rs_panel}
-{source_panel}
+{src_panel}
 </main>
+<footer>Research only — not investment advice · Agent Adda · agentadda.in</footer>
 <script>
-document.querySelectorAll('[data-index-card]').forEach(function(card) {{
-  card.addEventListener('toggle', function() {{ card.classList.toggle('active', card.open); }});
+document.querySelectorAll('[data-index-card]').forEach(function(el){{
+  el.addEventListener('toggle',function(){{el.classList.toggle('active',el.open);}});
 }});
 </script>
 </body>
 </html>
 """
+
 
 
 def _write_market_dashboard_html(snapshot: dict, *, drilldown: bool = False, open_browser: bool = False) -> Path:
@@ -7081,7 +7401,7 @@ def _run_voice_briefing_panel() -> None:
     Fast (< 1 second). Shown after the LLM startup briefing as a compact data panel.
     """
     try:
-        from generate_voice_briefing import generate_briefing
+        from voice.generate_voice_briefing import generate_briefing
 
         # Always regenerate — it's instant (reads CSVs, no LLM), idempotent
         result = generate_briefing(date_str=None, want_tts=False)
@@ -7979,6 +8299,22 @@ def _single_query(agent, query: str, show_trace: bool) -> None:
             _render_clarif(_mtf_conf, console)
         query = _mtf_rewrite
 
+    if query.lower().startswith("/ric"):
+        parts = query.split(maxsplit=2)
+        if len(parts) == 1:
+            _print_ric_library()
+        else:
+            ric_key = parts[1].lower()
+            ric_arg = parts[2] if len(parts) > 2 else ""
+            ric_fmt = ""
+            arg_toks = ric_arg.split()
+            if arg_toks and arg_toks[-1].lower() in ("html", "pdf", "md"):
+                ric_fmt = arg_toks[-1].lower()
+                ric_arg = " ".join(arg_toks[:-1])
+            _run_ric(agent, ric_key, ric_arg, show_trace, output_format=ric_fmt)
+        _record_learning_action(query, action="ric")
+        return
+
     registry = _get_shared_registry()
     if registry.dispatch(query, agent, show_trace, mode="single_query"):
         _record_learning_action(query, action=_learning_action_for_query(query))
@@ -8071,7 +8407,7 @@ def _chat_loop(agent, show_trace: bool) -> None:
     global _mode, _followups
 
     from terminal.theme import get_theme, get_scale
-    from voice_mode import VoiceModeState, handle_voice_mode_command, speak_answer_when_enabled
+    from voice.voice_mode import VoiceModeState, handle_voice_mode_command, speak_answer_when_enabled
     _theme = get_theme()
     _scale = get_scale()
     voice_mode = VoiceModeState()
@@ -8995,7 +9331,7 @@ def _chat_loop(agent, show_trace: bool) -> None:
                 )
                 continue
             try:
-                from company_index_command import run_company_index_from_args
+                from company_intelligence.company_index_command import run_company_index_from_args
 
                 console.print(f"[dim]  → Company Index: /company-index {args_text}[/dim]")
                 index_result = run_company_index_from_args(args_text)
@@ -9025,7 +9361,7 @@ def _chat_loop(agent, show_trace: bool) -> None:
                 console.print("[dim]  Usage: /company-xray SYMBOL [--strict] [--refresh][/dim]")
                 continue
             try:
-                from company_xray_command import run_company_xray_from_args
+                from company_intelligence.company_xray_command import run_company_xray_from_args
 
                 console.print(f"[dim]  → Company X-Ray: /company-xray {args_text}[/dim]")
                 xray_result = run_company_xray_from_args(args_text)
@@ -9737,8 +10073,8 @@ def _chat_loop(agent, show_trace: bool) -> None:
         # ── /voice-live — repeated voice assistant turns ──────────────────
         elif text.lower().startswith("/voice-live"):
             try:
-                from voice_command import parse_voice_live_args
-                from voice_live import run_voice_live_session
+                from voice.voice_command import parse_voice_live_args
+                from voice.voice_live import run_voice_live_session
 
                 args = parse_voice_live_args(text[len("/voice-live"):].strip())
 
@@ -10048,9 +10384,9 @@ def _chat_loop(agent, show_trace: bool) -> None:
         #         /voice 2026-05-09   → historical date
         elif text.lower().startswith("/voice"):
             try:
-                from voice_command import parse_voice_briefing_args
-                from generate_voice_briefing import generate_briefing
-                from voice_synth import play_audio
+                from voice.voice_command import parse_voice_briefing_args
+                from voice.generate_voice_briefing import generate_briefing
+                from voice.voice_synth import play_audio
 
                 args = parse_voice_briefing_args(text[len("/voice"):].strip())
                 console.print(f"[dim]  → Generating voice briefing{' (script only)' if not args.want_tts else ''}...[/dim]")
@@ -10083,8 +10419,8 @@ def _chat_loop(agent, show_trace: bool) -> None:
         # ── /ask-voice — speech → text → Agent Adda → speech ──────────────
         elif text.lower().startswith("/ask-voice"):
             try:
-                from voice_command import parse_ask_voice_args
-                from voice_copilot import run_voice_query
+                from voice.voice_command import parse_ask_voice_args
+                from voice.voice_copilot import run_voice_query
 
                 args = parse_ask_voice_args(text[len("/ask-voice"):].strip())
                 console.print(

@@ -1,0 +1,24 @@
+Agent Adda
+      Wed, 26 Aug 2026 · 12:18 IST
+
+        Report · fund_dashboard.html · mode: both
+
+    Fund Dashboard — Aug 2026
+
+    Sent: Wed, 26 Aug 2026 · 12:18 IST
+
+    Attachment: fund_dashboard.html
+
+    Share the updated SC and MC fund dashboard. Highlight the RATNAVEER holding update, the corrected NSE bhavcopy previous-close handling, current portfolio P&L, risk alerts, and the research-only disclaimer. Keep the email polished, concise, and factual; direct recipients to open the attached HTML dashboard for full details.
+
+    Composer note: no LLM backend
+
+      Research-only market intelligence; not investment advice.
+
+  Regards,
+
+  Agent Adda
+
+  ShunyaAI · NSE Market Intelligence
+
+Not investment advice. For research and learning only. NSE EOD + live snapshot data.

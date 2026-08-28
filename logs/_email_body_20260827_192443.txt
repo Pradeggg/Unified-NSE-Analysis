@@ -1,0 +1,34 @@
+Agent Adda
+      Thu, 27 Aug 2026 · 19:24 IST
+
+        Report · stage2_tracker.html · mode: both
+
+Market read: Stage 2 breadth eased to 390 (-64 d/d) after a mid‑week spike; still +25 vs 20 Aug, with leadership concentrated in Pharmaceuticals, Industrials, and Consumer Durables.
+Stage 2 Breakout Tracker — NSE EOD 27 Aug 2026
+Attached: Stage 2 Breakout Tracker — 27 Aug 2026. Summary below. This is research-only and not investment advice.
+Key takeaways
+ Stage 2 cohort at 390 names (−64 d/d vs 26 Aug); +25 w/w vs 20 Aug baseline.
+ Daily transitions: 22 upgrades S1→S2 and 5 S3→S2; 6 downgrades S2→S1; 4 moved S3→S4.
+ Momentum elevated: several S2 names flagged NO CHASE with RSI >70 (e.g., WELCORP ~85, SHILPAMED ~83, KMEW ~78, RATNAVEER ~88).
+ Fund‑Ready Stage 2 candidates: 15 names passed the ≥65 fundamental gate; examples: TBZ (ADD), AETHER (ADD), RADICO (ADD), NAVINFLUOR (ADD), KEI (ACCUMULATE), OFSS (ADD).
+ Sector mix within higher‑score S2 remains broad: Pharma & Biotech, Industrial Products, Consumer Durables, Capital Markets, and Chemicals.
+What to watch
+ Breadth: whether Stage 2 holds ~380–400 or weakens; a rebound would support accumulation resumption.
+ Transition balance: S1→S2 upgrades staying above S2→S1 downgrades over the next few sessions.
+ Entry quality: RSI cooling in extended leaders before entries; prioritize setups that pull back constructively to rising averages/pivots.
+ Fundamentals: resolve evidence gaps in RESEARCH REQUIRED/WATCH names (e.g., RATNAVEER Fin Strength 55; PREMIERPOL fundamental coverage 0%) and note AVOID flags (e.g., KABRAEXTRU fundamental quality 41).
+How to use this
+ Focus first on fund‑ready S2 names with ADD/ACCUMULATE and RSI <70 for lower‑risk entries (e.g., TBZ ~60.6, AETHER ~63.1, OFSS ~51.2, KEI ~46.8).
+ Set alerts on NO CHASE names for orderly pullbacks toward support; avoid chasing extended moves.
+ Cross‑verify earnings, sales, financial strength, and institutional backing before any action; align with risk controls.
+ Leverage the VCP setups indicated in the report for staged entries within the S2 cohort.
+Methodology: stage2‑fund‑ready‑v2; Sources: scores.stage_snapshots + market.equity_eod; stage_changes (SQLite). Generated: 27 Aug 2026, 19:17.
+Disclaimer: For informational research purposes only; not investment advice.
+
+  Regards,
+
+  Agent Adda
+
+  ShunyaAI · NSE Market Intelligence
+
+Not investment advice. For research and learning only. NSE EOD + live snapshot data.

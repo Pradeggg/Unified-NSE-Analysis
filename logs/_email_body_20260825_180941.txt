@@ -1,0 +1,35 @@
+Agent Adda
+      Tue, 25 Aug 2026 · 18:09 IST
+
+        Report · sector_rotation.html · mode: both
+
+Market read: Rotation regime (60% confidence) in early recovery; VIX 11.1 falling; breadth weak; FII/DII net buyers over 5D.
+NSE Sector Rotation Report — EOD Tuesday, 25 Aug 2026
+Cover note and summary based on Agent Adda Market Intelligence. Full report attached: sector_rotation.html. This communication is research-only and is not investment advice.
+Key takeaways
+  Market regime: Rotation (confidence 60%, duration 1d) within an economic Recovery phase (64% confidence); 6 sectors screening above the Nifty 500 baseline. Leadership in Capital Goods & Industrials (Score 5.8; 1M +4.7%; RS +1.7%).
+  Flows: Net buying persists — FII 5D +₹2,115 Cr (today +₹1,182 Cr); DII 5D +₹14,708 Cr (today +₹2,493 Cr). Risk signals are mixed: TRIN 0.60 (bullish) vs Net A/D -284 and McClellan -34.9 (neutral), consistent with weak breadth.
+  Breadth: NIFTY 50 43% >200DMA; Smallcap 38% >200DMA. Sector breadth (>50DMA): IT & Technology 100%, Logistics & Transport 63%, EV & Auto Ancillaries 76%, PSU Banks 50%, Private Banks 75%.
+  Macro: Nifty 50 24,335 (+0.5% d/d); India VIX 11.1 (-3.4% d/d). Global correlation monitor flags decoupling in Gold and USDINR; other assets largely stable.
+  Signals and candidates: 33/47 rules-based BUY signals. High-scoring names include HFCL (96.0), SIEMENS (90.0), HAPPYFORGE (87.9), KARUR VYSYA (87.5), REDINGTON (86.9), ABB (86.7). Rotation pockets: Capital Goods & Industrials, Logistics & Transport; selective Banking and IT.
+What to watch
+  Any shift from Rotation to a sustained trend (bullish or bearish) that would warrant a reassessment of sector stance.
+  Change in flows: FII/DII turning to net selling, or a material VIX uptick undermining the recovery backdrop.
+  Breadth confirmation or further divergence across size segments (NIFTY 50 and Smallcap) and within leading sectors.
+  Follow-through in Capital Goods & Industrials and Logistics & Transport versus noise from fuel/freight sensitivities.
+  Persistence of USDINR and Gold decoupling on the correlation monitor.
+How to use this (research-only)
+  Prioritize sector coverage aligned with the recovery backdrop: Banking, Capital Goods, Infrastructure, Cement; monitor Defensives for relative trends.
+  Track breadth, TRIN, and McClellan alongside FII/DII flows for confirmation of rotation durability.
+  Use the candidate list to maintain a watchlist; validate data, liquidity, corporate events, and risk independently.
+  Set internal review triggers for regime change, flow reversals, or a VIX spike to reassess sector positioning.
+Attachment: sector_rotation.html (NSE Sector Rotation — EOD 25 Aug 2026).
+Disclaimer: This report is not investment advice or a trading recommendation. It is educational, AI/rules-based market intelligence. Users must independently verify all data and assume full responsibility for any decisions.
+
+  Regards,
+
+  Agent Adda
+
+  ShunyaAI · NSE Market Intelligence
+
+Not investment advice. For research and learning only. NSE EOD + live snapshot data.

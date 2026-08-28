@@ -161,7 +161,32 @@ def _get_yfinance_financials(symbol: str) -> dict:
 # 1b. Screener.in  — full fundamental page
 # ─────────────────────────────────────────────────────────────────────────────
 
-def scrape_screener_in(symbol: str) -> dict:
+def _financial_coverage_score(payload: dict) -> int:
+    """Score how much structured financial history a Screener payload carries."""
+    score = 0
+    for section in ("quarterly", "annual_pl", "balance_sheet", "cash_flow"):
+        table = payload.get(section) or {}
+        headers = table.get("_headers") or [] if isinstance(table, dict) else []
+        score += len(headers)
+        score += sum(
+            1 for key, values in table.items()
+            if key != "_headers" and isinstance(values, list) and any(str(v).strip() for v in values)
+        ) if isinstance(table, dict) else 0
+    return score
+
+
+def _prefer_richer_payload(primary: dict, candidate: dict) -> dict:
+    """Return the payload with the greater structured financial coverage."""
+    return candidate if _financial_coverage_score(candidate) > _financial_coverage_score(primary) else primary
+
+
+def _is_annual_report_link(label: str, href: str) -> bool:
+    """Identify annual-report links even when BSE uses opaque PDF URLs."""
+    text = f"{label or ''} {href or ''}".lower()
+    return "annual report" in text or "annualreport" in text or "annual-report" in text
+
+
+def scrape_screener_in(symbol: str, *, _base_url: str | None = None, _allow_richer_fallback: bool = True) -> dict:
     """
     Scrape screener.in/company/{SYMBOL}/consolidated/ for:
       • key ratios  (P/E, P/B, ROE, ROCE, mkt-cap, div-yield …)
@@ -175,10 +200,10 @@ def scrape_screener_in(symbol: str) -> dict:
       • direct deep links (screener page, NSE page, BSE page)
     """
     sym = symbol.upper().strip()
-    base_url = f"https://www.screener.in/company/{sym}/consolidated/"
+    base_url = _base_url or f"https://www.screener.in/company/{sym}/consolidated/"
     try:
         resp = _get(base_url)
-        if resp.status_code == 404:
+        if _base_url is None and resp.status_code == 404:
             # Try standalone (non-consolidated) page
             base_url = f"https://www.screener.in/company/{sym}/"
             resp = _get(base_url)
@@ -320,12 +345,17 @@ def scrape_screener_in(symbol: str) -> dict:
 
     # ── Annual Reports ───────────────────────────────────────────────────────
     annual_reports: list[dict] = []
-    for a in soup.select("a[href*='AnnualReport'], a[href*='annual-report'], "
-                         "a[href*='bseplus/AnnualReport']")[:6]:
+    report_candidates = soup.select(
+        "a[href*='AnnualReport'], a[href*='annual-report'], "
+        "a[href*='bseplus/AnnualReport'], a[href*='bseindia.com'][href$='.pdf']"
+    )
+    for a in report_candidates:
         txt  = a.get_text(strip=True)
         href = a.get("href", "")
-        if href:
+        if href and _is_annual_report_link(txt, href) and not any(r["url"] == href for r in annual_reports):
             annual_reports.append({"label": txt or "Annual Report", "url": href})
+        if len(annual_reports) >= 6:
+            break
 
     # ── Concall transcripts — parsed from static HTML ────────────────────────
     # screener.in summary page requires login but transcript PDFs, PPTs, and
@@ -354,6 +384,26 @@ def scrape_screener_in(symbol: str) -> dict:
                 entry["ai_summary_title"] = btn.get("data-title", "")
             if entry.get("period"):
                 concalls.append(entry)
+
+    # Some newly listed companies expose a sparse consolidated route while
+    # their standalone page contains the full Screener history. Compare both
+    # responses instead of treating a valid-but-thin 200 response as complete.
+    if _allow_richer_fallback and base_url.endswith("/consolidated/"):
+        standalone_url = f"https://www.screener.in/company/{sym}/"
+        try:
+            standalone = scrape_screener_in(
+                sym, _base_url=standalone_url, _allow_richer_fallback=False
+            )
+            current = {
+                "quarterly": quarterly,
+                "annual_pl": annual_pl,
+                "balance_sheet": balance_sheet,
+                "cash_flow": cash_flow,
+            }
+            if _financial_coverage_score(standalone) > _financial_coverage_score(current):
+                return standalone
+        except Exception:
+            pass
 
     # ── Enrich with yfinance when screener.in values are JS-rendered ────────
     # screener.in populates .number spans via JavaScript; static HTML has empty spans.

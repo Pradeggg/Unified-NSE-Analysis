@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "nse": {
+      "command": "/Users/pradeepgorai/Documents/Projects/finance/Unified-NSE-Analysis/.venv/bin/python3",
+      "args": [
+        "/Users/pradeepgorai/Documents/Projects/finance/Unified-NSE-Analysis/mcp_server.py"
+      ],
+      "env": {
+        "PG_DSN": "dbname=nse_market user=nse_admin host=/tmp"
+      }
+    }
+  }
+}

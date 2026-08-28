@@ -1,0 +1,181 @@
+id: company_story_v1
+version: 1
+status: validated
+created_at: '2026-08-25T00:00:00'
+created_by: hand_crafted
+generation_model: null
+domain: stock_research
+title: Company Story — 15-Dimension Deep Research
+description: >
+  Build a comprehensive Agent Adda company story for any NSE/BSE ticker.
+  Pulls 15 research dimensions from PostgreSQL, Screener.in, and live web
+  search, then fills the Agent Adda deep-research HTML template
+  (reports/fundamental/templates/agent_adda_deep_research_template.html)
+  and writes the output to reports/fundamental/{symbol}_{date}.html.
+  Supports injected Claude WebSearch results for the 5 web-only dimensions.
+tags:
+  - company_story
+  - stock_research
+  - fundamentals
+  - concall_analysis
+  - technical_analysis
+  - broker_research
+  - credit_rating
+  - exports
+  - shareholding
+  - weinstein_stage
+  - template_fill
+  - agent_adda_template
+  - 15_dimensions
+input_patterns:
+  - "company story {symbol}"
+  - "story {symbol}"
+  - "deep research {symbol}"
+  - "build company story for {symbol}"
+  - "tell me about {symbol} company"
+  - "{company_name} what they do financials concall technical"
+  - "latest results {symbol} build a story"
+  - "research report {symbol} with web search"
+dimensions:
+  db:
+    - stage: "scores.stage_snapshots — Weinstein stage, investment score, all sub-scores"
+    - technical: "market.equity_eod via get_technical_setup — RSI, ADX, MACD, SMA, vol ratio"
+    - fundamentals: "render_fundamental_analysis_report — quarterly P&L, balance sheet, cash flow"
+    - results: "get_latest_results_feed — latest announced results"
+    - concall: "analyze_concall_sentiment — LLM concall NLP (requires OPENAI_API_KEY)"
+    - insight: "get_company_insight — event-driven catalysts and insider alerts"
+  screener:
+    - ratios: "Current Price, Market Cap, Stock P/E, ROCE, ROE, Book Value"
+    - shareholding: "Promoters, FIIs, DIIs, Public (latest %)"
+    - quarterly: "Sales, Operating Profit, OPM, PAT, EPS — last 6 quarters"
+    - balance_sheet: "Equity Capital, Reserves, Borrowings, Fixed Assets, Total Assets"
+    - cash_flow: "CFO, CFI, CFF, FCF, Net Cash Flow"
+    - concalls: "Transcript list + latest period labels"
+  web:
+    - analyst_view: "Broker targets, Buy/Hold/Sell ratings, consensus"
+    - order_book: "Order book, backlog, business guidance"
+    - credit_rating: "CRISIL/ICRA/CARE rating and rationale"
+    - exports: "Export/import revenue breakdown, geography mix"
+    - latest_news: "Latest quarterly results and major announcements"
+evidence_required:
+  tables:
+    - scores.stage_snapshots
+    - market.equity_eod
+    - scores.quarterly_results
+    - scores.balance_sheet
+    - scores.cash_flow
+    - scores.fundamental_scores
+  tools:
+    - get_technical_setup
+    - scrape_screener_in
+    - render_fundamental_analysis_report
+    - analyze_concall_sentiment
+    - get_company_insight
+    - get_latest_results_feed
+    - WebSearch (Claude Code native — inject via injected_web parameter)
+  template:
+    path: reports/fundamental/templates/agent_adda_deep_research_template.html
+    placeholders: 51
+    font_patch: "agentadda.in CDN → Google Fonts (Plus Jakarta Sans + Playfair Display)"
+tool_plan_template:
+  - name: collect_screener
+    tool_name: scrape_screener_in
+    params:
+      symbol: "{resolved_symbol}"
+    description: "Screener.in consolidated ratios, quarterly P&L, balance sheet, cash flow, shareholding, concalls."
+  - name: collect_technical
+    tool_name: get_technical_setup
+    params:
+      symbol: "{resolved_symbol}"
+    description: "EOD technical setup: price, RSI, ADX, MACD, SMA20/50/200, supertrend, vol ratio."
+  - name: collect_snapshot
+    tool_name: sql
+    params:
+      query: "SELECT stage, technical_score, rsi, enhanced_fund_score, earnings_quality, sales_growth, financial_strength, institutional_backing, investment_score, narrative FROM scores.stage_snapshots WHERE symbol='{resolved_symbol}' ORDER BY snapshot_date DESC LIMIT 1"
+    description: "Stage + all Agent Adda fundamental sub-scores from stage_snapshots."
+  - name: collect_web_search
+    tool_name: WebSearch
+    params:
+      queries:
+        - "{company_name} analyst rating target price 2026"
+        - "{company_name} latest quarterly results FY27 profit revenue"
+        - "{company_name} order book exports guidance 2026"
+        - "{company_name} CRISIL ICRA CARE credit rating 2026"
+        - "{company_name} business what they do who they serve"
+    description: "Live web search for 5 dimensions not in the DB. Inject results via injected_web parameter."
+    notes: >
+      In Claude Code, run WebSearch natively then pass hits as injected_web to
+      generate_research_report.generate() or run_company_story().
+      This bypasses DuckDuckGo and gives the richest web data.
+  - name: fill_template
+    tool_name: shell
+    params:
+      command: ".venv/bin/python scripts/generate_research_report.py {resolved_symbol} --open"
+    description: "Fill the Agent Adda deep-research template and open the HTML report."
+    notes: >
+      For Claude Code injection: call generate_research_report.generate(symbol, injected_web={...})
+      with pre-fetched WebSearch results to get all 15 dimensions.
+output_contract:
+  - symbol
+  - company_name
+  - report_html_path         # reports/fundamental/{symbol}_{date}.html
+  - stage                    # Weinstein stage from stage_snapshots
+  - scores                   # dict of EFS, investment, earnings_quality, sales_growth, financial_strength, institutional_backing, technical
+  - quarterly_table          # last 6 quarters
+  - balance_sheet_table      # last 3 years
+  - cash_flow_table          # last 3 years
+  - broker_view              # targets, ratings, sources
+  - credit_rating            # latest CRISIL/ICRA rating
+  - research_stance          # one-sentence conclusion
+  - evidence_trail           # list of sources
+cli_usage: |
+  # Standalone with DuckDuckGo web search (may be blocked in some environments)
+  python scripts/generate_research_report.py LTFOODS --open
+  python scripts/generate_research_report.py RELIANCE
+  python scripts/generate_research_report.py HDFCBANK --no-web
+
+  # Claude Code pattern (preferred — richest data)
+  # Step 1: Run WebSearch natively in Claude Code for all 5 web dimensions
+  # Step 2: Inject into generate():
+  from scripts.generate_research_report import generate
+  generate("LTFOODS", injected_web={
+      "analyst_view":  [{"title": "...", "url": "...", "snippet": "...", "domain": "..."}],
+      "order_book":    [...],
+      "credit_rating": [...],
+      "exports":       [...],
+      "latest_news":   [...],
+  }, open_browser=True)
+
+  # Via company_story.py (simpler entry point, same template)
+  python scripts/company_story.py LTFOODS --open
+ordering_rules:
+  - "PG-FUND-ORDER (2026-05-26): postgres/loader.py --fundamentals-only before sector_rotation_tracker.py --snapshot."
+  - "VCP-PICKS-ORDER (2026-08-18): materialize_stage2_vcp_picks.py before top_picks_report.py."
+  - "generate_research_report requires scores.stage_snapshots to be populated (run daily_refresh.py or sector_rotation_tracker.py --snapshot first)."
+  - "Web dimensions (analyst_view, order_book, credit_rating, exports, latest_news) require either DuckDuckGo access or Claude WebSearch injection."
+validation_rules:
+  - "Resolve the listed NSE symbol before collecting data."
+  - "Verify Screener.in quarterly headers match reported periods."
+  - "State consolidated vs standalone scope for all financials."
+  - "Include at least 5 recent quarters and 3 annual years when available."
+  - "Source every broker target with date and broker name."
+  - "End with research-only, not-investment-advice disclaimer from template."
+  - "Do not describe Stage 2 unless the breakout is confirmed over 2+ weeks."
+  - "Report credit rating upgrade date explicitly."
+synthesis_guidance:
+  - "Fill {{ONE_LINE_THESIS}} with a single sentence that captures business quality + current entry risk."
+  - "{{PULLQUOTE}} should be memorable and specific — name a brand, number, or insight."
+  - "Use {{DECISION_FRAME}} to separate business quality from entry timing."
+  - "Populate {{SCORE_BARS}} from stage_snapshots columns — never guess scores."
+  - "Use YoY % in {{KEY_METRIC_CARDS}} when 5+ quarters are available."
+  - "{{TECHNICAL_NARRATIVE}} must include Weinstein stage assessment AND O'Neil lens."
+  - "{{BROKER_NARRATIVE}} must date every target and note if it was set before or after the latest price move."
+  - "{{VALUATION_TABLE}} must have at least 3 scenarios: bear, base, bull."
+review:
+  status: pass
+  findings: []
+  rationale: >
+    Hand-crafted skill card for the generate_research_report.py + fill_research_template()
+    workflow. Covers all 15 dimensions, template filling, web injection pattern, and
+    ordering rules. Tested on LTFOODS 2026-08-25 with full data pipeline.
+  attempts: 1

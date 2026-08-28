@@ -1,0 +1,50 @@
+Agent Adda
+      Fri, 28 Aug 2026 · 22:35 IST
+
+        Report · sector_rotation.html · mode: both
+
+Market read: Rotation regime (60% confidence) in early recovery; Nifty 50 +0.3%, India VIX 10.7 (falling); breadth mixed with bearish divergence—stay selective.
+
+NSE Sector Rotation — EOD Friday, 28 Aug 2026
+
+Attached: Sector Rotation Report — 28 Aug 2026. Below is a concise, research-only summary for quick review. This is not investment advice.
+
+Key takeaways
+
+  Regime: Rotation (rule-based), 60% confidence; Economic cycle: Recovery (64% confidence). Six sectors are rotating above the Nifty 500 baseline.
+
+  Flows: 5D FII ₹-2,060 Cr vs DII ₹+19,310 Cr; today FII ₹-5,040 Cr and DII ₹+5,184 Cr—supportive domestic bids amid foreign selling.
+
+  Breadth/Divergence: A/D 1.07 with McClellan -12.3 (neutral) and TRIN 1.08 (neutral); Nifty50 and Smallcap breadth weak; bearish divergence flagged—cautious posture warranted.
+
+  Volatility/Index: India VIX down 3.7% to 10.7; Nifty 50 at 24,176 (+0.3%)—lower realized risk but from a weak participation base.
+
+  Leadership: Banking–PSU (Score 5.9; 1M +3.5%; RS +2.7%) and Capital Goods & Industrials (5.8; +3.1%; RS +2.4%) lead; Metals & Mining shows strong RS (+5.9%) with healthy breadth (75% >50DMA). 32 of 36 candidates on BUY (e.g., UNIPARTS, CRAFTSMAN, HAPPYFORGE, APARINDS, KARURVYSYA, RRKABEL, ATHERENERG).
+
+What to watch
+
+  Confirmation of trend: Break in bearish divergence and improvement in market breadth (especially Nifty50/Smallcap participation).
+
+  Flows: Sustained FII stabilization alongside continued DII support to firm up the recovery narrative.
+
+  Sector triggers: Capital Goods & Industrials maintaining breakouts near recent highs; Banking–Private breadth lifting from ~40% & RS holding near benchmark; Metals & Mining sustaining RS leadership.
+
+  Global correlations: Decoupling in Gold and select indices; monitor for spillovers into domestic cyclicals.
+
+How to use this
+
+  Positioning map: Prioritize sectors aligned to recovery—Banking (PSU), Capital Goods, Infrastructure; screen for relative strength in Metals & Mining and EV & Auto Ancillaries. Avoid defensives per regime signal.
+
+  Risk control: Maintain selective exposure given weak breadth and FII outflows; use incremental adds on confirmed breakouts and reduce on breadth deterioration.
+
+  Validation: Independently verify data, liquidity, corporate events, and risk before any action; this framework is rules-based and educational.
+
+  Disclaimer: This email and the attached report are for research and educational purposes only and are not investment advice or a trading recommendation. Users are solely responsible for any decisions made.
+
+  Regards,
+
+  Agent Adda
+
+  ShunyaAI · NSE Market Intelligence
+
+Not investment advice. For research and learning only. NSE EOD + live snapshot data.

@@ -1,0 +1,35 @@
+Agent Adda
+      Wed, 26 Aug 2026 · 10:31 IST
+
+        Report · morning_market.html · mode: both
+
+Agent Adda Morning Market — 26 Aug 2026
+Published to Agent Adda Market Intelligence. Attached: morning_market.html. Summary below reflects the live dashboard as of 10:30 IST. Research-only; not investment advice.
+Market read: Rotational open; leadership selective—confirm first-hour breadth (15–30 min). Banks supportive; VIX easing; global backdrop RISK_ON.
+Key takeaways
+Opening stance: Rotational; treat early strength as provisional until breadth confirms within 15–30 minutes.
+Index pulse: NIFTY 24,302 (-0.13%), Bank Nifty 57,903 (+0.68%, leading), Smallcap 250 18,436 (+0.49%); India VIX 10.88 (-1.76%, easing).
+Sector dispersion: Leaders — NIFTY CEMENT (+1.34%), PSU BANK (+1.29%), MIDSMALL HEALTHCARE (+0.85%), PRIVATE BANK (+0.80%). Weak — CPSE (-0.54%), CONSUMER DURABLES (-0.44%), INFRASTRUCTURE (-0.42%), INDIA DEFENCE (-0.40%), IT (-0.38%).
+Movers (NIFTY 500 feed): Top gainer SAGILITY (+4.14%); top loser TRIVENI (-2.89%). Positives include PINELABS, INDIANB, PCBL; laggards include VMM, TATACONSUM, INDUSTOWER.
+F&O context (10:30 IST): NIFTY PCR OI 0.91 (Max Pain 24,300), BANKNIFTY PCR OI 1.16 (Max Pain 57,700) — both Neutral; treat as context until price and OI buildup align with VWAP/opening range.
+Global/FX: Equities RISK_ON (Asia +0.70%, Nasdaq +0.66%); USDINR 95.4 (-0.34%).
+What to watch
+NIFTY holding above the opening-range high after 15–30 minutes; alignment with VWAP.
+Bank Nifty leadership or Financial Services absorbing sectoral weakness.
+Breadth in mid/small/micro caps without VIX uptick.
+Follow-through in leaders (cement, banks, chemicals) vs. persistence of weakness (CPSE, consumer durables, infra, defence, IT).
+Macro/flows: crude, USDINR/DXY, and FII/DII flow confirmation.
+How to use this
+Refine watchlists using momentum leaders (RBA, AVADHSUGAR, KABRAEXTRU, TFCILTD, MACPOWER) as research candidates — not trade calls.
+Set confirmation triggers: price holding above opening range with volume; avoid chasing leaders with RSI > 80 or large one-day gaps.
+Use F&O as corroboration only; look for alignment of price trend, PCR, OI buildup, and VWAP/opening range.
+Prefer sectors showing both index strength and stock-level breadth; reassess after the first 30–60 minutes.
+Important: This email is for education and general market research only. It is not personalised advice, not a SEBI-registered research report, and not a recommendation or solicitation to buy, sell, or trade. Markets carry risk, including capital loss. Verify independently and consult a SEBI-registered investment adviser/qualified professional before acting.
+
+  Regards,
+
+  Agent Adda
+
+  ShunyaAI · NSE Market Intelligence
+
+Not investment advice. For research and learning only. NSE EOD + live snapshot data.

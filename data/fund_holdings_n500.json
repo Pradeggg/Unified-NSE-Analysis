@@ -1,0 +1,11 @@
+{
+  "_meta": {
+    "description": "NIFTY 500 Fund holdings — single source of truth. Edit after each order fill.",
+    "budget_n500": 300000,
+    "slots_n500": 20,
+    "sl_pct": 0.05,
+    "inception_date": "2026-08-18",
+    "note": "NIFTY 500 fund. Inception 2026-08-18. No positions yet — screening 37 qualified candidates."
+  },
+  "n500": {}
+}

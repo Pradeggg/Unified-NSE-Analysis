@@ -1438,8 +1438,11 @@ def load_macro(cur, dry_run=False):
 
 def load_company_intel_schema(cur, dry_run=False):
     print("\n[8/9] COMPANY INTELLIGENCE — PostgreSQL schema")
-    schema_path = BASE / "postgres" / "migrations" / "20260612_company_intel.sql"
-    sql = schema_path.read_text(encoding="utf-8")
+    migrations_dir = BASE / "postgres" / "migrations"
+    migration_paths = sorted(migrations_dir.glob("*company_intel*.sql"))
+    if not migration_paths:
+        raise FileNotFoundError(f"No company_intel migrations found under {migrations_dir}")
+    sql = "\n\n".join(path.read_text(encoding="utf-8") for path in migration_paths)
     if not dry_run:
         cur.execute(sql)
     log("company_intel schema: ready")

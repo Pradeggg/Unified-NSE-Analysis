@@ -1,0 +1,14 @@
+{
+  "symbol": "CUPID",
+  "report_id": "ar_CUPID_401d8468c1ec",
+  "as_of_utc": "2026-08-25T21:56:53+00:00",
+  "pdf_path": "/Users/pradeepgorai/Documents/Projects/finance/Unified-NSE-Analysis/data/knowledge_base/raw/annual_report_CUPID_FY2425/2026-08-26/AR_28127_CUPID_2024_2025_A_4760311_02092025135122__401d8468c1ec.pdf",
+  "extract_meta": {
+    "pdf_path": "/Users/pradeepgorai/Documents/Projects/finance/Unified-NSE-Analysis/data/knowledge_base/raw/annual_report_CUPID_FY2425/2026-08-26/AR_28127_CUPID_2024_2025_A_4760311_02092025135122__401d8468c1ec.pdf",
+    "total_pages": 143,
+    "pages_read": 143,
+    "truncated": false,
+    "extractor": "pypdf",
+    "vision_fallback": false
+  }
+}

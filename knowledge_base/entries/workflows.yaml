@@ -1,0 +1,792 @@
+# Agent Adda Curated Workflow Definitions
+# These are the high-value, multi-step workflows that a coding assistant
+# should understand before writing code or answering questions.
+#
+# Fields:
+#   id, title, description, category, tags, input_patterns,
+#   cli, when_to_use, dependencies, phases, ordering_rules,
+#   variants, examples, ollama_guidance, source_file_tokens
+
+- id: workflow_daily_pipeline
+  title: "Daily Pipeline — 7-Phase Market Refresh"
+  description: >
+    Full end-to-end daily pipeline: bhavcopy ingest → PostgreSQL EOD →
+    universe scoring → fundamentals → VCP materialisation → stage snapshots →
+    40 screeners → sector rotation → top picks report → portfolio → fund dashboard
+    → email draft → voice briefing. Runs after NSE close (~16:00 IST). ~25–35 min.
+  category: workflow
+  tags: [pipeline, daily, etl, nse, bhavcopy, scores, reports, email]
+  input_patterns:
+    - "run daily pipeline"
+    - "run EOD reports"
+    - "refresh all reports"
+    - "run daily refresh"
+    - "post market pipeline"
+    - "nse daily update"
+    - "full pipeline"
+    - "daily refresh"
+  cli: "python daily_refresh.py"
+  when_to_use: "After NSE market close (~16:00 IST / 10:30 UTC) on trading days"
+  dependencies:
+    - "./postgres/start_pg.sh start   # PostgreSQL must be running"
+    - "source .venv/bin/activate"
+    - "export OPENAI_API_KEY=..."
+  phases:
+    - "Phase 1 — Data Ingestion: bhavcopy R loader → PG equity/index EOD → FII/DII / F&O / events / macro feeds"
+    - "Phase 2 — Scoring: universe analysis → daily_scores → fundamentals (2B) → stage backfill → VCP materialiser"
+    - "Phase 3 — Strategy Lab: portfolio strategy lab HTML"
+    - "Phase 4 — Stage & Sector: stage tracker snapshot → 40 screeners → UNKNOWN repair → sector rotation report"
+    - "Phase 5 — Picks & Market: screener.in refresh → corporate events → top picks report"
+    - "Phase 6 — Portfolio & Fund: portfolio EOD → swing playbook → fund dashboard"
+    - "Phase 7 — Distribution: email draft (top picks) → voice briefing script"
+  ordering_rules:
+    - "PG-FUND-ORDER: postgres/loader.py --fundamentals-only (Step 2B) MUST complete before sector_rotation_tracker.py --snapshot (Step 4B)"
+    - "VCP-PICKS-ORDER: scripts/materialize_stage2_vcp_picks.py MUST run before top_picks_report.py"
+    - "CSV-200-ORDER: stage tracker requires >=200 days price history; auto-falls back to market.equity_eod"
+  variants:
+    - cli: "python daily_refresh.py --dry-run"
+      description: "Preview plan, no execution"
+    - cli: "python daily_refresh.py --live-only"
+      description: "Fast price update only (~1 min)"
+    - cli: "python daily_refresh.py --skip-analysis"
+      description: "Skip heavy scoring, just tracker"
+    - cli: "python daily_refresh.py --fundamentals-backfill"
+      description: "Force full Nifty 500 screener backfill"
+    - cli: "python daily_refresh.py --skip-news"
+      description: "Skip yfinance news in fund dashboard"
+    - cli: "python daily_refresh.py --email-send"
+      description: "Actually send email (default is draft)"
+  examples:
+    - input: "run the daily pipeline"
+      command: "python daily_refresh.py"
+    - input: "quick price update only"
+      command: "python daily_refresh.py --live-only"
+    - input: "preview what the pipeline will do"
+      command: "python daily_refresh.py --dry-run"
+  ollama_guidance: |
+    Set models.mode = hybrid in ~/.agent-adda/config.toml.
+    Scoring and screeners run without LLM. Only narrative generation
+    (sector rotation report via Anthropic) requires an API key.
+    Voice briefing (TTS) requires OPENAI_API_KEY.
+  source_file_tokens: 18700
+
+- id: workflow_chart
+  title: "Build Equity Chart (TradingView-style)"
+  description: >
+    Generate a self-contained interactive HTML equity chart for any NSE symbol.
+    Includes candlestick (daily 6M + intraday 15m), SMA 20/50/200, EMA9,
+    RSI 14, Supertrend(10,3), swing-pivot S/R levels, and relative strength
+    tab vs Nifty 50 + sector index. Output: reports/latest/charts/{SYMBOL}_chart.html
+  category: workflow
+  tags: [chart, technical, candlestick, sma, rsi, supertrend, intraday, html]
+  input_patterns:
+    - "chart SYMBOL"
+    - "show chart of SYMBOL"
+    - "technical chart SYMBOL"
+    - "draw chart SYMBOL"
+    - "SYMBOL chart"
+    - "candlestick chart SYMBOL"
+    - "show SYMBOL on chart"
+    - "open chart SYMBOL"
+    - "tradingview chart SYMBOL"
+  cli: "python -m terminal.chart_engine SYMBOL --months 6 --intra-days 5 --open"
+  when_to_use: "Whenever a user asks to see a chart, technical analysis, or candles for a stock"
+  dependencies:
+    - "source .venv/bin/activate"
+    - "yfinance internet access for live prices"
+  variants:
+    - cli: "python -m terminal.chart_engine SYMBOL"
+      description: "Open chart in browser (default 6M daily + 5d intraday)"
+    - cli: "python nse_agent.py → /chart SYMBOL"
+      description: "Via REPL slash command"
+    - cli: "python nse_agent.py → /chart SYMBOL --html"
+      description: "Generate HTML only, don't open browser"
+  examples:
+    - input: "show me RELIANCE chart"
+      command: "python -m terminal.chart_engine RELIANCE --months 6 --intra-days 5 --open"
+    - input: "/chart HDFCBANK"
+      command: "python nse_agent.py  # then type /chart HDFCBANK"
+  source_file_tokens: 5200
+
+- id: workflow_fundamental_analysis
+  title: "Fundamental Analysis — Company Research"
+  description: >
+    Research and value a listed company using filings, investor materials,
+    exchange disclosures, Screener.in history, and current market data.
+    Covers: earnings quality, sales growth, financial strength, institutional
+    backing, valuation scenarios, and fair-value ranges. Uses Claude skill
+    fundamental-analyze which calls company_intelligence.py + KB passages.
+  category: workflow
+  tags: [fundamental, valuation, research, earnings, balance_sheet, screener]
+  input_patterns:
+    - "fundamental analysis SYMBOL"
+    - "analyze SYMBOL fundamentals"
+    - "valuation of SYMBOL"
+    - "financial health SYMBOL"
+    - "earnings quality SYMBOL"
+    - "research SYMBOL"
+    - "SYMBOL investment thesis"
+    - "fair value SYMBOL"
+    - "SYMBOL balance sheet"
+  cli: "python nse_agent.py --query \"fundamental analysis SYMBOL\""
+  when_to_use: "When user wants detailed financial research on a company"
+  variants:
+    - cli: "python nse_agent.py → /canslim SYMBOL"
+      description: "CAN SLIM growth criteria check"
+    - cli: "python nse_agent.py → /valuation-check SYMBOL1 SYMBOL2"
+      description: "Valuation comparison"
+    - cli: "python nse_agent.py → /company-xray SYMBOL"
+      description: "Full company X-Ray with KB passages"
+    - cli: "python tools/fund_refresh.py --symbol SYMBOL --no-open"
+      description: "Fund-rule compliance for single stock"
+  source_file_tokens: 8300
+
+- id: workflow_sector_rotation
+  title: "Sector Rotation Report"
+  description: >
+    Stage distribution across all sectors, RS leadership changes,
+    3-month rotation view, UNKNOWN-row repair, and full sector HTML report.
+    Key output: reports/latest/sector_rotation_report.html
+  category: workflow
+  tags: [sector, rotation, stage, rs, leadership, html]
+  input_patterns:
+    - "sector rotation report"
+    - "which sectors are leading"
+    - "sector stage distribution"
+    - "sector breadth report"
+    - "sector relative strength"
+  cli: "python sector_rotation_report.py"
+  when_to_use: "Weekly or post-daily pipeline; needs stage snapshots to be current"
+  variants:
+    - cli: "python sector_rotation_tracker.py --snapshot"
+      description: "Stage snapshot first (required)"
+    - cli: "python sector_rotation_tracker.py --report --html"
+      description: "Stage 2 HTML tracker report"
+    - cli: "python sector_rotation_report.py"
+      description: "Full sector rotation narrative"
+  source_file_tokens: 9000
+
+- id: workflow_live_prices
+  title: "Live Prices Dashboard"
+  description: >
+    Fetch live NSE prices via yfinance (5-min candles, ~15-min delay during market hours)
+    and open an auto-refreshing HTML dashboard at reports/latest/live_prices.html.
+    Shows NIFTY / BANKNIFTY / sector ETFs + top movers.
+  category: workflow
+  tags: [live, prices, intraday, dashboard, yfinance, html]
+  input_patterns:
+    - "live prices"
+    - "current prices"
+    - "today prices"
+    - "intraday prices"
+    - "refresh market data"
+    - "open live dashboard"
+    - "market is open prices"
+  cli: "python tools/live_prices.py"
+  when_to_use: "During market hours (9:15–15:30 IST) or to see latest prices"
+  source_file_tokens: 2500
+
+- id: workflow_fund_dashboard
+  title: "Fund Dashboard Refresh"
+  description: >
+    End-to-end refresh of the fund dashboard. Reads fund_holdings.json, fetches
+    live prices, queries DB for snapshots/fundamentals/quarterly results, applies
+    fund rules compliance gate, computes P&L for each position, and generates
+    reports/latest/fund_dashboard.html with clickable stock detail modals.
+  category: workflow
+  tags: [fund, dashboard, holdings, pnl, compliance, html]
+  input_patterns:
+    - "refresh fund dashboard"
+    - "update fund dashboard"
+    - "rebuild fund dashboard"
+    - "open fund dashboard"
+    - "fund holdings pnl"
+    - "fund dashboard"
+  cli: "python tools/fund_refresh.py --no-open"
+  when_to_use: "After daily pipeline or when fund holdings change"
+  variants:
+    - cli: "python tools/fund_refresh.py"
+      description: "Refresh and open in browser"
+    - cli: "python tools/fund_refresh.py --no-open"
+      description: "Refresh only, don't open browser"
+  source_file_tokens: 3500
+
+- id: workflow_agent_adda_intelligence_loop
+  title: "Agent Adda Intelligence Loop"
+  description: >
+    Inner-loop runner that retrieves KB context + similar real episodes, proposes the next
+    tool/command via BM25 routing, optionally executes it, and logs the full run as a real
+    episode (steps/validators/artifacts). Use for multi-step operational workflows.
+  category: workflow
+  tags: [agent, loop, intelligence, kb, episodes, routing]
+  input_patterns:
+    - "agent adda intelligence loop"
+    - "run intelligence loop"
+    - "start intelligence loop"
+    - "agent loop"
+    - "run the loop"
+  cli: "python -m terminal.agent_adda_intelligence_loop"
+  when_to_use: "When you want the agent to iteratively propose/execute/validate based on KB + episodes."
+  source_file_tokens: 2500
+
+- id: workflow_research_sources_sync
+  title: "Research Sources — Sync curated feeds (YAML → PostgreSQL)"
+  description: >
+    Sync curated RSS/Atom sources from config/research_sources.yml into PostgreSQL
+    (company_intel.research_sources). Idempotent upsert keyed by (source_kind, source_url).
+    This is the first step before ingesting news evidence.
+  category: workflow
+  tags: [research, news, rss, evidence, company_intel, postgres, sync]
+  input_patterns:
+    - "sync research sources"
+    - "sync curated feeds"
+    - "update research_sources"
+    - "load research_sources.yml"
+  cli: ".venv/bin/python tools/ingest_news_feeds.py --sync-only"
+  when_to_use: "When config/research_sources.yml changes or when setting up the evidence engine"
+  dependencies:
+    - "./postgres/start_pg.sh start   # PostgreSQL must be running"
+    - "source .venv/bin/activate"
+    - ".venv/bin/python postgres/migrate.py --section company_intel"
+  examples:
+    - input: "sync curated RSS feeds into Postgres"
+      command: ".venv/bin/python tools/ingest_news_feeds.py --sync-only"
+  source_file_tokens: 1200
+
+- id: workflow_news_feeds_ingest
+  title: "News Evidence — Ingest curated RSS/Atom feeds"
+  description: >
+    Fetch active curated RSS/Atom feeds (company_intel.research_sources) and ingest
+    feed entries into company_intel.source_documents + company_intel.evidence_chunks.
+    Stores titles + short summaries as evidence (not full articles).
+  category: workflow
+  tags: [news, rss, ingest, evidence, company_intel, postgres]
+  input_patterns:
+    - "ingest news feeds"
+    - "rss ingest"
+    - "fetch rss"
+    - "pull curated news"
+    - "news evidence pipeline"
+  cli: ".venv/bin/python tools/ingest_news_feeds.py --since-days 7 --max-items-per-feed 25"
+  when_to_use: "Daily/periodic refresh of curated news evidence (safe: feeds only)"
+  dependencies:
+    - "./postgres/start_pg.sh start   # PostgreSQL must be running"
+    - "source .venv/bin/activate"
+  variants:
+    - cli: ".venv/bin/python tools/ingest_news_feeds.py --dry-run"
+      description: "Simulate ingestion without DB writes"
+    - cli: ".venv/bin/python tools/ingest_news_feeds.py --since-days 1"
+      description: "Only last 1 day entries"
+  examples:
+    - input: "ingest last week of news evidence"
+      command: ".venv/bin/python tools/ingest_news_feeds.py --since-days 7"
+  source_file_tokens: 1400
+
+- id: workflow_evidence_search
+  title: "Evidence Search — PostgreSQL FTS (no embeddings)"
+  description: >
+    Lexical evidence search over company_intel.evidence_chunks (titles + snippets from
+    curated feeds + primary docs). Returns an evidence pack of top passages with
+    citations (source URL), authority tier, and dates.
+  category: workflow
+  tags: [search, evidence, fts, postgres, company_intel, research]
+  input_patterns:
+    - "search evidence"
+    - "evidence pack"
+    - "find passages about order book"
+    - "find guidance evidence"
+    - "what is the evidence for"
+  cli: ".venv/bin/python tools/search_evidence.py \"order book\" --symbol BHEL --limit 12 --days 30"
+  when_to_use: "Before writing a research view; to retrieve auditable passages quickly"
+  dependencies:
+    - "./postgres/start_pg.sh start   # PostgreSQL must be running"
+    - "source .venv/bin/activate"
+  examples:
+    - input: "search evidence for margin pressure in TATASTEEL"
+      command: ".venv/bin/python tools/search_evidence.py \"margin pressure\" --symbol TATASTEEL --days 90"
+  source_file_tokens: 1100
+
+- id: workflow_build_evidence_pack
+  title: "Evidence Pack — Multi-pass retrieval (broad + freshness + authority)"
+  description: >
+    Build a structured evidence pack for a symbol using repeated FTS searches across
+    dimensions (orders, guidance, ratings, policy, etc.) with freshness and authority
+    sweeps. Uses config/evidence_dimensions.yml and optional sector overlays.
+  category: workflow
+  tags: [evidence, research, fts, multi_pass, postgres, company_intel]
+  input_patterns:
+    - "build evidence pack"
+    - "multi pass evidence search"
+    - "evidence pack for SYMBOL"
+    - "collect evidence across dimensions"
+  cli: ".venv/bin/python tools/build_evidence_pack.py --symbol SYMBOL --sector-overlay banks_nbfc"
+  when_to_use: "Before generating an on-demand deep research report; to gather auditable passages by dimension"
+  variants:
+    - cli: ".venv/bin/python tools/build_evidence_pack.py --symbol SYMBOL --sector-overlay infra_shipping"
+      description: "Infra/shipping overlay"
+    - cli: ".venv/bin/python tools/build_evidence_pack.py --symbol SYMBOL --dimensions orders_orderbook,guidance_outlook --days-passes 0,30"
+      description: "Focused dimensions + shorter freshness sweep"
+  dependencies:
+    - "./postgres/start_pg.sh start   # PostgreSQL must be running"
+    - "source .venv/bin/activate"
+  examples:
+    - input: "build an evidence pack for HDFCBANK (banks/NBFC)"
+      command: ".venv/bin/python tools/build_evidence_pack.py --symbol HDFCBANK --sector-overlay banks_nbfc"
+  source_file_tokens: 1400
+
+- id: workflow_ingest_company_filings_evidence
+  title: "Company Filings — Ingest Tier-1 evidence (PDF → chunks → PG)"
+  description: >
+    Discover and ingest company financial-result filings from NSE/BSE/Screener candidates,
+    download PDFs, and store them into company_intel.source_documents + company_intel.evidence_chunks
+    (category=filing, tier=1). This makes evidence packs company-specific beyond exchange-wide circulars.
+  category: workflow
+  tags: [filing, results, evidence, postgres, company_intel]
+  input_patterns:
+    - "ingest company filings"
+    - "ingest filings evidence"
+    - "download latest results filing"
+    - "ingest results pdf"
+  cli: ".venv/bin/python tools/ingest_company_filings.py --symbol SYMBOL --max-docs 3"
+  when_to_use: "Before deep research report generation; whenever Tier-1 company evidence is missing"
+  dependencies:
+    - "./postgres/start_pg.sh start   # PostgreSQL must be running"
+    - "source .venv/bin/activate"
+  variants:
+    - cli: ".venv/bin/python tools/ingest_company_filings.py --symbol SYMBOL --dry-run"
+      description: "Discover candidates only, no downloads/DB writes"
+  source_file_tokens: 1600
+
+- id: workflow_ingest_company_concalls_evidence
+  title: "Company Concalls — Ingest Tier-1 evidence (Screener PDFs → chunks → PG)"
+  description: >
+    Fetch latest concall transcript/investor-presentation PDFs from Screener.in concalls list,
+    download PDFs, and store them into company_intel.source_documents + company_intel.evidence_chunks
+    (category=concall, tier=1). This enables management-tone and guidance evidence retrieval via FTS.
+  category: workflow
+  tags: [concall, management, evidence, postgres, company_intel]
+  input_patterns:
+    - "ingest concalls"
+    - "ingest concall transcript"
+    - "download concall pdf"
+    - "ingest management commentary"
+  cli: ".venv/bin/python tools/ingest_company_concalls.py --symbol SYMBOL --max-docs 3"
+  when_to_use: "Before deep research reports; to ground management/guidance in actual transcript text"
+  dependencies:
+    - "./postgres/start_pg.sh start   # PostgreSQL must be running"
+    - "source .venv/bin/activate"
+  variants:
+    - cli: ".venv/bin/python tools/ingest_company_concalls.py --symbol SYMBOL --dry-run"
+      description: "Discover concall links only, no downloads/DB writes"
+  source_file_tokens: 1600
+
+- id: workflow_vcp_picks
+  title: "VCP Picks Materialisation"
+  description: >
+    Stage 2 VCP breakout candidate materialisation to portfolio.stage2_vcp_picks.
+    Must run AFTER sector_rotation_tracker.py --snapshot (Step 4B) and BEFORE
+    top_picks_report.py. Without this, no pick receives a vcp+sector tag.
+  category: workflow
+  tags: [vcp, breakout, picks, stage2, materialize, portfolio]
+  input_patterns:
+    - "materialize vcp picks"
+    - "vcp breakout candidates"
+    - "top picks report"
+    - "stage 2 vcp"
+    - "run vcp materialiser"
+  cli: "python scripts/materialize_stage2_vcp_picks.py --lookback-days 365"
+  when_to_use: "After stage snapshot (4B), before top_picks_report.py — part of daily pipeline Phase 2C"
+  ordering_rules:
+    - "Must run after: sector_rotation_tracker.py --snapshot"
+    - "Must run before: python top_picks_report.py"
+  source_file_tokens: 1800
+
+- id: workflow_portfolio_assessment
+  title: "Portfolio Assessment — Add/Trim/Hold/Exit"
+  description: >
+    Review ICICI Direct equity portfolio CSV, compute add/trim/hold/exit rankings,
+    identify concentration risk, ETF separation, unresolved symbols, and regenerate
+    the sortable portfolio HTML report. Uses agent-adda-portfolio-assessment skill.
+  category: workflow
+  tags: [portfolio, assessment, add, trim, hold, exit, concentration, icici]
+  input_patterns:
+    - "review my portfolio"
+    - "portfolio assessment"
+    - "add or trim portfolio"
+    - "portfolio concentration risk"
+    - "portfolio report"
+    - "what should I add or reduce"
+  cli: "python nse_agent.py --query \"review my portfolio for incremental add or trim\""
+  when_to_use: "When user wants portfolio action recommendations"
+  source_file_tokens: 5000
+
+- id: workflow_postgres_management
+  title: "PostgreSQL Cluster Management"
+  description: >
+    Self-contained PostgreSQL cluster under postgres/data/. Must be started before
+    running any pipeline or loader. Connection: Unix socket /tmp, user nse_admin,
+    no password, database nse_market.
+  category: workflow
+  tags: [postgres, database, cluster, start, stop, restart, status]
+  input_patterns:
+    - "start postgres"
+    - "stop database"
+    - "restart postgres"
+    - "database status"
+    - "postgres cluster"
+    - "nse_market database"
+  cli: "./postgres/start_pg.sh start"
+  when_to_use: "Before any pipeline, loader, or analysis that reads from PostgreSQL"
+  variants:
+    - cli: "./postgres/start_pg.sh start"
+      description: "Start the cluster"
+    - cli: "./postgres/start_pg.sh stop"
+      description: "Graceful stop"
+    - cli: "./postgres/start_pg.sh status"
+      description: "Check if running"
+    - cli: "./postgres/start_pg.sh restart"
+      description: "Restart after crash"
+  examples:
+    - input: "start the database"
+      command: "./postgres/start_pg.sh start"
+    - input: "is postgres running"
+      command: "./postgres/start_pg.sh status"
+  source_file_tokens: 800
+
+- id: workflow_screener_backfill
+  title: "Screener.in Fundamentals Backfill"
+  description: >
+    Full Nifty 500 Screener.in fundamentals backfill: earnings quality, sales growth,
+    financial strength, institutional backing. Run weekly or when fundamental scores
+    are stale. Takes 15–30 min for full universe.
+  category: workflow
+  tags: [screener, fundamentals, backfill, nifty500, weekly]
+  input_patterns:
+    - "backfill fundamentals"
+    - "screener.in refresh"
+    - "refresh fundamental scores"
+    - "fundamental backfill"
+  cli: "python scripts/backfill_screener_fundamentals.py"
+  when_to_use: "Weekly (Sundays) or when fundamental scores appear stale"
+  variants:
+    - cli: "python scripts/refresh_results_feed.py"
+      description: "Refresh symbols with recent filings"
+    - cli: "python scripts/backfill_equity_eod_yfinance.py"
+      description: "Extend price history > 200 days"
+  source_file_tokens: 4000
+
+- id: workflow_ollama_local_setup
+  title: "Run Agent Adda with Local Ollama (offline)"
+  description: >
+    Configure Agent Adda to use a local Ollama model instead of OpenAI.
+    Recommended model: Granite4 (best balance of quality and speed).
+    Also supports nomic-embed-text for local KB embeddings.
+    Set models.mode = local-llm in ~/.agent-adda/config.toml.
+  category: workflow
+  tags: [ollama, local, offline, llm, granite4, embedding, config]
+  input_patterns:
+    - "use ollama"
+    - "run offline"
+    - "local llm"
+    - "granite4"
+    - "no openai key"
+    - "ollama setup"
+    - "local model"
+    - "run without api key"
+  cli: "ollama pull granite4 && ollama serve"
+  when_to_use: "When no OpenAI API key is available, or to run fully offline"
+  variants:
+    - cli: "ollama pull granite4"
+      description: "Download Granite4 model"
+    - cli: "ollama pull nomic-embed-text"
+      description: "Download embedding model for local KB vector search"
+    - cli: "ollama serve"
+      description: "Start Ollama server (default port 11434)"
+  examples:
+    - input: "run agent adda with local ollama"
+      command: |
+        ollama pull granite4
+        ollama serve &
+        # In ~/.agent-adda/config.toml set: [models] mode = "local-llm"
+        python nse_agent.py
+    - input: "use local embeddings for KB"
+      command: |
+        ollama pull nomic-embed-text
+        KB_EMBED_BACKEND=ollama python -m knowledge_base ask "sector rotation"
+  config_guidance: |
+    ~/.agent-adda/config.toml:
+      [models]
+      mode = "local-llm"          # rules | local-llm | openai | hybrid
+
+    Environment:
+      KB_EMBED_BACKEND=ollama     # for KB vector search
+      KB_OLLAMA_MODEL=nomic-embed-text
+      KB_OLLAMA_BASE=http://localhost:11434
+  source_file_tokens: 3200
+
+- id: workflow_intraday_scan
+  title: "Intraday F&O Alert Scan"
+  description: >
+    Real-time intraday breakout alerts for NIFTY/BANKNIFTY/FINNIFTY universe.
+    Scores 6 breakout strategies: supertrend_breakout, near_breakout_volume,
+    VCP, volume, Darvas, ORB+VWAP. Only surfaces alerts with R:R >= 2.
+  category: workflow
+  tags: [intraday, scan, fno, alerts, breakout, supertrend, vcp, darvas, orb]
+  input_patterns:
+    - "intraday scan"
+    - "intraday alerts"
+    - "fno alerts"
+    - "breakout scan today"
+    - "orb scan"
+    - "supertrend breakout scan"
+    - "live scan"
+  cli: "python nse_agent.py → /scan"
+  when_to_use: "During market hours (9:15–15:30 IST)"
+  variants:
+    - cli: "python nse_agent.py → /scan orb"
+      description: "Opening Range Breakout scan"
+    - cli: "python nse_agent.py → /scan vcp"
+      description: "VCP intraday scan"
+    - cli: "python nse_agent.py → /scan momentum"
+      description: "Momentum scan"
+    - cli: "python nse_agent.py → /scan gap"
+      description: "Gap-up/gap-down scan"
+  source_file_tokens: 6500
+
+- id: workflow_kb_financial_docs
+  title: "Knowledge Base — Financial Document Search"
+  description: >
+    Query SEBI, RBI, CRISIL, and broker research documents ingested into
+    the ChromaDB vector store. Separate from the tools/skills index.
+    Build the KB from the financial sources registry, then ask questions.
+  category: workflow
+  tags: [kb, sebi, rbi, crisil, broker, research, pdf, vector, chroma]
+  input_patterns:
+    - "search knowledge base"
+    - "sebi circular"
+    - "rbi policy"
+    - "crisil rating"
+    - "broker research"
+    - "kb ask"
+    - "financial documents"
+  cli: "python -m knowledge_base ask \"your question here\""
+  when_to_use: "For regulatory, rating, or broker research queries"
+  variants:
+    - cli: "python -m knowledge_base build --tier 1 --max-pdfs 3"
+      description: "Build KB from Tier-1 sources (SEBI/RBI)"
+    - cli: "python -m knowledge_base ingest https://...pdf"
+      description: "Add a single PDF report to the KB"
+    - cli: "python -m knowledge_base ask \"HDFC Bank outlook\" --collection chunks"
+      description: "Search raw chunks (vs QA pairs)"
+    - cli: "python -m knowledge_base stats"
+      description: "Show ChromaDB collection counts"
+  source_file_tokens: 5500
+
+---
+id: workflow_company_story
+title: Company Story — 15-Dimension Deep Research
+description: >
+  Full-spectrum company research: business narrative, latest results, P&L, balance
+  sheet, cashflow, financial score (5 sub-scores), technical setup (Weinstein stage),
+  shareholding/funding, management bio, concall highlights, institutional investors,
+  analyst market view, order book, exports/imports, credit rating.
+  Pulls from PostgreSQL, Screener.in, and live web search. LLM synthesises a
+  readable narrative; falls back to deterministic extract when no LLM key.
+category: workflow
+tags: [company, story, xray, fundamental, technical, concall, balance_sheet, cashflow, order_book, exports, credit_rating, analyst, management, shareholding, 15dim]
+input_patterns:
+  - "company story"
+  - "build a story"
+  - "deep research"
+  - "latest results published"
+  - "who heads the company"
+  - "concall details"
+  - "order book"
+  - "exports imports"
+  - "credit rating"
+  - "balance sheet pnl cashflow"
+  - "15 dimensions"
+  - "full analysis"
+cli: "python scripts/company_story.py SYMBOL"
+when_to_use: >
+  When you need a comprehensive single-document research briefing on a stock:
+  all financial, technical, and qualitative dimensions in one HTML report.
+  Use after markets close or during weekends for deep research.
+variants:
+  - cli: "python scripts/company_story.py RELIANCE --open"
+    description: "Run and auto-open HTML in browser"
+  - cli: "python scripts/company_story.py HDFCBANK --no-web"
+    description: "Skip live web search (faster, DB-only)"
+  - cli: "python scripts/company_story.py TCS --format json"
+    description: "JSON output for programmatic use"
+  - cli: "python nse_agent.py → /story SYMBOL"
+    description: "REPL command (same orchestrator)"
+dimensions:
+  db_postgresql:
+    - "scores.daily_scores → Weinstein stage, RSI, MACD, SMA50/200, ATR, trend score"
+    - "scores.fundamental_scores → EQ, SG, FS, IB, enhanced fund score (0-100)"
+    - "scores.quarterly_results → 8 quarters revenue, PAT, margins, YoY/QoQ"
+    - "scores.balance_sheet → assets, liabilities, equity, book value"
+    - "scores.cash_flow → ops, investing, financing cashflows"
+  screener_in:
+    - "Company about / business description (what they do, who they serve)"
+    - "Shareholding pattern (promoter %, FII, DII, retail)"
+    - "Concall transcripts (last 4 quarters)"
+    - "Key ratios (PE, ROE, D/E, Sales growth)"
+  web_search_live:
+    - "Analyst views + target prices (moneycontrol, ET, brokerage)"
+    - "Order book / backlog / guidance updates"
+    - "Credit ratings (CRISIL, ICRA, CARE, India Ratings)"
+    - "Exports & imports breakdown"
+    - "Latest results announcement (BSE/NSE filing)"
+  company_intelligence_db:
+    - "Evidence records, search audit, indexed IR documents"
+ordering_rules:
+  - "PostgreSQL must be running before running this command"
+  - "Optional: run postgres/loader.py --fundamentals-only first for freshest scores"
+examples:
+  - "python scripts/company_story.py RELIANCE --open"
+  - "python scripts/company_story.py TCS --no-web --format json"
+  - "python nse_agent.py  # then type: /story HDFCBANK"
+source_file_tokens: 8500
+
+---
+id: workflow_generate_research_report
+title: "Generate Research Report — Agent Adda Template Renderer"
+description: >
+  Fill the Agent Adda deep-research HTML template
+  (reports/fundamental/templates/agent_adda_deep_research_template.html)
+  with live data from PostgreSQL, Screener.in, and injected Claude WebSearch
+  results. Outputs a full-design branded dark-theme HTML to
+  reports/fundamental/{symbol}_{date}.html. Covers 51 placeholders across
+  every section: KPI cards, score bars, quarterly table, balance sheet, cash
+  flow, concall highlights, broker table, valuation scenarios, risk grid, and
+  evidence trail. Automatically swaps agentadda.in font CDN to Google Fonts.
+category: workflow
+tags: [research_report, template, fundamental, company_story, html, dark_theme,
+       score_bars, quarterly, balance_sheet, broker, valuation, risk, evidence_trail,
+       google_fonts, weinstein, agent_adda_template, generate, 51_placeholders]
+input_patterns:
+  - "generate research report"
+  - "fill research template"
+  - "agent adda template"
+  - "build research report"
+  - "deep research report"
+  - "research html report"
+  - "comprehensive report like ltfoods"
+  - "agent adda dark theme report"
+  - "company report with template"
+  - "fundamental report html"
+cli: "python scripts/generate_research_report.py SYMBOL --open"
+when_to_use: >
+  When you need a publication-quality HTML research report matching the Agent
+  Adda dark theme (Playfair Display headings, Plus Jakarta Sans body, score bars,
+  mini bar charts, broker table, risk grid). Best after markets close when all
+  data is fresh. Use WebSearch injection for richest 5-dimension web coverage.
+dependencies:
+  - "scores.stage_snapshots must be populated (run sector_rotation_tracker.py --snapshot)"
+  - "Screener.in reachable (or use injected_web for offline)"
+  - "reports/fundamental/templates/agent_adda_deep_research_template.html must exist"
+web_search_injection: |
+  # Claude Code pattern — run WebSearch natively then inject:
+  from scripts.generate_research_report import generate
+  generate("LTFOODS", injected_web={
+      "analyst_view":  [{"title":"...","url":"...","snippet":"...","domain":"..."}],
+      "order_book":    [...],
+      "credit_rating": [...],
+      "exports":       [...],
+      "latest_news":   [...],
+  }, open_browser=True)
+template_placeholders: 51
+font_patch: "agentadda.in CDN replaced with Google Fonts (Plus Jakarta Sans + Playfair Display)"
+ordering_rules:
+  - "scores.stage_snapshots must exist (run daily_refresh.py or sector_rotation_tracker.py --snapshot)"
+  - "WebSearch injection preferred over DuckDuckGo for richest web data"
+  - "chart_image auto-resolves to {symbol_lower}_{date}_chart_embed.png if present"
+variants:
+  - cli: "python scripts/generate_research_report.py LTFOODS --open"
+    description: "Generate and auto-open in browser"
+  - cli: "python scripts/generate_research_report.py RELIANCE"
+    description: "Generate without opening"
+  - cli: "python scripts/generate_research_report.py HDFCBANK --no-web"
+    description: "Skip DuckDuckGo (DB + Screener only)"
+examples:
+  - input: "generate research report for LTFOODS"
+    command: "python scripts/generate_research_report.py LTFOODS --open"
+  - input: "build the agent adda template report"
+    command: "python scripts/generate_research_report.py SYMBOL --open"
+related_skills:
+  - company_story_v1
+  - comprehensive_stock_research_v1
+  - equity_chart_v1
+output:
+  path: "reports/fundamental/{symbol_lower}_{yyyy-mm-dd}.html"
+  size_typical: "35-50 KB"
+source_file_tokens: 9200
+
+---
+id: workflow_company_story_v2
+title: "Company Story v2 — QA-Fixed + Template-Ready"
+description: >
+  Updated company_story.py (2026-08-25 QA pass). Eight visual rendering bugs
+  fixed: P/E KPI now uses correct Screener.in key 'Stock P/E'; Weinstein stage
+  reads from scores.stage_snapshots (STAGE_1 → Stage 1); ROCE replaces D/E
+  in KPI bar (D/E not in Screener ratios); balance sheet / cash flow labels
+  no longer duplicated (_fmt_list_vals helper); shareholding table skips
+  _quarters and *_trend keys; web domain extracted from URL when missing;
+  THE BUSINESS uses analyst_view snippets first and skips financial snippets;
+  LATEST RESULTS and THE BUSINESS now show different content.
+  For the full Agent Adda dark-theme design, use generate_research_report.py.
+category: workflow
+tags: [company_story, qa_fixed, stage_fix, pe_fix, shareholding_fix,
+       domain_extraction, business_desc_fix, balance_sheet_fix, template_ready,
+       web_search_injection, 15_dimensions]
+input_patterns:
+  - "company story"
+  - "story"
+  - "/story"
+  - "build a story"
+  - "deep research"
+  - "latest results build story"
+  - "who heads the company"
+  - "concall details"
+  - "order book exports credit rating"
+  - "balance sheet pnl cashflow"
+  - "15 dimensions"
+cli: "python scripts/company_story.py SYMBOL --open"
+when_to_use: >
+  Quick access to company story. Same data collectors as before but all QA bugs
+  fixed. Use scripts/generate_research_report.py for the full Agent Adda
+  dark-theme branded design.
+qa_fixes_2026_08_25:
+  - "P/E KPI: ratios.get('Stock P/E') — was ratios.get('P/E') which returned None"
+  - "Stage: _get_stage_db() queries scores.stage_snapshots — STAGE_1 normalised to Stage 1"
+  - "ROCE replaces D/E in KPI bar (D/E not in Screener.in ratios page)"
+  - "Balance sheet / cash flow: _fmt_list_vals(vals) removes label duplication"
+  - "Shareholding: skip _quarters and *_trend keys; show only latest % values"
+  - "Web domains: _domain_from_url(url) when domain key missing from injected results"
+  - "THE BUSINESS: analyst_view snippets first; _is_financial_snippet() guard skips earnings data"
+  - "LATEST RESULTS: latest_news snippets; business and results no longer show same content"
+web_search_pattern: |
+  from scripts.company_story import run_company_story
+  run_company_story("LTFOODS", injected_web={
+      "analyst_view":  [{"title":"...","url":"...","snippet":"..."}],
+      "order_book":    [...],
+      "credit_rating": [...],
+      "exports":       [...],
+      "latest_news":   [...],
+  })
+variants:
+  - cli: "python scripts/company_story.py RELIANCE --open"
+    description: "Run and auto-open HTML in browser"
+  - cli: "python scripts/company_story.py HDFCBANK --no-web"
+    description: "Skip live web search (DB + Screener only)"
+  - cli: "python scripts/company_story.py TCS --format json"
+    description: "JSON output for programmatic use"
+  - cli: "python scripts/generate_research_report.py SYMBOL --open"
+    description: "Full Agent Adda template (preferred for rich design)"
+examples:
+  - "python scripts/company_story.py LTFOODS --open"
+  - "python scripts/generate_research_report.py LTFOODS --open"
+  - "python nse_agent.py  # then type: /story LTFOODS"
+source_file_tokens: 9800

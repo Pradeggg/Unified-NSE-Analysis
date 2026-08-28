@@ -1,0 +1,1322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NSE Long-term Screeners Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: "Roboto", "Google Sans", "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #212121;
+            font-weight: 400;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 100%;
+            margin: 0 auto;
+            padding: 20px;
+            width: 100%;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 3rem;
+            font-weight: 300;
+            margin-bottom: 16px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            letter-spacing: -0.5px;
+        }
+
+        .header p {
+            font-size: 1.25rem;
+            font-weight: 400;
+            opacity: 0.9;
+        }
+
+        .long-term-section, .sector-analysis-section {
+            margin: 2rem 0;
+            padding: 2rem;
+            background: #f8f9fa;
+            border-radius: 12px;
+        }
+        
+        .screeners-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+        }
+        
+        .screener-card {
+            background: white;
+            border-radius: 8px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .screener-header h3 {
+            color: #2c3e50;
+            margin-bottom: 0.5rem;
+        }
+        
+        .screener-header p {
+            color: #7f8c8d;
+            font-size: 0.9rem;
+        }
+        
+        .screener-list {
+            margin-top: 1rem;
+        }
+        
+        .screener-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid #ecf0f1;
+        }
+        
+        .screener-item:last-child {
+            border-bottom: none;
+        }
+        
+        .stock-info {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .stock-symbol {
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        
+        .stock-price {
+            font-size: 0.9rem;
+            color: #7f8c8d;
+        }
+        
+        .metric-value {
+            font-weight: 600;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+        
+        .metric-value.rs {
+            background: #e8f5e8;
+            color: #27ae60;
+        }
+        
+        .metric-value.score {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+        
+        .sector-performance-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 2rem;
+            margin-top: 1.5rem;
+        }
+        
+        .sector-chart-container, .sector-insights {
+            background: white;
+            border-radius: 8px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .sector-list {
+            margin-top: 1rem;
+        }
+        
+        .sector-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid #ecf0f1;
+        }
+        
+        .sector-item:last-child {
+            border-bottom: none;
+        }
+        
+        .sector-name {
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        
+        .sector-performance {
+            display: flex;
+            gap: 1rem;
+            font-size: 0.9rem;
+        }
+        
+        .perf-1m, .perf-6m {
+            color: #7f8c8d;
+        }
+        
+        .perf-3m.positive {
+            color: #27ae60;
+            font-weight: 600;
+        }
+        
+        .perf-3m.negative {
+            color: #e74c3c;
+            font-weight: 600;
+        }
+        
+        .insights-section {
+            margin-bottom: 1.5rem;
+        }
+        
+        .insights-section h4 {
+            color: #2c3e50;
+            margin-bottom: 0.5rem;
+        }
+        
+        .insights-section ul {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .insights-section li {
+            padding: 0.25rem 0;
+            color: #34495e;
+        }
+        
+        .no-data {
+            text-align: center;
+            color: #7f8c8d;
+            font-style: italic;
+            padding: 2rem;
+        }
+        
+        .loading {
+            text-align: center;
+            color: #7f8c8d;
+            font-style: italic;
+            padding: 1rem;
+        }
+        
+        .info-text {
+            text-align: center;
+            color: #7f8c8d;
+            font-style: italic;
+            padding: 2rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 2px dashed #dee2e6;
+        }
+        
+        /* Chart Styles */
+        .chart-section {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #dee2e6;
+        }
+        
+        .chart-wrapper {
+            position: relative;
+            height: 300px;
+            margin-bottom: 1rem;
+        }
+        
+        .volume-chart-wrapper {
+            position: relative;
+            height: 100px;
+        }
+        
+        .chart-controls {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            justify-content: center;
+        }
+        
+        .chart-btn {
+            padding: 0.5rem 1rem;
+            border: 1px solid #dee2e6;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+        
+        .chart-btn:hover {
+            background: #e9ecef;
+        }
+        
+        .chart-btn.active {
+            background: #007bff;
+            color: white;
+            border-color: #007bff;
+        }
+        
+        .chart-period-info {
+            text-align: center;
+            color: #6c757d;
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+        }
+        
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 200px;
+            color: #6c757d;
+            font-style: italic;
+        }
+        
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #007bff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+        
+        .modal-content {
+            background-color: white;
+            margin: 2% auto;
+            padding: 2rem;
+            border-radius: 12px;
+            width: 95%;
+            max-width: 1200px;
+            max-height: 90vh;
+            overflow-y: auto;
+            position: relative;
+        }
+        
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            position: absolute;
+            right: 1rem;
+            top: 1rem;
+            cursor: pointer;
+        }
+        
+        .close:hover {
+            color: #000;
+        }
+        
+        .modal-header {
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        .modal-header h2 {
+            color: #2c3e50;
+            margin-bottom: 0.5rem;
+        }
+        
+        .modal-header p {
+            color: #6c757d;
+            margin: 0;
+        }
+        
+        @media (max-width: 768px) {
+            .sector-performance-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .screeners-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎯 NSE Long-term Screeners</h1>
+            <p>Advanced pattern recognition and trend analysis for long-term investment opportunities</p>
+            <p>Analysis Date: November 14, 2025</p>
+        </div>
+
+                 <!-- Long-term Screeners Section -->
+                 <div class="long-term-section">
+                     <div class="section-header">
+                         <h2>🎯 Enhanced Long-term Perspective Screeners</h2>
+                         <p>Advanced pattern recognition and trend analysis for long-term investment opportunities</p>
+                     </div>
+
+                     <div class="screeners-grid">
+                         <div class="screener-card">
+                             <div class="screener-header">
+                                 <h3>💪 Strong Monthly RS</h3>
+                                 <p>Stocks with relative strength > 1.5 vs NIFTY500</p>
+                             </div>
+                             <div class="screener-content" id="strongRSContent">
+                                 <div class="loading">Loading...</div>
+                             </div>
+                         </div>
+
+                         <div class="screener-card">
+                             <div class="screener-header">
+                                 <h3>🚀 Consolidation Breakouts</h3>
+                                 <p>Stocks breaking out of 3-4 month consolidation</p>
+                             </div>
+                             <div class="screener-content" id="breakoutsContent">
+                                 <div class="loading">Loading...</div>
+                             </div>
+                         </div>
+
+                         <div class="screener-card">
+                             <div class="screener-header">
+                                 <h3>☕ Cup & Handle Patterns</h3>
+                                 <p>Classic bullish continuation patterns</p>
+                             </div>
+                             <div class="screener-content" id="cupHandleContent">
+                                 <div class="loading">Loading...</div>
+                             </div>
+                         </div>
+
+                         <div class="screener-card">
+                             <div class="screener-header">
+                                 <h3>📈 Long-term Uptrends</h3>
+                                 <p>Stocks in consistent 6-month uptrends</p>
+                             </div>
+                             <div class="screener-content" id="uptrendsContent">
+                                 <div class="loading">Loading...</div>
+                             </div>
+                         </div>
+
+                         <div class="screener-card">
+                             <div class="screener-header">
+                                 <h3>⚡ Momentum Breakouts</h3>
+                                 <p>Stocks with strong momentum + volume surge</p>
+                             </div>
+                             <div class="screener-content" id="momentumContent">
+                                 <div class="loading">Loading...</div>
+                             </div>
+                         </div>
+
+                         <div class="screener-card">
+                             <div class="screener-header">
+                                 <h3>🎯 Support Bounce</h3>
+                                 <p>Stocks bouncing from key support levels</p>
+                             </div>
+                             <div class="screener-content" id="supportContent">
+                                 <div class="loading">Loading...</div>
+                             </div>
+                         </div>
+
+                         <div class="screener-card">
+                             <div class="screener-header">
+                                 <h3>📊 Volume Accumulation</h3>
+                                 <p>Stocks showing volume accumulation patterns</p>
+                             </div>
+                             <div class="screener-content" id="volumeContent">
+                                 <div class="loading">Loading...</div>
+                             </div>
+                         </div>
+
+                         <div class="screener-card">
+                             <div class="screener-header">
+                                 <h3>💰 Earnings Momentum</h3>
+                                 <p>Stocks with accelerating price momentum</p>
+                             </div>
+                             <div class="screener-content" id="earningsContent">
+                                 <div class="loading">Loading...</div>
+                             </div>
+                         </div>
+
+                         <div class="screener-card">
+                             <div class="screener-header">
+                                 <h3>🏆 52-Week High Breakouts</h3>
+                                 <p>Stocks breaking or near 52-week highs</p>
+                             </div>
+                             <div class="screener-content" id="week52Content">
+                                 <div class="loading">Loading...</div>
+                             </div>
+                         </div>
+                     </div>
+                 </div>
+
+        <!-- Index Rotation Analysis -->
+        <div class="sector-analysis-section">
+            <div class="section-header">
+                <h2>🔄 Index Rotation Analysis</h2>
+                <p>Performance analysis across major market indices</p>
+            </div>
+            
+            <div class="sector-performance-grid">
+                <div class="sector-chart-container">
+                    <h3>📊 Index Performance (3M)</h3>
+                    <div class="sector-chart" id="indexChart">
+                        <div class="loading">Loading index data...</div>
+                    </div>
+                </div>
+                
+                <div class="sector-insights">
+                    <h3>💡 Rotation Insights</h3>
+                    <div class="insights-content" id="indexInsights">
+                        <div class="loading">Analyzing index rotation...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stock Details Modal -->
+    <div id="stockModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal()">&times;</span>
+            <div class="modal-header">
+                <h2 id="modalStockSymbol">Stock Details</h2>
+                <p id="modalStockInfo">Loading stock information...</p>
+            </div>
+            <div class="chart-section">
+                <div class="chart-controls">
+                    <button class="chart-btn active" data-period="1M">1M</button>
+                    <button class="chart-btn" data-period="3M">3M</button>
+                    <button class="chart-btn" data-period="6M">6M</button>
+                    <button class="chart-btn" data-period="1Y">1Y</button>
+                    <button class="chart-btn" data-period="ALL">ALL</button>
+                </div>
+                <div class="chart-period-info" id="chartPeriodInfo">
+                    Showing: 1M data
+                </div>
+                <div class="chart-wrapper">
+                    <div class="loading" id="chartLoading">
+                        <div class="spinner"></div>
+                        Loading chart data...
+                    </div>
+                    <canvas id="stockChart" style="display: none;"></canvas>
+                </div>
+                <div class="volume-chart-wrapper">
+                    <canvas id="volumeChart" style="display: none;"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Long-term screeners data
+        const longTermData = {
+            strongRS: [{symbol: 'TEMBO', price: 781.4, rs: 36.45, score: 53.3}, {symbol: 'BHAGYANGR', price: 153.67, rs: 17.49, score: 72.7}, {symbol: 'CUPID', price: 312.84, rs: 16.93, score: 68}, {symbol: 'GMBREW', price: 1197.3, rs: 15, score: 45.3}, {symbol: 'MTARTECH', price: 2626.6, rs: 14.34, score: 52}, {symbol: 'IMFA', price: 1370.7, rs: 13.07, score: 53.3}, {symbol: 'PARAGMILK', price: 353.65, rs: 13.04, score: 47.3}, {symbol: 'CHENNPETRO', price: 1029, rs: 12.26, score: 61.3}, {symbol: 'NETWEB', price: 3438, rs: 12.12, score: 40.7}, {symbol: 'BALAJITELE', price: 120.1, rs: 12.02, score: 50.7}],
+            breakouts: [],
+            cupHandle: [{symbol: 'RPTECH', price: 337.5, score: 64}, {symbol: 'NYKAA', price: 260.13, score: 50.7}],
+            uptrends: [{symbol: 'BANCOINDIA', price: 806.05, score: 78.7}, {symbol: 'ASHAPURMIN', price: 689.9, score: 77.3}, {symbol: 'CARRARO', price: 540.85, score: 74}, {symbol: 'BHAGYANGR', price: 153.67, score: 72.7}, {symbol: 'CANFINHOME', price: 884.65, score: 70.7}, {symbol: 'GPIL', price: 276.7, score: 70}, {symbol: 'SRM', price: 634.1, score: 70}, {symbol: 'AXISBANK', price: 1241.6, score: 69.3}, {symbol: 'CUPID', price: 312.84, score: 68}, {symbol: 'KAPSTON', price: 322.65, score: 68}],
+            momentum: [{symbol: 'BANCOINDIA', price: 806.05, score: 78.7}, {symbol: 'ARMANFIN', price: 1729.5, score: 72.7}, {symbol: 'BHAGYANGR', price: 153.67, score: 72.7}, {symbol: 'SRM', price: 634.1, score: 70}, {symbol: 'CUPID', price: 312.84, score: 68}, {symbol: 'KAPSTON', price: 322.65, score: 68}, {symbol: 'CUB', price: 270.59, score: 67.3}, {symbol: 'GRMOVER', price: 480.75, score: 66.7}, {symbol: 'VARROC', price: 652.8, score: 66.7}, {symbol: 'GRSE', price: 2897.1, score: 66}],
+            support: [{symbol: 'BDL', price: 1613.8, score: 69.3}, {symbol: 'AETHER', price: 838.9, score: 59.3}, {symbol: 'DONEAR', price: 102.44, score: 56.7}, {symbol: 'SPANDANA', price: 275.95, score: 54}, {symbol: 'SPAL', price: 784.2, score: 50.7}, {symbol: 'AEROFLEX', price: 188.34, score: 50.7}, {symbol: 'CSLFINANCE', price: 303.35, score: 50.7}, {symbol: 'MHLXMIRU', price: 230.35, score: 50}, {symbol: 'CAPACITE', price: 290.95, score: 48.7}, {symbol: 'INDUSINDBK', price: 848.25, score: 47.3}],
+            volume: [{symbol: 'ARMANFIN', price: 1729.5, score: 72.7}, {symbol: 'CANFINHOME', price: 884.65, score: 70.7}, {symbol: 'HBLENGINE', price: 1041.3, score: 67.3}, {symbol: 'IIFL', price: 547.3, score: 66.7}, {symbol: 'GRMOVER', price: 480.75, score: 66.7}, {symbol: 'BPCL', price: 371.15, score: 66}, {symbol: 'DATAPATTNS', price: 3100.7, score: 65.3}, {symbol: 'MUTHOOTFIN', price: 3725.6, score: 62.7}, {symbol: 'KITEX', price: 210.99, score: 62}, {symbol: 'SANDHAR', price: 548.25, score: 62}],
+            earnings: [{symbol: 'UNIVCABLES', price: 860.5, score: 56.7}, {symbol: 'APEX', price: 289.46, score: 52.7}, {symbol: 'KIRLOSENG', price: 1092.05, score: 48}],
+            week52: [{symbol: 'BHAGYANGR', price: 153.67, score: 72.7}, {symbol: 'SRM', price: 634.1, score: 70}, {symbol: 'CUPID', price: 312.84, score: 68}, {symbol: 'CUB', price: 270.59, score: 67.3}, {symbol: 'GRMOVER', price: 480.75, score: 66.7}, {symbol: 'STARHEALTH', price: 522.45, score: 64}, {symbol: 'MUTHOOTFIN', price: 3725.6, score: 62.7}, {symbol: 'ASIANPAINT', price: 2906.4, score: 61.3}, {symbol: 'MOVALUE', price: 115.5, score: 58.7}, {symbol: 'SETFNIFBK', price: 598.37, score: 47.3}]
+        };
+
+
+        // Index performance data
+        const indexData = [{index: 'Nifty Metal', perf1M: 2.02, perf3M: 13.87, perf6M: 14.33, rs: 2.72}, {index: 'Nifty Auto', perf1M: 0.71, perf3M: 12.94, perf6M: 16.11, rs: 2.54}, {index: 'Nifty Midcap 50', perf1M: 3.18, perf3M: 8.62, perf6M: 9.77, rs: 1.69}, {index: 'Nifty Realty', perf1M: 0.9, perf3M: 7.03, perf6M: 0.72, rs: 1.38}, {index: 'Nifty Bank', perf1M: 1.91, perf3M: 5.74, perf6M: 6.51, rs: 1.13}, {index: 'Nifty 200', perf1M: 1.39, perf3M: 5.58, perf6M: 5.65, rs: 1.09}, {index: 'Nifty Energy', perf1M: 2.23, perf3M: 5.2, perf6M: 2.56, rs: 1.02}, {index: 'Nifty 50', perf1M: 1.27, perf3M: 5.19, perf6M: 5.28, rs: 1.02}, {index: 'Nifty 100', perf1M: 1.14, perf3M: 5.16, perf6M: 5.18, rs: 1.01}, {index: 'Nifty 500', perf1M: 1.16, perf3M: 5.1, perf6M: 5.49, rs: 1}, {index: 'Nifty Next 50', perf1M: 0.48, perf3M: 4.92, perf6M: 4.6, rs: 0.97}, {index: 'Nifty IT', perf1M: 2.17, perf3M: 4.21, perf6M: -2.02, rs: 0.83}, {index: 'NIFTY SMLCAP 50', perf1M: 1.64, perf3M: 4.1, perf6M: 5.51, rs: 0.81}, {index: 'NIFTY SMLCAP 100', perf1M: 0.67, perf3M: 4.02, perf6M: 4.28, rs: 0.79}, {index: 'Nifty Pharma', perf1M: 3.25, perf3M: 3.02, perf6M: 6.04, rs: 0.59}, {index: 'NIFTY SMLCAP 250', perf1M: -0.21, perf3M: 2.55, perf6M: 3.92, rs: 0.5}, {index: 'Nifty FMCG', perf1M: -0.52, perf3M: 1.65, perf6M: -0.07, rs: 0.32}, {index: 'Nifty Media', perf1M: -4.15, perf3M: -10.49, perf6M: -11.61, rs: -2.06}];
+
+
+        // Chart variables
+        let stockChart = null;
+        let volumeChart = null;
+        let currentStock = null;
+
+        document.addEventListener("DOMContentLoaded", () => {
+            populateLongTermScreeners();
+            populateIndexAnalysis();
+        });
+
+        // Long-term screeners functions
+        function populateLongTermScreeners() {
+            populateScreener("strongRSContent", longTermData.strongRS, "RS");
+            populateScreener("breakoutsContent", longTermData.breakouts, "Score");
+            populateScreener("cupHandleContent", longTermData.cupHandle, "Score");
+            populateScreener("uptrendsContent", longTermData.uptrends, "Score");
+            populateScreener("momentumContent", longTermData.momentum, "Score");
+            populateScreener("supportContent", longTermData.support, "Score");
+            populateScreener("volumeContent", longTermData.volume, "Score");
+            populateScreener("earningsContent", longTermData.earnings, "Score");
+            populateScreener("week52Content", longTermData.week52, "Score");
+        }
+        
+        function populateScreener(containerId, data, metricKey) {
+            const container = document.getElementById(containerId);
+            
+            if (!data || data.length === 0) {
+                container.innerHTML = "<div class=\"no-data\">No stocks found matching this criteria</div>";
+                return;
+            }
+            
+            let html = "<div class=\"screener-list\">";
+            data.forEach((stock, index) => {
+                const metric = metricKey === "RS" ? stock.rs : stock.score;
+                const metricLabel = metricKey === "RS" ? "RS" : "Score";
+                html += "<div class=\"screener-item\" onclick=\"showStockDetails(\"" + stock.symbol + "\", " + stock.price + ", " + metric + ")\" style=\"cursor: pointer;\">";
+                html += "<div class=\"stock-info\">";
+                html += "<span class=\"stock-symbol\">" + stock.symbol + "</span>";
+                html += "<span class=\"stock-price\">₹" + stock.price.toFixed(2) + "</span>";
+                html += "</div>";
+                html += "<div class=\"metric-value " + metricKey.toLowerCase() + "\">";
+                html += metricLabel + ": " + metric.toFixed(2);
+                html += "</div>";
+                html += "</div>";
+            });
+            html += "</div>";
+            container.innerHTML = html;
+        }
+        
+        function populateIndexAnalysis() {
+            if (!indexData || indexData.length === 0) {
+                document.getElementById("indexChart").innerHTML = "<div class=\"no-data\">No index data available</div>";
+                document.getElementById("indexInsights").innerHTML = "<div class=\"no-data\">No insights available</div>";
+                return;
+            }
+            
+            // Sort by 3M performance
+            const sortedIndices = indexData.sort((a, b) => b.perf3M - a.perf3M);
+            
+            // Create index chart
+            const chartContainer = document.getElementById("indexChart");
+            let chartHtml = "<div class=\"sector-list\">";
+            sortedIndices.forEach(index => {
+                const perfClass = index.perf3M > 0 ? "positive" : "negative";
+                chartHtml += "<div class=\"sector-item\">" +
+                    "<div class=\"sector-name\">" + index.index + "</div>" +
+                    "<div class=\"sector-performance\">" +
+                        "<span class=\"perf-1m\">1M: " + index.perf1M.toFixed(1) + "%</span>" +
+                        "<span class=\"perf-3m " + perfClass + "\">3M: " + index.perf3M.toFixed(1) + "%</span>" +
+                        "<span class=\"perf-6m\">6M: " + index.perf6M.toFixed(1) + "%</span>" +
+                    "</div>" +
+                "</div>";
+            });
+            chartHtml += "</div>";
+            chartContainer.innerHTML = chartHtml;
+            
+            // Create insights
+            const insightsContainer = document.getElementById("indexInsights");
+            const top5 = sortedIndices.slice(0, 5);
+            const bottom5 = sortedIndices.slice(-5);
+            
+            let insightsHtml = "<div class=\"insights-section\">" +
+                "<h4>🏆 Top Performing Indices (3M)</h4>" +
+                "<ul>";
+            top5.forEach((index, index_num) => {
+                insightsHtml += "<li>" + (index_num + 1) + ". " + index.index + ": " + index.perf3M.toFixed(1) + "%</li>";
+            });
+            insightsHtml += "</ul></div>" +
+                "<div class=\"insights-section\">" +
+                "<h4>📉 Underperforming Indices (3M)</h4>" +
+                "<ul>";
+            bottom5.forEach((index, index_num) => {
+                insightsHtml += "<li>" + (index_num + 1) + ". " + index.index + ": " + index.perf3M.toFixed(1) + "%</li>";
+            });
+            insightsHtml += "</ul></div>";
+            insightsContainer.innerHTML = insightsHtml;
+        }
+
+        // Chart functions
+        function showStockDetails(symbol, price, metric) {
+            console.log("Showing details for:", symbol);
+            currentStock = { symbol: symbol, price: price, metric: metric };
+            
+            // Update modal header
+            document.getElementById("modalStockSymbol").textContent = symbol;
+            document.getElementById("modalStockInfo").textContent = 
+                "Price: ₹" + price.toFixed(2) + " | Metric: " + metric.toFixed(2);
+            
+            // Show modal
+            document.getElementById("stockModal").style.display = "block";
+            
+            // Load chart
+            loadStockChart(symbol);
+            setupChartControls();
+        }
+        
+        function closeModal() {
+            document.getElementById("stockModal").style.display = "none";
+            if (stockChart) {
+                stockChart.destroy();
+                stockChart = null;
+            }
+            if (volumeChart) {
+                volumeChart.destroy();
+                volumeChart = null;
+            }
+        }
+        
+        function loadStockChart(symbol) {
+            console.log("Loading chart for symbol:", symbol);
+            const chartLoading = document.getElementById("chartLoading");
+            const stockChartCanvas = document.getElementById("stockChart");
+            const volumeChartCanvas = document.getElementById("volumeChart");
+
+            console.log("Chart elements found:", {
+                chartLoading: !!chartLoading,
+                stockChartCanvas: !!stockChartCanvas,
+                volumeChartCanvas: !!volumeChartCanvas
+            });
+
+            chartLoading.style.display = "flex";
+            stockChartCanvas.style.display = "none";
+            volumeChartCanvas.style.display = "none";
+
+            console.log("Chart.js available:", typeof Chart !== "undefined");
+            if (typeof Chart === "undefined") {
+                console.error("Chart.js not loaded, using simple chart");
+                setTimeout(() => {
+                    const chartData = generateSampleChartData(symbol);
+                    console.log("Generated simple chart data:", chartData.length);
+                    createSimpleChart(chartData);
+                    chartLoading.style.display = "none";
+                    document.getElementById("stockChart").style.display = "block";
+                }, 1000);
+                return;
+            }
+
+            setTimeout(() => {
+                try {
+                    const chartData = generateSampleChartData(symbol);
+                    console.log("Generated chart data:", chartData.length, "points");
+                    createCandlestickChart(chartData);
+                    createVolumeChart(chartData);
+                    chartLoading.style.display = "none";
+                    stockChartCanvas.style.display = "block";
+                    volumeChartCanvas.style.display = "block";
+                    console.log("Charts created successfully");
+                    console.log("Chart visibility:", {
+                        stockChart: stockChartCanvas.style.display,
+                        volumeChart: volumeChartCanvas.style.display,
+                        loading: chartLoading.style.display
+                    });
+                } catch (error) {
+                    console.error("Error loading charts:", error);
+                    chartLoading.innerHTML = "<div>Error loading charts. Please try again.</div>";
+                }
+            }, 1000);
+        }
+        
+        function generateSampleChartData(symbol) {
+            const data = [];
+            const basePrice = currentStock ? currentStock.price : 100;
+            let currentPrice = basePrice;
+            const startDate = new Date();
+            startDate.setDate(startDate.getDate() - 200); // 200 days ago
+
+            for (let i = 0; i < 200; i++) {
+                const date = new Date(startDate);
+                date.setDate(date.getDate() + i);
+                
+                // Generate realistic price movement
+                const change = (Math.random() - 0.5) * 0.05;
+                const open = currentPrice;
+                const close = open * (1 + change);
+                const high = Math.max(open, close) * (1 + Math.random() * 0.02);
+                const low = Math.min(open, close) * (1 - Math.random() * 0.02);
+                const volume = Math.floor(Math.random() * 1000000) + 100000;
+                
+                data.push({
+                    x: date,
+                    o: open,
+                    h: high,
+                    l: low,
+                    c: close,
+                    v: volume
+                });
+                
+                currentPrice = close;
+            }
+            
+            return calculateMovingAverages(data);
+        }
+        
+        function calculateMovingAverages(data) {
+            const closePrices = data.map(d => d.c);
+            
+            // Calculate SMA 20
+            const sma20 = [];
+            for (let i = 0; i < data.length; i++) {
+                if (i < 19) {
+                    sma20.push(null);
+                } else {
+                    const sum = closePrices.slice(i - 19, i + 1).reduce((a, b) => a + b, 0);
+                    sma20.push(sum / 20);
+                }
+            }
+            
+            // Calculate SMA 50
+            const sma50 = [];
+            for (let i = 0; i < data.length; i++) {
+                if (i < 49) {
+                    sma50.push(null);
+                } else {
+                    const sum = closePrices.slice(i - 49, i + 1).reduce((a, b) => a + b, 0);
+                    sma50.push(sum / 50);
+                }
+            }
+            
+            // Calculate SMA 100
+            const sma100 = [];
+            for (let i = 0; i < data.length; i++) {
+                if (i < 99) {
+                    sma100.push(null);
+                } else {
+                    const sum = closePrices.slice(i - 99, i + 1).reduce((a, b) => a + b, 0);
+                    sma100.push(sum / 100);
+                }
+            }
+            
+            // Calculate SMA 200
+            const sma200 = [];
+            for (let i = 0; i < data.length; i++) {
+                if (i < 199) {
+                    sma200.push(null);
+                } else {
+                    const sum = closePrices.slice(i - 199, i + 1).reduce((a, b) => a + b, 0);
+                    sma200.push(sum / 200);
+                }
+            }
+            
+            return data.map((point, index) => ({
+                ...point,
+                sma20: sma20[index],
+                sma50: sma50[index],
+                sma100: sma100[index],
+                sma200: sma200[index]
+            }));
+        }
+        
+        function createCandlestickChart(data) {
+            console.log("Creating OHLC chart with data:", data.length, "points");
+            const ctx = document.getElementById("stockChart").getContext("2d");
+            
+            // Destroy existing chart
+            if (stockChart) {
+                stockChart.destroy();
+            }
+            
+            try {
+                // Create datasets for OHLC and Moving Averages (using numeric indices)
+                const highData = data.map((d, index) => ({ x: index, y: d.h }));
+                const lowData = data.map((d, index) => ({ x: index, y: d.l }));
+                const openData = data.map((d, index) => ({ x: index, y: d.o }));
+                const closeData = data.map((d, index) => ({ x: index, y: d.c }));
+                
+                // Moving averages data
+                const sma20Data = data.map((d, index) => ({ x: index, y: d.sma20 })).filter(d => d.y !== null);
+                const sma50Data = data.map((d, index) => ({ x: index, y: d.sma50 })).filter(d => d.y !== null);
+                const sma100Data = data.map((d, index) => ({ x: index, y: d.sma100 })).filter(d => d.y !== null);
+                const sma200Data = data.map((d, index) => ({ x: index, y: d.sma200 })).filter(d => d.y !== null);
+                
+                stockChart = new Chart(ctx, {
+                    type: "line",
+                    data: {
+                        datasets: [
+                            {
+                                label: "Close",
+                                data: closeData,
+                                borderColor: "#1976d2",
+                                backgroundColor: "rgba(25, 118, 210, 0.1)",
+                                borderWidth: 2,
+                                pointRadius: 0,
+                                fill: true,
+                                tension: 0.1
+                            },
+                            {
+                                label: "SMA 20",
+                                data: sma20Data,
+                                borderColor: "#ff9800",
+                                backgroundColor: "transparent",
+                                borderWidth: 1,
+                                pointRadius: 0,
+                                tension: 0,
+                                borderDash: [5, 5]
+                            },
+                            {
+                                label: "SMA 50",
+                                data: sma50Data,
+                                borderColor: "#9c27b0",
+                                backgroundColor: "transparent",
+                                borderWidth: 1,
+                                pointRadius: 0,
+                                tension: 0,
+                                borderDash: [5, 5]
+                            },
+                            {
+                                label: "SMA 100",
+                                data: sma100Data,
+                                borderColor: "#4caf50",
+                                backgroundColor: "transparent",
+                                borderWidth: 1,
+                                pointRadius: 0,
+                                tension: 0,
+                                borderDash: [5, 5]
+                            },
+                            {
+                                label: "SMA 200",
+                                data: sma200Data,
+                                borderColor: "#f44336",
+                                backgroundColor: "transparent",
+                                borderWidth: 2,
+                                pointRadius: 0,
+                                tension: 0,
+                                borderDash: [5, 5]
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: true,
+                                position: "top"
+                            }
+                        },
+                        scales: {
+                            x: {
+                                type: "linear",
+                                ticks: {
+                                    maxTicksLimit: 10,
+                                    callback: function(value, index, values) {
+                                        if (data[Math.floor(value)]) {
+                                            const date = new Date(data[Math.floor(value)].x);
+                                            return date.toLocaleDateString("en-US", { 
+                                                month: "short", 
+                                                day: "numeric",
+                                                year: "numeric"
+                                            });
+                                        }
+                                        return "";
+                                    }
+                                }
+                            },
+                            y: {
+                                position: "right"
+                            }
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error("Error creating OHLC chart:", error);
+                try {
+                    createLineChart(data);
+                } catch (lineError) {
+                    console.error("Error creating line chart:", lineError);
+                    createSimpleChart(data);
+                }
+            }
+        }
+        
+        function createLineChart(data) {
+            const ctx = document.getElementById("stockChart").getContext("2d");
+            
+            // Destroy existing chart
+            if (stockChart) {
+                stockChart.destroy();
+            }
+            
+            const lineData = data.map((d, index) => ({
+                x: index,
+                y: d.c // Use close price for line chart
+            }));
+            
+            // Moving averages data
+            const sma20Data = data.map((d, index) => ({ x: index, y: d.sma20 })).filter(d => d.y !== null);
+            const sma50Data = data.map((d, index) => ({ x: index, y: d.sma50 })).filter(d => d.y !== null);
+            const sma100Data = data.map((d, index) => ({ x: index, y: d.sma100 })).filter(d => d.y !== null);
+            const sma200Data = data.map((d, index) => ({ x: index, y: d.sma200 })).filter(d => d.y !== null);
+            
+            stockChart = new Chart(ctx, {
+                type: "line",
+                data: {
+                    datasets: [
+                        {
+                            label: currentStock.symbol + " Close",
+                            data: lineData,
+                            borderColor: "#1976d2",
+                            backgroundColor: "rgba(25, 118, 210, 0.1)",
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.1
+                        },
+                        {
+                            label: "SMA 20",
+                            data: sma20Data,
+                            borderColor: "#ff9800",
+                            backgroundColor: "transparent",
+                            borderWidth: 1,
+                            pointRadius: 0,
+                            tension: 0,
+                            borderDash: [5, 5]
+                        },
+                        {
+                            label: "SMA 50",
+                            data: sma50Data,
+                            borderColor: "#9c27b0",
+                            backgroundColor: "transparent",
+                            borderWidth: 1,
+                            pointRadius: 0,
+                            tension: 0,
+                            borderDash: [5, 5]
+                        },
+                        {
+                            label: "SMA 100",
+                            data: sma100Data,
+                            borderColor: "#4caf50",
+                            backgroundColor: "transparent",
+                            borderWidth: 1,
+                            pointRadius: 0,
+                            tension: 0,
+                            borderDash: [5, 5]
+                        },
+                        {
+                            label: "SMA 200",
+                            data: sma200Data,
+                            borderColor: "#f44336",
+                            backgroundColor: "transparent",
+                            borderWidth: 2,
+                            pointRadius: 0,
+                            tension: 0,
+                            borderDash: [5, 5]
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: "top"
+                        }
+                    },
+                    scales: {
+                        x: {
+                            type: "linear",
+                            ticks: {
+                                maxTicksLimit: 10,
+                                callback: function(value, index, values) {
+                                    if (data[Math.floor(value)]) {
+                                        const date = new Date(data[Math.floor(value)].x);
+                                        return date.toLocaleDateString("en-US", { 
+                                            month: "short", 
+                                            day: "numeric",
+                                            year: "numeric"
+                                        });
+                                    }
+                                    return "";
+                                }
+                            }
+                        },
+                        y: {
+                            position: "right"
+                        }
+                    }
+                }
+            });
+        }
+        
+        function createVolumeChart(data) {
+            const ctx = document.getElementById("volumeChart").getContext("2d");
+            
+            // Destroy existing chart
+            if (volumeChart) {
+                volumeChart.destroy();
+            }
+            
+            try {
+            const volumeData = data.map((d, index) => ({
+                x: index,
+                y: d.v
+            }));
+                
+                volumeChart = new Chart(ctx, {
+                    type: "bar",
+                    data: {
+                        datasets: [{
+                            label: "Volume",
+                            data: volumeData,
+                            backgroundColor: "#1976d2",
+                            borderColor: "#1976d2",
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        },
+                        scales: {
+                            x: {
+                                type: "linear",
+                                display: false
+                            },
+                            y: {
+                                position: "right",
+                                beginAtZero: true
+                            }
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error("Error creating volume chart:", error);
+            }
+        }
+        
+        function createSimpleChart(data) {
+            console.log("Creating simple chart with data:", data.length, "points");
+            const chartContainer = document.getElementById("stockChart");
+            console.log("Chart container found:", !!chartContainer);
+            const ctx = chartContainer.getContext("2d");
+            ctx.clearRect(0, 0, chartContainer.width, chartContainer.height);
+            chartContainer.width = chartContainer.offsetWidth;
+            chartContainer.height = chartContainer.offsetHeight;
+            const width = chartContainer.width;
+            const height = chartContainer.height;
+            const padding = 40;
+
+            if (data.length === 0) {
+                ctx.fillStyle = "#666";
+                ctx.font = "16px Arial";
+                ctx.textAlign = "center";
+                ctx.fillText("No data available", width / 2, height / 2);
+                return;
+            }
+
+            const prices = data.map(d => d.c);
+            const minPrice = Math.min(...prices);
+            const maxPrice = Math.max(...prices);
+            const priceRange = maxPrice - minPrice;
+
+            // Draw axes
+            ctx.strokeStyle = "#ccc";
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(padding, padding);
+            ctx.lineTo(padding, height - padding);
+            ctx.lineTo(width - padding, height - padding);
+            ctx.stroke();
+
+            // Draw price line
+            ctx.strokeStyle = "#1976d2";
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            for (let i = 0; i < data.length; i++) {
+                const x = padding + (i / (data.length - 1)) * (width - 2 * padding);
+                const y = height - padding - ((data[i].c - minPrice) / priceRange) * (height - 2 * padding);
+                if (i === 0) {
+                    ctx.moveTo(x, y);
+                } else {
+                    ctx.lineTo(x, y);
+                }
+            }
+            ctx.stroke();
+
+            // Draw moving averages
+            const colors = ["#ff9800", "#9c27b0", "#4caf50", "#f44336"];
+            const periods = [20, 50, 100, 200];
+            const smaKeys = ["sma20", "sma50", "sma100", "sma200"];
+
+            smaKeys.forEach((key, idx) => {
+                const smaData = data.map(d => d[key]).filter(val => val !== null);
+                if (smaData.length > 0) {
+                    ctx.strokeStyle = colors[idx];
+                    ctx.lineWidth = 1;
+                    ctx.setLineDash([5, 5]);
+                    ctx.beginPath();
+                    let firstPoint = true;
+                    for (let i = 0; i < data.length; i++) {
+                        if (data[i][key] !== null) {
+                            const x = padding + (i / (data.length - 1)) * (width - 2 * padding);
+                            const y = height - padding - ((data[i][key] - minPrice) / priceRange) * (height - 2 * padding);
+                            if (firstPoint) {
+                                ctx.moveTo(x, y);
+                                firstPoint = false;
+                            } else {
+                                ctx.lineTo(x, y);
+                            }
+                        }
+                    }
+                    ctx.stroke();
+                }
+            });
+            ctx.setLineDash([]);
+
+            // Draw X-axis labels (dates)
+            ctx.fillStyle = "#666";
+            ctx.font = "10px Arial";
+            ctx.textAlign = "center";
+            const labelCount = Math.min(10, data.length);
+            for (let i = 0; i < labelCount; i++) {
+                const dataIndex = Math.floor((i / (labelCount - 1)) * (data.length - 1));
+                const x = padding + (dataIndex / (data.length - 1)) * (width - 2 * padding);
+                const date = new Date(data[dataIndex].x);
+                const dateStr = date.toLocaleDateString("en-US", { 
+                    month: "short", 
+                    day: "numeric",
+                    year: "numeric"
+                });
+                ctx.fillText(dateStr, x, height - padding + 15);
+            }
+
+            // Draw Y-axis labels (prices)
+            ctx.textAlign = "right";
+            const priceLabelCount = 5;
+            for (let i = 0; i <= priceLabelCount; i++) {
+                const price = minPrice + (i / priceLabelCount) * priceRange;
+                const y = height - padding - (i / priceLabelCount) * (height - 2 * padding);
+                ctx.fillText("₹" + price.toFixed(0), padding - 5, y + 3);
+            }
+
+            // Draw legend
+            const legendItems = [
+                { label: "Close", color: "#1976d2" },
+                { label: "SMA 20", color: "#ff9800" },
+                { label: "SMA 50", color: "#9c27b0" },
+                { label: "SMA 100", color: "#4caf50" },
+                { label: "SMA 200", color: "#f44336" }
+            ];
+
+            ctx.font = "12px Arial";
+            ctx.textAlign = "left";
+            legendItems.forEach((item, index) => {
+                const x = width - 150;
+                const y = 20 + index * 20;
+                
+                // Draw color box
+                ctx.fillStyle = item.color;
+                ctx.fillRect(x, y - 8, 12, 12);
+                
+                // Draw label
+                ctx.fillStyle = "#333";
+                ctx.fillText(item.label, x + 18, y);
+            });
+        }
+        
+        function setupChartControls() {
+            const buttons = document.querySelectorAll(".chart-btn");
+            buttons.forEach(button => {
+                button.addEventListener("click", function() {
+                    // Remove active class from all buttons
+                    buttons.forEach(btn => btn.classList.remove("active"));
+                    // Add active class to clicked button
+                    this.classList.add("active");
+                    
+                    const period = this.getAttribute("data-period");
+                    console.log("Loading chart data for period:", period);
+                    filterChartData(period);
+                });
+            });
+        }
+        
+        function filterChartData(period) {
+            if (!currentStock) return;
+            
+            const chartLoading = document.getElementById("chartLoading");
+            const stockChartCanvas = document.getElementById("stockChart");
+            const volumeChartCanvas = document.getElementById("volumeChart");
+            
+            chartLoading.style.display = "flex";
+            stockChartCanvas.style.display = "none";
+            volumeChartCanvas.style.display = "none";
+            
+            setTimeout(() => {
+                try {
+                    const fullData = generateSampleChartData(currentStock.symbol);
+                    const filteredData = filterDataByPeriod(fullData, period);
+                    console.log(`Filtered data for ${period}:`, filteredData.length, "points");
+                    
+                    const periodInfo = document.getElementById("chartPeriodInfo");
+                    if (periodInfo) {
+                        periodInfo.textContent = `Showing: ${period} data (${filteredData.length} points)`;
+                    }
+                    
+                    if (typeof Chart !== "undefined") {
+                        createCandlestickChart(filteredData);
+                        createVolumeChart(filteredData);
+                    } else {
+                        createSimpleChart(filteredData);
+                    }
+                    
+                    chartLoading.style.display = "none";
+                    stockChartCanvas.style.display = "block";
+                    volumeChartCanvas.style.display = "block";
+                } catch (error) {
+                    console.error("Error filtering chart data:", error);
+                    chartLoading.innerHTML = "<div>Error loading chart data. Please try again.</div>";
+                }
+            }, 500);
+        }
+        
+        function filterDataByPeriod(data, period) {
+            const now = new Date();
+            let cutoffDate;
+            
+            switch (period) {
+                case "1M":
+                    cutoffDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+                    break;
+                case "3M":
+                    cutoffDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+                    break;
+                case "6M":
+                    cutoffDate = new Date(now.getTime() - 180 * 24 * 60 * 60 * 1000);
+                    break;
+                case "1Y":
+                    cutoffDate = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+                    break;
+                case "ALL":
+                default:
+                    return data;
+            }
+            
+            return data.filter(point => new Date(point.x) >= cutoffDate);
+        }
+
+    </script>
+</body>
+</html>

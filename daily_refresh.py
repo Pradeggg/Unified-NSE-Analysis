@@ -1,23 +1,148 @@
 #!/usr/bin/env python3
 """
-Daily NSE Data Refresh Orchestrator
-=====================================
-Runs the full pipeline after NSE market close (3:30 PM IST / 10:00 UTC).
-
-Report chain:
-  Daily refresh
-    → portfolio strategy lab
-    → sector rotation report
-    → Stage 2 tracker
-    → Top Investment Picks detailed report
-    → personal portfolio EOD report
-    → swing trading playbook
+Daily NSE Data Refresh Orchestrator — 7-Phase Pipeline
+=======================================================
+Run after NSE market close (~16:00 IST / 10:30 UTC). ~25–35 min wall-clock.
 
 Usage:
-  python daily_refresh.py               # full pipeline
-  python daily_refresh.py --live-only   # just update live prices (fast, ~1 min)
-  python daily_refresh.py --skip-analysis  # skip heavy analysis, just tracker
-  python daily_refresh.py --dry-run     # print plan without executing
+  python daily_refresh.py                         # full pipeline
+  python daily_refresh.py --live-only             # fast price update only (~1 min)
+  python daily_refresh.py --skip-analysis         # skip heavy analysis, just tracker
+  python daily_refresh.py --dry-run               # print plan without executing
+  python daily_refresh.py --fundamentals-backfill # force Nifty 500 screener backfill
+  python daily_refresh.py --skip-news             # skip yfinance news in fund dashboard
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ CRITICAL ORDERING RULES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+ PG-FUND-ORDER (2026-05-26)
+   Step 2B (--fundamentals-only) MUST run BEFORE Step 4B (--snapshot).
+   If fundamentals run after the snapshot, the Stage-2 HTML detail cards
+   render NULL for Earnings Quality, Sales Growth, Financial Strength,
+   and Institutional Backing — only Enhanced Fund Score appears.
+
+ CSV-200-ORDER (2026-08-18)
+   sector_rotation_tracker.py --snapshot requires ≥200 days of price
+   history to compute SMA200 for Weinstein stages. If the local CSV
+   (nse_sec_full_data.csv, ~95 days) is used, ALL stages become UNKNOWN.
+   The tracker auto-falls-back to market.equity_eod (PostgreSQL, 500+
+   days) when CSV has <200 days. Never bypass this check.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ PHASE 1 — DATA INGESTION                               (~3–5 min)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ Step 0   load_latest_nse_data_comprehensive.R
+            NSE bhavcopy CSVs (bh*, pr*, hl*, mcap*, bm*.txt) → local disk
+ Step 0B  postgres/loader.py --eod-only
+            market.equity_eod + market.index_eod (2700+ rows today)
+ Step 1   fetch_*.py  (FII/DII, F&O, corp events, insider alerts, macro)
+            signals.fii_dii_flows, signals.corporate_events,
+            signals.insider_alerts, macro.fred_series
+ Step 1B  postgres/loader.py --fno-only
+            derivatives.fno_eod (F&O daily chain analytics)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ PHASE 2 — SCORING                                      (~5–8 min)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ Step 2   fixed_nse_universe_analysis.py
+            scores.daily_scores (tech + RS vs Nifty 500 percentile)
+            RS formula: 40%×3m + 20%×6m + 20%×9m + 20%×12m momentum
+            Universe: CLOSE>₹100, vol>100k; RS ranked within Nifty 500
+ Step 2B  postgres/loader.py --fundamentals-only          ⚠️ PG-FUND-ORDER
+            scores.fundamental_scores (5 sub-scores for all universe stocks)
+            MUST complete before Step 4B tracker snapshot
+ Step 3A  scripts.backfill_historical_stage_snapshots
+            scores.stage_snapshots (history fill, ensures non-empty table)
+ Step 2C  scripts/materialize_stage2_vcp_picks.py
+            portfolio.vcp_candidates (point-in-time VCP candidates)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ PHASE 3 — STRATEGY LAB                                 (~3–5 min)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ Step 3B  portfolio.cli strategy-lab
+            portfolio_strategy_lab.html (best strategy + VCP strategy tabs)
+ QA       report_validation("portfolio_strategy_lab") — LLM QA checkpoint
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ PHASE 4 — STAGE & SECTOR                              (~5–8 min)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ Step 4B  sector_rotation_tracker.py --snapshot           ⚠️ CSV-200-ORDER
+            scores.stage_snapshots (today's Weinstein stages, all universe)
+            Requires ≥200d price history → auto-falls-back to market.equity_eod
+            MUST run after Step 2B (PG-FUND-ORDER)
+ Step 7   postgres/loader.py
+            All 40 screeners → screener.screen_results
+            Canonical snapshot load (SQLite → scores.stage_snapshots)
+ Step 4B.5  repair_latest_stage_snapshot
+            Patches STAGE_UNKNOWN rows using daily_scores fallback
+ Step 4A  sector_rotation_report.py
+            signal_log.csv, sector rotation HTML report
+ Step 4C  sector_rotation_tracker.py --report --html
+            Stage-2 HTML tracker (stage cards + strategy tabs)
+ Step 4E  rrg_report.py
+            Market breadth + RRG HTML (A/D, McClellan, TRIN, sector RRG)
+ QA×2     Sector rotation + Stage-2 tracker report validation
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ PHASE 5 — PICKS & MARKET                              (~3–5 min)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ Step 5A  scripts.backfill_screener_fundamentals --symbols <picks>
+            Screener.in fundamentals pre-refresh for today's top picks only
+ Step 5A.5  fetch_corporate_events.py + fetch_insider_alerts.py (--force)
+            signals.corporate_events, signals.insider_alerts (fresh)
+ Step 5C  top_picks_report.py
+            Top Investment Picks HTML (charts, fund scores, staged alerts)
+ Step 5D  scripts/build_eod_market_report.py
+            EOD market tape report HTML (breadth, sectors, movers)
+ QA×2     Top picks + EOD market report validation
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ PHASE 6 — PORTFOLIO & FUND                            (~3–5 min)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ Step 6   terminal.portfolio_monitor (EOD)
+            Personal portfolio EOD report (positions vs stage snapshot)
+ Step 6B  terminal.swing_playbook --fresh
+            Swing trading playbook HTML (stage+sector+top-picks context)
+ Step 6C  tools/fund_refresh.py --no-open
+            fund_dashboard.html — 5-tab dashboard for Aug SC + MC funds:
+            • P&L tab: SC + MC tables (Entry/CMP/Qty/P&L%/Stop/Days)
+            • Orders tab: position log from fund_holdings.json
+            • Candidates tab: Stage-2/RS/Tech screened watch list
+            • Fund Rules tab: SC/MC governance reference
+            • Alerts tab: SL breach, Supertrend, Stage, RS, Fundamentals,
+                          Corporate Events, Bulk Deals, News (yfinance)
+            Data sources: yfinance prices, scores.stage_snapshots,
+                          scores.quarterly_results, signals.corporate_events,
+                          signals.bulk_block_deals, signals.insider_alerts
+ QA       Portfolio EOD report validation
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ PHASE 7 — DISTRIBUTION & MAINTENANCE                  (~5–10 min)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ Step 5D  terminal.email_dispatcher top_picks
+            Outlook draft email for Top Picks (--email-send to send now)
+ Step 7A  generate_voice_briefing.py --no-tts
+            Voice briefing script from signal_log.csv (no TTS/audio)
+ Step 7b  scripts.refresh_results_feed (--days-back 14)
+            scores.quarterly_results + financials cache (companies w/ fresh filings)
+ Step 7c  scripts.analyze_daily_results (LLM, --days-back 1)
+            scores.results_analysis (LLM analyst notes per filing)
+ Step 8   scripts.backfill_screener_fundamentals (Sundays / --fundamentals-backfill)
+            Full Nifty 500 + Microcap 250 screener.in fundamentals refresh
+ Step 8A  analyze_all_indexes.R + analyze_all_sectors.R (--comprehensive only)
+            reports/nse_analysis/2026/ (All Indexes + All Sectors HTML)
+ Step 9   mutual_funds/working/daily_mf_refresh.py
+            Smallcap fund daily research update + market check
+ Step 8Z  Remove legacy SQLite artifacts (sector_rotation_tracker.db etc.)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ SINGLE SOURCE OF TRUTH: PostgreSQL nse_market
+   All analysis reads from market.equity_eod (not raw CSV files).
+   CSV files are loaded into PG in Phase 1 (Steps 0/0B) before any
+   scoring or analysis begins. fund_refresh.py reads from scores.*
+   and signals.* tables populated by Phases 1–5.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 from __future__ import annotations
 
@@ -36,20 +161,23 @@ PYTHON = sys.executable
 
 def _load_project_env() -> None:
     """Load project .env values for missing or empty process env vars."""
-    env_path = ROOT / ".env"
-    if not env_path.exists():
-        return
-    try:
-        for line in env_path.read_text(encoding="utf-8").splitlines():
-            stripped = line.strip()
-            if not stripped or stripped.startswith("#") or "=" not in stripped:
-                continue
-            key, value = stripped.split("=", 1)
-            key = key.strip()
-            if key and not os.environ.get(key):
-                os.environ[key] = value.strip().strip('"').strip("'")
-    except OSError:
-        return
+    env_paths = [ROOT / ".env", ROOT.parent / ".env"]
+    if ROOT.parent.name == ".worktrees":
+        env_paths.append(ROOT.parent.parent / ".env")
+    for env_path in env_paths:
+        if not env_path.exists():
+            continue
+        try:
+            for line in env_path.read_text(encoding="utf-8").splitlines():
+                stripped = line.strip()
+                if not stripped or stripped.startswith("#") or "=" not in stripped:
+                    continue
+                key, value = stripped.split("=", 1)
+                key = key.strip()
+                if key and not os.environ.get(key):
+                    os.environ[key] = value.strip().strip('"').strip("'")
+        except OSError:
+            continue
 
 
 _load_project_env()
@@ -144,6 +272,24 @@ def _ensure_postgres_running(dry_run: bool = False) -> bool:
     return _run("Start local PostgreSQL", [str(script), "start"], dry_run=False)
 
 
+def _latest_equity_eod_date() -> str | None:
+    """Return the latest loaded equity EOD trade date from PostgreSQL."""
+    try:
+        import psycopg2
+
+        conn = psycopg2.connect(PG_DSN)
+        try:
+            with conn.cursor() as cur:
+                cur.execute("SELECT max(trade_date)::text FROM market.equity_eod")
+                row = cur.fetchone()
+                return str(row[0]) if row and row[0] else None
+        finally:
+            conn.close()
+    except Exception as exc:
+        print(f"   ⚠️  Could not read latest equity EOD date: {exc}")
+        return None
+
+
 def _section(title: str) -> None:
     print(f"\n{'═'*60}")
     print(f"  {title}")
@@ -164,12 +310,18 @@ def step_fetch_eod_data(dry_run: bool) -> bool:
         if MAIN_WORKTREE_BASE != ROOT and (MAIN_WORKTREE_BASE / "data" / "nse_sec_full_data.csv").exists()
         else ROOT
     )
+    script = ROOT / "load_latest_nse_data_comprehensive.R"
+    if not script.exists():
+        script = ROOT / "R" / "core" / "load_latest_nse_data_comprehensive.R"
+    if not script.exists():
+        print("   ❌ EOD downloader missing: load_latest_nse_data_comprehensive.R")
+        return False
     # Pass PROJECT_ROOT so R script resolves paths relative to the data root.
     import os
     env = {**os.environ, "PROJECT_ROOT": str(data_root)}
     ok = _run(
         "Download latest NSE bhavcopy → data/nse-raw/ + data/",
-        ["Rscript", str(ROOT / "load_latest_nse_data_comprehensive.R")],
+        ["Rscript", str(script)],
         dry_run=dry_run,
         env=env,
     )
@@ -224,6 +376,43 @@ def step_fetch_auxiliary(dry_run: bool) -> dict[str, bool]:
         if not ok:
             print(f"   ⚠️  {label} failed — continuing with stale data")
     return results
+
+
+def step_refresh_stock_csv(dry_run: bool) -> bool:
+    """Rebuild data/nse_sec_full_data.csv from PostgreSQL equity_eod (2+ years, EQ/BE series).
+
+    This CSV is the price data source for pullback_recovery_screener.py / apex_resilience.
+    Without this step the CSV goes stale and the screener fails MIN_HISTORY checks.
+    CSV-200-ORDER: must run AFTER step_postgres_eod_load (Step 0B) so today's prices are in PG.
+    """
+    _section("STEP 1Z — Refresh nse_sec_full_data.csv from PostgreSQL")
+    stock_csv = ROOT / "data" / "nse_sec_full_data.csv"
+    if dry_run:
+        print(f"  [dry-run] would rebuild {stock_csv} from market.equity_eod")
+        return True
+    script = (
+        "import psycopg2, os; from pathlib import Path; "
+        f"stock_csv = Path(r'{stock_csv}'); "
+        "conn = psycopg2.connect(host='/tmp', dbname='nse_market', user='nse_admin'); "
+        "cur = conn.cursor(); "
+        "q = '''SELECT symbol AS \"SYMBOL\", trade_date AS \"TIMESTAMP\", open AS \"OPEN\", "
+        "high AS \"HIGH\", low AS \"LOW\", close AS \"CLOSE\", volume AS \"TOTTRDQTY\", "
+        "ROUND((turnover_cr * 1e7)::numeric, 0) AS \"TOTTRDVAL\" "
+        "FROM market.equity_eod WHERE series IN ('EQ','BE','BZ','SM','ST') "
+        "AND close IS NOT NULL AND close > 0 ORDER BY symbol, trade_date'''; "
+        "tmp = stock_csv.with_suffix('.tmp'); "
+        "f = open(tmp, 'w'); cur.copy_expert(f'COPY ({q}) TO STDOUT WITH CSV HEADER', f); "
+        "f.close(); conn.close(); "
+        "sz = os.path.getsize(tmp)/1e6; "
+        "import shutil; shutil.move(str(tmp), str(stock_csv)); "
+        f"print(f'  {{sz:.1f}} MB → {{stock_csv}}')"
+    )
+    return _run(
+        f"Rebuild {stock_csv.name} from PostgreSQL equity_eod",
+        [PYTHON, "-c", script],
+        dry_run=dry_run,
+        timeout=120,
+    )
 
 
 def step_comprehensive_analysis(dry_run: bool) -> bool:
@@ -291,11 +480,20 @@ def step_generate_report(dry_run: bool) -> bool:
 def step_sector_rotation_report(dry_run: bool) -> bool:
     """Regenerate full sector rotation report — populates signal_log.csv."""
     _section("STEP 4A — Sector Rotation Report")
-    return _run(
+    ok = _run(
         "Sector Rotation Report",
         [PYTHON, "sector_rotation_report.py"],
         dry_run=dry_run,
     )
+    if ok:
+        # 4A-SL: Sync signal_log.csv → signals.signal_log (PG) and resolve open signals.
+        _run(
+            "Sync signal_log.csv → signals.signal_log (PG)",
+            [PYTHON, "scripts/sync_signal_log_to_pg.py", "--days-back", "7", "--resolve"],
+            dry_run=dry_run,
+            timeout=60,
+        )
+    return ok
 
 
 def step_materialize_stage2_vcp_picks(dry_run: bool) -> bool:
@@ -324,9 +522,12 @@ def step_rrg_breadth_report(dry_run: bool) -> bool:
 def step_top_picks_report(dry_run: bool) -> bool:
     """Generate Top Investment Picks Analysis (merges sector rotation + stage-2 tracker)."""
     _section("STEP 5C — Top Investment Picks Detailed Report")
+    cmd = [PYTHON, "top_picks_report.py"]
+    if os.environ.get("TOP_PICKS_FORCE_RULE_BASED") == "1":
+        cmd.append("--no-llm")
     return _run(
         "Top Investment Picks Analysis",
-        [PYTHON, "top_picks_report.py", "--no-llm"],
+        cmd,
         dry_run=dry_run,
         timeout=300,
     )
@@ -374,6 +575,33 @@ def step_historical_stage_backfill(dry_run: bool) -> bool:
             "2025-01-01",
             "--lookback",
             "2024-01-01",
+        ],
+        dry_run=dry_run,
+    )
+
+
+def step_repair_latest_stage_snapshot(dry_run: bool) -> bool:
+    """Overwrite the latest EOD snapshot with deterministic STAGE_1/2/3/4 values."""
+    _section("STEP 4B.5 — Repair Latest Stage Snapshot")
+    if not _ensure_postgres_running(dry_run=dry_run):
+        return False
+    latest_date = _latest_equity_eod_date()
+    if not latest_date:
+        print("   ⚠️  No latest equity EOD date found for stage repair")
+        return False
+    return _run(
+        f"Repair stage snapshot for {latest_date}",
+        [
+            PYTHON,
+            "-m",
+            "scripts.backfill_historical_stage_snapshots",
+            "--start",
+            latest_date,
+            "--end",
+            latest_date,
+            "--lookback",
+            "2024-01-01",
+            "--replace-existing",
         ],
         dry_run=dry_run,
     )
@@ -454,6 +682,21 @@ def step_portfolio_monitor(dry_run: bool, *, intraday: bool = False) -> bool:
         return False
 
 
+def step_fund_dashboard(dry_run: bool) -> bool:
+    """Refresh the Aug Fund dashboard (fund_holdings.json → live prices → DB → HTML)."""
+    _section("STEP 6C — Aug Fund Dashboard Refresh")
+    fund_refresh = Path(__file__).parent / "tools" / "fund_refresh.py"
+    if not fund_refresh.exists():
+        print("  ⚠️  tools/fund_refresh.py not found — skipping fund dashboard")
+        return True  # non-fatal: fund dashboard is supplementary
+    return _run(
+        "Aug Fund dashboard → reports/latest/fund_dashboard.html",
+        [PYTHON, str(fund_refresh), "--no-open"],
+        dry_run=dry_run,
+        timeout=120,
+    )
+
+
 def step_swing_playbook(dry_run: bool) -> bool:
     """Generate the swing trading playbook from fresh PostgreSQL/report context."""
     _section("STEP 6B — Swing Trading Playbook")
@@ -471,6 +714,34 @@ def step_swing_playbook(dry_run: bool) -> bool:
         ],
         dry_run=dry_run,
     )
+
+
+def step_mf_smallcap_refresh(dry_run: bool, run_date: str | None = None) -> bool:
+    """Run the daily Agent Adda Smallcap Portfolio refresh (research update + market check)."""
+    _section("STEP 9 — Smallcap Fund Portfolio Refresh")
+    cmd = [
+        PYTHON,
+        str(ROOT / "mutual_funds" / "working" / "daily_mf_refresh.py"),
+    ]
+    if run_date:
+        cmd += ["--run-date", run_date]
+    return _run("Smallcap fund: research update + market check", cmd, dry_run=dry_run)
+
+
+def step_publish_www(dry_run: bool, run_date: str | None = None) -> bool:
+    """Publish daily reports to agentadda/www repo (→ agentadda.in/stocks/reports).
+
+    Publishes: sector_rotation, stage2_tracker, swing_playbook, eod_market.
+    Non-fatal — failure here must not block the rest of the pipeline.
+    """
+    _section("STEP 9W — Publish Reports to agentadda/www")
+    presets = ["sector_rotation", "stage2_tracker", "swing_playbook", "eod_market"]
+    date_arg = run_date or datetime.now().strftime("%Y-%m-%d")
+    cmd = [PYTHON, "scripts/push_to_www.py", "--all-daily", "--push", "--date", date_arg]
+    if dry_run:
+        cmd.append("--dry-run")
+    ok = _run("Publish reports → agentadda.in", cmd, dry_run=dry_run)
+    return ok
 
 
 def step_cleanup_legacy_sqlite(dry_run: bool) -> bool:
@@ -661,6 +932,7 @@ def step_screener_fundamentals_backfill(
 
     Polite (delay+jitter) by default; only re-scrapes symbols whose snapshot
     is older than ``skip_fresh_days`` so weekly runs cost ~zero on no-op days.
+    After scraping, recomputes scores.fundamental_scores from the fresh data.
     """
     _section(f"STEP 8 — Fundamentals Backfill ({index})")
     if not _ensure_postgres_running(dry_run=dry_run):
@@ -671,7 +943,14 @@ def step_screener_fundamentals_backfill(
         "--delay", str(delay),
         "--skip-fresh-days", str(skip_fresh_days),
     ]
-    return _run(f"Screener fundamentals backfill ({index})", cmd, dry_run=dry_run)
+    ok = _run(f"Screener fundamentals backfill ({index})", cmd, dry_run=dry_run)
+    if ok:
+        _run(
+            "Recompute fundamental scores from fresh screener data",
+            [PYTHON, "-m", "scripts.compute_fund_scores_from_db", "--universe", "all"],
+            dry_run=dry_run,
+        )
+    return ok
 
 
 def step_refresh_results_feed(
@@ -814,9 +1093,10 @@ def main() -> int:
                         default="NIFTY 500,NIFTY MICROCAP 250",
                         help="Index label(s) for fundamentals backfill (comma-separated). "
                              "Default: NIFTY 500 ∪ NIFTY MICROCAP 250 (~750 symbols).")
-    parser.add_argument("--enrich-missing", type=int, default=60, metavar="N",
+    parser.add_argument("--enrich-missing", type=int, default=10, metavar="N",
                         help="During tracker snapshot, live-scrape screener.in for up to N "
-                             "symbols missing from the PG fund cache (default 60). Set 0 to disable.")
+                             "symbols missing from the PG fund cache (default 10). Set 0 to disable. "
+                             "High values (>20) trigger many HTTP calls and can cause SIGURG kills on macOS.")
     parser.add_argument("--enrich-delay", type=float, default=2.5,
                         help="Seconds between enrichment screener.in calls (default: 2.5)")
     parser.add_argument("--enrich-yfinance-fallback", action="store_true", default=True,
@@ -869,6 +1149,14 @@ def main() -> int:
         failed.append("PostgreSQL F&O EOD load")
         print("\n  ⚠️  PostgreSQL F&O load failed — sector report may use stale derivatives analytics")
 
+    # 1Z. Rebuild nse_sec_full_data.csv from PostgreSQL (after EOD load so today's prices are in PG).
+    #     Required by pullback_recovery_screener.py / apex_resilience_full_report.py which need
+    #     ≥307 trading sessions per symbol (52W rolling peak + SMA50 cushion).
+    #     CSV-200-ORDER (2026-08-18): must run after Step 0B.
+    if not args.skip_analysis:
+        if not step_refresh_stock_csv(args.dry_run):
+            print("\n  ⚠️  nse_sec_full_data.csv rebuild failed (non-fatal) — screener may use stale data")
+
     # 2. Comprehensive analysis
     if not args.skip_analysis:
         if not step_comprehensive_analysis(args.dry_run):
@@ -883,19 +1171,26 @@ def main() -> int:
         failed.append("Fundamentals pre-refresh")
         print("\n  ⚠️  Fundamentals pre-refresh failed — tracker snapshot may render NULL sub-scores")
 
-    # 2C. Persist VCP candidates before strategy lab. The portfolio lab's
-    # persisted_vcp_picks_v1 strategy and Top Picks report both consume this
-    # point-in-time table.
-    if not step_materialize_stage2_vcp_picks(args.dry_run):
-        failed.append("Stage 2 VCP pick materialization")
-        print("\n  ⚠️  VCP pick materialization failed — persisted VCP strategy may be empty")
-
-    # 3. Portfolio strategy lab first. The Stage 2 tracker reads this artifact
-    # to render the Best Strategy and VCP Strategy tabs.
+    # 3A. Historical stage backfill runs BEFORE materialize_stage2_vcp_picks so
+    # that scores.stage_snapshots already contains real STAGE_1/2/3/4 rows when
+    # the VCP materialization queries it. On a fresh DB the table is empty and
+    # materialize will raise RuntimeError("scores.stage_snapshots is empty").
     if not args.skip_portfolio_lab:
         if not step_historical_stage_backfill(args.dry_run):
             print("  ⚠️  Historical stage backfill failed — portfolio lab may use stale stages")
             failed.append("Historical stage backfill")
+
+    # 2C. Persist VCP candidates before strategy lab. The portfolio lab's
+    # persisted_vcp_picks_v1 strategy and Top Picks report both consume this
+    # point-in-time table. Runs after the stage backfill so stage_snapshots is
+    # populated even on a fresh DB.
+    if not step_materialize_stage2_vcp_picks(args.dry_run):
+        failed.append("Stage 2 VCP pick materialization")
+        print("\n  ⚠️  VCP pick materialization failed — persisted VCP strategy may be empty")
+
+    # 3. Portfolio strategy lab. The Stage 2 tracker reads this artifact
+    # to render the Best Strategy and VCP Strategy tabs.
+    if not args.skip_portfolio_lab:
         if not step_portfolio_strategy_lab(
             args.dry_run,
             output_dir=args.portfolio_lab_output_dir,
@@ -931,6 +1226,14 @@ def main() -> int:
     if not step_postgres_load(args.dry_run):
         print("  ⚠️  PostgreSQL load failed — screeners not updated")
         failed.append("PostgreSQL screeners")
+
+    # 4B.5. The tracker snapshot path may write STAGE_UNKNOWN when the upstream
+    # comprehensive analysis has no STAGE column. Repair the latest canonical PG
+    # snapshot before reports read it.
+    if not args.skip_portfolio_lab:
+        if not step_repair_latest_stage_snapshot(args.dry_run):
+            print("  ⚠️  Latest stage snapshot repair failed — reports may show UNKNOWN stages")
+            failed.append("Latest stage snapshot repair")
 
     if args.broker_crawl:
         if not step_broker_research_crawl(
@@ -1004,6 +1307,14 @@ def main() -> int:
     if not step_swing_playbook(args.dry_run):
         failed.append("Swing trading playbook")
 
+    # 6C. Aug Fund dashboard — reads fund_holdings.json, fetches live prices via
+    #     yfinance, queries DB for stage/fundamentals/results, computes P&L per
+    #     position, applies fund-rules compliance gate, writes fund_dashboard.html.
+    #     Non-fatal: missing fund_refresh.py is silently skipped.
+    if not step_fund_dashboard(args.dry_run):
+        print("  ⚠️  Fund dashboard refresh failed (non-fatal) — see logs above")
+        failed.append("Fund dashboard")
+
     # 5C. Email Top Picks report (opens as Outlook draft; --email-send to send)
     if not args.skip_email:
         if not step_email_top_picks(args.dry_run, send=args.email_send):
@@ -1052,8 +1363,35 @@ def main() -> int:
         if not step_comprehensive_r_reports(args.dry_run):
             failed.append("Comprehensive R reports")
 
+    # 9. Smallcap fund portfolio daily refresh (research update + market check).
+    #    Non-fatal: failure here must not block the rest of the pipeline.
+    if not step_mf_smallcap_refresh(args.dry_run):
+        print("  ⚠️  Smallcap fund refresh failed (non-fatal) — see logs above")
+        failed.append("Smallcap fund refresh")
+
     if not step_cleanup_legacy_sqlite(args.dry_run):
         failed.append("Legacy SQLite cleanup")
+
+    # 9W. Publish daily HTML reports to agentadda/www → agentadda.in/stocks/reports.
+    #     Non-fatal: failure here must not block the pipeline summary.
+    if not step_publish_www(args.dry_run, run_date=args.run_date if hasattr(args, "run_date") else None):
+        print("  ⚠️  www publish failed (non-fatal) — reports committed locally, push manually")
+        failed.append("www publish (non-fatal)")
+
+    # 9X. Rebuild docs/PROJECT_RESEARCH.md with live KB + PG stats.
+    #     Non-fatal: never blocks the pipeline.
+    if not args.dry_run:
+        try:
+            import importlib.util, subprocess as _sp
+            _res = _sp.run(
+                [PYTHON, "scripts/build_project_research.py"],
+                cwd=ROOT,
+                timeout=60,
+            )
+            if _res.returncode != 0:
+                print("  ⚠️  PROJECT_RESEARCH.md rebuild failed (non-fatal)")
+        except Exception as _e:
+            print(f"  ⚠️  PROJECT_RESEARCH.md rebuild error (non-fatal): {_e}")
 
     _print_summary(failed, t_total, args.dry_run)
     return 1 if failed else 0

@@ -1098,7 +1098,11 @@ def rank_stock_candidates(stocks: pd.DataFrame, enforce_stage2: bool = False) ->
     stage_bonus = _column_or_default(df, "STAGE", "UNKNOWN").map({"STAGE_2": 4, "STAGE_1": 0, "STAGE_3": -5, "STAGE_4": -8, "UNKNOWN": 0}).fillna(0)
 
     df["RS_RANK_SCORE"] = rs.round(2)
-    df["INVESTMENT_SCORE"] = (0.38 * tech + 0.27 * rs + 0.25 * fund + pattern_bonus + supertrend_bonus + signal_bonus + stage_bonus).round(2)
+    df["INVESTMENT_SCORE"] = (
+        (0.38 * tech + 0.27 * rs + 0.25 * fund + pattern_bonus + supertrend_bonus + signal_bonus + stage_bonus)
+        .clip(upper=100)
+        .round(2)
+    )
     df["SETUP_CLASS"] = _classify_setup(df)
     df = _compute_entry_levels(df)
     df = assign_action_buckets(df)
@@ -1181,12 +1185,17 @@ def rank_peak_resilience_stocks(stocks: pd.DataFrame, max_drawdown_pct: float = 
 
 
 def assign_sector(symbol: str, company_name: str = "") -> str | None:
-    symbol_u = str(symbol).upper()
-    company_u = str(company_name).upper()
+    symbol_u = str(symbol).upper().strip()
+    company_u = str(company_name).upper().strip()
     for sector, keywords in SECTOR_KEYWORDS.items():
         for keyword in keywords:
-            kw = keyword.upper()
-            if kw in symbol_u or kw in company_u:
+            kw = keyword.upper().strip()
+            # Exact symbol match (prevents "LT" matching "MSTCLTD", "LTF", company "...LTD" etc.)
+            if kw == symbol_u:
+                return sector
+            # For company name matching only use keywords ≥6 chars to avoid false positives
+            # from short tickers like "LT", "BEL", "GNA" matching "...LTD", "LABEL", "SIGNALS"
+            if len(kw) >= 6 and kw in company_u:
                 return sector
     return None
 
@@ -2330,7 +2339,7 @@ def _build_narrative_prompt(sector_rank: pd.DataFrame, candidates: pd.DataFrame,
             f"Score: {score:.1f} | Tech: {tech:.1f} | RS: {rs:+.1f}% | RSI: {rsi:.1f} | "
             f"Supertrend: {st} @ {st_str} | Pattern: {pat} | Vol: {vol_str} | "
             f"Fund: {fund:.1f} | Resistance: {res_str} | Support: {sup_str} | "
-            f"Entry: {el_str} | Stop: {sl_str} | T1: {t1_str} | T2: {t2_str} | "
+            f"Ref range: {el_str} | Inv level: {sl_str} | Ref T1: {t1_str} | Ref T2: {t2_str} | "
             f"Minervini: {minv} | CAN-SLIM: {canslim}"
         )
         # F&O derivative signals (P1-2)
@@ -3039,7 +3048,8 @@ def _signal_badge(signal: str) -> str:
     }
     css = css_map.get(sig, "sig-hold")
     label = label_map.get(sig, html_mod.escape(signal))
-    return f'<span class="sig {css}">{label}</span>'
+    title = "Model-generated technical signal — not a personal buy/sell recommendation (research use only)"
+    return f'<span class="sig {css}" title="{title}">{label}</span>'
 
 
 def _st_badge(state: str) -> str:
@@ -3145,12 +3155,12 @@ def _setup_badge(setup_class: str) -> str:
 
 def _action_badge(action_bucket: str) -> str:
     label_map = {
-        "BUY_WATCH": "Buy Watch",
-        "BREAKOUT_WATCH": "Breakout Watch",
-        "HOLD_TRAIL": "Hold/Trail",
-        "WAIT_FOR_PULLBACK": "Wait Pullback",
-        "AVOID": "Avoid",
-        "WATCHLIST": "Watchlist",
+        "BUY_WATCH":        "On Radar",
+        "BREAKOUT_WATCH":   "Breakout Watch",
+        "HOLD_TRAIL":       "Hold/Review",
+        "WAIT_FOR_PULLBACK":"Wait Pullback",
+        "AVOID":            "Avoid",
+        "WATCHLIST":        "Watchlist",
     }
     css_map = {
         "BUY_WATCH": "act-buy",
@@ -3160,9 +3170,10 @@ def _action_badge(action_bucket: str) -> str:
         "AVOID": "act-avoid",
         "WATCHLIST": "act-watch",
     }
+    title = "Model-derived research filter — not a personal buy/sell/hold recommendation"
     label = label_map.get(action_bucket, html_mod.escape(action_bucket))
     css = css_map.get(action_bucket, "act-watch")
-    return f'<span class="action {css}">{label}</span>'
+    return f'<span class="action {css}" title="{title}">{label}</span>'
 
 
 def _cycle_tag_badge(tag: object, adjustment: object = 0) -> str:
@@ -5179,16 +5190,17 @@ def render_html_interactive(
 
             levels_html = (
                 f'<div class="levels">'
-                f'<span class="lev-entry">Entry: {html_mod.escape(entry_low_str)}–{html_mod.escape(entry_high_str)}</span>'
-                f'<span class="lev-stop">Stop: {html_mod.escape(stop_str)}</span>'
-                f'<span class="lev-tgt">T1: {html_mod.escape(tgt1_str)}</span>'
-                f'<span class="lev-tgt2">T2: {html_mod.escape(tgt2_str)}</span>'
+                f'<span class="lev-entry" title="Model reference range — not an entry recommendation">Ref range: {html_mod.escape(entry_low_str)}–{html_mod.escape(entry_high_str)}</span>'
+                f'<span class="lev-stop" title="Model invalidation level — not a stop-loss instruction">Inv. level: {html_mod.escape(stop_str)}</span>'
+                f'<span class="lev-tgt" title="Model target reference 1 — not a price target recommendation">Ref T1: {html_mod.escape(tgt1_str)}</span>'
+                f'<span class="lev-tgt2" title="Model target reference 2 — not a price target recommendation">Ref T2: {html_mod.escape(tgt2_str)}</span>'
                 f'</div>'
                 f'<div class="levels-sub">'
                 f'<span class="lev-r">R: {html_mod.escape(res_str)}</span>'
                 f' · <span class="lev-s">S: {html_mod.escape(sup_str)}</span>'
                 f' · <span style="color:#7c3aed">ST: {html_mod.escape(st_str)}</span>'
                 f'</div>'
+                f'<div style="font-size:.68rem;color:#92400e;margin-top:3px">⚠ Model reference levels only — not investment advice or personal recommendations</div>'
             )
 
             # Stock narrative
@@ -5236,7 +5248,7 @@ def render_html_interactive(
             f'<th>Symbol</th><th>Company</th><th class="num">Price</th>'
             f'<th>Signal / Action</th><th>Score</th><th>Tech</th><th>Fund</th>'
             f'<th class="num">RS%</th><th class="num">RSI</th>'
-            f'<th>Supertrend</th><th>Pattern</th><th>Vol</th><th>Signals</th><th>Entry · Stop · Targets</th>'
+            f'<th>Supertrend</th><th>Pattern</th><th>Vol</th><th>Signals</th><th>Model Ref Levels ⚠</th>'
             f'</tr></thead>'
             f'<tbody>{stock_rows_html}</tbody>'
             f'</table></div>'
@@ -5553,7 +5565,7 @@ def render_html_interactive(
         '<div class="meth-card">'
         '<div class="meth-card-title"><div class="meth-icon">A1</div>Stage Analysis (O\'Neil / Weinstein)</div>'
         '<p>Classifies every stock into one of four price-cycle stages using the SMA 50/200 structure and their slopes. '
-        '<strong>Only buy Stage 2.</strong> Avoid Stage 3 (distribution) and never hold Stage 4 (decline).</p>'
+        '<strong>Stage 2 is the preferred research filter for long-only setups (not a buy recommendation).</strong> Stage 3 (distribution) and Stage 4 (decline) are excluded from the research shortlist.</p>'
         '<ul style="font-size:12px;color:var(--muted);margin:6px 0 0 16px;line-height:1.8">'
         '<li><strong>Stage 2 — Markup ✅</strong>: Price &gt; SMA50 &gt; SMA200, both slopes rising, '
         'within 20% of 52W high. Score +4.</li>'

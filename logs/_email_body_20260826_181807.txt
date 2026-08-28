@@ -1,0 +1,34 @@
+Agent Adda
+      Wed, 26 Aug 2026 · 18:18 IST
+
+        Report · sector_rotation.html · mode: both
+
+NSE Sector Rotation — EOD Wednesday, 26 Aug 2026
+Attached: Sector Rotation Report — 26 Aug 2026 (sector_rotation.html). Summary below.
+Market read: Rotation regime (60% confidence) in early recovery; Nifty 50 -0.5% to 24,208; VIX 10.4 (-5.9%).
+Key takeaways
+Institutional flows remain supportive: FII +₹1,594 Cr today (+₹2,057 Cr 5D); DII +₹230 Cr today (+₹12,359 Cr 5D) — BOTH_BUYING.
+Breadth mixed/weak: NIFTY 50 43% and Smallcap 38% above 200DMA; McClellan bullish cross (Osc +6.7); TRIN 0.93 neutral; Net A/D +269 with a bearish divergence flagged.
+Leaders: Banking – PSU (Score 5.8; 1M +3.7%; RS +1.9%; 58% >50DMA) and Capital Goods & Industrials (Score 5.4; 1M +3.5%; RS +1.7%).
+Metals & Mining accelerating (Score 4.8; 1M +8.5%; RS +6.8%; 75% >50DMA); Banking – Private steady (Score 4.5; 1M +1.2%; 60% >50DMA).
+Logistics & Transport constructive (Score 2.9; 1M +5.0%; RS +3.2%; 67% >50DMA); Infrastructure is tactical/low conviction (Score 2.6; 1M -0.1%; RS -1.9%; 33% >50DMA).
+Signals breadth: 30 BUY signals out of 37; 6 sectors rotating above Nifty 500 baseline; decoupling alerts in Gold and USDINR. Maintain lighter exposure to defensives.
+What to watch
+Any regime shift away from Rotation; sustained Nifty 50 closes above 24,500 or India VIX rising above 15.
+Continuation of BOTH_BUYING and breadth stabilization/improvement, especially in PSU Banks and Capital Goods; signs of breadth repair in Infrastructure.
+Correlation shifts and decoupling in USDINR and Gold that could affect exporters/commodities.
+Whether the McClellan bullish cross sees follow-through despite the current bearish divergence.
+Action items
+Review the attached report for full sector rankings, heatmaps, and candidate screens.
+Prioritize research screens in Banking – PSU and Capital Goods & Industrials; treat Infrastructure as a tactical, lower-conviction pocket.
+Track the 30 active BUY candidates for confirmation (e.g., VADILALIND, KARURVYSYA, MSTCLTD, HAPPYFORGE, PRUDENT, EIMCOELECO, POLYPLEX, UNIPARTS).
+Set risk monitors for Nifty 50 > 24,500 and VIX > 15; validate data, liquidity, and corporate events before use.
+This communication is educational, rules-based market intelligence and is not investment advice or a trading recommendation. Use at your own risk; independently verify all data, prices, liquidity, corporate events, and risks before making any financial decision.
+
+  Regards,
+
+  Agent Adda
+
+  ShunyaAI · NSE Market Intelligence
+
+Not investment advice. For research and learning only. NSE EOD + live snapshot data.

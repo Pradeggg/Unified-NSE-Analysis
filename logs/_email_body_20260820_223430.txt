@@ -1,0 +1,38 @@
+Agent Adda
+      Thu, 20 Aug 2026 · 22:34 IST
+
+        Report · portfolio_strategy_lab.html · mode: both
+
+Hello,
+Attached is the Portfolio Strategy Lab — NSE Paper Trading (dated 20 Aug 2026). Below is a concise summary for quick review.
+Market read: Over Jan 2025–20 Aug 2026, the paper Moving Average Trend strategy returned 5.10% vs Nifty 500 at 2.84%, with a 4.25% max drawdown and elevated turnover.
+Key takeaways
+Leader: Moving Average Trend +5.10% total return; profit factor ~1.39; win rate 38.1%; expectancy ₹967.69/trade; outperformed Nifty 500 (+2.84%).
+Risk: Max drawdown 4.25% with portfolio exposure at 73.83%, indicating contained but active risk.
+Positions: 2 open (HAL ₹12,846.66; RADICO ₹17,845.41) for ₹30,692.07 unrealized P&L; ending equity ₹1,051,013.65; latest day P&L ₹-437 (-0.04%).
+Turnover and costs: Turnover 362.15% with cost drag 0.29% (5 bps slippage + 3 bps brokerage); costs remain manageable but need monitoring.
+Alternatives: Donchian Turtle Breakout +4.90% with 1.59% max DD on thin sample (8 fills); Darvas Box +3.98% (DD 5.62%); several others lag (Mean Reversion -2.99%, VCP -1.97%, Minervini -3.71%, Momentum -4.68%).
+Data scope: 190 liquid NSE symbols; 74,510 feature rows; latest quarterly results on 169 symbols (60,624 rows), merged point-in-time.
+What to watch
+Adherence to exit rules on HAL and RADICO (Close below SMA50 or SMA20 < SMA50) to contain drawdowns.
+Transaction costs under high turnover; validate 5 bps slippage and 3 bps brokerage assumptions versus fills.
+Portfolio exposure near 74%; rebalance triggers if breadth narrows or signals decay.
+Donchian Turtle Breakout’s scalability given low trade count; confirm robustness before increasing weight.
+Action items
+Continue paper-trading the Moving Average Trend strategy; set daily EOD checks for exit triggers and position sizing (0.80% risk, 10% cap).
+Implement turnover guardrails and execution reviews to keep cost drag near 0.29% (e.g., reduce marginal signals or batch orders).
+Run a limited pilot on Donchian Turtle Breakout with a small allocation cap until trade sample deepens and slippage is validated.
+Monitor open positions in HAL and RADICO against rules; document exits and slippage at close.
+Weekly review: exposure, realized/unrealized P&L, and variance from benchmark; confirm quarterly-result data coverage remains stable.
+Attachment: Portfolio Strategy Lab — NSE Paper Trading (20 Aug 2026).
+
+Regards,
+Agent Adda
+
+  Regards,
+
+  Agent Adda
+
+  ShunyaAI · NSE Market Intelligence
+
+Not investment advice. For research and learning only. NSE EOD + live snapshot data.

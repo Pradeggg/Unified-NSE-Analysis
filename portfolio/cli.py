@@ -80,6 +80,8 @@ def main(argv: list[str] | None = None) -> int:
     strategy_lab.add_argument("--lookback", default="2024-01-01")
     strategy_lab.add_argument("--end", default=None)
     strategy_lab.add_argument("--top-n", type=int, default=200)
+    strategy_lab.add_argument("--index-filter", default=None,
+                              help="Restrict universe to index members, e.g. 'NIFTY 500'")
     strategy_lab.add_argument("--benchmark-id", default="Nifty 500")
     strategy_lab.add_argument("--initial-capital", type=float, default=1_000_000.0)
     strategy_lab.add_argument("--slippage-bps", type=float, default=5.0)
@@ -264,6 +266,7 @@ def _cmd_strategy_lab(args: argparse.Namespace) -> int:
         end_date=args.end,
         top_n=args.top_n,
         benchmark_id=args.benchmark_id,
+        index_filter=getattr(args, "index_filter", None),
     )
     data = data_bundle.features
     validation = validate_ohlcv(data)

@@ -1,12 +1,12 @@
 {
   "_meta": {
-    "description": "Active fund holdings — single source of truth. Edit this after each order fill.",
-    "budget_sc": 200000,
-    "budget_mc": 200000,
-    "slots_sc": 9,
+    "description": "Active fund holdings \u2014 single source of truth. Edit this after each order fill.",
+    "budget_sc": 250000,
+    "budget_mc": 250000,
+    "slots_sc": 12,
     "slots_mc": 15,
     "inception_date": "2026-08-15",
-    "note": "smallcap = Aug SC fund, midcap = Aug MC fund. Add entries here after Monday's orders fill."
+    "note": "Corpus increased to \u20b95,00,000 on 2026-08-20 (was \u20b94,00,000). SC=11/12 slots \u00b7 \u20b920,833/pos target \u00b7 1 dry powder. MC=10/15 slots \u00b7 \u20b916,667/pos target \u00b7 5 dry powder. AEROFLEX added 2026-08-27. CUPID moved from candidates \u2192 SC fund. RATEGAIN + RPTECH added 2026-08-18; RPTECH fully exited 2026-08-27. ASIANENE added 2026-08-19 and fully exited 2026-08-25 after revenue/PAT QoQ deterioration. THYROCARE added 2026-08-20. LAURUSLABS + SAILIFE existing holdings added 2026-08-20. MINDACORP added 2026-08-20. QUESS + SYRMA added 2026-08-24."
   },
   "smallcap": {
     "BLSE": {
@@ -14,44 +14,142 @@
       "entry_date": "2026-08-15",
       "qty": 70,
       "fund": "Aug SC",
-      "note": "ICICI Direct BLSESE — market order 15-Aug-2026"
+      "note": "ICICI Direct BLSESE \u2014 market order 15-Aug-2026. Broker confirmed: 70 shares @ avg \u20b9316.83 (minor avg diff, keeping original entry)"
     },
     "EIMCOELECO": {
-      "entry": 2005.50,
+      "entry": 2027.77,
       "entry_date": "2026-08-15",
       "qty": 11,
       "fund": "Aug SC",
-      "note": "ICICI Direct EIMELE — market order 15-Aug-2026"
+      "note": "ICICI Direct EIMELE \u2014 market order 15-Aug-2026. Avg updated to broker cost \u20b92027.77 (was \u20b92005.50)"
     },
     "RATNAVEER": {
-      "entry": 230.16,
+      "entry": 248.97,
       "entry_date": "2026-08-15",
-      "qty": 96,
+      "qty": 146,
       "fund": "Aug SC",
-      "note": "ICICI Direct RATPRE — market order 15-Aug-2026"
+      "note": "ICICI Direct RATPRE \u2014 original 96 shares @ avg \u20b9230.88 plus 50 shares purchased 26-Aug-2026 @ \u20b9283.71. Blended cost \u20b9248.97; total 146 shares."
+    },
+    "SKYGOLD": {
+      "entry": 591.72,
+      "entry_date": "2026-08-15",
+      "qty": 55,
+      "fund": "Aug SC",
+      "note": "Existing ICICI Direct holding (SKYGOL) \u2014 55 shares, avg \u20b9591.72. Broker confirmed."
+    },
+    "SANSERA": {
+      "entry": 3022.25,
+      "entry_date": "2026-08-15",
+      "qty": 15,
+      "fund": "Aug SC",
+      "note": "Existing ICICI Direct holding (SANEN) \u2014 15 shares, avg \u20b93022.25. Broker confirmed."
+    },
+    "RRKABEL": {
+      "entry": 2736.54,
+      "entry_date": "2026-08-17",
+      "qty": 9,
+      "fund": "Aug SC",
+      "note": "ICICI Direct RRKAB \u2014 updated to broker: 9 shares @ avg \u20b92736.54 (was 8 @ \u20b92745.20). Market order 17-Aug-2026."
+    },
+    "CUPID": {
+      "entry": 182.7,
+      "entry_date": "2026-08-15",
+      "qty": 225,
+      "fund": "Aug SC",
+      "note": "ICICI Direct CUPRUB \u2014 existing broker holding moved to SC fund. 225 shares @ avg \u20b9182.70. Passes all SC rules: Stage S2, RS=100, Tech=83, FundScore=88, Supertrend BULLISH."
+    },
+    "RATEGAIN": {
+      "entry": 941.8,
+      "entry_date": "2026-08-18",
+      "qty": 15,
+      "fund": "Aug SC",
+      "note": "ICICI Direct \u2014 market order 18-Aug-2026. 15 shares @ \u20b9941.80 (18-Aug EOD). Stage S2, RS=95.7, Tech=96.2, EFS=81.6, Supertrend BULLISH, Signal BUY."
+    },
+    "QUESS": {
+      "entry": 343.2,
+      "entry_date": "2026-08-24",
+      "qty": 60,
+      "fund": "Aug SC",
+      "note": "ICICI Direct \u2014 market order 24-Aug-2026. 60 shares @ \u20b9343.20. Added after QES/QUESS purchase from next SC candidates. Stage S2, RS~97, Tech~73/98, EFS~68.5, Supertrend BULLISH, Signal BUY."
+    },
+    "AEROFLEX": {
+      "entry": 502.0,
+      "entry_date": "2026-08-27",
+      "qty": 10,
+      "fund": "Aug SC",
+      "note": "Existing holding logged from user-provided broker fill: 10 shares @ \u20b9502.00 on 27-Aug-2026."
+    },
+    "RUBICON": {
+      "entry": 1622.0,
+      "entry_date": "2026-08-15",
+      "qty": 18,
+      "fund": "Aug SC",
+      "note": "ICICI Direct RUBRES \u2014 updated to broker data: 18 shares @ avg \u20b91622.00 (was 5 @ \u20b91409.21; includes pre-fund holding). DB/screener slug: RUBICON [Key corrected from RUBCORP to RUBICON \u2014 NSE ticker]"
     }
   },
   "midcap": {
     "ENDURANCE": {
-      "entry": 2570.12,
+      "entry": 2675.91,
       "entry_date": "2026-08-15",
-      "qty": 6,
+      "qty": 8,
       "fund": "Aug MC",
-      "note": "Existing ICICI Direct holding (ENDTEC) — 6 shares, avg ₹2570.12, slot covered"
+      "note": "ICICI Direct ENDTEC \u2014 updated to broker: 8 shares @ avg \u20b92675.91 (was 6 @ \u20b92570.12; 2 more shares added). Existing holding."
     },
     "COFORGE": {
       "entry": 1439.36,
       "entry_date": "2026-08-15",
       "qty": 17,
       "fund": "Aug MC",
-      "note": "Existing ICICI Direct holding (NIITEC) — 17 shares, avg ₹1439.36, slot covered"
+      "note": "Existing ICICI Direct holding (NIITEC) \u2014 17 shares, avg \u20b91439.36. Broker confirmed."
     },
     "FEDERALBNK": {
       "entry": 204.22,
       "entry_date": "2026-08-15",
-      "qty": 221,
+      "qty": 191,
       "fund": "Aug MC",
-      "note": "Existing ICICI Direct holding (FEDBAN) — 221 shares, avg ₹204.22, slot covered"
+      "note": "Existing ICICI Direct holding (FEDBAN) \u2014 221 shares, avg \u20b9204.22. Partial exit logged: sold 30 @ \u20b9346.00 on 27-Aug-2026; 191 shares remain."
+    },
+    "ATHERENERG": {
+      "entry": 868.11,
+      "entry_date": "2026-08-15",
+      "qty": 25,
+      "fund": "Aug MC",
+      "note": "Existing ICICI Direct holding (ATHENE) \u2014 partial exit 19-Aug-2026: sold 20 @ \u20b91,456.20 (CMP), booked \u20b911,762 profit (+67.7%). Remaining 25 shares. Trailed SL to entry \u20b9868.11 per fund rules (+40% profit booking rule). EFS=63.1 <65 \u2014 review at month-end."
+    },
+    "NYKAA": {
+      "entry": 240.37,
+      "entry_date": "2026-08-15",
+      "qty": 15,
+      "fund": "Aug MC",
+      "note": "Existing ICICI Direct holding (FSNECO) \u2014 15 shares, avg \u20b9240.37. Broker confirmed."
+    },
+    "SENORES": {
+      "entry": 1540.8,
+      "entry_date": "2026-08-17",
+      "qty": 4,
+      "fund": "Aug MC",
+      "note": "ICICI Direct SENPHA \u2014 updated avg to broker: 4 shares @ \u20b91540.80 (was \u20b91521.00). Market order 17-Aug-2026."
+    },
+    "LAURUSLABS": {
+      "entry": 1001.09,
+      "entry_date": "2026-08-15",
+      "qty": 32,
+      "fund": "Aug MC",
+      "note": "Existing ICICI Direct holding \u2014 32 shares @ avg \u20b91,001.09. Added to MC fund 2026-08-20. Stage S2, RS=91.3, Tech=95.1, EFS=81.72, EQ=91, OPM expanding 24%\u219232% over 4Q, Supertrend BULLISH, Signal BUY."
+    },
+    "SAILIFE": {
+      "entry": 1397.92,
+      "entry_date": "2026-08-15",
+      "qty": 13,
+      "fund": "Aug MC",
+      "note": "Blended position: 3 shares @ \u20b91,161 (existing) + 10 shares @ \u20b91,469 (added 2026-08-20) = 13 shares @ avg \u20b91,397.92. Stage S2, RS=86.9, Tech=94.1, EFS=85.10, EQ=91.25, SG=90, OPM 27-34%, Supertrend BULLISH, Signal BUY."
+    },
+    "SYRMA": {
+      "entry": 1454.3,
+      "entry_date": "2026-08-24",
+      "qty": 11,
+      "fund": "Aug MC",
+      "note": "ICICI Direct \u2014 market order 24-Aug-2026. 11 shares @ \u20b91,454.30. Added from next MC candidates. Stage S2, RS~97.8, Tech~70/97, EFS~72.2, IT rotation beneficiary, Supertrend BULLISH, Signal BUY."
     }
   }
 }

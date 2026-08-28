@@ -1,0 +1,1726 @@
+# Agent Adda Knowledge Base — flat text index
+# grep -i 'daily pipeline' knowledge_base/index/kb_flat.txt
+# grep -A8 'id: daily_refresh' knowledge_base/index/kb_flat.txt
+#────────────────────────────────────────────────────────────────────────────
+
+id: market_3m_rotation_swing_v1
+title: market 3m rotation swing v1
+category: skill
+description: Build a three-month market rotation view with index returns, stage distribution change, sector return leadership, liquid Stage 2 candidates, and optional persisted VCP overlap.
+cli: AGENT_ADDA_SKILL_STORE=1 .venv/bin/python3 nse_agent.py --query "last 3 months market rotation"
+tags: market_regime sector_rotation stage_2 swing vcp last_3_months
+patterns: last 3 months market rotation | three month swing candidates | market regime and stage 2 leadership over 3 months | find swing candidates from sector rotation
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: portfolio_incremental_add_trim_v1
+title: portfolio incremental add trim v1
+category: skill
+description: Review the current portfolio state before recommending incremental adds, trims, holds, and sector exposure actions using existing holdings, current market value, position weights, sector weights, stages, signals, and scores.
+cli: AGENT_ADDA_SKILL_STORE=1 .venv/bin/python3 nse_agent.py --query "review my portfolio for incremental add or trim"
+tags: portfolio incremental_add trim sector_exposure position_sizing existing_holdings
+patterns: review my portfolio for incremental add or trim | what should I add or reduce in my portfolio | portfolio sector concentration and position sizing | add incrementally based on current holdings | reduce exposure by sector and stock position size
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: vcp_breakouts_with_fundamentals_v1
+title: vcp breakouts with fundamentals v1
+category: skill
+description: Find Stage 2 VCP breakout candidates and high-quality Stage 2 momentum candidates with strong technical and fundamental evidence, returning a bounded TradingView-ready watchlist.
+cli: AGENT_ADDA_SKILL_STORE=1 .venv/bin/python3 nse_agent.py --query "stocks creating new highs or VCP or breakouts with good fundamentals"
+tags: vcp breakout new_high fundamentals stage_2 tradingview watchlist
+patterns: stocks creating new highs or VCP or breakouts with good fundamentals | VCP breakouts with strong fundamentals | breakout candidates for TradingView | quality breakouts with RS and fundamentals
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: comprehensive_stock_research_v1
+title: Comprehensive Stock Research Report
+category: skill_store
+description: Build a comprehensive Agent Adda stock research report for an NSE/BSE listed equity. The workflow resolves the symbol, gathers fundamentals, sector context, latest filings/news, broker web research, live price, technical setup, and the equity_chart_v1 chart, then writes a source-grounded Markdown/HTML report under reports/fundamental.
+
+cli: python nse_agent.py --query "Comprehensive Stock Research Report [SYMBOL]"
+tags: stock_research fundamentals sector_analysis news_analysis technical_analysis broker_research concall_analysis multi_timeframe_analysis weinstein_stage_analysis oneil_canslim_analysis valuation equity_chart_v1 report_generation
+patterns: comprehensive stock research report for {symbol} | {symbol} fundamental sector news technical chart analysis | build Agent Adda research report for {symbol} | {symbol} full stock research with equity_chart_v1 | deep stock report {symbol}
+source: skill_store/stored/comprehensive_stock_research_v1.yml
+────────────────────────────────────────────────────────────
+
+id: equity_chart_v1
+title: equity_chart_v1
+category: skill_store
+description: Generate a comprehensive interactive equity chart for any NSE symbol. Includes candlestick (daily 6M + intraday 15m), SMA 20/50/200, EMA9 (intraday), RSI 14, Supertrend(10,3), swing-pivot S/R levels, and a dedicated Relative Strength tab showing stock performance vs Nifty 50 and its sector index.
+
+cli: python -m terminal.chart_engine {SYMBOL} --months 6 --intra-days 5 --open
+tags: 
+patterns: show chart of {symbol} | chart {symbol} | {symbol} chart | technical chart {symbol} | draw chart {symbol}
+source: skill_store/stored/equity_chart_v1.yml
+────────────────────────────────────────────────────────────
+
+id: intraday_fno_alert_scan_v1
+title: Intraday F&O Alert Scan
+category: skill_store
+description: Scans the live F&O universe on 15-minute candles for active and near-trigger intraday setups. Scores each candidate across six breakout strategies (supertrend_breakout, near_breakout_volume, vcp, volume, darvas, orb_vwap), applies trade-timing and decision scores, and surfaces candidates with R:R >= 2 as email alerts. Covers NIFTY, BANKNIFTY, FINNIFTY, MIDCPNIFTY, and the top liquid F&O names. Runs via terminal.live_intraday_alerts.
+
+cli: python nse_agent.py --query "Intraday F&O Alert Scan [SYMBOL]"
+tags: intraday fno alerts breakout orb vwap vcp supertrend darvas live scan email_alert f_and_o
+patterns: intraday alerts | show intraday setups | live F&O scan | what is triggering right now | active intraday breakouts
+source: skill_store/stored/intraday_fno_alert_scan_v1.yml
+────────────────────────────────────────────────────────────
+
+id: publish_intelligence_report_v1
+title: Publish Agent Adda Intelligence Report
+category: skill_store
+description: Validate a generated Agent Adda HTML report, publish it to agentadda.in under Market Intelligence, verify the live report URLs and latest.json metadata, and prepare or send the Agent Adda recipient notification after explicit approval.
+
+cli: python nse_agent.py --query "Publish Agent Adda Intelligence Report [SYMBOL]"
+tags: publish deployment report_qa market_intelligence deep_research email notification agentadda_www compliance
+patterns: post this report to agentadda.in | publish this under market intelligence | publish the deep research report | deploy the Agent Adda report and email recipients | send notification to Agent Adda recipients
+source: skill_store/stored/publish_intelligence_report_v1.yml
+────────────────────────────────────────────────────────────
+
+id: swing_playbook_report_v1
+title: swing_playbook_report_v1
+category: skill_store
+description: Generate the Agent Adda dark-terminal themed Swing Playbook HTML report. Runs the full pipeline: pulls candidates from PostgreSQL, checks overextension signals (RSI > 72 or price > 7% above SMA20), fetches live market context, and renders the themed HTML with sparklines, TradingView + Screener.in links, R:R badges, and a full SEBI disclaimer.
+
+cli: python scripts/generate_swing_playbook_report.py --fresh
+tags: 
+patterns: /swing-playbook-report | generate swing playbook report | render swing playbook | swing playbook html | refresh swing playbook report
+source: skill_store/stored/swing_playbook_report_v1.yml
+────────────────────────────────────────────────────────────
+
+id: report_link_data_validation_v1
+title: report link data validation v1
+category: skill
+description: Validate generated HTML report links, underlying detail pages, populated data, and source trails for Agent Adda Indian market research reports. This skill is for research-only quality assurance and does not provide investment advice.
+cli: AGENT_ADDA_SKILL_STORE=1 .venv/bin/python3 nse_agent.py --query "review report links not working"
+tags: report_qa links html data_validation indian_market research_only
+patterns: review report links not working | underlying stock html files do not have data | validate generated report links and missing data
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: /dashboard
+title: /dashboard
+category: repl
+description: Full market dashboard — breadth, sector rotation, regime
+cli: python nse_agent.py → /dashboard
+tags: market overview
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: /heat
+title: /heat
+category: repl
+description: Sector heat map — colour-coded stage/momentum grid
+cli: python nse_agent.py → /heat
+tags: sector heat overview
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: /global
+title: /global
+category: repl
+description: Overnight US / Asian / SGX global cues and readthrough
+cli: python nse_agent.py → /global
+tags: global macro
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: /us
+title: /us
+category: repl
+description: US market readthrough — how US close maps to Indian open
+cli: python nse_agent.py → /us
+tags: global us
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: /cycle
+title: /cycle
+category: repl
+description: Market cycle position — phase, duration, historical analogues
+cli: python nse_agent.py → /cycle
+tags: cycle macro
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: /data-status
+title: /data-status
+category: repl
+description: Data freshness check — last update time for each source
+cli: python nse_agent.py → /data-status
+tags: admin health data
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: /status
+title: /status
+category: repl
+description: System status — PG, LLM, yfinance, Screener.in connectivity
+cli: python nse_agent.py → /status
+tags: admin health
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: /commands
+title: /commands
+category: repl
+description: List all REPL commands with descriptions
+cli: python nse_agent.py → /commands
+tags: admin help
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: /scan
+title: /scan
+category: repl
+description: Live intraday scan across the F&O universe
+cli: python nse_agent.py → /scan
+tags: intraday scan
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: /screen
+title: /screen
+category: repl
+description: Run any of the 40 screeners (stage2, momentum, highrs, vcp…)
+cli: python nse_agent.py → /screen
+tags: screener
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: /visual-scan
+title: /visual-scan
+category: repl
+description: Grounded EOD chart-pattern visual scan across universe
+cli: python nse_agent.py → /visual-scan
+tags: screener technical eod
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: /intraday-alerts
+title: /intraday-alerts
+category: repl
+description: View latest intraday alert cycle results from the tracker
+cli: python nse_agent.py → /intraday-alerts
+tags: intraday alerts
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: /monitor
+title: /monitor
+category: repl
+description: Start live monitoring loop — continuous alert tracking
+cli: python nse_agent.py → /monitor
+tags: intraday monitor
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: /search
+title: /search
+category: repl
+description: Symbol / concept search — find stocks matching a description
+cli: python nse_agent.py → /search QUERY
+tags: search symbol
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: /chart
+title: /chart
+category: repl
+description: Comprehensive HTML chart — SMA, Supertrend, RS, S/R, MACD, BB, VWAP
+cli: python -m terminal.chart_engine SYMBOL
+tags: chart technical
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: /xray
+title: /xray
+category: repl
+description: Company X-Ray — fundamentals, insider, events, Weinstein stage
+cli: python nse_agent.py → /xray SYMBOL
+tags: fundamental research
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: /mtf
+title: /mtf
+category: repl
+description: Multi-time-frame level analysis — PWk/P3D/PD/SOD/L30
+cli: python nse_agent.py → /mtf SYMBOL
+tags: mtf levels
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: /options
+title: /options
+category: repl
+description: Options chain, PCR, OI heatmap, bias and trade verdict
+cli: python nse_agent.py → /options SYMBOL
+tags: options derivatives
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: /fno
+title: /fno
+category: repl
+description: F&O summary — OI, PCR, basis, max pain, CE/PE walls
+cli: python nse_agent.py → /fno SYMBOL
+tags: fno derivatives
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: /oi
+title: /oi
+category: repl
+description: Open interest analysis — OI change, long/short build-up
+cli: python nse_agent.py → /oi SYMBOL
+tags: oi fno
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: /pcr
+title: /pcr
+category: repl
+description: Put/Call Ratio trend and interpretation
+cli: python nse_agent.py → /pcr SYMBOL
+tags: pcr options
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: /scenario
+title: /scenario
+category: repl
+description: Options scenario P&L run — payoff across price range
+cli: python nse_agent.py → /scenario SYMBOL
+tags: options scenario
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: /backtest
+title: /backtest
+category: repl
+description: Historical backtest for a symbol — signals vs EOD returns
+cli: python nse_agent.py → /backtest SYMBOL
+tags: backtest historical
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: /research
+title: /research
+category: repl
+description: Full research pipeline — technicals + fundamentals + F&O + news
+cli: python nse_agent.py → /research SYMBOL
+tags: research fundamental
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: /deep-research
+title: /deep-research
+category: repl
+description: Deep research pipeline — multi-source AI-synthesised report
+cli: python nse_agent.py → /deep-research SYMBOL
+tags: research llm deep
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: /ric
+title: /ric
+category: repl
+description: Research Intelligence Council — AI ensemble deep-dive
+cli: python nse_agent.py → /ric SYMBOL
+tags: ric llm
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: /strategy_council
+title: /strategy council
+category: repl
+description: Multi-agent strategy council for a symbol
+cli: python nse_agent.py → /strategy_council SYMBOL
+tags: strategy llm
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: /plan
+title: /plan
+category: repl
+description: Trade plan — entry trigger, stop, target, R:R for a symbol
+cli: python nse_agent.py → /plan SYMBOL
+tags: trade plan
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: /strength
+title: /strength
+category: repl
+description: Relative strength vs Nifty 50 and sector index
+cli: python nse_agent.py → /strength SYMBOL
+tags: rs relative-strength
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: /canslim
+title: /canslim
+category: repl
+description: CANSLIM analysis — O'Neil criteria scored for a symbol
+cli: python nse_agent.py → /canslim SYMBOL
+tags: canslim fundamental
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: /valuation-check
+title: /valuation-check
+category: repl
+description: Valuation scenario — DCF, P/E, EV/EBITDA bands
+cli: python nse_agent.py → /valuation-check SYMBOL
+tags: valuation fundamental
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: /forensic
+title: /forensic
+category: repl
+description: Forensic accounting check — red flags, cash flow vs profit
+cli: python nse_agent.py → /forensic SYMBOL
+tags: forensic fundamental
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: /diagnose
+title: /diagnose
+category: repl
+description: Fundamental driver diagnosis — what's driving earnings
+cli: python nse_agent.py → /diagnose SYMBOL
+tags: fundamental diagnosis
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: /investment-checklist
+title: /investment-checklist
+category: repl
+description: Investment checklist — quality, growth, momentum, valuation score
+cli: python nse_agent.py → /investment-checklist SYMBOL
+tags: checklist fundamental
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: /concall
+title: /concall
+category: repl
+description: Concall transcript summary — management commentary from Screener.in
+cli: python nse_agent.py → /concall SYMBOL
+tags: concall fundamental
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: /results
+title: /results
+category: repl
+description: Latest quarterly results — revenue, PAT, margins, YoY/QoQ
+cli: python nse_agent.py → /results SYMBOL
+tags: results fundamental
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: /events
+title: /events
+category: repl
+description: Corporate events — dividends, buybacks, board meetings, splits
+cli: python nse_agent.py → /events SYMBOL
+tags: events corporate
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: /broker-research
+title: /broker-research
+category: repl
+description: Broker research fetch — target prices and ratings
+cli: python nse_agent.py → /broker-research SYMBOL
+tags: broker research
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: /sector
+title: /sector
+category: repl
+description: Sector deep-dive — stage distribution, leaders, catalysts
+cli: python nse_agent.py → /sector NAME
+tags: sector research
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: /pnl
+title: /pnl
+category: repl
+description: Portfolio P&L snapshot — holdings, cost basis, unrealised
+cli: python nse_agent.py → /pnl
+tags: portfolio pnl
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: /my-portfolio
+title: /my-portfolio
+category: repl
+description: Portfolio analysis — add/trim/hold ranking with stage + fundamentals
+cli: python nse_agent.py → /my-portfolio
+tags: portfolio analysis
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: /swing-playbook
+title: /swing-playbook
+category: repl
+description: Swing trade playbook — ranked setups with entry/stop/target
+cli: python nse_agent.py → /swing-playbook
+tags: swing trade report
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: /strategy-lab
+title: /strategy-lab
+category: repl
+description: Portfolio strategy lab HTML — best-strategy replay + VCP tabs
+cli: python nse_agent.py → /strategy-lab run
+tags: strategy portfolio
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: /report
+title: /report
+category: repl
+description: Top picks HTML report from today's screener results
+cli: python nse_agent.py → /report
+tags: report picks
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: /results-feed
+title: /results-feed
+category: repl
+description: Recent filings feed — symbols with latest quarterly results
+cli: python nse_agent.py → /results-feed
+tags: results feed
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: /voice
+title: /voice
+category: repl
+description: Generate voice briefing script (no TTS)
+cli: python generate_voice_briefing.py --no-tts
+tags: voice report
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: /voice-mode
+title: /voice-mode
+category: repl
+description: Toggle real-time voice mode — speak queries, hear answers
+cli: python nse_agent.py → /voice-mode
+tags: voice tts
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: /email
+title: /email
+category: repl
+description: Draft and send daily top-picks email to distribution list
+cli: python nse_agent.py → /email
+tags: email report
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: /youtube
+title: /youtube
+category: repl
+description: YouTube research search — find analyst videos for a query
+cli: python nse_agent.py → /youtube QUERY
+tags: youtube research
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: /export
+title: /export
+category: repl
+description: Export REPL session data — signals, scores, watchlist
+cli: python nse_agent.py → /export
+tags: export data
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: /screenshot
+title: /screenshot
+category: repl
+description: Capture terminal output as HTML and attach to email
+cli: python nse_agent.py → /screenshot
+tags: screenshot export
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: /skills
+title: /skills
+category: repl
+description: List and execute skill-store cards from the REPL
+cli: python nse_agent.py → /skills
+tags: skills store
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: /prompts
+title: /prompts
+category: repl
+description: Browse the 60+ prompt library with fuzzy search
+cli: python nse_agent.py → /prompts
+tags: prompts
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: /doctor
+title: /doctor
+category: repl
+description: Health check — data freshness, DB status, API keys
+cli: agent-adda doctor
+tags: admin health
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: /refresh
+title: /refresh
+category: repl
+description: Run full daily pipeline (all 7 phases)
+cli: python daily_refresh.py
+tags: pipeline admin
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: equity_chart
+title: equity chart
+category: screener
+description: Comprehensive chart — BB, MACD, VWAP, RS, S/R, Supertrend (chart_engine)
+cli: python -m terminal.chart_engine SYMBOL
+tags: chart technical
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: stage2_vcp
+title: stage2 vcp
+category: screener
+description: Stage 2 VCP breakout candidates
+cli: python nse_agent.py → /screen stage2_vcp
+tags: stage2 vcp breakout
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: intraday_alerts
+title: intraday alerts
+category: screener
+description: Live F&O intraday alert scan — trigger, R:R, options verdict
+cli: python -m terminal.live_intraday_alerts --cycles 1
+tags: intraday fno alerts
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: pullback_recovery
+title: pullback recovery
+category: screener
+description: Apex pullback-recovery screener — Midcap/Nifty500 resilience candidates
+cli: python pullback_recovery_screener.py
+tags: screener pullback
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: screeners_stage
+title: screeners stage
+category: screener
+description: William O'Neil Stage Analysis screener — full universe stage scan
+cli: python screeners.py
+tags: stage oneil
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: sector_rotation
+title: sector rotation
+category: screener
+description: Sector rotation report — stage distribution, leaders / laggards
+cli: python sector_rotation_report.py
+tags: sector rotation
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: fund_dashboard
+title: fund dashboard
+category: screener
+description: Mutual fund holdings & sector allocation dashboard
+cli: python tools/fund_refresh.py
+tags: fund portfolio
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: live_prices
+title: live prices
+category: screener
+description: Live prices dashboard for watchlist
+cli: python tools/live_prices.py
+tags: live prices
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: market_breadth
+title: market breadth
+category: screener
+description: Market breadth — A/D, McClellan, TRIN
+cli: python market_breadth.py
+tags: breadth market
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: rrg_report
+title: rrg report
+category: screener
+description: Relative Rotation Graph (RRG) — sector momentum quadrant chart → rrg.html
+cli: python rrg_report.py
+tags: rrg sector rs
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: seasonal_heat_calendar
+title: seasonal heat calendar
+category: screener
+description: Sectoral heat calendar — seasonal return patterns by month
+cli: python seasonal_heat_calendar.py
+tags: seasonal sector
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: global_correlation
+title: global correlation
+category: screener
+description: Global correlation monitor — NSE vs US/EM/commodities
+cli: python global_correlation.py
+tags: global correlation
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: knowledge_graph
+title: knowledge graph
+category: screener
+description: NSE knowledge graph with shock propagation paths
+cli: python knowledge_graph.py
+tags: knowledge graph
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: apex_resilience
+title: apex resilience
+category: screener
+description: Apex resilience full report — drawdown recovery scoring
+cli: python apex_resilience_full_report.py
+tags: resilience screener
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: top_picks
+title: top picks
+category: screener
+description: Top picks report from today's screener results
+cli: python scripts/top_picks_report.py
+tags: picks report
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: swing_playbook_html
+title: swing playbook html
+category: screener
+description: Swing playbook HTML — ranked candidates with entry/stop/target
+cli: python nse_agent.py → /swing-playbook
+tags: swing report
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: strategy_lab
+title: strategy lab
+category: screener
+description: Portfolio strategy lab HTML — replay + VCP tabs
+cli: python nse_agent.py → /strategy-lab run
+tags: strategy portfolio
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: morning_market_report
+title: morning market report
+category: screener
+description: Morning market report — pre-open global cues, sector outlook, watchlist
+cli: python scripts/build_morning_market_report.py
+tags: morning report
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: midday_market_report
+title: midday market report
+category: screener
+description: Midday market report — second-half breadth, sector leaders, risk control
+cli: python scripts/build_morning_market_report.py --variant midday
+tags: midday report
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: eod_market_report
+title: eod market report
+category: screener
+description: EOD market report — day's movers, breadth, F&O snapshot
+cli: python scripts/build_eod_market_report.py
+tags: eod report
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: weekend_review
+title: weekend review
+category: screener
+description: Weekend market review — weekly summary, leaders, setups to watch
+cli: python scripts/run_weekend_market_review.py
+tags: weekend report
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: morning_publish
+title: morning publish
+category: screener
+description: Morning market report + auto-publish (email + HTML)
+cli: python scripts/run_morning_market_publish.py
+tags: morning publish
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: broader_market
+title: broader market
+category: screener
+description: Broader market analysis — Midcap / Smallcap / Microcap breakdown
+cli: python scripts/build_broader_market_analysis.py
+tags: midcap smallcap market
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: smallcap_super_report
+title: smallcap super report
+category: screener
+description: Smallcap super report — quality filter + momentum screen
+cli: python scripts/build_smallcap_super_report.py
+tags: smallcap report
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: intraday_fno_report
+title: intraday fno report
+category: screener
+description: Intraday F&O editorial report — evidence-bound narrative
+cli: python scripts/build_agent_adda_intraday_fno_report.py
+tags: intraday fno report
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: email_daily_reports
+title: email daily reports
+category: screener
+description: Email daily NSE reports to distribution list (PG-backed)
+cli: python email_daily_reports.py
+tags: email daily
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: universe_scoring
+title: universe scoring
+category: screener
+description: Full NSE universe scoring → scores.daily_scores in PostgreSQL
+cli: python fixed_nse_universe_analysis.py
+tags: scoring universe
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: regime_detector
+title: regime detector
+category: screener
+description: HMM regime detection — BULL / ROTATION / CHOP / BEAR
+cli: python regime_detector.py
+tags: regime hmm
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: global_market_intel
+title: global market intel
+category: screener
+description: Global market intelligence — overnight US/Asia/macro digest
+cli: python global_market_intelligence.py
+tags: global macro
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: index_intelligence
+title: index intelligence
+category: screener
+description: Index intelligence — composition, momentum, sector allocation shifts
+cli: python index_intelligence.py
+tags: index intelligence
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: portfolio_signals
+title: portfolio signals
+category: screener
+description: Daily portfolio signal digest — add/trim/watch signals for holdings
+cli: python tools/portfolio_signals.py
+tags: portfolio signals
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: portfolio_assessment
+title: portfolio assessment
+category: screener
+description: Portfolio add/trim/hold assessment from ICICI Direct CSV
+cli: python tools/build_equity_portfolio_assessment.py --portfolio FILE.csv
+tags: portfolio assessment
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: fund_daily
+title: fund daily
+category: screener
+description: Fund daily dashboard — intraday NAV and holding movements
+cli: python tools/fund_daily.py
+tags: fund daily
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: fund_rebalance
+title: fund rebalance
+category: screener
+description: Monthly fund rebalance engine — drift check and rebalance orders
+cli: python tools/fund_rebalance.py
+tags: fund rebalance
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: backtest_fund
+title: backtest fund
+category: screener
+description: Fund strategy backtest — historical replay of allocation strategies
+cli: python tools/backtest_fund_strategies.py
+tags: fund backtest
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: midcap_monitor
+title: midcap monitor
+category: screener
+description: Midcap daily monitor — top movers, stage changes, watchlist alerts
+cli: python tools/midcap_daily_monitor.py
+tags: midcap monitor
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: smallcap_monitor
+title: smallcap monitor
+category: screener
+description: Smallcap daily monitor — top movers, stage changes, breakouts
+cli: python tools/smallcap_daily_monitor.py
+tags: smallcap monitor
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: n500_fund_refresh
+title: n500 fund refresh
+category: screener
+description: NIFTY 500 fund dashboard refresh — full holding re-pull
+cli: python tools/n500_fund_refresh.py
+tags: fund nifty500
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: deep_research_report
+title: deep research report
+category: screener
+description: Deep research report — tail-first narrative with sourced evidence
+cli: python tools/build_tail_first_deep_research_report.py
+tags: research deep
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: export_fundamentals
+title: export fundamentals
+category: screener
+description: Export fundamentals from DB to CSV / JSON
+cli: python tools/export_fundamentals.py
+tags: export fundamentals
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: intraday_editorial
+title: intraday editorial
+category: screener
+description: Evidence-bound F&O editorial report (terminal module)
+cli: python -m terminal.intraday_editorial_report
+tags: intraday editorial
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: scope_report
+title: scope report
+category: screener
+description: Sector/index grounded report (terminal module)
+cli: python -m terminal.scope_report
+tags: sector report
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: materialize_vcp
+title: materialize vcp
+category: screener
+description: Materialise Stage 2 VCP picks into portfolio.stage2_vcp_picks
+cli: python scripts/materialize_stage2_vcp_picks.py
+tags: vcp portfolio
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: backfill_fund
+title: backfill fund
+category: screener
+description: Screener.in fundamentals backfill (NIFTY 500, run weekly)
+cli: python scripts/backfill_screener_fundamentals.py
+tags: fundamentals backfill
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: backfill_eod
+title: backfill eod
+category: screener
+description: Extend equity price history >200 days via yfinance
+cli: python scripts/backfill_equity_eod_yfinance.py
+tags: price history
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: backfill_stage_history
+title: backfill stage history
+category: screener
+description: Backfill historical stage snapshots — extend stage history in DB
+cli: python scripts/backfill_historical_stage_snapshots.py
+tags: stage history
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: refresh_results_feed
+title: refresh results feed
+category: screener
+description: Refresh Screener.in results feed for symbols with recent filings
+cli: python scripts/refresh_results_feed.py
+tags: results feed
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: sync_signal_log
+title: sync signal log
+category: screener
+description: Sync signal_log.csv → PostgreSQL signals table
+cli: python scripts/sync_signal_log_to_pg.py
+tags: signals sync
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: pg_loader
+title: pg loader
+category: screener
+description: Load all data into PostgreSQL (equity + F&O + fundamentals)
+cli: python postgres/loader.py
+tags: postgres admin
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: pg_loader_eod
+title: pg loader eod
+category: screener
+description: Load equity EOD only into PostgreSQL
+cli: python postgres/loader.py --eod-only
+tags: postgres eod
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: pg_loader_fno
+title: pg loader fno
+category: screener
+description: Load F&O EOD into PostgreSQL
+cli: python postgres/loader.py --fno-only
+tags: postgres fno
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: mcp_server
+title: mcp server
+category: screener
+description: Start MCP server — exposes tool catalogue to Copilot / Claude
+cli: python mcp_server.py
+tags: mcp server
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: fetch_corporate_events
+title: fetch corporate events
+category: screener
+description: Fetch upcoming corporate events from NSE API
+cli: python fetch_corporate_events.py
+tags: corporate events
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: fetch_insider_alerts
+title: fetch insider alerts
+category: screener
+description: Fetch insider trade alerts from NSE API
+cli: python fetch_insider_alerts.py
+tags: insider alerts
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: fetch_fii_dii
+title: fetch fii dii
+category: screener
+description: Fetch FII / DII flow data for the day
+cli: python fetch_fii_dii_flows.py
+tags: fii dii flow
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: fetch_macro_proxies
+title: fetch macro proxies
+category: screener
+description: Fetch macro-economic proxy signals (FRED etc.)
+cli: python fetch_macro_proxies.py
+tags: macro fred
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: intraday_ohlcv_capture
+title: intraday ohlcv capture
+category: screener
+description: Intraday OHLCV capture — scheduled bar data collection (launchd)
+cli: python scripts/run_intraday_ohlcv_capture.py
+tags: intraday ohlcv
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: intraday_pattern_monitor
+title: intraday pattern monitor
+category: screener
+description: Intraday pattern monitor — live pattern detection across universe
+cli: python scripts/run_intraday_pattern_monitor.py
+tags: intraday pattern
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: portfolio_construction
+title: portfolio construction
+category: screener
+description: Portfolio construction from signals — build target portfolio
+cli: python scripts/portfolio_construction.py
+tags: portfolio signals
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: analyze_daily_results
+title: analyze daily results
+category: screener
+description: Analyze daily results — batch parse quarterly filings
+cli: python scripts/analyze_daily_results.py
+tags: results analysis
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: deep_analyze_batch
+title: deep analyze batch
+category: screener
+description: Batch deep analysis — run deep research on a symbol list
+cli: python scripts/deep_analyze_batch.py
+tags: research batch
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: full_analysis_pipeline
+title: full analysis pipeline
+category: screener
+description: End-to-end analysis pipeline — all stages in one run
+cli: python run_complete_analysis_pipeline.py
+tags: pipeline analysis
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: report_validation
+title: report validation
+category: screener
+description: Report validation — check HTML reports for broken links and stale data
+cli: python report_validation.py
+tags: validation report
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: daily_refresh
+title: daily refresh
+category: pipeline
+description: Full 7-phase daily pipeline (~25–35 min, run after NSE close 16:00 IST)
+cli: python daily_refresh.py
+tags: pipeline daily
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: daily_refresh_dry
+title: daily refresh dry
+category: pipeline
+description: Daily pipeline dry-run — preview plan without executing
+cli: python daily_refresh.py --dry-run
+tags: pipeline dry-run
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: daily_refresh_live
+title: daily refresh live
+category: pipeline
+description: Fast live-price update only (~1 min)
+cli: python daily_refresh.py --live-only
+tags: pipeline live
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: stage_snapshot
+title: stage snapshot
+category: pipeline
+description: Stage tracker snapshot → scores.stage_snapshots
+cli: python sector_rotation_tracker.py --snapshot
+tags: stage tracker
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: pg_start
+title: pg start
+category: pipeline
+description: Start local PostgreSQL cluster
+cli: ./postgres/start_pg.sh start
+tags: postgres admin
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: pg_stop
+title: pg stop
+category: pipeline
+description: Stop local PostgreSQL cluster
+cli: ./postgres/start_pg.sh stop
+tags: postgres admin
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: pg_status
+title: pg status
+category: pipeline
+description: Check PostgreSQL cluster status
+cli: ./postgres/start_pg.sh status
+tags: postgres admin
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: ollama_pull
+title: ollama pull
+category: pipeline
+description: Pull Granite4 local LLM model via Ollama
+cli: ollama pull granite4
+tags: llm local
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: bhavcopy_loader
+title: bhavcopy loader
+category: pipeline
+description: Load daily bhavcopy CSV into PostgreSQL via R
+cli: Rscript load_latest_nse_data_comprehensive.R
+tags: bhavcopy eod
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: sector_analysis_r
+title: sector analysis r
+category: pipeline
+description: Run R sector analysis (analyze_all_sectors.R)
+cli: Rscript analyze_all_sectors.R
+tags: r sector
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: data_bootstrap
+title: data bootstrap
+category: pipeline
+description: Seed SQLite from bundled CSV history (first-time setup)
+cli: agent-adda data bootstrap --historical --source data
+tags: setup admin
+patterns: 
+source: launcher_data.json
+────────────────────────────────────────────────────────────
+
+id: agent-adda-publish-intelligence-report
+title: Agent Adda Publish Intelligence Report
+category: project_skill
+description: Publish Agent Adda research/report HTML to agentadda.in Market Intelligence and prepare or send the recipient notification. Use when the user asks to post, publish, deploy, email, or notify recipients about an Agent Adda report.
+cli: cd /Users/pradeepgorai/Documents/Projects/finance/Unified-NSE-Analysis
+tags: agent adda publish intelligence report
+patterns: 
+source: .claude/skills/agent-adda-publish-intelligence-report/SKILL.md
+────────────────────────────────────────────────────────────
+
+id: fundamental-analyze
+title: Fundamental Analyze
+category: project_skill
+description: Research and value a listed company using the newest company filings, investor materials, exchange disclosures, Screener history, and current market data. Use for fundamental analysis, investment theses, earnings updates, financial-quality reviews, valuation scenarios, fair-value ranges, or requests to compare reported and normalized performance.
+cli: python3 .agents/skills/fundamental-analyze/scripts/fundamental_analyzer.py INPUT.json --format markdown --output REPORT.md
+tags: fundamental analyze
+patterns: 
+source: .claude/skills/fundamental-analyze/SKILL.md
+────────────────────────────────────────────────────────────
+
+id: swing-playbook-report
+title: Swing Playbook Report
+category: project_skill
+description: # Swing Playbook Report
+
+Generates the **Agent Adda dark-terminal themed Swing Playbook HTML report**.
+
+Runs the full pipeline:
+1. Pulls swing candidates from PostgreSQL (`scores.daily_scores`)
+2. Checks overextension signals (RSI14 > 72 or price > 7% above SMA20)
+3. Fetches live market context (NIF
+cli: cd /Users/pradeepgorai/Documents/Projects/finance/Unified-NSE-Analysis
+tags: swing playbook report
+patterns: 
+source: .claude/skills/swing-playbook-report/SKILL.md
+────────────────────────────────────────────────────────────
+
+id: live-prices
+title: Live Prices
+category: project_skill
+description: Fetch live NSE prices via yfinance (5-min candles, ~15-min delay during market hours) and open an HTML dashboard at reports/latest/live_prices.html. Use when the user asks for live prices, current prices, today's prices, intraday prices, or wants to refresh market data.
+cli: cd /Users/pradeepgorai/Documents/Projects/finance/Unified-NSE-Analysis
+tags: live prices
+patterns: 
+source: .claude/skills/live-prices/SKILL.md
+────────────────────────────────────────────────────────────
+
+id: intraday-alerts
+title: Intraday Alerts
+category: project_skill
+description: # Intraday Alerts
+
+Live F&O intraday scan with trigger-based email alerts. Scans the F&O universe every N minutes, detects active/near setups, and emails candidates to the `intraday_alerts` distribution list.
+
+## Quickstart — one scan cycle + send email
+
+```bash
+cd /Users/pradeepgorai/Documents/Proj
+cli: cd /Users/pradeepgorai/Documents/Projects/finance/Unified-NSE-Analysis
+tags: intraday alerts
+patterns: 
+source: .claude/skills/intraday-alerts/SKILL.md
+────────────────────────────────────────────────────────────
+
+id: agent-adda-portfolio-assessment
+title: Agent Adda Portfolio Assessment
+category: project_skill
+description: Review the latest ICICI Direct equity portfolio CSV and the generated assessment HTML. Use for add/trim/hold/exit rankings, concentration risk, ETF separation, unresolved symbols, and refreshing the sortable portfolio report.
+cli: cd /Users/pradeepgorai/Documents/Projects/finance/Unified-NSE-Analysis
+tags: agent adda portfolio assessment
+patterns: 
+source: .claude/skills/agent-adda-portfolio-assessment/SKILL.md
+────────────────────────────────────────────────────────────
+
+id: daily-pipeline
+title: Daily Pipeline
+category: project_skill
+description: Run the full Agent Adda 7-phase daily pipeline after NSE market close (~16:00 IST). Downloads bhavcopy, scores 965 stocks, generates all 8 HTML reports (EOD, Stage2, Sector Rotation, Top Picks, RRG, Portfolio, Swing Playbook, Fund Dashboard), validates them, and emails top picks. Use when the user says "run daily pipeline", "run EOD reports", "refresh all reports", or "run daily refresh".
+cli: cd /Users/pradeepgorai/Documents/Projects/finance/Unified-NSE-Analysis
+tags: daily pipeline
+patterns: run daily pipeline | run EOD reports | refresh all reports | run daily refresh
+source: .claude/skills/daily-pipeline/SKILL.md
+────────────────────────────────────────────────────────────
+
+id: refresh-fund-dashboard
+title: Refresh Fund Dashboard
+category: project_skill
+description: End-to-end refresh of the Aug Fund dashboard. Reads fund_holdings.json, fetches live prices via yfinance, queries DB for snapshots/fundamentals/quarterly results, applies fund rules compliance gate, computes P&L for each position, and generates reports/latest/fund_dashboard.html with clickable stock detail modals. Use when the user asks to refresh, update, rebuild, or open the fund dashboard.
+cli: cd /Users/pradeepgorai/Documents/Projects/finance/Unified-NSE-Analysis
+tags: refresh fund dashboard
+patterns: 
+source: .claude/skills/refresh-fund-dashboard/SKILL.md
+────────────────────────────────────────────────────────────
+
+id: tradingview-chart
+title: Tradingview Chart
+category: project_skill
+description: Open a TradingView-style NSE/BSE chart with Agent Adda studies (SMA 20/50/200, RSI 14, MACD 12/26/9, Supertrend 10x3, ADX 14, volume) and also build daily plus intraday Cursor Canvas LineCharts. Use when the user asks to view, open, or show a TradingView chart, candlestick chart, technical chart, intraday chart, 5-minute chart, or canvas chart for a stock.
+cli: python3 .agents/skills/tradingview-chart/scripts/open_tradingview_chart.py SYMBOL --open --canvas
+tags: tradingview chart
+patterns: 
+source: .claude/skills/tradingview-chart/SKILL.md
+────────────────────────────────────────────────────────────
+
+id: workflow_daily_pipeline
+title: Daily Pipeline — 7-Phase Market Refresh
+category: workflow
+description: Full end-to-end daily pipeline: bhavcopy ingest → PostgreSQL EOD → universe scoring → fundamentals → VCP materialisation → stage snapshots → 40 screeners → sector rotation → top picks report → portfolio → fund dashboard → email draft → voice briefing. Runs after NSE close (~16:00 IST). ~25–35 min.
+
+cli: python daily_refresh.py
+tags: pipeline daily etl nse bhavcopy scores reports email
+patterns: run daily pipeline | run EOD reports | refresh all reports | run daily refresh | post market pipeline
+source: knowledge_base/entries/workflows.yaml
+────────────────────────────────────────────────────────────
+
+id: workflow_chart
+title: Build Equity Chart (TradingView-style)
+category: workflow
+description: Generate a self-contained interactive HTML equity chart for any NSE symbol. Includes candlestick (daily 6M + intraday 15m), SMA 20/50/200, EMA9, RSI 14, Supertrend(10,3), swing-pivot S/R levels, and relative strength tab vs Nifty 50 + sector index. Output: reports/latest/charts/{SYMBOL}_chart.html
+
+cli: python -m terminal.chart_engine SYMBOL --months 6 --intra-days 5 --open
+tags: chart technical candlestick sma rsi supertrend intraday html
+patterns: chart SYMBOL | show chart of SYMBOL | technical chart SYMBOL | draw chart SYMBOL | SYMBOL chart
+source: knowledge_base/entries/workflows.yaml
+────────────────────────────────────────────────────────────
+
+id: workflow_fundamental_analysis
+title: Fundamental Analysis — Company Research
+category: workflow
+description: Research and value a listed company using filings, investor materials, exchange disclosures, Screener.in history, and current market data. Covers: earnings quality, sales growth, financial strength, institutional backing, valuation scenarios, and fair-value ranges. Uses Claude skill fundamental-analyze which calls company_intelligence.py + KB passages.
+
+cli: python nse_agent.py --query "fundamental analysis SYMBOL"
+tags: fundamental valuation research earnings balance_sheet screener
+patterns: fundamental analysis SYMBOL | analyze SYMBOL fundamentals | valuation of SYMBOL | financial health SYMBOL | earnings quality SYMBOL
+source: knowledge_base/entries/workflows.yaml
+────────────────────────────────────────────────────────────
+
+id: workflow_sector_rotation
+title: Sector Rotation Report
+category: workflow
+description: Stage distribution across all sectors, RS leadership changes, 3-month rotation view, UNKNOWN-row repair, and full sector HTML report. Key output: reports/latest/sector_rotation_report.html
+
+cli: python sector_rotation_report.py
+tags: sector rotation stage rs leadership html
+patterns: sector rotation report | which sectors are leading | sector stage distribution | sector breadth report | sector relative strength
+source: knowledge_base/entries/workflows.yaml
+────────────────────────────────────────────────────────────
+
+id: workflow_live_prices
+title: Live Prices Dashboard
+category: workflow
+description: Fetch live NSE prices via yfinance (5-min candles, ~15-min delay during market hours) and open an auto-refreshing HTML dashboard at reports/latest/live_prices.html. Shows NIFTY / BANKNIFTY / sector ETFs + top movers.
+
+cli: python tools/live_prices.py
+tags: live prices intraday dashboard yfinance html
+patterns: live prices | current prices | today prices | intraday prices | refresh market data
+source: knowledge_base/entries/workflows.yaml
+────────────────────────────────────────────────────────────
+
+id: workflow_fund_dashboard
+title: Fund Dashboard Refresh
+category: workflow
+description: End-to-end refresh of the fund dashboard. Reads fund_holdings.json, fetches live prices, queries DB for snapshots/fundamentals/quarterly results, applies fund rules compliance gate, computes P&L for each position, and generates reports/latest/fund_dashboard.html with clickable stock detail modals.
+
+cli: python tools/fund_refresh.py --no-open
+tags: fund dashboard holdings pnl compliance html
+patterns: refresh fund dashboard | update fund dashboard | rebuild fund dashboard | open fund dashboard | fund holdings pnl
+source: knowledge_base/entries/workflows.yaml
+────────────────────────────────────────────────────────────
+
+id: workflow_vcp_picks
+title: VCP Picks Materialisation
+category: workflow
+description: Stage 2 VCP breakout candidate materialisation to portfolio.stage2_vcp_picks. Must run AFTER sector_rotation_tracker.py --snapshot (Step 4B) and BEFORE top_picks_report.py. Without this, no pick receives a vcp+sector tag.
+
+cli: python scripts/materialize_stage2_vcp_picks.py --lookback-days 365
+tags: vcp breakout picks stage2 materialize portfolio
+patterns: materialize vcp picks | vcp breakout candidates | top picks report | stage 2 vcp | run vcp materialiser
+source: knowledge_base/entries/workflows.yaml
+────────────────────────────────────────────────────────────
+
+id: workflow_portfolio_assessment
+title: Portfolio Assessment — Add/Trim/Hold/Exit
+category: workflow
+description: Review ICICI Direct equity portfolio CSV, compute add/trim/hold/exit rankings, identify concentration risk, ETF separation, unresolved symbols, and regenerate the sortable portfolio HTML report. Uses agent-adda-portfolio-assessment skill.
+
+cli: python nse_agent.py --query "review my portfolio for incremental add or trim"
+tags: portfolio assessment add trim hold exit concentration icici
+patterns: review my portfolio | portfolio assessment | add or trim portfolio | portfolio concentration risk | portfolio report
+source: knowledge_base/entries/workflows.yaml
+────────────────────────────────────────────────────────────
+
+id: workflow_postgres_management
+title: PostgreSQL Cluster Management
+category: workflow
+description: Self-contained PostgreSQL cluster under postgres/data/. Must be started before running any pipeline or loader. Connection: Unix socket /tmp, user nse_admin, no password, database nse_market.
+
+cli: ./postgres/start_pg.sh start
+tags: postgres database cluster start stop restart status
+patterns: start postgres | stop database | restart postgres | database status | postgres cluster
+source: knowledge_base/entries/workflows.yaml
+────────────────────────────────────────────────────────────
+
+id: workflow_screener_backfill
+title: Screener.in Fundamentals Backfill
+category: workflow
+description: Full Nifty 500 Screener.in fundamentals backfill: earnings quality, sales growth, financial strength, institutional backing. Run weekly or when fundamental scores are stale. Takes 15–30 min for full universe.
+
+cli: python scripts/backfill_screener_fundamentals.py
+tags: screener fundamentals backfill nifty500 weekly
+patterns: backfill fundamentals | screener.in refresh | refresh fundamental scores | fundamental backfill
+source: knowledge_base/entries/workflows.yaml
+────────────────────────────────────────────────────────────
+
+id: workflow_ollama_local_setup
+title: Run Agent Adda with Local Ollama (offline)
+category: workflow
+description: Configure Agent Adda to use a local Ollama model instead of OpenAI. Recommended model: Granite4 (best balance of quality and speed). Also supports nomic-embed-text for local KB embeddings. Set models.mode = local-llm in ~/.agent-adda/config.toml.
+
+cli: ollama pull granite4 && ollama serve
+tags: ollama local offline llm granite4 embedding config
+patterns: use ollama | run offline | local llm | granite4 | no openai key
+source: knowledge_base/entries/workflows.yaml
+────────────────────────────────────────────────────────────
+
+id: workflow_intraday_scan
+title: Intraday F&O Alert Scan
+category: workflow
+description: Real-time intraday breakout alerts for NIFTY/BANKNIFTY/FINNIFTY universe. Scores 6 breakout strategies: supertrend_breakout, near_breakout_volume, VCP, volume, Darvas, ORB+VWAP. Only surfaces alerts with R:R >= 2.
+
+cli: python nse_agent.py → /scan
+tags: intraday scan fno alerts breakout supertrend vcp darvas orb
+patterns: intraday scan | intraday alerts | fno alerts | breakout scan today | orb scan
+source: knowledge_base/entries/workflows.yaml
+────────────────────────────────────────────────────────────
+
+id: workflow_kb_financial_docs
+title: Knowledge Base — Financial Document Search
+category: workflow
+description: Query SEBI, RBI, CRISIL, and broker research documents ingested into the ChromaDB vector store. Separate from the tools/skills index. Build the KB from the financial sources registry, then ask questions.
+
+cli: python -m knowledge_base ask "your question here"
+tags: kb sebi rbi crisil broker research pdf vector chroma
+patterns: search knowledge base | sebi circular | rbi policy | crisil rating | broker research
+source: knowledge_base/entries/workflows.yaml
+────────────────────────────────────────────────────────────
+
+id: mcp_get_market_overview
+title: MCP: Market Overview
+category: mcp
+description: NIFTY breadth, A/D, FII/DII flows, global indices from MCP
+cli: # via MCP: call get_market_overview()
+tags: mcp market overview
+patterns: market overview via mcp | mcp market status
+source: mcp_server.py
+────────────────────────────────────────────────────────────
+
+id: mcp_get_stage2_picks
+title: MCP: Stage 2 Picks
+category: mcp
+description: Stage 2 uptrend stocks with RSI/RS/technical score, filtered by index
+cli: # via MCP: call get_stage2_picks(index='NIFTY 500')
+tags: mcp stage2 picks
+patterns: stage 2 picks via mcp | mcp stage2 stocks
+source: mcp_server.py
+────────────────────────────────────────────────────────────
+
+id: mcp_get_stock_profile
+title: MCP: Stock Profile
+category: mcp
+description: Full single-stock profile: stage, price, RSI, fundamentals, 30d history
+cli: # via MCP: call get_stock_profile(symbol='RELIANCE')
+tags: mcp stock profile
+patterns: stock profile via mcp | mcp stock details SYMBOL
+source: mcp_server.py
+────────────────────────────────────────────────────────────
+
+id: mcp_get_swing_candidates
+title: MCP: Swing Candidates
+category: mcp
+description: Liquid Stage 2 stocks suitable for swing trading
+cli: # via MCP: call get_swing_candidates(limit=15)
+tags: mcp swing stage2
+patterns: swing candidates via mcp
+source: mcp_server.py
+────────────────────────────────────────────────────────────
+
+id: mcp_get_sector_rotation
+title: MCP: Sector Rotation
+category: mcp
+description: Sector-level stage distribution and relative strength
+cli: # via MCP: call get_sector_rotation()
+tags: mcp sector rotation
+patterns: sector rotation via mcp
+source: mcp_server.py
+────────────────────────────────────────────────────────────
+
+id: mcp_get_strategy_lab
+title: MCP: Strategy Lab
+category: mcp
+description: Backtest leaderboard or trade log for 8 built-in strategies
+cli: # via MCP: call get_strategy_lab(strategy_id='vcp_momentum')
+tags: mcp strategy backtest
+patterns: strategy lab via mcp | backtest results mcp
+source: mcp_server.py
+────────────────────────────────────────────────────────────
+
+id: mcp_get_fno_signals
+title: MCP: F&O Signals
+category: mcp
+description: PCR, OI buildup, max pain, OI changes for derivatives
+cli: # via MCP: call get_fno_signals(symbol='NIFTY', limit=20)
+tags: mcp fno options oi
+patterns: fno signals via mcp | options data mcp
+source: mcp_server.py
+────────────────────────────────────────────────────────────
+
+id: mcp_get_bulk_block_deals
+title: MCP: Bulk/Block Deals
+category: mcp
+description: Institutional bulk/block deal activity
+cli: # via MCP: call get_bulk_block_deals(symbol='HDFC')
+tags: mcp bulk block institutional
+patterns: bulk deals via mcp | block deals mcp
+source: mcp_server.py
+────────────────────────────────────────────────────────────
+
+id: mcp_get_corporate_events
+title: MCP: Corporate Events
+category: mcp
+description: Dividends, bonuses, rights, AGMs, splits, result dates
+cli: # via MCP: call get_corporate_events(days_ahead=30)
+tags: mcp events dividend results
+patterns: corporate events via mcp | result dates mcp
+source: mcp_server.py
+────────────────────────────────────────────────────────────

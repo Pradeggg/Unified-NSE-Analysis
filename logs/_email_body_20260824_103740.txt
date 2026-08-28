@@ -1,0 +1,92 @@
+Agent Adda
+      Mon, 24 Aug 2026 · 10:37 IST
+
+        Report · morning_market.html · mode: both
+
+          Sharing the latest morning_market.html from Agent Adda (snapshot Mon, 24 Aug 2026).
+
+[fallback render: LLM error: 'bool' object has no attribute 'chat']
+
+Agent Adda Morning Market - 2026-08-24 10:34 IST
+AA
+Agent Adda
+Market intelligence dashboard
+Educational market intelligence - not advice
+Agent Adda Morning Market
+Rotational open
+Leadership is selective; confirm with first-hour breadth. Bank Nifty is not confirming yet. Use the first 15-30 minutes to confirm whether this is real breadth or just a gap-and-rotate tape.
+Bank Nifty lagging. Confirm breadth in 15-30 min.
+As of 2026-08-24 10:34 IST
+Domestic live runtime
+F&O date 2026-08-21
+Momentum date 2026-08-21
+Opening stance
+Rotational open
+RISK_ON global backdrop - educational market intelligence only.
+Research only.
+NIFTY 50
+24,280
++0.12%
+Bank Nifty
+57,673
+-0.15%
+Smallcap 250
+18,488
++0.40%
+India VIX
+11.24
++0.37%
+Domestic Index Pulse
+Area
+Level
+Move
+Day Range
+Read
+NIFTY 50
+24,280
++0.12%
+24,267 - 24,313
+Flat
+NIFTY BANK
+57,673
+-0.15%
+57,645 - 57,874
+Weak
+NIFTY FINANCIAL SERVICES
+26,278
++0.07%
+26,264 - 26,362
+Flat
+NIFTY MIDCAP 100
+63,972
++0.37%
+63,770 - 63,987
+Supportive
+NIFTY SMALLCAP 100
+20,050
++0.36%
+20,008 - 20,080
+Supportive
+NIFTY SMALLCAP 250
+18,488
++0.40%
+18,446 - 18,514
+Supportive
+NIFTY MICROCAP 250
+26,509
++0.66%
+26,392 - 26,520
+Leading
+INDIA VIX
+11.24
++0.37%
+10.32 - 11.34
+Vol
+
+  Regards,
+
+  Agent Adda
+
+  ShunyaAI · NSE Market Intelligence
+
+Not investment advice. For research and learning only. NSE EOD + live snapshot data.

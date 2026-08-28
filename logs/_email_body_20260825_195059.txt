@@ -1,0 +1,54 @@
+Agent Adda
+      Tue, 25 Aug 2026 · 19:50 IST
+
+        Report · swing_playbook.html · mode: both
+
+    Market read: Balanced swing risk; 20 NSE candidates identified; trade only on intraday confirmation; size ≤1.0% risk; target 8–12 positions.
+
+  Attached: Swing Trade Playbook — 25 Aug 2026 (research-only). Below is a concise summary for quick review.
+
+  Generated: 25 Aug 2026 19:43:09 • Universe: NSE • Frames: Tactical (10) and Position (10)
+
+  Key takeaways
+
+    CUPID leads (score 76.8). Tactical: trigger Rs 284.58, stop Rs 264.01; Position stop Rs 258.09; Tactical T1/T2 Rs 315.43 / Rs 325.71.
+
+    Breadth/mix: 10 Tactical and 10 Position candidates; 0 watchlist rows; no portfolio-aware actions this run.
+
+    Stage composition: predominantly Stage 2; Stage 1 setups include KALYANKJIL, LODHA, DIXON, IIFL.
+
+    Risk and targets: typical stop distances 7.2% (Tactical) and 9.3% (Position); target bands framed at 1.5R and 2.0R.
+
+    Liquidity checks: DIXON (Liq 4.2) and APARINDS (Liq 3.5) warrant live depth/spread review before orders.
+
+  What to watch
+
+    Approach to key Tactical triggers: CUPID Rs 284.58; KALYANKJIL Rs 618.73; WELCORP Rs 2,368.95; LODHA Rs 1,293.91; LAURUSLABS Rs 1,884.86.
+
+    Intraday confirmation required; avoid pre-emptive entries.
+
+    Spreads/order book on higher-priced names: DIXON Rs 15,139.90; APARINDS Rs 17,171.01; verify executable size.
+
+    Respect initial stops; reduce size when stop distance is wide.
+
+  How to use this
+
+    Set alerts at listed triggers; execute only above trigger.
+
+    Size positions to ≤1.0% account risk per trade; maintain 8–12 concurrent swings.
+
+    Place the initial stop immediately; monitor 1.5R and 2.0R targets.
+
+    Recheck live price, liquidity, and potential slippage before placing orders.
+
+  Research only. Not investment advice or a trading recommendation. Confirm live price, liquidity, and risk before any action.
+
+  Source: Agent Adda Swing Playbook (generated 25 Aug 2026 19:43:09).
+
+  Regards,
+
+  Agent Adda
+
+  ShunyaAI · NSE Market Intelligence
+
+Not investment advice. For research and learning only. NSE EOD + live snapshot data.

@@ -159,6 +159,19 @@ def _rating_class(rating: str | None) -> str:
     return "watch"
 
 
+def _fund_score(snapshot: dict[str, Any], portfolio_row: dict[str, Any]) -> Any:
+    """Prefer the current scored snapshot over optional CSV-enriched fields."""
+    for value in (
+        snapshot.get("enhanced_fund_score"),
+        snapshot.get("fundamental_score"),
+        portfolio_row.get("enhanced_fund_score"),
+        portfolio_row.get("fundamental_score"),
+    ):
+        if value is not None and str(value).strip() not in {"", "—", "nan", "None"}:
+            return value
+    return None
+
+
 def _sherlock_verdict(snapshot: dict[str, Any], technical: dict[str, Any], portfolio_row: dict[str, Any]) -> str:
     stage = str(snapshot.get("stage") or portfolio_row.get("stage") or "").upper()
     signal = str(snapshot.get("trading_signal") or portfolio_row.get("signal") or "").upper()
@@ -575,12 +588,12 @@ def _heat_tile(item: dict[str, Any]) -> str:
     signal = str(snap.get("trading_signal") or row.get("signal") or "—")
     stage = str(snap.get("stage") or row.get("stage") or "—")
     tech_score = snap.get("technical_score") or row.get("technical_score")
-    fund_score = row.get("enhanced_fund_score")
+    fund_score = _fund_score(snap, row)
     rs = snap.get("relative_strength") or row.get("relative_strength")
     month = snap.get("change_1m_pct") or row.get("chg_1m")
     dist = tech.get("pct_from_52h")
     return f"""
-<button class="heat-tile verdict-{verdict_key}" data-symbol="{html.escape(sym)}" data-verdict="{verdict_key}" onclick="focusStock('{html.escape(sym)}')" type="button">
+<button class="heat-tile verdict-{verdict_key}" data-symbol="{html.escape(sym)}" data-verdict="{verdict_key}" data-signal="{html.escape(signal.upper())}" onclick="focusStock('{html.escape(sym)}')" type="button">
   <span class="tile-head"><b>{html.escape(sym)}</b><span>{html.escape(stage.replace('STAGE_', 'S'))}</span></span>
   <span class="tile-signal pill {_signal_class(signal)}">{html.escape(signal)}</span>
   <span class="tile-metrics">
@@ -617,13 +630,13 @@ def _matrix_table(rows: list[dict[str, Any]]) -> str:
         signal = str(snap.get("trading_signal") or row.get("signal") or "—")
         setup = str(trade.get("setup_label") or "—")
         body.append(
-            f'<tr data-symbol="{html.escape(sym)}" data-verdict="{verdict_key}">'
+            f'<tr data-symbol="{html.escape(sym)}" data-verdict="{verdict_key}" data-signal="{html.escape(signal.upper())}">' 
             f"<td><b>{html.escape(sym)}</b></td>"
             f"<td>{html.escape(str(snap.get('stage') or row.get('stage') or '—'))}</td>"
             f"<td><span class=\"pill {_signal_class(signal)}\">{html.escape(signal)}</span></td>"
             f"{_metric_cell(row.get('portfolio_score'))}"
             f"{_metric_cell(snap.get('technical_score') or row.get('technical_score'))}"
-            f"{_metric_cell(row.get('enhanced_fund_score'))}"
+            f"{_metric_cell(_fund_score(snap, row))}"
             f"{_metric_cell(snap.get('relative_strength') or row.get('relative_strength'), 'rs', '%')}"
             f"{_metric_cell(snap.get('change_1m_pct') or row.get('chg_1m'), 'return', '%')}"
             f"{_metric_cell(tech.get('pct_from_52h'), 'distance', '%')}"
@@ -695,7 +708,7 @@ def _ric_detail_html(item: dict[str, Any]) -> str:
     verdict_key = _verdict_key(item.get("verdict"))
 
     return f"""
-<details class="stock-detail" id="stock-{html.escape(sym)}" data-symbol="{html.escape(sym)}" data-verdict="{verdict_key}">
+<details class="stock-detail" id="stock-{html.escape(sym)}" data-symbol="{html.escape(sym)}" data-verdict="{verdict_key}" data-signal="{html.escape(str(snap.get('trading_signal') or row.get('signal') or '—').upper())}">
   <summary>
     <span class="sym">{html.escape(sym)}</span>
     <span class="muted">{html.escape(str(row.get('inputs') or row.get('company_name') or ''))}</span>
@@ -755,7 +768,7 @@ def _ric_detail_html(item: dict[str, Any]) -> str:
       · <b>Book:</b> {html.escape(str(ratios.get('Book Value') or '—'))}
       · <b>ROCE:</b> {html.escape(str(ratios.get('ROCE') or '—'))}
       · <b>ROE:</b> {html.escape(str(ratios.get('ROE') or '—'))}
-      · <b>Fund Score:</b> {_fmt(row.get('enhanced_fund_score'))}
+      · <b>Fund Score:</b> {_fmt(_fund_score(snap, row))}
       · <b>Source:</b> {html.escape(fund_source)}</p>
       <p><b>Annual Sales YoY:</b> {_fmt(sales_yoy, 1, '%')}
       · <b>Annual EPS YoY:</b> {_fmt(eps_yoy, 1, '%')}
@@ -791,7 +804,7 @@ def _summary_table(rows: list[dict[str, Any]]) -> str:
         sig = str(snap.get("trading_signal") or row.get("signal") or "—")
         verdict_key = _verdict_key(item.get("verdict"))
         body.append(
-            f'<tr data-symbol="{html.escape(item["symbol"])}" data-verdict="{verdict_key}">'
+            f'<tr data-symbol="{html.escape(item["symbol"])}" data-verdict="{verdict_key}" data-signal="{html.escape(sig.upper())}">' 
             f"<td><b>{html.escape(item['symbol'])}</b></td>"
             f"<td>{html.escape(str(row.get('inputs') or ''))}</td>"
             f"<td>{html.escape(str(snap.get('sector') or row.get('sector') or '—'))}</td>"
@@ -799,13 +812,84 @@ def _summary_table(rows: list[dict[str, Any]]) -> str:
             f"<td><span class=\"pill {_signal_class(sig)}\">{html.escape(sig)}</span></td>"
             f"{_metric_cell(row.get('portfolio_score'))}"
             f"{_metric_cell(snap.get('technical_score') or row.get('technical_score'))}"
-            f"{_metric_cell(row.get('enhanced_fund_score'))}"
+            f"{_metric_cell(_fund_score(snap, row))}"
             f"{_metric_cell(snap.get('relative_strength') or row.get('relative_strength'), 'rs', '%')}"
             f"{_metric_cell(tech.get('pct_from_52h'), 'distance', '%')}"
             f"<td>{html.escape(item.get('verdict') or '—')}</td>"
             "</tr>"
         )
     return "\n".join(body)
+
+
+def _exit_priority_html(rows: list[dict[str, Any]]) -> str:
+    def record(item: dict[str, Any]) -> dict[str, Any] | None:
+        snap = item.get("snapshot") or {}
+        portfolio = item.get("portfolio") or {}
+        rs = _f(snap.get("relative_strength"))
+        tech = _f(snap.get("technical_score"))
+        fund = _f(_fund_score(snap, portfolio))
+        if rs is None or tech is None or fund is None:
+            return None
+        return {
+            "symbol": item["symbol"],
+            "stage": str(snap.get("stage") or "—"),
+            "signal": str(snap.get("trading_signal") or "—"),
+            "trend": str(snap.get("trend_signal") or "—"),
+            "rs": rs,
+            "tech": tech,
+            "fund": fund,
+            "pnl_pct": _f(portfolio.get("unrealized_pct")),
+            "market_value": _f(portfolio.get("market_value")),
+        }
+
+    scored = [r for item in rows if (r := record(item)) is not None]
+    strict = [
+        r for r in scored
+        if r["signal"] == "SELL" and r["stage"] == "STAGE_4"
+        and r["rs"] < 50 and 10 < r["fund"] < 50 and r["tech"] < 40
+    ]
+    technical = [
+        r for r in scored
+        if r["signal"] == "SELL" and r["stage"] == "STAGE_4"
+        and r["rs"] < 50 and r["fund"] >= 50 and r["tech"] < 30
+    ]
+    coverage = [
+        r for r in scored
+        if r["signal"] == "SELL" and r["rs"] < 50 and r["fund"] <= 10 and r["tech"] < 40
+    ]
+    strict.sort(key=lambda r: (r["tech"] + r["rs"] + r["fund"]))
+    technical.sort(key=lambda r: (r["tech"] + r["rs"]))
+    coverage.sort(key=lambda r: (r["tech"] + r["rs"]))
+
+    def table_rows(group: list[dict[str, Any]], label: str) -> str:
+        out = []
+        for r in group:
+            out.append(
+                f'<tr data-signal="{html.escape(r["signal"])}">'
+                f'<td><b>{html.escape(r["symbol"])}</b></td>'
+                f'<td>{html.escape(label)}</td>'
+                f'<td>{html.escape(r["stage"])}</td>'
+                f'<td><span class="pill sell">{html.escape(r["signal"])}</span></td>'
+                f'<td>{html.escape(r["trend"])}</td>'
+                f'{_metric_cell(r["rs"], "rs", "%")}'
+                f'{_metric_cell(r["fund"])}'
+                f'{_metric_cell(r["tech"])}'
+                f'{_metric_cell(r["pnl_pct"], "return", "%")}'
+                f'<td class="num">{_money(r["market_value"])}</td>'
+                '</tr>'
+            )
+        return "".join(out) or '<tr><td colspan="10" class="muted">No holdings currently meet this rule.</td></tr>'
+
+    headers = '<thead><tr><th>Symbol</th><th>Classification</th><th>Stage</th><th>Signal</th><th>Trend</th><th class="num">RS vs N500</th><th class="num">Fund</th><th class="num">Tech</th><th class="num">P&amp;L</th><th class="num">Market Value</th></tr></thead>'
+    return f"""
+<div class="disc exit-note"><b>Rule framework:</b> High-confidence exits require Stage 4 + SELL + RS below 50 + technical score below 40 + a non-floor fundamental score below 50. Technical exits retain fundamentals of 50 or better. A score of exactly 10 is treated as a coverage warning, not confirmed fundamental weakness.</div>
+<h3>High-confidence three-factor exits</h3>
+<div class="tbl-wrap"><table id="exit-priority">{headers}<tbody>{table_rows(strict, 'Three-factor exit')}</tbody></table></div>
+<h3 class="subtable-title">Technical exits with acceptable fundamentals</h3>
+<div class="tbl-wrap"><table id="exit-technical">{headers}<tbody>{table_rows(technical, 'Technical exit')}</tbody></table></div>
+<h3 class="subtable-title">Manual verification required</h3>
+<div class="tbl-wrap"><table id="exit-coverage">{headers}<tbody>{table_rows(coverage, 'Fund score floor')}</tbody></table></div>
+"""
 
 
 def render_html(rows: list[dict[str, Any]], generated_at: str) -> str:
@@ -831,6 +915,7 @@ def render_html(rows: list[dict[str, Any]], generated_at: str) -> str:
     summary_rows = _summary_table(rows)
     heatmap_html = _heatmap_grid(rows)
     matrix_rows = _matrix_table(rows)
+    exit_priority_html = _exit_priority_html(rows)
     stage_bits = "".join(f"<span class=\"chip\">{html.escape(k)}: <b>{v}</b></span>" for k, v in sorted(stage_counts.items()))
     signal_bits = "".join(f"<span class=\"chip\">{html.escape(k)}: <b>{v}</b></span>" for k, v in sorted(signal_counts.items()))
     verdict_bits = "".join(f"<span class=\"chip\">{html.escape(k)}: <b>{v}</b></span>" for k, v in sorted(verdict_counts.items()))
@@ -848,6 +933,7 @@ def render_html(rows: list[dict[str, Any]], generated_at: str) -> str:
 .appbar h1{{margin:0;font-size:22px;font-weight:750}} .appbar .meta{{font-size:12px;opacity:.9;margin-top:4px}}
 .content{{max-width:1480px;margin:0 auto;padding:22px}}
 .disc{{background:#fff7ed;color:#92400e;border-left:4px solid #d97706;padding:10px 14px;border-radius:var(--radius);margin-bottom:16px;font-size:12px}}
+.exit-note{{margin:0 0 12px}} .subtable-title{{margin-top:16px}}
 .metrics{{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:16px}}
 .card{{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow)}}
 .label{{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:750}} .value{{font-size:26px;font-weight:850;color:var(--primary-dark);margin-top:2px}}
@@ -864,6 +950,7 @@ h2{{font-size:16px;color:var(--primary-dark);margin:22px 0 10px}} h3{{font-size:
 .heat-3{{background:#dcfce7;color:#14532d}} .heat-2{{background:#e0f2fe;color:#075985}} .heat-1{{background:#fef3c7;color:#92400e}} .heat-0{{background:#fee2e2;color:#991b1b}} .heat-na{{background:#f1f5f9;color:#64748b}}
 .tbl-wrap{{overflow-x:auto;background:#fff;border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}}
 table{{border-collapse:collapse;width:100%;font-size:12px}} th{{background:var(--primary);color:#fff;text-align:left;padding:9px 10px;white-space:nowrap}} td{{padding:8px 10px;border-bottom:1px solid #edf2f2;vertical-align:top}} tbody tr:nth-child(even){{background:rgba(15,118,110,.035)}} .num{{text-align:right;font-variant-numeric:tabular-nums}}
+th.sortable{{cursor:pointer;user-select:none;padding-right:24px;position:relative}} th.sortable:hover{{background:#0b625b}} th.sortable::after{{content:'↕';position:absolute;right:8px;opacity:.55}} th.sortable[aria-sort='ascending']::after{{content:'▲';opacity:1}} th.sortable[aria-sort='descending']::after{{content:'▼';opacity:1}}
 .pill{{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:750;white-space:nowrap}} .buy,.core{{background:#dcfce7;color:#166534}} .sell,.avoid{{background:#fee2e2;color:#991b1b}} .hold,.watch{{background:#f1f5f9;color:#475569}}
 .stock-detail{{background:#fff;border:1px solid var(--line);border-radius:var(--radius);margin:8px 0;box-shadow:var(--shadow)}} .stock-detail summary{{cursor:pointer;padding:12px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}}
 .stock-detail[open]{{outline:2px solid rgba(15,118,110,.12)}} .sym{{font-weight:800;font-size:15px;color:#0f766e}} .muted{{color:var(--muted);font-size:12px}}
@@ -903,6 +990,9 @@ table{{border-collapse:collapse;width:100%;font-size:12px}} th{{background:var(-
     <button class="filter-btn" data-filter="stage2" onclick="setVerdictFilter('stage2', this)" type="button">Stage 2</button>
     <button class="filter-btn" data-filter="watch" onclick="setVerdictFilter('watch', this)" type="button">Watch</button>
     <button class="filter-btn" data-filter="review" onclick="setVerdictFilter('review', this)" type="button">Review</button>
+    <button class="filter-btn" data-signal-filter="BUY" onclick="setSignalFilter('BUY', this)" type="button">BUY signals</button>
+    <button class="filter-btn" data-signal-filter="SELL" onclick="setSignalFilter('SELL', this)" type="button">SELL signals</button>
+    <button class="filter-btn" data-signal-filter="all" onclick="setSignalFilter('all', this)" type="button">All signals</button>
     <button class="filter-btn" onclick="toggleDetails(true)" type="button">Open all</button>
     <button class="filter-btn" onclick="toggleDetails(false)" type="button">Close all</button>
   </div>
@@ -910,6 +1000,8 @@ table{{border-collapse:collapse;width:100%;font-size:12px}} th{{background:var(-
 <h2>Stage Distribution</h2><div class="chips">{stage_bits}</div>
 <h2>Signal Distribution</h2><div class="chips">{signal_bits}</div>
 <h2>Sherlock Verdicts</h2><div class="chips">{verdict_bits}</div>
+<h2>Exit Priority — RS vs NIFTY 500 + Fundamentals + Technicals</h2>
+{exit_priority_html}
 <h2>Sherlock Heat Map</h2>
 {heatmap_html}
 <h2>Heat Map Matrix</h2>
@@ -922,11 +1014,14 @@ table{{border-collapse:collapse;width:100%;font-size:12px}} th{{background:var(-
 {TV_CROSSHAIR_JS}
 <script>
 let verdictFilter = 'all';
+let signalFilter = 'all';
 function matches(el, q){{
   const text = (el.innerText || el.textContent || '').toLowerCase();
   const verdict = el.dataset.verdict || '';
+  const signal = (el.dataset.signal || '').toUpperCase();
   return (!q || text.includes(q) || (el.dataset.symbol || '').toLowerCase().includes(q)) &&
-    (verdictFilter === 'all' || verdict === verdictFilter);
+    (verdictFilter === 'all' || verdict === verdictFilter) &&
+    (signalFilter === 'all' || signal === signalFilter || (signalFilter === 'BUY' && signal === 'STRONG_BUY'));
 }}
 function applyFilters(){{
   const q = (document.getElementById('q').value || '').toLowerCase();
@@ -939,6 +1034,61 @@ function setVerdictFilter(filter, btn){{
   document.querySelectorAll('.filter-btn[data-filter]').forEach(function(b){{ b.classList.remove('active'); }});
   if (btn) btn.classList.add('active');
   applyFilters();
+}}
+function setSignalFilter(filter, btn){{
+  signalFilter = filter;
+  document.querySelectorAll('.filter-btn[data-signal-filter]').forEach(function(b){{ b.classList.remove('active'); }});
+  if (btn) btn.classList.add('active');
+  applyFilters();
+}}
+function sortValue(cell, columnName, numeric){{
+  const text = (cell.innerText || cell.textContent || '').trim().toUpperCase();
+  if (columnName === 'SIGNAL') {{
+    const rank = {{'STRONG_BUY':0,'BUY':1,'HOLD':2,'WEAK_HOLD':3,'SELL':4,'—':5}};
+    return Object.prototype.hasOwnProperty.call(rank, text) ? rank[text] : 6;
+  }}
+  if (columnName === 'STAGE') {{
+    const rank = {{'STAGE_2':0,'STAGE_1':1,'STAGE_3':2,'STAGE_4':3,'UNKNOWN':4,'—':5}};
+    return Object.prototype.hasOwnProperty.call(rank, text) ? rank[text] : 6;
+  }}
+  if (numeric) {{
+    const parsed = Number(text.replace(/[₹,%]/g, '').replace(/,/g, ''));
+    return Number.isFinite(parsed) ? parsed : Number.NEGATIVE_INFINITY;
+  }}
+  return text;
+}}
+function sortTable(table, columnIndex, direction){{
+  const headers = Array.from(table.tHead.rows[0].cells);
+  const header = headers[columnIndex];
+  const numeric = header.classList.contains('num');
+  const columnName = (header.innerText || header.textContent || '').trim().toUpperCase();
+  const rows = Array.from(table.tBodies[0].rows);
+  rows.sort(function(a, b){{
+    const av = sortValue(a.cells[columnIndex], columnName, numeric);
+    const bv = sortValue(b.cells[columnIndex], columnName, numeric);
+    const result = typeof av === 'number' ? av - bv : String(av).localeCompare(String(bv));
+    return direction === 'ascending' ? result : -result;
+  }});
+  rows.forEach(function(row){{ table.tBodies[0].appendChild(row); }});
+  headers.forEach(function(th){{ th.removeAttribute('aria-sort'); }});
+  header.setAttribute('aria-sort', direction);
+}}
+function makeSortable(tableId){{
+  const table = document.getElementById(tableId);
+  if (!table || !table.tHead) return;
+  Array.from(table.tHead.rows[0].cells).forEach(function(th, index){{
+    th.classList.add('sortable');
+    th.title = 'Click to sort';
+    th.tabIndex = 0;
+    function activate(){{
+      const direction = th.getAttribute('aria-sort') === 'ascending' ? 'descending' : 'ascending';
+      sortTable(table, index, direction);
+    }}
+    th.addEventListener('click', activate);
+    th.addEventListener('keydown', function(event){{ if (event.key === 'Enter' || event.key === ' ') {{ event.preventDefault(); activate(); }} }});
+  }});
+  const signalIndex = Array.from(table.tHead.rows[0].cells).findIndex(function(th){{ return (th.textContent || '').trim() === 'Signal'; }});
+  if (signalIndex >= 0) sortTable(table, signalIndex, 'ascending');
 }}
 function toggleDetails(open){{
   document.querySelectorAll('.stock-detail').forEach(function(d){{
@@ -954,6 +1104,11 @@ function focusStock(symbol){{
   detail.scrollIntoView({{behavior:'smooth', block:'start'}});
 }}
 document.addEventListener('DOMContentLoaded', function(){{
+  makeSortable('matrix');
+  makeSortable('summary');
+  makeSortable('exit-priority');
+  makeSortable('exit-technical');
+  makeSortable('exit-coverage');
   applyFilters();
 }});
 </script>

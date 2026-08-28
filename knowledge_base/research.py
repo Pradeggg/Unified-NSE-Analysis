@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import os
 import re
+from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, unquote, urlparse
 
@@ -162,6 +163,41 @@ def search_research_reports(
     return out
 
 
+def _fetch_nse_annual_report(symbol: str, *, do_qa: bool = True) -> dict[str, Any]:
+    """Auto-fetch the latest NSE annual report for symbol into the KB.
+
+    Silently skips if already cached or NSE API is unavailable — never raises.
+    Returns a summary dict compatible with research_symbol's ingested list.
+    """
+    try:
+        import sys as _sys
+        import importlib as _importlib
+        # fetch_annual_reports lives in scripts/ — not on the package path
+        _scripts_dir = str(Path(__file__).resolve().parent.parent / "scripts")
+        if _scripts_dir not in _sys.path:
+            _sys.path.insert(0, _scripts_dir)
+        _mod = _importlib.import_module("fetch_annual_reports")
+        entries = _mod.fetch_ar_listing(symbol)
+        if not entries:
+            return {}
+        entry = entries[0]  # most recent year
+        from_yr = entry.get("fromYr", "?")
+        to_yr   = entry.get("toYr", "?")
+        source_id = _mod._source_id(symbol, from_yr, to_yr)
+        # Skip if already in KB
+        raw_dir = Path(__file__).resolve().parent.parent / "data" / "knowledge_base" / "raw" / source_id
+        if raw_dir.exists() and any(raw_dir.rglob("*.pdf")):
+            return {"url": entry.get("fileName", ""), "brand": "nse_annual_report",
+                    "chunks": "cached", "qa": 0, "note": "already_indexed"}
+        result = _mod.ingest_annual_report(symbol, entry, dry_run=False, force=False)
+        if result.get("status") == "ok":
+            return {"url": entry.get("fileName", ""), "brand": "nse_annual_report",
+                    "chunks": result.get("chunks"), "qa": result.get("qa", 0)}
+        return {}
+    except Exception:
+        return {}  # best-effort, never block the main flow
+
+
 def research_symbol(
     symbol: str,
     *,
@@ -169,10 +205,13 @@ def research_symbol(
     max_results: int = 3,
     do_qa: bool = True,
     dry_run: bool = False,
+    include_annual_report: bool = True,
 ) -> dict[str, Any]:
     """Search → download → ingest. Returns a summary of what landed in the KB.
 
     `dry_run=True` skips ingestion, only returns the candidate URLs.
+    `include_annual_report=True` (default) also auto-fetches the latest NSE
+    annual report so critique_report() has first-party source data.
     """
     sym = symbol.upper().strip()
     candidates = search_research_reports(sym, brand=brand, max_results=max_results)
@@ -185,6 +224,12 @@ def research_symbol(
         "ingested": [],
         "errors": [],
     }
+
+    # Step 0: auto-fetch NSE annual report as first-party KB grounding
+    if include_annual_report and not dry_run:
+        ar = _fetch_nse_annual_report(sym, do_qa=do_qa)
+        if ar:
+            summary["ingested"].append(ar)
 
     if dry_run or not candidates:
         if not candidates:

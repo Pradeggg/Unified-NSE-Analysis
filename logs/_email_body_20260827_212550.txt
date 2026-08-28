@@ -1,0 +1,35 @@
+Agent Adda
+      Thu, 27 Aug 2026 · 21:25 IST
+
+        Report · swing_playbook.html · mode: both
+
+Cautious breadth with balanced, Stage-2 swing setups; intraday confirmation required at reference triggers.
+
+Swing Trade Playbook — 27 Aug 2026
+Research-only update published to Agent Adda Market Intelligence. Attached: swing_playbook.html. Summary below.
+Key takeaways
+  Playbook breadth: 20 candidates, 0 watchlist rows; Swing risk: YES; profile: Balanced with defined reference levels.
+  All candidates require INTRADAY_CONFIRM; triggers are reference levels for further research, not entry instructions.
+  Typical reference stop distance: ~7.2% (Tactical) and ~9.3% (Position); target framework: 1.5R / 2.0R.
+  Top scores (Tactical): LAURUSLABS 87.2 (Trig Rs 1,948.69 / Stop Rs 1,807.85), RRKABEL 86.6 (Rs 2,858.40 / Rs 2,651.80), BLSE 86.6 (Rs 317.19 / Rs 294.26); predominantly Stage 2 structures with strong technical/RS evidence.
+  Portfolio actions: multiple CANDIDATE_ADD flags (e.g., LAURUSLABS, RRKABEL, BLSE, SYRMA, ATHERENERG, SAILIFE); REVIEW_STOP: COFORGE, ENDURANCE, RATEGain; STOP_LOSS_BREACH: MINDACORP (₹690.65 vs stop ₹697.50), RPTECH (₹782.50 vs stop ₹794.56).
+What to watch
+  Intraday confirmation near triggers: LAURUSLABS (Rs 1,948.69), RRKABEL (Rs 2,858.40), BLSE (Rs 317.19), SYRMA (Rs 1,508.43), ATHERENERG (Rs 1,510.25).
+  Volume and liquidity: validate rising volume at/through triggers; avoid thin liquidity.
+  Stops under review: monitor COFORGE, ENDURANCE, RATEGain for further weakness; reassess risk bands.
+  Breach follow-up: MINDACORP and RPTECH closed below reference stops—review against independent risk rules.
+How to use this
+  Confirm live price vs. trigger and intraday volume before drawing conclusions; treat triggers/stops as model references.
+  Size positions to your own risk; report context suggests up to ~1.0% account equity risk per idea in a balanced profile.
+  Reduce notional when reference stop distance is wide; adjust targets using your methodology.
+  For holdings with REVIEW_STOP or STOP_LOSS_BREACH, re-evaluate exposure against your plan and market conditions.
+  Compliance and disclaimer
+  Research and educational use only. This is not investment advice or a buy/sell recommendation. Agent Adda is not a SEBI-registered research analyst or investment adviser. All signals, scores, prices, and labels are model outputs and are not personalized advice. Markets involve risk, including loss of capital. Verify all information (price, liquidity, volume) independently and consult a SEBI-registered professional before acting.
+
+  Regards,
+
+  Agent Adda
+
+  ShunyaAI · NSE Market Intelligence
+
+Not investment advice. For research and learning only. NSE EOD + live snapshot data.

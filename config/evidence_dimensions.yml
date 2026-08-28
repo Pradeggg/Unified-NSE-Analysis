@@ -1,0 +1,140 @@
+# Evidence Dimensions (FTS-only) — v1
+#
+# Purpose:
+# - Define reusable "dimensions" (orders, guidance, credit ratings, etc.)
+# - Define sector overlays (banks/NBFC, infra/shipping, defence, pharma, auto)
+# - Provide query templates for multi-pass evidence-pack retrieval (FTS).
+#
+# Conventions:
+# - Templates support placeholders: {co} (company/alias), {sector} (sector overlay label)
+# - Keep queries short; prefer 3–6 templates per dimension to reduce noise.
+
+version: 1
+
+dimensions:
+  orders_orderbook:
+    title: "Orders / Order Book"
+    category: "orders"
+    templates:
+      - "\"order book\" OR \"order intake\" OR \"order inflow\" OR \"order backlog\""
+      - "\"contract win\" OR \"letter of award\" OR LoA OR tender OR EPC"
+      - "L1 OR \"lowest bidder\" OR \"purchase order\" OR PO"
+      - "({co}) AND (\"order book\" OR \"order intake\" OR LoA OR tender)"
+
+  results_financials:
+    title: "Results / Earnings"
+    category: "results"
+    templates:
+      - "\"quarterly results\" OR \"financial results\" OR earnings"
+      - "revenue OR sales OR EBITDA OR OPM OR PAT OR \"net profit\""
+      - "({co}) AND (results OR earnings OR EBITDA OR PAT OR revenue)"
+
+  guidance_outlook:
+    title: "Guidance / Outlook"
+    category: "guidance"
+    templates:
+      - "guidance OR outlook OR \"FY guidance\" OR \"full year\""
+      - "\"we expect\" OR \"we anticipate\" OR targeting"
+      - "({co}) AND (guidance OR outlook OR targeting)"
+
+  margins_pricing:
+    title: "Margins / Pricing / Costs"
+    category: "margins"
+    templates:
+      - "margin OR EBITDA OR OPM OR \"gross margin\""
+      - "pricing OR realisation OR \"price hike\" OR \"price erosion\""
+      - "\"input cost\" OR \"cost pressure\" OR \"commodity inflation\""
+      - "({co}) AND (margin OR pricing OR realisation OR \"input cost\")"
+
+  working_capital_cash_debt:
+    title: "Working Capital / Cash / Debt"
+    category: "balance_sheet"
+    templates:
+      - "\"working capital\" OR receivables OR debtors OR inventory"
+      - "CFO OR \"operating cash flow\" OR \"cash conversion\" OR \"cash cycle\""
+      - "debt OR leverage OR \"net debt\" OR refinancing"
+      - "({co}) AND (\"working capital\" OR receivables OR CFO OR debt)"
+
+  capex_capacity:
+    title: "Capex / Capacity"
+    category: "capex"
+    templates:
+      - "capex OR \"capital expenditure\""
+      - "\"capacity expansion\" OR \"new plant\" OR commissioning OR \"ramp up\""
+      - "utilisation OR \"capacity utilisation\""
+      - "({co}) AND (capex OR \"capacity expansion\" OR utilisation)"
+
+  policy_regulatory:
+    title: "Policy / Regulation / Government"
+    category: "policy"
+    templates:
+      - "policy OR regulation OR \"gazette notification\""
+      - "\"Union Budget\" OR RBI OR \"rate cut\" OR PLI OR subsidy"
+      - "duty OR tariff OR \"import duty\" OR \"export duty\""
+      - "({sector}) AND (policy OR regulation OR RBI OR PLI OR duty OR subsidy)"
+
+  credit_ratings:
+    title: "Credit Ratings"
+    category: "credit"
+    templates:
+      - "rating OR outlook OR upgrade OR downgrade OR \"rating reaffirmed\""
+      - "CRISIL OR ICRA OR CARE OR \"India Ratings\""
+      - "covenant OR \"debt servicing\" OR \"credit metrics\""
+      - "({co}) AND (CRISIL OR ICRA OR CARE OR \"India Ratings\" OR rating OR outlook)"
+
+  ownership_flows:
+    title: "Ownership / Flows"
+    category: "ownership"
+    templates:
+      - "FII OR DII OR \"mutual fund\" OR \"shareholding pattern\""
+      - "pledge OR \"bulk deal\" OR \"block deal\" OR insider"
+      - "({co}) AND (FII OR DII OR \"bulk deal\" OR \"block deal\" OR pledge OR insider)"
+
+  management_concall:
+    title: "Management / Concall"
+    category: "concall"
+    templates:
+      - "concall OR \"earnings call\" OR transcript OR \"investor presentation\""
+      - "\"Q&A\" OR \"question\" OR \"answer\" OR \"analyst\""
+      - "({co}) AND (concall OR transcript OR \"earnings call\" OR \"investor presentation\")"
+
+sector_overlays:
+  banks_nbfc:
+    label: "banks/NBFC"
+    templates:
+      - "NIM OR NII OR \"net interest margin\" OR \"net interest income\""
+      - "CASA OR \"cost of funds\" OR \"deposit growth\" OR \"credit growth\""
+      - "GNPA OR NNPA OR slippages OR \"credit cost\" OR provisions OR PCR"
+      - "AUM OR disbursements OR \"collection efficiency\" OR ALM OR LCR OR CRAR OR CET1"
+      - "RBI AND (circular OR guidelines OR \"risk weights\" OR \"digital lending\" OR NBFC)"
+
+  infra_shipping:
+    label: "infra/shipping"
+    templates:
+      - "EPC OR HAM OR BOT OR \"hybrid annuity\" OR NHAI OR MoRTH"
+      - "arbitration OR claims OR \"project delay\" OR \"cost overrun\""
+      - "mobilisation OR \"working capital\" OR receivables"
+      - "freight OR \"charter rates\" OR TCE OR bunker OR \"dry dock\""
+      - "BDI OR \"Baltic Dry\" OR \"container rates\" OR \"port congestion\""
+
+  defence:
+    label: "defence"
+    templates:
+      - "MoD OR DAC OR AoN OR RFP OR RFQ"
+      - "indigenisation OR \"negative import list\" OR ToT OR offsets"
+      - "defence AND (contract OR order OR LoA OR tender OR trial OR qualification)"
+
+  pharma:
+    label: "pharma"
+    templates:
+      - "USFDA OR \"Form 483\" OR \"warning letter\" OR EIR OR \"import alert\" OR GMP"
+      - "ANDA OR \"para IV\" OR FTF OR \"first to file\""
+      - "\"price erosion\" OR remediation OR compliance"
+
+  auto:
+    label: "auto"
+    templates:
+      - "dispatches OR wholesales OR \"retail sales\" OR \"dealer inventory\""
+      - "\"price hike\" OR discounts OR bookings OR \"waiting period\""
+      - "EV OR battery OR PLI OR \"new model\" OR charging"
+      - "\"chip shortage\" OR supplier OR \"commodity cost\" OR steel OR aluminium"

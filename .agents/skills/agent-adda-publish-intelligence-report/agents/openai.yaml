@@ -1,0 +1,4 @@
+interface:
+  display_name: "Agent Adda Publish Report"
+  short_description: "Publish Agent Adda reports and notify recipients"
+  default_prompt: "Use $agent-adda-publish-intelligence-report to validate, publish, verify, and prepare notification for an Agent Adda Market Intelligence report."

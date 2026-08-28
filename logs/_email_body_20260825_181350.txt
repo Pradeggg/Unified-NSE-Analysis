@@ -1,0 +1,33 @@
+Agent Adda
+      Tue, 25 Aug 2026 · 18:13 IST
+
+        Report · eod_market_report.html · mode: both
+
+NSE EOD Market Report — 24 Aug 2026
+Published to Agent Adda Market Intelligence. Attached: eod_market_report.html. Summary below.
+Market read: Risk-off session; NIFTY -0.44% to 24,178 and BANKNIFTY -0.77% to 57,384; breadth trough at 15:00 (+27.5% advancers) following a 09:00 expansion to +49.1%.
+Key takeaways
+  Indices: NIFTY closed at 24,178.05 (-0.44%), range 24,144.45–24,312.85; BANKNIFTY 57,383.75 (-0.77%), range 57,248.90–57,873.75; late prints marginally positive despite weak breadth.
+  Breadth: Hourly advancers ranged from +49.1% (09:00) to +27.5% (15:00); late A/D at 15:00 was 11/29, marking the broadest risk-off phase.
+  Sectors: Leadership from IT - Services (+3.72%); Chemicals & Specialty (+1.67%) and IT & Technology (+0.54%) also positive. Laggards included Pharmaceuticals & Biotechnology (-2.52%); Banking clusters were negative on the day.
+  Participation: Stored universe of 57 stocks; volume peaked at 09:00 (157.7L). Most active names included ADANIPOWER 89.2L (-1.04%), HDFCBANK 23.3L (-0.50%), AMBUJACEM 19.5L (-1.72%), AARTIIND 18.8L (+2.65%), and INFY 17.9L (+0.73%).
+  Movers: Top advancers: AKUMS +4.33%, ADSL +3.72%, AARTIIND +2.65%. Top decliners: AEGISLOG -5.82%, AMAGI -3.93%, ADVANCE -3.03%.
+What to watch
+  Whether early-session breadth (>~45–50%) persists; a fade would frame the rebound as tactical rather than a fresh trend impulse.
+  Durability of IT leadership versus continued underperformance in Pharmaceuticals & Biotechnology; monitor BANKNIFTY relative strength.
+  Participation quality: assess if the 09:00 volume peak reflected accumulation or distribution via follow-through in volume leaders (e.g., ADANIPOWER, HDFCBANK).
+  Reference levels: NIFTY 24,144/24,313 and BANKNIFTY 57,249/57,874 for potential reaction zones.
+How to use this
+  Incorporate the hourly breadth windows (09:00 strength, 15:00 trough) into session planning and post-trade reviews.
+  Update watchlists around sector tilts (overweight IT clusters; monitor Pharma/Biotech weakness) and high-volume names for liquidity-aware execution.
+  Set alerts near the cited index ranges and re-check leadership/laggard lists for continuity into the next session.
+  Use the Stage/Signal annotations as research inputs only; corroborate with your own risk framework.
+Coverage note: this analysis uses the stored intraday 15m universe and is not a complete NSE-wide breadth measure unless the capture universe is complete. For research and learning only; this is not investment advice.
+
+  Regards,
+
+  Agent Adda
+
+  ShunyaAI · NSE Market Intelligence
+
+Not investment advice. For research and learning only. NSE EOD + live snapshot data.

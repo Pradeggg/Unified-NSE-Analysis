@@ -1,6 +1,6 @@
 import unittest
 
-from company_intelligence_analyze import (
+from company_intelligence.company_intelligence_analyze import (
     build_deliberation_view,
     score_evidence_coverage,
     strict_mode_passes,

@@ -1,0 +1,37 @@
+Agent Adda
+      Mon, 24 Aug 2026 · 18:57 IST
+
+        Report · sector_rotation.html · mode: both
+
+Market read: Rotation regime (60%) in slowdown; VIX rising, weak breadth; DIIs buying while FIIs sell.
+Sector Rotation Report — 24 Aug 2026
+Cover note: End-of-day data as of Fri, 21 Aug 2026. The report has been published to Agent Adda Market Intelligence and is provided as a research summary. Attachment: sector_rotation.html. Live report URL (plaintext): https://agentadda.in/stocks/reports/sector-rotation-2026-08-24
+  Regime: Rotation (60%); Econ cycle: Slowdown (66%) VIX: 11.7 (+4.5% d/d); Nifty 50: 24,219 (-0.1% d/d) Flows 5D: FII -₹1,602 Cr; DII +₹17,316 Cr (Today: FII -₹543 Cr; DII +₹2,124 Cr)
+  Breadth: Nifty50 43% >200DMA; Smallcap 38% >200DMA Internals: McClellan -9.2 (Neutral); TRIN 0.54 (Bullish); A/D -19 Global corr: Decoupling alerts — USDINR, Gold
+
+Key takeaways
+ IT & Technology leads rotation (Score 7.3) with 1M +6.9% and 100% of constituents >50DMA; six sectors are outperforming the Nifty 500 baseline.
+ Next cohorts: Media & Entertainment 1M +7.8% (Score 5.8); Capital Goods & Industrials 1M +3.5% (Score 5.7); Pharma & Healthcare 1M +2.4% (Score 5.2). Mid-tier pockets: Capital Markets (4.4) and Logistics & Transport (4.0).
+ Flows remain divergent: FIIs are net sellers over 5D (-₹1,602 Cr) while DIIs are strong net buyers (+₹17,316 Cr).
+ Market breadth is weak with a mild bearish divergence (A/D -19), though TRIN is bullish, indicating potential for internal stabilization.
+ Macro backdrop is mixed: VIX rising from low levels; decoupling in USDINR and Gold; Nifty 50 flat on the day.
+ Regime/seasonality mapping favors slowdown-resilient groups — FMCG, Pharma, IT; cautions on Metals, Auto, and Real Estate.
+ What to watch
+ Confirmation signals: shift to net FII inflows and sustained breadth improvement (>50DMA and >200DMA participation).
+ Volatility path: a decline in VIX from 11.7 would support risk-on; continued rise would argue for defense.
+ Sector follow-through: IT near-term volatility (5D -2.6%); Pharma breadth (45% >50DMA) for wider participation; Logistics RS durability (>2.7% threshold).
+ Global decoupling: persistence of USDINR and Gold correlation breaks vs Nifty 500.
+  How to use this
+  Maintain a defensive, selective posture given mixed breadth and rising VIX.
+ Tilt research focus toward slowdown-resilient sectors (IT, FMCG, Pharma); use mid-tier groups (Logistics, Capital Markets) tactically with price confirmation.
+ Avoid pro-cyclical laggards (Metals, Auto, Real Estate) per current regime mapping until evidence improves.
+ Track FII/DII flow shifts and sector breadth to reassess conviction.
+  Disclaimer: This email summarizes AI/rules-based market intelligence and is not investment advice or a trading recommendation. Validate all data, prices, liquidity, corporate events, and risks independently before making any financial decision.
+
+  Regards,
+
+  Agent Adda
+
+  ShunyaAI · NSE Market Intelligence
+
+Not investment advice. For research and learning only. NSE EOD + live snapshot data.

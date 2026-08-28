@@ -1,6 +1,6 @@
 import unittest
 
-from voice_command import parse_ask_voice_args, parse_voice_briefing_args, parse_voice_live_args
+from voice.voice_command import parse_ask_voice_args, parse_voice_briefing_args, parse_voice_live_args
 
 
 class VoiceCommandTests(unittest.TestCase):

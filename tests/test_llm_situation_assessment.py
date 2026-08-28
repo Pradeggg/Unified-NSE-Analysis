@@ -101,6 +101,32 @@ def test_llm_situation_assessment_rejects_unsafe_tool_plan():
     assert assessment is None
 
 
+def test_llm_situation_assessment_rejects_unresolved_symbol_placeholder():
+    backend = FakeBackend(
+        {
+            "applies": True,
+            "decision": "run_tool_plan",
+            "confidence": 0.98,
+            "user_is_asking": "Fetch latest financial results.",
+            "context_found": "No prior context.",
+            "resolved_entities": ["<RESOLVED_NSE_SYMBOL>"],
+            "tool_plan": [
+                {"tool": "get_latest_results", "args": {"symbol": "<RESOLVED_NSE_SYMBOL>"}},
+            ],
+            "synthesis_intent": "stock_results",
+        }
+    )
+
+    assessment = classify_llm_situation_assessment(
+        "Can you pull the latest financial results and technical analysis of LTFoods",
+        None,
+        backend,
+        data_mode="historical",
+    )
+
+    assert assessment is None
+
+
 def test_agent_situation_stage_uses_llm_before_deterministic_followup():
     agent = Agent()
     agent.backend = FakeBackend(

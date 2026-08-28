@@ -1,0 +1,2711 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Agent Adda Smallcap Portfolio - Phase 1 Evidence Packs</title>
+  <style>
+    :root {
+      --ink:#17222b;
+      --muted:#63717c;
+      --line:#dbe3e8;
+      --paper:#ffffff;
+      --soft:#f4f7f8;
+      --soft2:#eef5f1;
+      --green:#0e6b52;
+      --blue:#1f5d8f;
+      --amber:#9a6a00;
+      --red:#9a332b;
+    }
+    * { box-sizing:border-box; }
+    html { scroll-behavior:smooth; }
+    body {
+      margin:0;
+      color:var(--ink);
+      background:#fbfcfd;
+      font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;
+    }
+    header, main, footer { padding:24px 32px; }
+    header {
+      background:var(--paper);
+      border-bottom:1px solid var(--line);
+      position:sticky;
+      top:0;
+      z-index:3;
+    }
+    h1 { margin:0 0 6px; font-size:28px; letter-spacing:0; }
+    h2 { margin:28px 0 12px; font-size:20px; letter-spacing:0; }
+    h3 { margin:0; font-size:21px; letter-spacing:0; }
+    h3 small { display:block; color:var(--muted); font-weight:500; font-size:13px; }
+    h4 { margin:0 0 10px; font-size:14px; text-transform:uppercase; letter-spacing:.04em; color:#3e505c; }
+    p { margin:0 0 10px; }
+    a { color:var(--blue); text-decoration:none; }
+    a:hover { text-decoration:underline; }
+    nav { display:flex; gap:8px; flex-wrap:wrap; margin-top:14px; }
+    nav a { border:1px solid var(--line); border-radius:8px; padding:6px 9px; background:var(--soft); }
+    .meta { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; color:var(--muted); }
+    .pill { border:1px solid var(--line); border-radius:8px; padding:7px 9px; background:var(--soft); }
+    .summary {
+      display:grid;
+      grid-template-columns:repeat(6,minmax(150px,1fr));
+      gap:10px;
+      margin-top:8px;
+    }
+    .metric {
+      background:var(--paper);
+      border:1px solid var(--line);
+      border-radius:8px;
+      padding:11px;
+      min-height:82px;
+    }
+    .metric span { display:block; color:var(--muted); font-size:12px; }
+    .metric b { display:block; margin-top:3px; font-size:21px; }
+    .metric small { display:block; margin-top:4px; color:var(--muted); }
+    .business-case {
+      margin-top:18px;
+      padding-top:4px;
+    }
+    .lead {
+      max-width:980px;
+      color:#33454f;
+      font-size:15px;
+    }
+    .case-grid {
+      display:grid;
+      grid-template-columns:repeat(3,minmax(0,1fr));
+      gap:10px;
+      margin:12px 0;
+    }
+    .case-card {
+      background:var(--paper);
+      border:1px solid var(--line);
+      border-radius:8px;
+      padding:13px;
+      min-height:126px;
+    }
+    .case-card h3 {
+      margin:0 0 7px;
+      font-size:16px;
+    }
+    .case-card p {
+      color:var(--muted);
+    }
+    .steps {
+      grid-template-columns:repeat(2,minmax(0,1fr));
+    }
+    .step-card {
+      min-height:118px;
+    }
+    .strategy-read {
+      grid-template-columns:repeat(6,minmax(130px,1fr));
+    }
+    .compact-table table {
+      min-width:560px;
+    }
+    .metrics-list {
+      display:grid;
+      grid-template-columns:repeat(2,minmax(0,1fr));
+      gap:8px 18px;
+      background:var(--paper);
+      border:1px solid var(--line);
+      border-radius:8px;
+      padding:14px 14px 14px 32px;
+    }
+    .decision {
+      border-left:5px solid var(--green);
+      background:var(--soft2);
+      border-radius:8px;
+      padding:14px;
+      margin-top:18px;
+    }
+    .candidate {
+      background:var(--paper);
+      border:1px solid var(--line);
+      border-left:5px solid var(--green);
+      border-radius:8px;
+      margin:14px 0;
+      padding:16px;
+    }
+    .candidate.retest { border-left-color:var(--amber); }
+    .candidate-head {
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-start;
+      gap:16px;
+    }
+    .eyebrow { color:var(--muted); font-size:12px; text-transform:uppercase; letter-spacing:.05em; }
+    .score-chip {
+      min-width:78px;
+      text-align:center;
+      color:var(--green);
+      border:1px solid #bad8cd;
+      background:#f2faf6;
+      border-radius:8px;
+      padding:9px;
+      font-size:25px;
+      font-weight:800;
+    }
+    .score-chip span { font-size:12px; color:var(--muted); }
+    .metrics, .columns {
+      display:grid;
+      grid-template-columns:repeat(4,minmax(0,1fr));
+      gap:10px;
+      margin-top:12px;
+    }
+    .columns { grid-template-columns:1fr 1fr; gap:14px; }
+    .columns section, .mini-table, .ratio-grid, .trade-grid {
+      min-width:0;
+    }
+    .scorebar { margin:9px 0; }
+    .scorebar-head { display:flex; justify-content:space-between; gap:10px; font-size:12px; color:var(--muted); }
+    .scorebar-head b { color:var(--ink); }
+    .bar { height:8px; background:#e7ecef; border-radius:999px; overflow:hidden; margin-top:4px; }
+    .bar span { display:block; height:100%; background:linear-gradient(90deg,var(--blue),var(--green)); }
+    .trade-grid, .ratio-grid {
+      display:grid;
+      grid-template-columns:repeat(2,minmax(0,1fr));
+      gap:8px;
+      margin:10px 0;
+    }
+    .theme-box {
+      margin-top:12px;
+      border:1px solid var(--line);
+      border-radius:8px;
+      padding:12px;
+      background:#fbfdfb;
+    }
+    .theme-grid {
+      display:grid;
+      grid-template-columns:repeat(4,minmax(0,1fr));
+      gap:8px;
+      margin:10px 0;
+    }
+    .trade-grid div, .ratio-grid div, .theme-grid div {
+      border:1px solid var(--line);
+      border-radius:8px;
+      padding:8px;
+      background:var(--soft);
+    }
+    .trade-grid span, .ratio-grid span, .theme-grid span { display:block; color:var(--muted); font-size:12px; }
+    .trade-grid b, .ratio-grid b, .theme-grid b { display:block; margin-top:2px; overflow-wrap:anywhere; }
+    .theme-grid small { display:block; color:var(--muted); margin-top:2px; }
+    .compact { margin-top:10px; }
+    .strong { font-weight:700; color:var(--ink); }
+    .warning { color:#5c4100; background:#fff8e5; border-left:4px solid var(--amber); padding:9px; border-radius:8px; }
+    .muted { color:var(--muted); }
+    ul { margin:0; padding-left:19px; }
+    li { margin:5px 0; }
+    .source-list { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px 14px; padding-left:0; list-style:none; }
+    .source-list span { display:block; color:var(--muted); font-size:12px; }
+    .mini-table { overflow:auto; border:1px solid var(--line); border-radius:8px; margin:10px 0; }
+    table { width:100%; border-collapse:collapse; min-width:760px; }
+    th, td { border-bottom:1px solid var(--line); padding:8px; text-align:left; vertical-align:top; }
+    th { background:#eef3f5; color:#31434f; font-size:12px; }
+    td span { display:block; color:var(--muted); }
+    .table-wrap { overflow:auto; border:1px solid var(--line); border-radius:8px; background:var(--paper); }
+    .table-wrap table { min-width:1200px; }
+    footer { color:var(--muted); border-top:1px solid var(--line); background:var(--paper); }
+    @media (max-width: 1100px) {
+      .summary { grid-template-columns:repeat(3,minmax(150px,1fr)); }
+      .case-grid, .steps, .strategy-read { grid-template-columns:repeat(2,minmax(0,1fr)); }
+      .metrics { grid-template-columns:repeat(2,minmax(0,1fr)); }
+      .columns { grid-template-columns:1fr; }
+      .theme-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+      .metrics-list { grid-template-columns:1fr; }
+      .source-list { grid-template-columns:1fr; }
+    }
+    @media (max-width: 720px) {
+      header, main, footer { padding:16px; }
+      header { position:static; }
+      h1 { font-size:23px; }
+      .summary, .metrics { grid-template-columns:1fr; }
+      .case-grid, .steps, .strategy-read { grid-template-columns:1fr; }
+      .theme-grid { grid-template-columns:1fr; }
+      .candidate-head { flex-direction:column; }
+      .score-chip { width:100%; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Agent Adda Smallcap Portfolio - Phase 1 Evidence Packs</h1>
+    <p>Clean trigger-map names and retest-only names from the 2026-08-06 smallcap portfolio policy gate.</p>
+    <div class="meta">
+      <span class="pill">Generated: 2026-08-06 22:26 IST</span>
+      <span class="pill">Policy: docs/fund_policies/2026-08-06-smallcap-super-performers-fund-policy.md</span>
+      <span class="pill">Input: Mutual Funds/extracted/agent_adda_smallcap_policy_gate_20260806.csv</span>
+      <span class="pill">Research only</span>
+    </div>
+    <nav><a href="#SYRMA">SYRMA</a>
+<a href="#AEGISVOPAK">AEGISVOPAK</a>
+<a href="#KARURVYSYA">KARURVYSYA</a>
+<a href="#VMART">VMART</a>
+<a href="#FIVESTAR">FIVESTAR</a>
+<a href="#SONACOMS">SONACOMS</a>
+<a href="#NETWEB">NETWEB</a>
+<a href="#WELCORP">WELCORP</a>
+<a href="#RAINBOW">RAINBOW</a>
+<a href="#WEWORK">WEWORK</a></nav>
+  </header>
+  <main>
+    <section class="summary">
+
+      <div class="metric">
+        <span>Clean candidates</span>
+        <b>5</b>
+        <small>trigger-map only</small>
+      </div>
+
+
+      <div class="metric">
+        <span>Retest candidates</span>
+        <b>5</b>
+        <small>no-chase watch</small>
+      </div>
+
+
+      <div class="metric">
+        <span>Best score</span>
+        <b>80.8</b>
+        <small>SYRMA</small>
+      </div>
+
+
+      <div class="metric">
+        <span>Clean exposure</span>
+        <b>Rs. 79,014</b>
+        <small>cap Rs. 200,000</small>
+      </div>
+
+
+      <div class="metric">
+        <span>Clean risk</span>
+        <b>Rs. 7,054</b>
+        <small>cap Rs. 30,000</small>
+      </div>
+
+
+      <div class="metric">
+        <span>All trigger-map exposure</span>
+        <b>Rs. 151,397</b>
+        <small>risk Rs. 13,696</small>
+      </div>
+
+    </section>
+
+
+    <section class="business-case">
+      <h2>Business Case And Operating Approach</h2>
+      <p class="lead">This section explains how the report becomes a portfolio process. The current artifact is not a buy list; it is the bridge from research to controlled paper-portfolio operation.</p>
+
+      <div class="case-grid">
+        <section class="case-card">
+          <h3>Objective</h3>
+          <p>Build an internal, paper-only smallcap portfolio process that can identify asymmetric opportunities while proving that selection, sizing, risk control, and review discipline work before any live-capital discussion.</p>
+        </section>
+
+
+        <section class="case-card">
+          <h3>Why Now</h3>
+          <p>The current smallcap research stack has three useful inputs at the same time: local Agent Adda stage/technical evidence, refreshed company fundamentals, and mutual-fund holding overlap. The business case is to convert that research into a repeatable portfolio operating system.</p>
+        </section>
+
+
+        <section class="case-card">
+          <h3>Edge Hypothesis</h3>
+          <p>The edge is not one model. It is the combination of theme confirmation, fundamental acceleration, relative-strength momentum, liquidity discipline, and stop-risk sizing.</p>
+        </section>
+
+
+        <section class="case-card">
+          <h3>Constraints</h3>
+          <p>This is an internal paper/model portfolio only. It is long-only, no leverage, no derivatives, no forced deployment, and no automatic order from narrative research or LLM output.</p>
+        </section>
+
+
+        <section class="case-card">
+          <h3>Success Definition</h3>
+          <p>Success means a controlled process: documented evidence packs, pre-defined triggers, realistic paper execution, measurable expectancy, drawdown control, and benchmark-relative review.</p>
+        </section>
+        </div>
+
+      <h2>Current Strategy Read</h2>
+      <div class="case-grid strategy-read">
+
+      <div class="metric">
+        <span>Deployment phase</span>
+        <b>Phase 1 pilot</b>
+        <small>evidence packs and trigger map</small>
+      </div>
+
+
+      <div class="metric">
+        <span>Eligible clean names</span>
+        <b>5</b>
+        <small>governance and live trigger still pending</small>
+      </div>
+
+
+      <div class="metric">
+        <span>Retest reserve</span>
+        <b>5</b>
+        <small>no-chase watchlist</small>
+      </div>
+
+
+      <div class="metric">
+        <span>Modelled clean exposure</span>
+        <b>Rs. 79,014</b>
+        <small>Phase 1 cap Rs. 200,000</small>
+      </div>
+
+
+      <div class="metric">
+        <span>Modelled clean risk</span>
+        <b>Rs. 7,054</b>
+        <small>open-risk cap Rs. 30,000</small>
+      </div>
+
+
+      <div class="metric">
+        <span>Order status</span>
+        <b>None</b>
+        <small>no automatic paper buy</small>
+      </div>
+
+      </div>
+
+      <h2>Approach</h2>
+      <div class="case-grid steps">
+        <section class="case-card step-card">
+          <h3>1. Source The Universe</h3>
+          <p>Start from Agent Adda smallcap screens, stage snapshots, index/sector evidence, mutual-fund overlap files, and current company fundamentals.</p>
+        </section>
+
+
+        <section class="case-card step-card">
+          <h3>2. Score And Gate</h3>
+          <p>Apply the 100-point scorecard across theme, fundamentals, technicals, liquidity, governance, and valuation/reward-risk. Scores create research priority, not orders.</p>
+        </section>
+
+
+        <section class="case-card step-card">
+          <h3>3. Build Evidence Packs</h3>
+          <p>For each active candidate, attach financials, ratios, shareholding, source links, technical levels, theme thesis, risks, and invalidation rules.</p>
+        </section>
+
+
+        <section class="case-card step-card">
+          <h3>4. Map Triggers</h3>
+          <p>Convert eligible names into pre-defined breakout, retest, or pullback triggers with stop, 2R target, no-chase rule, and paper quantity.</p>
+        </section>
+
+
+        <section class="case-card step-card">
+          <h3>5. Portfolio-Risk Check</h3>
+          <p>Before a paper order, check NAV, available cash, sector cap, single-stock cap, liquidity cap, risk to stop, total open risk, and event gap risk.</p>
+        </section>
+
+
+        <section class="case-card step-card">
+          <h3>6. Journal And Review</h3>
+          <p>Every paper order, skip, add, trim, and exit must create a journal entry with thesis, result, R multiple, postmortem, and policy lesson.</p>
+        </section>
+        </div>
+
+      <div class="columns">
+        <section>
+          <h2>Governance Model</h2>
+          <div class="table-wrap compact-table">
+            <table>
+              <thead><tr><th>Role</th><th>Responsibility</th></tr></thead>
+              <tbody>
+        <tr>
+          <td><b>Research engine</b></td>
+          <td>Finds themes, screens stocks, gathers company/technical/source evidence, and drafts scorecards.</td>
+        </tr>
+
+
+        <tr>
+          <td><b>Strategy engine</b></td>
+          <td>Turns approved candidates into deterministic entry, stop, sizing, exit, and backtest rules.</td>
+        </tr>
+
+
+        <tr>
+          <td><b>Portfolio manager</b></td>
+          <td>Allocates paper capital, enforces caps, approves skips/orders, and manages adds/trims/exits.</td>
+        </tr>
+
+
+        <tr>
+          <td><b>Reviewer</b></td>
+          <td>Challenges assumptions, reviews postmortems, and approves policy changes only with evidence.</td>
+        </tr>
+        </tbody>
+            </table>
+          </div>
+        </section>
+        <section>
+          <h2>Implementation Roadmap</h2>
+          <div class="table-wrap compact-table">
+            <table>
+              <thead><tr><th>Phase</th><th>Deliverable</th><th>Status</th></tr></thead>
+              <tbody>
+        <tr>
+          <td><b>Phase A</b></td>
+          <td>Policy and business case</td>
+          <td>Complete</td>
+        </tr>
+
+
+        <tr>
+          <td><b>Phase B</b></td>
+          <td>Candidate evidence packs and trigger map</td>
+          <td>Current artifact</td>
+        </tr>
+
+
+        <tr>
+          <td><b>Phase C</b></td>
+          <td>Portfolio Lab integration with managed paper orders</td>
+          <td>Next</td>
+        </tr>
+
+
+        <tr>
+          <td><b>Phase D</b></td>
+          <td>Backtest, liquidity stress, gap/slippage sensitivity</td>
+          <td>Pending</td>
+        </tr>
+
+
+        <tr>
+          <td><b>Phase E</b></td>
+          <td>Daily paper operations, journal, weekly/monthly review</td>
+          <td>Pending</td>
+        </tr>
+        </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+
+      <h2>Operating Metrics</h2>
+      <ul class="metrics-list"><li>NAV, cash, gross exposure, and benchmark-relative return.</li>
+<li>Open positions, stock weights, sector exposure, and cash drag.</li>
+<li>Stop level, rupee risk to stop, total open risk, and gap-risk flags.</li>
+<li>Closed trade count, hit rate, average win/loss, expectancy, profit factor, and max drawdown.</li>
+<li>Rule adherence: entries skipped for no-chase, liquidity, stale data, governance, or event risk.</li></ul>
+    </section>
+
+
+    <section class="decision">
+      <h2>Execution Decision</h2>
+      <p><b>No paper order is created yet.</b> The policy output is a trigger map. Every candidate still requires governance/filing review, current-source reconciliation, and a live trigger with volume confirmation before any Agent Adda Smallcap Portfolio paper slot can be booked.</p>
+      <p>The clean Phase 1 list is SYRMA, AEGISVOPAK, KARURVYSYA, VMART, FIVESTAR. The retest-only list is SONACOMS, NETWEB, WELCORP, RAINBOW, WEWORK. SYRMA ranks highest, but the report keeps its valuation and working-capital risks visible instead of treating the score as automatic approval.</p>
+    </section>
+
+    <h2>Theme Board</h2>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Stock</th><th>Theme Lens</th><th>Stock Expression</th><th>Confirmation</th><th>Theme Risk</th><th>Priority Impact</th><th>Theme Score</th></tr>
+        </thead>
+        <tbody>
+            <tr>
+              <td><a href="#SYRMA"><b>SYRMA</b></a><span>Clean trigger map</span></td>
+              <td>India EMS and manufacturing scale-up</td>
+              <td>Syrma is the EMS expression in the basket: high growth, Stage 2 price behavior, and mutual-fund overlap, but not a valuation bargain.</td>
+              <td>Fresh Jun 2026 result in local cache, high relative strength, Stage 2 trend, and policy theme fit through industrial manufacturing.</td>
+              <td>Expensive EMS expectations, working-capital deterioration, customer/product execution risk, and promoter holding reduction.</td>
+              <td>Highest clean-candidate priority, but only after governance review and trigger confirmation.</td>
+              <td>13.0<span>CONFIRMED</span></td>
+            </tr>
+
+
+            <tr>
+              <td><a href="#AEGISVOPAK"><b>AEGISVOPAK</b></a><span>Clean trigger map</span></td>
+              <td>Energy storage, terminals, and logistics infrastructure</td>
+              <td>Aegis Vopak represents terminal infrastructure rather than commodity-price exposure. The market is rewarding the asset theme, visible in relative strength.</td>
+              <td>Stage 2 trend, strong relative strength, fresh Jun 2026 result cache, and adequate traded value for a small-cap paper slot.</td>
+              <td>High P/E and P/B, leverage, interest capitalization concerns, short listed history, and asset-heavy capex execution.</td>
+              <td>Good theme watch, but valuation and balance-sheet review must be stricter than for SYRMA.</td>
+              <td>14.0<span>CONFIRMED</span></td>
+            </tr>
+
+
+            <tr>
+              <td><a href="#KARURVYSYA"><b>KARURVYSYA</b></a><span>Clean trigger map</span></td>
+              <td>Private-bank credit cycle and regional lending franchise</td>
+              <td>Karur Vysya is the valuation-and-liquidity counterweight in the clean list. It is less thematic momentum and more compounding-through-credit-cycle evidence.</td>
+              <td>Fresh Jun 2026 result cache, strong institutional holding, Stage 2 price trend, and very high traded value.</td>
+              <td>Lower relative strength than the leaders, thin current volume ratio in the policy scan, and bank-specific NPA/NIM/CASA/credit-cost evidence still needing review.</td>
+              <td>Useful diversifier if the trigger arrives with participation, not the first momentum buy.</td>
+              <td>12.0<span>BUILDING</span></td>
+            </tr>
+
+
+            <tr>
+              <td><a href="#VMART"><b>VMART</b></a><span>Clean trigger map</span></td>
+              <td>Value retail and discretionary consumption recovery</td>
+              <td>V-Mart is the consumer recovery expression. The stock has Stage 2 behavior, but the fundamental thesis depends on execution and margin recovery.</td>
+              <td>Fresh Jun 2026 result cache, Stage 2 trend, improving momentum score, and sampled fund ownership overlap.</td>
+              <td>Modest operating margin, not-cheap valuation, weaker liquidity versus the top candidates, and execution/management-transition risk.</td>
+              <td>Keep as active watch; require a clean retest or high-quality breakout before slotting.</td>
+              <td>12.0<span>BUILDING</span></td>
+            </tr>
+
+
+            <tr>
+              <td><a href="#FIVESTAR"><b>FIVESTAR</b></a><span>Clean trigger map</span></td>
+              <td>Secured MSME and small-business NBFC lending</td>
+              <td>Five Star gives NBFC exposure with visible profitability, but the score is constrained by valuation, modest growth, and shareholding/governance questions.</td>
+              <td>Fresh Jun 2026 result cache, Stage 2 trend, acceptable liquidity, and healthy operating profitability in cached financials.</td>
+              <td>NBFC asset quality, borrowing cost, high valuation, low promoter holding, and promoter holding decline.</td>
+              <td>Watch-only until asset-quality and governance review is complete; do not lead Phase 1.</td>
+              <td>11.0<span>BUILDING</span></td>
+            </tr>
+
+
+            <tr>
+              <td><a href="#SONACOMS"><b>SONACOMS</b></a><span>Retest trigger map</span></td>
+              <td>EV and premium auto-component content</td>
+              <td>Sona BLW is the EV/auto-component quality proxy, but the policy scan flags no-chase behavior.</td>
+              <td>Fresh result cache, Stage 2 trend, and auto-component policy theme fit.</td>
+              <td>Extended setup, valuation risk, export/customer-cycle sensitivity, and EV demand volatility.</td>
+              <td>Retest-only; no fresh allocation at current extension.</td>
+              <td>11.0<span>CROWDED</span></td>
+            </tr>
+
+
+            <tr>
+              <td><a href="#NETWEB"><b>NETWEB</b></a><span>Retest trigger map</span></td>
+              <td>AI, HPC, and data-center infrastructure</td>
+              <td>Netweb is a direct digital-infrastructure momentum proxy.</td>
+              <td>Fresh result cache, Stage 2 trend, and very high traded value.</td>
+              <td>Valuation, order concentration, capacity execution, and extended price behavior.</td>
+              <td>Attractive theme, but retest-only under no-chase discipline.</td>
+              <td>10.0<span>CROWDED</span></td>
+            </tr>
+
+
+            <tr>
+              <td><a href="#WELCORP"><b>WELCORP</b></a><span>Retest trigger map</span></td>
+              <td>Industrial pipes and energy infrastructure capex</td>
+              <td>Welspun Corp gives cyclical industrial capex exposure.</td>
+              <td>Fresh result cache, high relative strength, Stage 2 trend, and strong liquidity.</td>
+              <td>Cyclical order timing, commodity/input-cost swings, and extended RSI.</td>
+              <td>Retest-only because the technical gate is extended.</td>
+              <td>11.0<span>CROWDED</span></td>
+            </tr>
+
+
+            <tr>
+              <td><a href="#RAINBOW"><b>RAINBOW</b></a><span>Retest trigger map</span></td>
+              <td>Specialty healthcare services and hospital capacity</td>
+              <td>Rainbow is the healthcare-services quality and expansion proxy.</td>
+              <td>Fresh result cache, Stage 2 trend, operating-margin evidence, and sampled fund overlap.</td>
+              <td>Capex ramp-up, occupancy, doctor availability, and valuation risk.</td>
+              <td>Retest-only; useful defensive-growth watch if price resets.</td>
+              <td>11.0<span>CROWDED</span></td>
+            </tr>
+
+
+            <tr>
+              <td><a href="#WEWORK"><b>WEWORK</b></a><span>Retest trigger map</span></td>
+              <td>Flexible workspace and managed office demand</td>
+              <td>WeWork India represents office-services growth rather than pure real-estate ownership.</td>
+              <td>Fresh result cache, Stage 2 trend, healthy operating-margin evidence, and adequate liquidity.</td>
+              <td>Lease liabilities, occupancy execution, cyclicality in office demand, and short market history.</td>
+              <td>Retest-only; needs more listing-history and governance comfort.</td>
+              <td>11.0<span>CROWDED</span></td>
+            </tr>
+            </tbody>
+      </table>
+    </div>
+
+    <h2>Clean Phase 1 Evidence Packs</h2>
+
+    <article id="SYRMA" class="candidate clean">
+      <div class="candidate-head">
+        <div>
+          <span class="eyebrow">Clean trigger map / Rank 1</span>
+          <h3>SYRMA <small>Syrma SGS Technology Ltd</small></h3>
+          <p>Best clean candidate, but valuation/governance must clear before order.</p>
+        </div>
+        <div class="score-chip">80.8<span>/100</span></div>
+      </div>
+
+      <div class="metrics">
+
+      <div class="metric">
+        <span>Policy rating</span>
+        <b>Core Candidate</b>
+        <small>PHASE1_TRIGGER_MAP_GOVERNANCE_PENDING</small>
+      </div>
+
+
+      <div class="metric">
+        <span>Price / stage</span>
+        <b>1,418.0</b>
+        <small>STAGE_2 / RSI 57.6</small>
+      </div>
+
+
+      <div class="metric">
+        <span>RS</span>
+        <b>31.2</b>
+        <small>RS score 8.5/10</small>
+      </div>
+
+
+      <div class="metric">
+        <span>Paper slot</span>
+        <b>Rs. 19,852</b>
+        <small>14 sh / risk Rs. 1,418</small>
+      </div>
+
+      </div>
+
+      <section class="theme-box">
+        <h4>Theme Detail</h4>
+        <div class="theme-grid">
+          <div>
+            <span>Lens</span>
+            <b>India EMS and manufacturing scale-up</b>
+          </div>
+          <div>
+            <span>Policy Status</span>
+            <b>Capital goods / industrial manufacturing</b>
+            <small>CONFIRMED / theme score 13.0/15</small>
+          </div>
+          <div>
+            <span>Stock Expression</span>
+            <b>Syrma is the EMS expression in the basket: high growth, Stage 2 price behavior, and mutual-fund overlap, but not a valuation bargain.</b>
+          </div>
+          <div>
+            <span>Priority Impact</span>
+            <b>Highest clean-candidate priority, but only after governance review and trigger confirmation.</b>
+          </div>
+        </div>
+        <p>The theme is domestic electronics manufacturing, outsourcing, and import substitution. It stays attractive only if revenue growth converts into cash and margins without excess inventory or receivable stretch.</p>
+        <div class="columns compact">
+          <section>
+            <h4>Theme Confirmation</h4>
+            <p>Fresh Jun 2026 result in local cache, high relative strength, Stage 2 trend, and policy theme fit through industrial manufacturing.</p>
+          </section>
+          <section>
+            <h4>Theme Risk / Invalidation</h4>
+            <p>Expensive EMS expectations, working-capital deterioration, customer/product execution risk, and promoter holding reduction.</p>
+            <p class="muted">Growth quality weakens, cash conversion deteriorates, or the stock fails the mapped retest/breakout with volume.</p>
+          </section>
+        </div>
+      </section>
+
+      <div class="columns">
+        <section>
+          <h4>Score Components</h4>
+
+      <div class="scorebar">
+        <div class="scorebar-head"><span>Theme</span><b>13.0 / 15</b></div>
+        <div class="bar"><span style="width:86.7%"></span></div>
+      </div>
+
+
+      <div class="scorebar">
+        <div class="scorebar-head"><span>Fundamental</span><b>18.7 / 25</b></div>
+        <div class="bar"><span style="width:74.8%"></span></div>
+      </div>
+
+
+      <div class="scorebar">
+        <div class="scorebar-head"><span>Technical</span><b>20.1 / 25</b></div>
+        <div class="bar"><span style="width:80.4%"></span></div>
+      </div>
+
+
+      <div class="scorebar">
+        <div class="scorebar-head"><span>Liquidity</span><b>15.0 / 15</b></div>
+        <div class="bar"><span style="width:100.0%"></span></div>
+      </div>
+
+
+      <div class="scorebar">
+        <div class="scorebar-head"><span>Governance</span><b>6.0 / 10</b></div>
+        <div class="bar"><span style="width:60.0%"></span></div>
+      </div>
+
+
+      <div class="scorebar">
+        <div class="scorebar-head"><span>Valuation/RR</span><b>8.0 / 10</b></div>
+        <div class="bar"><span style="width:80.0%"></span></div>
+      </div>
+
+        </section>
+        <section>
+          <h4>Trigger Plan</h4>
+          <p class="strong">Break above 1532.88 with volume, or retest-hold near 1379.22; skip if &gt;5% above planned trigger.</p>
+          <div class="trade-grid">
+            <div><span>Stop</span><b>1,316.7</b></div>
+            <div><span>2R target</span><b>1,620.6</b></div>
+            <div><span>Turnover</span><b>200.8 cr</b></div>
+            <div><span>Volume ratio</span><b>0.8</b></div>
+          </div>
+          <p class="warning">Not an order. Governance/filing review and live trigger confirmation remain mandatory.</p>
+        </section>
+      </div>
+
+      <div class="columns">
+        <section>
+          <h4>Fundamental View</h4>
+          <p>EMS growth is strong and fresh Q1 data is available. The main offset is valuation, promoter reduction, and working-capital stretch.</p>
+
+      <div class="mini-table">
+        <table>
+          <thead><tr><th>Period</th><th>Label</th><th>Revenue Cr</th><th>PAT Cr</th><th>OPM</th><th>Revenue Chg</th><th>PAT Chg</th></tr></thead>
+          <tbody><tr><td>Latest quarter</td><td>Jun 2026</td><td>1,589.0</td><td>106.0</td><td>10.0%</td><td>68.3%</td><td>112.0%</td></tr>
+<tr><td>Previous quarter</td><td>Mar 2026</td><td>1,465.0</td><td>119.0</td><td>12.0%</td><td>8.5%</td><td>-10.9%</td></tr>
+<tr><td>Year-ago quarter</td><td>Jun 2025</td><td>944.0</td><td>50.0</td><td>9.0%</td><td></td><td></td></tr>
+<tr><td>Latest annual</td><td>Mar 2026</td><td>4,819.0</td><td>346.0</td><td>11.0%</td><td>27.3%</td><td>88.0%</td></tr></tbody>
+        </table>
+      </div>
+      <p class="muted">Borrowings 400.0; Net debt -147.0; Assets 5,767.0; Operating CF 290.0; Net CF 111.0</p>
+
+          <div class="ratio-grid"><div><span>Market cap</span><b>27,337</b></div>
+<div><span>P/E</span><b>73.6</b></div>
+<div><span>P/B or book</span><b>148</b></div>
+<div><span>ROE</span><b>14.0</b></div>
+<div><span>ROCE</span><b>16.8</b></div>
+<div><span>Dividend yield</span><b>0.11</b></div>
+<div><span>Promoters</span><b>42.28%</b></div>
+<div><span>FII/DII</span><b>7.51% / 15.90%</b></div></div>
+        </section>
+        <section>
+          <h4>Technical And Sector View</h4>
+          <p>Stage 2 with good relative strength and a non-extended RSI. Breakout or 20DMA retest can be mapped, but the order is not executable until volume confirms.</p>
+          <p>Industrial manufacturing/EMS remains a high-growth manufacturing theme.</p>
+          <div class="trade-grid">
+            <div><span>Tech price</span><b>1,418.0</b></div>
+            <div><span>20DMA / 50DMA</span><b>1,379.2 / 1,330.0</b></div>
+            <div><span>ADX</span><b>32.3</b></div>
+            <div><span>52W gap</span><b>-6.6%</b></div>
+          </div>
+        </section>
+      </div>
+
+      <div class="columns">
+        <section>
+          <h4>Strengths</h4>
+          <ul>
+            <li>overlaps one sampled small-cap fund; high relative strength; current Stage 2 trend; profit growth evidence</li>
+<li>Company has reduced debt.</li>
+<li>Company is expected to give good quarter</li>
+<li>Company has delivered good profit growth of 36.3% CAGR over last 5 years</li>
+          </ul>
+        </section>
+        <section>
+          <h4>Risks And Kill Switches</h4>
+          <ul>
+            <li>setup backtest sample provisional</li>
+<li>GOVERNANCE_REVIEW_PENDING</li>
+<li>Stock is trading at 9.55 times its book value</li>
+<li>Company has a low return on equity of 10.4% over last 3 years.</li>
+<li>Promoter holding has decreased over last 3 years: -4.99%</li>
+          </ul>
+        </section>
+      </div>
+
+      <section>
+        <h4>Source Trail</h4>
+        <p class="muted">Domains captured: bseindia.com, nseindia.com, screener.in, syrmasgs.com</p>
+        <ul class="source-list"><li><a href="https://www.syrmasgs.com/investor-relations/">Company IR: Q1 FY2027 results and earnings materials</a><span>syrmasgs.com</span></li>
+<li><a href="https://www.screener.in/company/SYRMA/consolidated/">Screener structured fundamentals</a><span>screener.in</span></li>
+<li><a href="https://www.nseindia.com/get-quotes/equity?symbol=SYRMA">NSE quote page</a><span>nseindia.com</span></li>
+<li><a href="https://www.bseindia.com/stock-share-price/syrma-sgs-technology-ltd/SYRMA/543573/">BSE company page</a><span>bseindia.com</span></li>
+<li><a href="https://www.bseindia.com/stock-share-price/syrma-sgs-technology-ltd/SYRMA/543573/corp-announcements/">BSE announcement: All</a><span>bseindia.com</span></li>
+<li><a href="https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=13ead359-db88-472c-948c-9941361e182e.pdf">BSE announcement: Announcement under Regulation 30 (LODR)-Earnings Call Transcript4 Aug- Earning Call Transc</a><span>bseindia.com</span></li>
+<li><a href="https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=b79ef4ab-e509-4d36-8caf-e08968659034.pdf">BSE announcement: Announcement under Regulation 30 (LODR)-Newspaper Publication4 Aug- Post dispatch Newspape</a><span>bseindia.com</span></li>
+<li><a href="https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=35f78458-fda9-4486-b457-33d418a9eca5.pdf">Concall transcript: Jun 2026</a><span>bseindia.com</span></li></ul>
+      </section>
+    </article>
+
+
+    <article id="AEGISVOPAK" class="candidate clean">
+      <div class="candidate-head">
+        <div>
+          <span class="eyebrow">Clean trigger map / Rank 2</span>
+          <h3>AEGISVOPAK <small>Aegis Vopak Terminals Limited</small></h3>
+          <p>Theme and relative strength are attractive; valuation/leverage history makes this active watch.</p>
+        </div>
+        <div class="score-chip">73.2<span>/100</span></div>
+      </div>
+
+      <div class="metrics">
+
+      <div class="metric">
+        <span>Policy rating</span>
+        <b>Active Watch</b>
+        <small>PHASE1_TRIGGER_MAP_GOVERNANCE_PENDING</small>
+      </div>
+
+
+      <div class="metric">
+        <span>Price / stage</span>
+        <b>288.7</b>
+        <small>STAGE_2 / RSI 59.5</small>
+      </div>
+
+
+      <div class="metric">
+        <span>RS</span>
+        <b>37.0</b>
+        <small>RS score 8.5/10</small>
+      </div>
+
+
+      <div class="metric">
+        <span>Paper slot</span>
+        <b>Rs. 14,724</b>
+        <small>51 sh / risk Rs. 1,472</small>
+      </div>
+
+      </div>
+
+      <section class="theme-box">
+        <h4>Theme Detail</h4>
+        <div class="theme-grid">
+          <div>
+            <span>Lens</span>
+            <b>Energy storage, terminals, and logistics infrastructure</b>
+          </div>
+          <div>
+            <span>Policy Status</span>
+            <b>Infrastructure / terminals</b>
+            <small>CONFIRMED / theme score 14.0/15</small>
+          </div>
+          <div>
+            <span>Stock Expression</span>
+            <b>Aegis Vopak represents terminal infrastructure rather than commodity-price exposure. The market is rewarding the asset theme, visible in relative strength.</b>
+          </div>
+          <div>
+            <span>Priority Impact</span>
+            <b>Good theme watch, but valuation and balance-sheet review must be stricter than for SYRMA.</b>
+          </div>
+        </div>
+        <p>The theme is long-duration liquid/gas storage infrastructure with operating leverage. It works when utilization, pricing, and debt-service comfort support the asset base.</p>
+        <div class="columns compact">
+          <section>
+            <h4>Theme Confirmation</h4>
+            <p>Stage 2 trend, strong relative strength, fresh Jun 2026 result cache, and adequate traded value for a small-cap paper slot.</p>
+          </section>
+          <section>
+            <h4>Theme Risk / Invalidation</h4>
+            <p>High P/E and P/B, leverage, interest capitalization concerns, short listed history, and asset-heavy capex execution.</p>
+            <p class="muted">Security-cover/debt review weakens, Q1 margins do not support the thesis, or price loses 20DMA support after a failed breakout.</p>
+          </section>
+        </div>
+      </section>
+
+      <div class="columns">
+        <section>
+          <h4>Score Components</h4>
+
+      <div class="scorebar">
+        <div class="scorebar-head"><span>Theme</span><b>14.0 / 15</b></div>
+        <div class="bar"><span style="width:93.3%"></span></div>
+      </div>
+
+
+      <div class="scorebar">
+        <div class="scorebar-head"><span>Fundamental</span><b>14.8 / 25</b></div>
+        <div class="bar"><span style="width:59.2%"></span></div>
+      </div>
+
+
+      <div class="scorebar">
+        <div class="scorebar-head"><span>Technical</span><b>17.9 / 25</b></div>
+        <div class="bar"><span style="width:71.6%"></span></div>
+      </div>
+
+
+      <div class="scorebar">
+        <div class="scorebar-head"><span>Liquidity</span><b>15.0 / 15</b></div>
+        <div class="bar"><span style="width:100.0%"></span></div>
+      </div>
+
+
+      <div class="scorebar">
+        <div class="scorebar-head"><span>Governance</span><b>3.5 / 10</b></div>
+        <div class="bar"><span style="width:35.0%"></span></div>
+      </div>
+
+
+      <div class="scorebar">
+        <div class="scorebar-head"><span>Valuation/RR</span><b>8.0 / 10</b></div>
+        <div class="bar"><span style="width:80.0%"></span></div>
+      </div>
+
+        </section>
+        <section>
+          <h4>Trigger Plan</h4>
+          <p class="strong">Break above 314.60 with volume, or retest-hold near 289.32; skip if &gt;5% above planned trigger.</p>
+          <div class="trade-grid">
+            <div><span>Stop</span><b>259.8</b></div>
+            <div><span>2R target</span><b>346.4</b></div>
+            <div><span>Turnover</span><b>64.7 cr</b></div>
+            <div><span>Volume ratio</span><b>1.5</b></div>
+          </div>
+          <p class="warning">Not an order. Governance/filing review and live trigger confirmation remain mandatory.</p>
+        </section>
+      </div>
+
+      <div class="columns">
+        <section>
+          <h4>Fundamental View</h4>
+          <p>Terminal infrastructure has high operating margin, but the stock screens expensive and carries leverage/interest-capitalization concerns.</p>
+
+      <div class="mini-table">
+        <table>
+          <thead><tr><th>Period</th><th>Label</th><th>Revenue Cr</th><th>PAT Cr</th><th>OPM</th><th>Revenue Chg</th><th>PAT Chg</th></tr></thead>
+          <tbody><tr><td>Latest quarter</td><td>Jun 2026</td><td>234.0</td><td>69.0</td><td>77.0%</td><td>12.5%</td><td>-12.7%</td></tr>
+<tr><td>Previous quarter</td><td>Mar 2026</td><td>243.0</td><td>74.0</td><td>74.0%</td><td>-3.7%</td><td>-6.8%</td></tr>
+<tr><td>Year-ago quarter</td><td>Jun 2025</td><td>208.0</td><td>79.0</td><td>75.0%</td><td></td><td></td></tr>
+<tr><td>Latest annual</td><td>Mar 2026</td><td>923.0</td><td>342.0</td><td>74.0%</td><td>17.0%</td><td>52.0%</td></tr></tbody>
+        </table>
+      </div>
+      <p class="muted">Borrowings 3,731.0; Net debt 3,731.0; Assets 8,421.0; Operating CF 702.0; Net CF -419.0</p>
+
+          <div class="ratio-grid"><div><span>Market cap</span><b>31,976</b></div>
+<div><span>P/E</span><b>118</b></div>
+<div><span>P/B or book</span><b>38.7</b></div>
+<div><span>ROE</span><b>11.0</b></div>
+<div><span>ROCE</span><b>7.56</b></div>
+<div><span>Dividend yield</span><b>0.07</b></div>
+<div><span>Promoters</span><b>86.94%</b></div>
+<div><span>FII/DII</span><b>5.35% / 5.30%</b></div></div>
+        </section>
+        <section>
+          <h4>Technical And Sector View</h4>
+          <p>Stage 2 and high relative strength, with strong traded value. It needs the mapped trigger rather than a chase after the result move.</p>
+          <p>Liquid/gas logistics and storage is infrastructure-linked with long-duration assets.</p>
+          <div class="trade-grid">
+            <div><span>Tech price</span><b>288.7</b></div>
+            <div><span>20DMA / 50DMA</span><b>289.3 / 251.9</b></div>
+            <div><span>ADX</span><b>31.6</b></div>
+            <div><span>52W gap</span><b>-7.3%</b></div>
+          </div>
+        </section>
+      </div>
+
+      <div class="columns">
+        <section>
+          <h4>Strengths</h4>
+          <ul>
+            <li>overlaps one sampled small-cap fund; high relative strength; current Stage 2 trend; profit growth evidence</li>
+          </ul>
+        </section>
+        <section>
+          <h4>Risks And Kill Switches</h4>
+          <ul>
+            <li>fundamental score weak; setup backtest sample provisional</li>
+<li>GOVERNANCE_REVIEW_PENDING</li>
+<li>Stock is trading at 7.46 times its book value</li>
+<li>Company has a low return on equity of 12.0% over last 3 years.</li>
+<li>Company might be capitalizing the interest cost</li>
+          </ul>
+        </section>
+      </div>
+
+      <section>
+        <h4>Source Trail</h4>
+        <p class="muted">Domains captured: aegisvopak.com, bseindia.com, nseindia.com, screener.in</p>
+        <ul class="source-list"><li><a href="https://www.aegisvopak.com/investors">Company IR: investor presentations and exchange communications</a><span>aegisvopak.com</span></li>
+<li><a href="https://www.screener.in/company/AEGISVOPAK/consolidated/">Screener structured fundamentals</a><span>screener.in</span></li>
+<li><a href="https://www.nseindia.com/get-quotes/equity?symbol=AEGISVOPAK">NSE quote page</a><span>nseindia.com</span></li>
+<li><a href="https://www.bseindia.com/stock-share-price/aegis-vopak-terminals-ltd/AEGISVOPAK/544407/">BSE company page</a><span>bseindia.com</span></li>
+<li><a href="https://www.bseindia.com/stock-share-price/aegis-vopak-terminals-ltd/AEGISVOPAK/544407/corp-announcements/">BSE announcement: All</a><span>bseindia.com</span></li>
+<li><a href="https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=4dccd3ec-147c-4174-8ffa-12297802ca33.pdf">BSE announcement: Announcement under Regulation 30 (LODR)-Investor Presentation6 Aug</a><span>bseindia.com</span></li>
+<li><a href="https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=d8ad0020-c854-447e-889f-b7e7ada1fbce.pdf">BSE announcement: Announcement Under Regulation 30 Of SEBI LODR - Framework Agreement Executed Between KCPL </a><span>bseindia.com</span></li>
+<li><a href="https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=53674766-2875-4330-9e54-960fcfc5a869.pdf">Concall transcript: Jun 2026</a><span>bseindia.com</span></li></ul>
+      </section>
+    </article>
+
+
+    <article id="KARURVYSYA" class="candidate clean">
+      <div class="candidate-head">
+        <div>
+          <span class="eyebrow">Clean trigger map / Rank 3</span>
+          <h3>KARURVYSYA <small>Karur Vysya Bank Limited</small></h3>
+          <p>Best valuation/liquidity balance among the clean five, but technical leadership is lower.</p>
+        </div>
+        <div class="score-chip">71.5<span>/100</span></div>
+      </div>
+
+      <div class="metrics">
+
+      <div class="metric">
+        <span>Policy rating</span>
+        <b>Active Watch</b>
+        <small>PHASE1_TRIGGER_MAP_GOVERNANCE_PENDING</small>
+      </div>
+
+
+      <div class="metric">
+        <span>Price / stage</span>
+        <b>337.5</b>
+        <small>STAGE_2 / RSI 68.3</small>
+      </div>
+
+
+      <div class="metric">
+        <span>RS</span>
+        <b>11.5</b>
+        <small>RS score 4.0/10</small>
+      </div>
+
+
+      <div class="metric">
+        <span>Paper slot</span>
+        <b>Rs. 14,850</b>
+        <small>44 sh / risk Rs. 1,522</small>
+      </div>
+
+      </div>
+
+      <section class="theme-box">
+        <h4>Theme Detail</h4>
+        <div class="theme-grid">
+          <div>
+            <span>Lens</span>
+            <b>Private-bank credit cycle and regional lending franchise</b>
+          </div>
+          <div>
+            <span>Policy Status</span>
+            <b>Financial services</b>
+            <small>BUILDING / theme score 12.0/15</small>
+          </div>
+          <div>
+            <span>Stock Expression</span>
+            <b>Karur Vysya is the valuation-and-liquidity counterweight in the clean list. It is less thematic momentum and more compounding-through-credit-cycle evidence.</b>
+          </div>
+          <div>
+            <span>Priority Impact</span>
+            <b>Useful diversifier if the trigger arrives with participation, not the first momentum buy.</b>
+          </div>
+        </div>
+        <p>The theme is mid-sized private bank credit growth with profitability, asset-quality, and deposit-franchise discipline.</p>
+        <div class="columns compact">
+          <section>
+            <h4>Theme Confirmation</h4>
+            <p>Fresh Jun 2026 result cache, strong institutional holding, Stage 2 price trend, and very high traded value.</p>
+          </section>
+          <section>
+            <h4>Theme Risk / Invalidation</h4>
+            <p>Lower relative strength than the leaders, thin current volume ratio in the policy scan, and bank-specific NPA/NIM/CASA/credit-cost evidence still needing review.</p>
+            <p class="muted">Asset quality, NIM, or credit-cost commentary deteriorates, or relative strength fails against bank benchmarks.</p>
+          </section>
+        </div>
+      </section>
+
+      <div class="columns">
+        <section>
+          <h4>Score Components</h4>
+
+      <div class="scorebar">
+        <div class="scorebar-head"><span>Theme</span><b>12.0 / 15</b></div>
+        <div class="bar"><span style="width:80.0%"></span></div>
+      </div>
+
+
+      <div class="scorebar">
+        <div class="scorebar-head"><span>Fundamental</span><b>17.3 / 25</b></div>
+        <div class="bar"><span style="width:69.2%"></span></div>
+      </div>
+
+
+      <div class="scorebar">
+        <div class="scorebar-head"><span>Technical</span><b>15.7 / 25</b></div>
+        <div class="bar"><span style="width:62.8%"></span></div>
+      </div>
+
+
+      <div class="scorebar">
+        <div class="scorebar-head"><span>Liquidity</span><b>13.0 / 15</b></div>
+        <div class="bar"><span style="width:86.7%"></span></div>
+      </div>
+
+
+      <div class="scorebar">
+        <div class="scorebar-head"><span>Governance</span><b>6.0 / 10</b></div>
+        <div class="bar"><span style="width:60.0%"></span></div>
+      </div>
+
+
+      <div class="scorebar">
+        <div class="scorebar-head"><span>Valuation/RR</span><b>7.5 / 10</b></div>
+        <div class="bar"><span style="width:75.0%"></span></div>
+      </div>
+
+        </section>
+        <section>
+          <h4>Trigger Plan</h4>
+          <p class="strong">Break above 355.32 with volume, or retest-hold near 327.74; skip if &gt;5% above planned trigger.</p>
+          <div class="trade-grid">
+            <div><span>Stop</span><b>302.9</b></div>
+            <div><span>2R target</span><b>406.7</b></div>
+            <div><span>Turnover</span><b>247.4 cr</b></div>
+            <div><span>Volume ratio</span><b>0.2</b></div>
+          </div>
+          <p class="warning">Not an order. Governance/filing review and live trigger confirmation remain mandatory.</p>
+        </section>
+      </div>
+
+      <div class="columns">
+        <section>
+          <h4>Fundamental View</h4>
+          <p>Fresh bank result evidence and institutional ownership are positives. The analysis needs NPA, CASA, NIM, credit-cost, and capital adequacy checks before capital deployment.</p>
+
+      <div class="mini-table">
+        <table>
+          <thead><tr><th>Period</th><th>Label</th><th>Revenue Cr</th><th>PAT Cr</th><th>OPM</th><th>Revenue Chg</th><th>PAT Chg</th></tr></thead>
+          <tbody><tr><td>Latest quarter</td><td>Jun 2026</td><td>1,864.5</td><td>755.7</td><td>NA</td><td>22.1%</td><td>44.9%</td></tr>
+<tr><td>Previous quarter</td><td>Mar 2026</td><td>1,974.6</td><td>725.0</td><td>NA</td><td>-5.6%</td><td>4.2%</td></tr>
+<tr><td>Year-ago quarter</td><td>Jun 2025</td><td>1,526.6</td><td>521.5</td><td>NA</td><td></td><td></td></tr>
+<tr><td>Latest annual</td><td>Mar 2026</td><td>7,022.9</td><td>2,510.3</td><td>NA</td><td>15.3%</td><td>29.3%</td></tr></tbody>
+        </table>
+      </div>
+      <p class="muted">Balance sheet/cash-flow cache is not complete for this symbol.</p>
+
+          <div class="ratio-grid"><div><span>Market cap</span><b>₹32625 Cr</b></div>
+<div><span>P/E</span><b>11.88</b></div>
+<div><span>P/B or book</span><b>2.31</b></div>
+<div><span>ROE</span><b>N/A (see financials)</b></div>
+<div><span>ROCE</span><b>NA</b></div>
+<div><span>Dividend yield</span><b>0.77%</b></div>
+<div><span>Promoters</span><b>2.07%</b></div>
+<div><span>FII/DII</span><b>17.92% / 41.22%</b></div></div>
+        </section>
+        <section>
+          <h4>Technical And Sector View</h4>
+          <p>Stage 2 with high RSI but weaker relative strength than the leaders. Current volume ratio is thin, so the trigger needs stronger participation.</p>
+          <p>Private bank exposure is cyclical and rate/credit-cost sensitive.</p>
+          <div class="trade-grid">
+            <div><span>Tech price</span><b>337.5</b></div>
+            <div><span>20DMA / 50DMA</span><b>327.7 / 306.0</b></div>
+            <div><span>ADX</span><b>35.4</b></div>
+            <div><span>52W gap</span><b>-4.1%</b></div>
+          </div>
+        </section>
+      </div>
+
+      <div class="columns">
+        <section>
+          <h4>Strengths</h4>
+          <ul>
+            <li>owned by two sampled small-cap funds; current Stage 2 trend; profit growth evidence</li>
+          </ul>
+        </section>
+        <section>
+          <h4>Risks And Kill Switches</h4>
+          <ul>
+            <li>GOVERNANCE_REVIEW_PENDING; WATCH_THIN_CURRENT_VOLUME</li>
+<li>Asset-quality or credit-cost trend worsens.</li>
+<li>Relative strength fails versus Bank/Nifty benchmarks.</li>
+<li>Price closes below mapped stop or 50DMA structure.</li>
+          </ul>
+        </section>
+      </div>
+
+      <section>
+        <h4>Source Trail</h4>
+        <p class="muted">Domains captured: bseindia.com, kvb.bank.in, nseindia.com, screener.in</p>
+        <ul class="source-list"><li><a href="https://www.kvb.bank.in/about-us/financial-performance/financial-reports-recent-quarter/">Company financial report: quarter ended June 30, 2026</a><span>kvb.bank.in</span></li>
+<li><a href="https://www.screener.in/company/KARURVYSYA/consolidated/">Screener structured fundamentals</a><span>screener.in</span></li>
+<li><a href="https://www.nseindia.com/get-quotes/equity?symbol=KARURVYSYA">NSE quote page</a><span>nseindia.com</span></li>
+<li><a href="https://www.bseindia.com/stock-share-price/karur-vysya-bank-ltd/KARURVYSYA/590003/">BSE company page</a><span>bseindia.com</span></li>
+<li><a href="https://www.bseindia.com/stock-share-price/karur-vysya-bank-ltd/KARURVYSYA/590003/corp-announcements/">BSE announcement: All</a><span>bseindia.com</span></li>
+<li><a href="https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=E1D5ADDD-11DA-41A8-8964-0E89FD4A5C18-102147.pdf">BSE announcement: Schedule of Institutional Investors/Analysts meet6 Aug- Karur Vysya Bank schedules Avendus</a><span>bseindia.com</span></li>
+<li><a href="https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=39E8716B-20FC-4A3B-BF5D-4FA293C242BF-075545.pdf">BSE announcement: Proceedings of Annual General Meeting (AGM)6 Aug- 107th AGM held on 5 Aug 2026; approved R</a><span>bseindia.com</span></li>
+<li><a href="https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=540E6A3D-71D2-4B9C-B386-86F383AA654F-155555.pdf">Concall transcript: Jul 2026</a><span>bseindia.com</span></li>
+<li><a href="https://www.kvb.bank.in/docs/investor-con-call-transcript-fy26-4.pdf">Concall transcript: May 2026</a><span>kvb.bank.in</span></li></ul>
+      </section>
+    </article>
+
+
+    <article id="VMART" class="candidate clean">
+      <div class="candidate-head">
+        <div>
+          <span class="eyebrow">Clean trigger map / Rank 4</span>
+          <h3>VMART <small>V-Mart Retail Ltd.</small></h3>
+          <p>Consumer recovery watch; still needs valuation and execution comfort.</p>
+        </div>
+        <div class="score-chip">67.1<span>/100</span></div>
+      </div>
+
+      <div class="metrics">
+
+      <div class="metric">
+        <span>Policy rating</span>
+        <b>Active Watch</b>
+        <small>PHASE1_TRIGGER_MAP_GOVERNANCE_PENDING</small>
+      </div>
+
+
+      <div class="metric">
+        <span>Price / stage</span>
+        <b>813.9</b>
+        <small>STAGE_2 / RSI 65.6</small>
+      </div>
+
+
+      <div class="metric">
+        <span>RS</span>
+        <b>19.1</b>
+        <small>RS score 5.5/10</small>
+      </div>
+
+
+      <div class="metric">
+        <span>Paper slot</span>
+        <b>Rs. 14,650</b>
+        <small>18 sh / risk Rs. 1,326</small>
+      </div>
+
+      </div>
+
+      <section class="theme-box">
+        <h4>Theme Detail</h4>
+        <div class="theme-grid">
+          <div>
+            <span>Lens</span>
+            <b>Value retail and discretionary consumption recovery</b>
+          </div>
+          <div>
+            <span>Policy Status</span>
+            <b>Consumer / retail</b>
+            <small>BUILDING / theme score 12.0/15</small>
+          </div>
+          <div>
+            <span>Stock Expression</span>
+            <b>V-Mart is the consumer recovery expression. The stock has Stage 2 behavior, but the fundamental thesis depends on execution and margin recovery.</b>
+          </div>
+          <div>
+            <span>Priority Impact</span>
+            <b>Keep as active watch; require a clean retest or high-quality breakout before slotting.</b>
+          </div>
+        </div>
+        <p>The theme is small-town/value retail recovery: revenue growth, store economics, margin normalization, and inventory discipline.</p>
+        <div class="columns compact">
+          <section>
+            <h4>Theme Confirmation</h4>
+            <p>Fresh Jun 2026 result cache, Stage 2 trend, improving momentum score, and sampled fund ownership overlap.</p>
+          </section>
+          <section>
+            <h4>Theme Risk / Invalidation</h4>
+            <p>Modest operating margin, not-cheap valuation, weaker liquidity versus the top candidates, and execution/management-transition risk.</p>
+            <p class="muted">Same-store growth or margin recovery stalls, inventory pressure rises, or breakout near the 52-week zone fails on weak volume.</p>
+          </section>
+        </div>
+      </section>
+
+      <div class="columns">
+        <section>
+          <h4>Score Components</h4>
+
+      <div class="scorebar">
+        <div class="scorebar-head"><span>Theme</span><b>12.0 / 15</b></div>
+        <div class="bar"><span style="width:80.0%"></span></div>
+      </div>
+
+
+      <div class="scorebar">
+        <div class="scorebar-head"><span>Fundamental</span><b>16.5 / 25</b></div>
+        <div class="bar"><span style="width:66.0%"></span></div>
+      </div>
+
+
+      <div class="scorebar">
+        <div class="scorebar-head"><span>Technical</span><b>16.1 / 25</b></div>
+        <div class="bar"><span style="width:64.4%"></span></div>
+      </div>
+
+
+      <div class="scorebar">
+        <div class="scorebar-head"><span>Liquidity</span><b>11.0 / 15</b></div>
+        <div class="bar"><span style="width:73.3%"></span></div>
+      </div>
+
+
+      <div class="scorebar">
+        <div class="scorebar-head"><span>Governance</span><b>3.5 / 10</b></div>
+        <div class="bar"><span style="width:35.0%"></span></div>
+      </div>
+
+
+      <div class="scorebar">
+        <div class="scorebar-head"><span>Valuation/RR</span><b>8.0 / 10</b></div>
+        <div class="bar"><span style="width:80.0%"></span></div>
+      </div>
+
+        </section>
+        <section>
+          <h4>Trigger Plan</h4>
+          <p class="strong">Break above 896.88 with volume, or retest-hold near 762.24; skip if &gt;5% above planned trigger.</p>
+          <div class="trade-grid">
+            <div><span>Stop</span><b>740.2</b></div>
+            <div><span>2R target</span><b>961.2</b></div>
+            <div><span>Turnover</span><b>13.6 cr</b></div>
+            <div><span>Volume ratio</span><b>0.9</b></div>
+          </div>
+          <p class="warning">Not an order. Governance/filing review and live trigger confirmation remain mandatory.</p>
+        </section>
+      </div>
+
+      <div class="columns">
+        <section>
+          <h4>Fundamental View</h4>
+          <p>Fresh Q1 data supports recovery, but operating margin remains modest and valuation is not cheap.</p>
+
+      <div class="mini-table">
+        <table>
+          <thead><tr><th>Period</th><th>Label</th><th>Revenue Cr</th><th>PAT Cr</th><th>OPM</th><th>Revenue Chg</th><th>PAT Chg</th></tr></thead>
+          <tbody><tr><td>Latest quarter</td><td>Jun 2026</td><td>1,088.8</td><td>47.2</td><td>7.0%</td><td>23.0%</td><td>40.5%</td></tr>
+<tr><td>Previous quarter</td><td>Mar 2026</td><td>970.9</td><td>11.3</td><td>2.7%</td><td>12.1%</td><td>318.5%</td></tr>
+<tr><td>Year-ago quarter</td><td>Jun 2025</td><td>885.2</td><td>33.6</td><td>6.6%</td><td></td><td></td></tr>
+<tr><td>Latest annual</td><td>Mar 2026</td><td>3,784.3</td><td>124.0</td><td>6.2%</td><td>16.5%</td><td>170.9%</td></tr></tbody>
+        </table>
+      </div>
+      <p class="muted">Balance sheet/cash-flow cache is not complete for this symbol.</p>
+
+          <div class="ratio-grid"><div><span>Market cap</span><b>₹6477 Cr</b></div>
+<div><span>P/E</span><b>47.13</b></div>
+<div><span>P/B or book</span><b>6.80</b></div>
+<div><span>ROE</span><b>N/A (see financials)</b></div>
+<div><span>ROCE</span><b>NA</b></div>
+<div><span>Dividend yield</span><b>0.12%</b></div>
+<div><span>Promoters</span><b>44.15%</b></div>
+<div><span>FII/DII</span><b>16.47% / 30.90%</b></div></div>
+        </section>
+        <section>
+          <h4>Technical And Sector View</h4>
+          <p>Stage 2 and improving momentum, but liquidity is weaker than the other clean candidates. Retest quality matters.</p>
+          <p>Value retail is discretionary-consumption sensitive and execution-heavy.</p>
+          <div class="trade-grid">
+            <div><span>Tech price</span><b>813.9</b></div>
+            <div><span>20DMA / 50DMA</span><b>762.2 / 747.7</b></div>
+            <div><span>ADX</span><b>25.3</b></div>
+            <div><span>52W gap</span><b>-8.3%</b></div>
+          </div>
+        </section>
+      </div>
+
+      <div class="columns">
+        <section>
+          <h4>Strengths</h4>
+          <ul>
+            <li>owned by two sampled small-cap funds; current Stage 2 trend; profit growth evidence</li>
+          </ul>
+        </section>
+        <section>
+          <h4>Risks And Kill Switches</h4>
+          <ul>
+            <li>GOVERNANCE_REVIEW_PENDING</li>
+<li>Same-store growth or margin recovery stalls.</li>
+<li>Management/finance leadership changes create disclosure risk.</li>
+<li>Low-volume breakout fails near the 52-week high zone.</li>
+          </ul>
+        </section>
+      </div>
+
+      <section>
+        <h4>Source Trail</h4>
+        <p class="muted">Domains captured: bseindia.com, nseindia.com, screener.in, vmart.co.in</p>
+        <ul class="source-list"><li><a href="https://www.vmart.co.in/investor-call-invitation-investor-presentation/">Company IR: earnings-call invitations and presentations</a><span>vmart.co.in</span></li>
+<li><a href="https://www.vmart.co.in/press-and-releases/">Company IR sections: results, transcripts, governance, annual reports</a><span>vmart.co.in</span></li>
+<li><a href="https://www.screener.in/company/VMART/consolidated/">Screener structured fundamentals</a><span>screener.in</span></li>
+<li><a href="https://www.nseindia.com/get-quotes/equity?symbol=VMART">NSE quote page</a><span>nseindia.com</span></li>
+<li><a href="https://www.bseindia.com/stock-share-price/v-mart-retail-ltd/VMART/534976/">BSE company page</a><span>bseindia.com</span></li>
+<li><a href="https://www.bseindia.com/stock-share-price/v-mart-retail-ltd/VMART/534976/corp-announcements/">BSE announcement: All</a><span>bseindia.com</span></li>
+<li><a href="https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=a65fbd64-5549-458f-8df0-2bb0fffc11a9.pdf">BSE announcement: Announcement under Regulation 30 (LODR)-Analyst / Investor Meet - Intimation4 Aug- Intimat</a><span>bseindia.com</span></li>
+<li><a href="https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=a7803bef-2809-4751-b410-8da2ce1b8ea7.pdf">BSE announcement: Announcement under Regulation 30 (LODR)-Analyst / Investor Meet - Intimation3 Aug- Intimat</a><span>bseindia.com</span></li>
+<li><a href="https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=7c9d40df-0881-4020-af5a-0d37e19eab17.pdf">Concall transcript: Jul 2026</a><span>bseindia.com</span></li>
+<li><a href="https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=f448eb8d-4c3e-4775-8bb1-73ca1038f7f5.pdf">Concall transcript: May 2026</a><span>bseindia.com</span></li></ul>
+      </section>
+    </article>
+
+
+    <article id="FIVESTAR" class="candidate clean">
+      <div class="candidate-head">
+        <div>
+          <span class="eyebrow">Clean trigger map / Rank 5</span>
+          <h3>FIVESTAR <small>Five Star Business Finance Ltd</small></h3>
+          <p>NBFC watch only until asset-quality and governance checks are complete.</p>
+        </div>
+        <div class="score-chip">65.7<span>/100</span></div>
+      </div>
+
+      <div class="metrics">
+
+      <div class="metric">
+        <span>Policy rating</span>
+        <b>Active Watch</b>
+        <small>PHASE1_TRIGGER_MAP_GOVERNANCE_PENDING</small>
+      </div>
+
+
+      <div class="metric">
+        <span>Price / stage</span>
+        <b>553.2</b>
+        <small>STAGE_2 / RSI 48.2</small>
+      </div>
+
+
+      <div class="metric">
+        <span>RS</span>
+        <b>18.4</b>
+        <small>RS score 3.5/10</small>
+      </div>
+
+
+      <div class="metric">
+        <span>Paper slot</span>
+        <b>Rs. 14,938</b>
+        <small>27 sh / risk Rs. 1,315</small>
+      </div>
+
+      </div>
+
+      <section class="theme-box">
+        <h4>Theme Detail</h4>
+        <div class="theme-grid">
+          <div>
+            <span>Lens</span>
+            <b>Secured MSME and small-business NBFC lending</b>
+          </div>
+          <div>
+            <span>Policy Status</span>
+            <b>Financial services</b>
+            <small>BUILDING / theme score 11.0/15</small>
+          </div>
+          <div>
+            <span>Stock Expression</span>
+            <b>Five Star gives NBFC exposure with visible profitability, but the score is constrained by valuation, modest growth, and shareholding/governance questions.</b>
+          </div>
+          <div>
+            <span>Priority Impact</span>
+            <b>Watch-only until asset-quality and governance review is complete; do not lead Phase 1.</b>
+          </div>
+        </div>
+        <p>The theme is formalized secured lending to small business customers. It works when loan growth, collections, credit cost, and funding access remain controlled.</p>
+        <div class="columns compact">
+          <section>
+            <h4>Theme Confirmation</h4>
+            <p>Fresh Jun 2026 result cache, Stage 2 trend, acceptable liquidity, and healthy operating profitability in cached financials.</p>
+          </section>
+          <section>
+            <h4>Theme Risk / Invalidation</h4>
+            <p>NBFC asset quality, borrowing cost, high valuation, low promoter holding, and promoter holding decline.</p>
+            <p class="muted">GNPA/NNPA, collection efficiency, or credit-cost trends weaken, or price fails the 20DMA/50DMA support zone.</p>
+          </section>
+        </div>
+      </section>
+
+      <div class="columns">
+        <section>
+          <h4>Score Components</h4>
+
+      <div class="scorebar">
+        <div class="scorebar-head"><span>Theme</span><b>11.0 / 15</b></div>
+        <div class="bar"><span style="width:73.3%"></span></div>
+      </div>
+
+
+      <div class="scorebar">
+        <div class="scorebar-head"><span>Fundamental</span><b>15.2 / 25</b></div>
+        <div class="bar"><span style="width:60.8%"></span></div>
+      </div>
+
+
+      <div class="scorebar">
+        <div class="scorebar-head"><span>Technical</span><b>14.5 / 25</b></div>
+        <div class="bar"><span style="width:58.0%"></span></div>
+      </div>
+
+
+      <div class="scorebar">
+        <div class="scorebar-head"><span>Liquidity</span><b>11.0 / 15</b></div>
+        <div class="bar"><span style="width:73.3%"></span></div>
+      </div>
+
+
+      <div class="scorebar">
+        <div class="scorebar-head"><span>Governance</span><b>6.0 / 10</b></div>
+        <div class="bar"><span style="width:60.0%"></span></div>
+      </div>
+
+
+      <div class="scorebar">
+        <div class="scorebar-head"><span>Valuation/RR</span><b>8.0 / 10</b></div>
+        <div class="bar"><span style="width:80.0%"></span></div>
+      </div>
+
+        </section>
+        <section>
+          <h4>Trigger Plan</h4>
+          <p class="strong">Break above 802.39 with volume, or retest-hold near 550.36; skip if &gt;5% above planned trigger.</p>
+          <div class="trade-grid">
+            <div><span>Stop</span><b>504.5</b></div>
+            <div><span>2R target</span><b>650.7</b></div>
+            <div><span>Turnover</span><b>41.3 cr</b></div>
+            <div><span>Volume ratio</span><b>0.4</b></div>
+          </div>
+          <p class="warning">Not an order. Governance/filing review and live trigger confirmation remain mandatory.</p>
+        </section>
+      </div>
+
+      <div class="columns">
+        <section>
+          <h4>Fundamental View</h4>
+          <p>Business scale and profitability are visible, but PAT growth is modest, valuation is high, and promoter holding has reduced materially.</p>
+
+      <div class="mini-table">
+        <table>
+          <thead><tr><th>Period</th><th>Label</th><th>Revenue Cr</th><th>PAT Cr</th><th>OPM</th><th>Revenue Chg</th><th>PAT Chg</th></tr></thead>
+          <tbody><tr><td>Latest quarter</td><td>Jun 2026</td><td>821.2</td><td>271.4</td><td>49.5%</td><td>6.1%</td><td>1.9%</td></tr>
+<tr><td>Previous quarter</td><td>Mar 2026</td><td>809.6</td><td>269.3</td><td>49.5%</td><td>1.4%</td><td>0.8%</td></tr>
+<tr><td>Year-ago quarter</td><td>Jun 2025</td><td>774.3</td><td>266.3</td><td>49.8%</td><td></td><td></td></tr>
+<tr><td>Latest annual</td><td>Mar 2026</td><td>3,175.7</td><td>1,098.8</td><td>50.7%</td><td>13.5%</td><td>2.4%</td></tr></tbody>
+        </table>
+      </div>
+      <p class="muted">Borrowings NA; Net debt NA; Assets 2,350.0; Operating CF -951.0; Net CF 88.0</p>
+
+          <div class="ratio-grid"><div><span>Market cap</span><b>16,354</b></div>
+<div><span>P/E</span><b>104</b></div>
+<div><span>P/B or book</span><b>NA</b></div>
+<div><span>ROE</span><b>16.0</b></div>
+<div><span>ROCE</span><b>17.0</b></div>
+<div><span>Dividend yield</span><b>0.36</b></div>
+<div><span>Promoters</span><b>18.61%</b></div>
+<div><span>FII/DII</span><b>43.97% / 22.35%</b></div></div>
+        </section>
+        <section>
+          <h4>Technical And Sector View</h4>
+          <p>Stage 2 but not near 52-week leadership. Trigger is dominated by retest discipline and gap-risk control.</p>
+          <p>Secured small-business lending is credit-cycle and funding-cost sensitive.</p>
+          <div class="trade-grid">
+            <div><span>Tech price</span><b>553.2</b></div>
+            <div><span>20DMA / 50DMA</span><b>550.4 / 509.6</b></div>
+            <div><span>ADX</span><b>21.0</b></div>
+            <div><span>52W gap</span><b>-30.4%</b></div>
+          </div>
+        </section>
+      </div>
+
+      <div class="columns">
+        <section>
+          <h4>Strengths</h4>
+          <ul>
+            <li>overlaps one sampled small-cap fund; current Stage 2 trend; healthy operating margin</li>
+          </ul>
+        </section>
+        <section>
+          <h4>Risks And Kill Switches</h4>
+          <ul>
+            <li>GOVERNANCE_REVIEW_PENDING</li>
+<li>Promoter holding is low: 18.6%</li>
+<li>Promoter holding has decreased over last 3 years: -15.8%</li>
+<li>Collection efficiency, GNPA/NNPA, or credit-cost trends deteriorate.</li>
+<li>Borrowing cost or liquidity disclosures weaken.</li>
+          </ul>
+        </section>
+      </div>
+
+      <section>
+        <h4>Source Trail</h4>
+        <p class="muted">Domains captured: bseindia.com, fivestargroup.in, nseindia.com, screener.in</p>
+        <ul class="source-list"><li><a href="https://fivestargroup.in/">Company site: financials, credit rating, governance sections</a><span>fivestargroup.in</span></li>
+<li><a href="https://fivestargroup.in/corporate-governance/">Company governance page</a><span>fivestargroup.in</span></li>
+<li><a href="https://www.screener.in/company/FIVESTAR/consolidated/">Screener structured fundamentals</a><span>screener.in</span></li>
+<li><a href="https://www.nseindia.com/get-quotes/equity?symbol=FIVESTAR">NSE quote page</a><span>nseindia.com</span></li>
+<li><a href="https://www.bseindia.com/stock-share-price/five-star-business-finance-ltd/FIVESTAR/543663/">BSE company page</a><span>bseindia.com</span></li>
+<li><a href="https://www.bseindia.com/stock-share-price/five-star-business-finance-ltd/FIVESTAR/543663/corp-announcements/">BSE announcement: All</a><span>bseindia.com</span></li>
+<li><a href="https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=7a20fb7c-2f82-496e-a2da-0581dff20993.pdf">BSE announcement: Business Responsibility and Sustainability Reporting (BRSR)6 Aug- Submitted BRSR for FY 20</a><span>bseindia.com</span></li>
+<li><a href="https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=426b76e7-4887-41be-8a2f-6a395bbcd78a.pdf">BSE announcement: Intimation Under Regulation 29 And 50 Of SEBI (LODR)- Prior Intimation For Annual General </a><span>bseindia.com</span></li>
+<li><a href="https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=c5d4e073-3d10-488a-b973-89b3422e009d.pdf">Concall transcript: Jul 2026</a><span>bseindia.com</span></li>
+<li><a href="https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=32985bf4-fbeb-4b8b-b1bb-ba3ac7fd8b97.pdf">Concall transcript: May 2026</a><span>bseindia.com</span></li></ul>
+      </section>
+    </article>
+
+
+    <h2>Retest-Only Appendix</h2>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Stock</th><th>Score</th><th>No-Chase Gate</th><th>RSI</th><th>RS</th><th>Mapped Trigger</th><th>Slot</th><th>Blockers</th></tr>
+        </thead>
+        <tbody>
+            <tr>
+              <td><a href="#SONACOMS"><b>SONACOMS</b></a><span>Sona BLW Precision Forgings Limited</span></td>
+              <td>74.0</td>
+              <td>WATCH_EXTENDED_FROM_20DMA</td>
+              <td>74.5</td>
+              <td>24.7</td>
+              <td>Break above 832.85 with volume, or retest-hold near 727.07; skip if &gt;5% above planned trigger.</td>
+              <td>Rs. 14,256<span>risk Rs. 1,426</span></td>
+              <td>GOVERNANCE_REVIEW_PENDING; WATCH_EXTENDED_FROM_20DMA</td>
+            </tr>
+
+
+            <tr>
+              <td><a href="#NETWEB"><b>NETWEB</b></a><span>Netweb Technologies India Limited</span></td>
+              <td>73.0</td>
+              <td>WATCH_EXTENDED_FROM_20DMA</td>
+              <td>68.7</td>
+              <td>14.9</td>
+              <td>Break above 5296.44 with volume, or retest-hold near 4402.31; skip if &gt;5% above planned trigger.</td>
+              <td>Rs. 14,448<span>risk Rs. 1,004</span></td>
+              <td>GOVERNANCE_REVIEW_PENDING; WATCH_EXTENDED_FROM_20DMA</td>
+            </tr>
+
+
+            <tr>
+              <td><a href="#WELCORP"><b>WELCORP</b></a><span>Welspun Corp Limited</span></td>
+              <td>72.3</td>
+              <td>WATCH_RSI_EXTENDED</td>
+              <td>80.0</td>
+              <td>29.2</td>
+              <td>Break above 1880.62 with volume, or retest-hold near 1661.64; skip if &gt;5% above planned trigger.</td>
+              <td>Rs. 14,557<span>risk Rs. 1,456</span></td>
+              <td>GOVERNANCE_REVIEW_PENDING; WATCH_RSI_EXTENDED</td>
+            </tr>
+
+
+            <tr>
+              <td><a href="#RAINBOW"><b>RAINBOW</b></a><span>Rainbow Childrens Medicare Limited</span></td>
+              <td>68.9</td>
+              <td>WATCH_AGENT_ADDA_EXTENDED</td>
+              <td>66.5</td>
+              <td>10.9</td>
+              <td>Break above 1626.10 with volume, or retest-hold near 1505.28; skip if &gt;5% above planned trigger.</td>
+              <td>Rs. 14,159<span>risk Rs. 1,297</span></td>
+              <td>GOVERNANCE_REVIEW_PENDING; WATCH_AGENT_ADDA_EXTENDED</td>
+            </tr>
+
+
+            <tr>
+              <td><a href="#WEWORK"><b>WEWORK</b></a><span>Wework India Management Limited</span></td>
+              <td>66.9</td>
+              <td>WATCH_AGENT_ADDA_EXTENDED</td>
+              <td>71.7</td>
+              <td>23.3</td>
+              <td>Break above 802.45 with volume, or retest-hold near 720.66; skip if &gt;5% above planned trigger.</td>
+              <td>Rs. 14,964<span>risk Rs. 1,460</span></td>
+              <td>GOVERNANCE_REVIEW_PENDING; WATCH_AGENT_ADDA_EXTENDED</td>
+            </tr>
+            </tbody>
+      </table>
+    </div>
+
+    <article id="SONACOMS" class="candidate retest">
+      <div class="candidate-head">
+        <div>
+          <span class="eyebrow">Retest trigger map / Rank 6</span>
+          <h3>SONACOMS <small>Sona BLW Precision Forgings Limited</small></h3>
+          <p>Trigger-map candidate; execution gates pending.</p>
+        </div>
+        <div class="score-chip">74.0<span>/100</span></div>
+      </div>
+
+      <div class="metrics">
+
+      <div class="metric">
+        <span>Policy rating</span>
+        <b>Active Watch</b>
+        <small>PHASE1_RETEST_TRIGGER_MAP_GOVERNANCE_PENDING</small>
+      </div>
+
+
+      <div class="metric">
+        <span>Price / stage</span>
+        <b>792.0</b>
+        <small>STAGE_2 / RSI 74.5</small>
+      </div>
+
+
+      <div class="metric">
+        <span>RS</span>
+        <b>24.7</b>
+        <small>RS score 7.5/10</small>
+      </div>
+
+
+      <div class="metric">
+        <span>Paper slot</span>
+        <b>Rs. 14,256</b>
+        <small>18 sh / risk Rs. 1,426</small>
+      </div>
+
+      </div>
+
+      <section class="theme-box">
+        <h4>Theme Detail</h4>
+        <div class="theme-grid">
+          <div>
+            <span>Lens</span>
+            <b>EV and premium auto-component content</b>
+          </div>
+          <div>
+            <span>Policy Status</span>
+            <b>Auto components / EV ancillaries</b>
+            <small>CROWDED / theme score 11.0/15</small>
+          </div>
+          <div>
+            <span>Stock Expression</span>
+            <b>Sona BLW is the EV/auto-component quality proxy, but the policy scan flags no-chase behavior.</b>
+          </div>
+          <div>
+            <span>Priority Impact</span>
+            <b>Retest-only; no fresh allocation at current extension.</b>
+          </div>
+        </div>
+        <p>The theme is rising EV and drivetrain content per vehicle. It needs durable order visibility and margin protection.</p>
+        <div class="columns compact">
+          <section>
+            <h4>Theme Confirmation</h4>
+            <p>Fresh result cache, Stage 2 trend, and auto-component policy theme fit.</p>
+          </section>
+          <section>
+            <h4>Theme Risk / Invalidation</h4>
+            <p>Extended setup, valuation risk, export/customer-cycle sensitivity, and EV demand volatility.</p>
+            <p class="muted">Retest fails or management commentary weakens on order conversion/margins.</p>
+          </section>
+        </div>
+      </section>
+
+      <div class="columns">
+        <section>
+          <h4>Score Components</h4>
+
+      <div class="scorebar">
+        <div class="scorebar-head"><span>Theme</span><b>11.0 / 15</b></div>
+        <div class="bar"><span style="width:73.3%"></span></div>
+      </div>
+
+
+      <div class="scorebar">
+        <div class="scorebar-head"><span>Fundamental</span><b>18.8 / 25</b></div>
+        <div class="bar"><span style="width:75.2%"></span></div>
+      </div>
+
+
+      <div class="scorebar">
+        <div class="scorebar-head"><span>Technical</span><b>16.7 / 25</b></div>
+        <div class="bar"><span style="width:66.8%"></span></div>
+      </div>
+
+
+      <div class="scorebar">
+        <div class="scorebar-head"><span>Liquidity</span><b>15.0 / 15</b></div>
+        <div class="bar"><span style="width:100.0%"></span></div>
+      </div>
+
+
+      <div class="scorebar">
+        <div class="scorebar-head"><span>Governance</span><b>6.0 / 10</b></div>
+        <div class="bar"><span style="width:60.0%"></span></div>
+      </div>
+
+
+      <div class="scorebar">
+        <div class="scorebar-head"><span>Valuation/RR</span><b>6.5 / 10</b></div>
+        <div class="bar"><span style="width:65.0%"></span></div>
+      </div>
+
+        </section>
+        <section>
+          <h4>Trigger Plan</h4>
+          <p class="strong">Break above 832.85 with volume, or retest-hold near 727.07; skip if &gt;5% above planned trigger.</p>
+          <div class="trade-grid">
+            <div><span>Stop</span><b>712.8</b></div>
+            <div><span>2R target</span><b>950.4</b></div>
+            <div><span>Turnover</span><b>250.1 cr</b></div>
+            <div><span>Volume ratio</span><b>0.8</b></div>
+          </div>
+          <p class="warning">Not an order. Governance/filing review and live trigger confirmation remain mandatory.</p>
+        </section>
+      </div>
+
+      <div class="columns">
+        <section>
+          <h4>Fundamental View</h4>
+          <p></p>
+
+      <div class="mini-table">
+        <table>
+          <thead><tr><th>Period</th><th>Label</th><th>Revenue Cr</th><th>PAT Cr</th><th>OPM</th><th>Revenue Chg</th><th>PAT Chg</th></tr></thead>
+          <tbody><tr><td>Latest quarter</td><td>Jun 2026</td><td>1,301.0</td><td>179.0</td><td>23.0%</td><td>52.3%</td><td>46.7%</td></tr>
+<tr><td>Previous quarter</td><td>Mar 2026</td><td>1,258.0</td><td>187.0</td><td>24.0%</td><td>3.4%</td><td>-4.3%</td></tr>
+<tr><td>Year-ago quarter</td><td>Jun 2025</td><td>854.0</td><td>122.0</td><td>24.0%</td><td></td><td></td></tr>
+<tr><td>Latest annual</td><td>Mar 2026</td><td>4,449.0</td><td>629.0</td><td>24.0%</td><td>25.5%</td><td>4.8%</td></tr></tbody>
+        </table>
+      </div>
+      <p class="muted">Borrowings 442.0; Net debt -108.0; Assets 7,464.0; Operating CF 659.0; Net CF -896.0</p>
+
+          <div class="ratio-grid"><div><span>Market cap</span><b>49,382</b></div>
+<div><span>P/E</span><b>67.9</b></div>
+<div><span>P/B or book</span><b>96.2</b></div>
+<div><span>ROE</span><b>11.3</b></div>
+<div><span>ROCE</span><b>14.2</b></div>
+<div><span>Dividend yield</span><b>0.43</b></div>
+<div><span>Promoters</span><b>28.01%</b></div>
+<div><span>FII/DII</span><b>23.61% / 41.60%</b></div></div>
+        </section>
+        <section>
+          <h4>Technical And Sector View</h4>
+          <p></p>
+          <p></p>
+          <div class="trade-grid">
+            <div><span>Tech price</span><b>792.0</b></div>
+            <div><span>20DMA / 50DMA</span><b>727.1 / 661.8</b></div>
+            <div><span>ADX</span><b>71.2</b></div>
+            <div><span>52W gap</span><b>-4.0%</b></div>
+          </div>
+        </section>
+      </div>
+
+      <div class="columns">
+        <section>
+          <h4>Strengths</h4>
+          <ul>
+            <li>overlaps one sampled small-cap fund; current Stage 2 trend; profit growth evidence; healthy operating margin</li>
+<li>Company is almost debt free.</li>
+<li>Company is expected to give good quarter</li>
+<li>Company has delivered good profit growth of 23.6% CAGR over last 5 years</li>
+<li>Company has been maintaining a healthy dividend payout of 33.6%</li>
+          </ul>
+        </section>
+        <section>
+          <h4>Risks And Kill Switches</h4>
+          <ul>
+            <li>GOVERNANCE_REVIEW_PENDING; WATCH_EXTENDED_FROM_20DMA</li>
+<li>Stock is trading at 8.23 times its book value</li>
+          </ul>
+        </section>
+      </div>
+
+      <section>
+        <h4>Source Trail</h4>
+        <p class="muted">Domains captured: bseindia.com, nseindia.com, screener.in</p>
+        <ul class="source-list"><li><a href="https://www.screener.in/company/SONACOMS/consolidated/">Screener structured fundamentals</a><span>screener.in</span></li>
+<li><a href="https://www.nseindia.com/get-quotes/equity?symbol=SONACOMS">NSE quote page</a><span>nseindia.com</span></li>
+<li><a href="https://www.bseindia.com/stock-share-price/sona-blw-precision-forgings-ltd/SONACOMS/543300/">BSE company page</a><span>bseindia.com</span></li>
+<li><a href="https://www.bseindia.com/stock-share-price/sona-blw-precision-forgings-ltd/SONACOMS/543300/corp-announcements/">BSE announcement: All</a><span>bseindia.com</span></li>
+<li><a href="https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=e4fbaa7e-983d-4cb7-ad30-8946325e4048.pdf">BSE announcement: Announcement under Regulation 30 (LODR)-Allotment of ESOP / ESPS1 Aug</a><span>bseindia.com</span></li>
+<li><a href="https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=ba4be72b-164f-4dd9-b6ae-ff475176e5bc.pdf">BSE announcement: Announcement under Regulation 30 (LODR)-Earnings Call Transcript30 Jul</a><span>bseindia.com</span></li>
+<li><a href="https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=e655e3eb-4d7d-4ace-bde9-5a2f30cf8019.pdf">Concall transcript: May 2026</a><span>bseindia.com</span></li></ul>
+      </section>
+    </article>
+
+
+    <article id="NETWEB" class="candidate retest">
+      <div class="candidate-head">
+        <div>
+          <span class="eyebrow">Retest trigger map / Rank 7</span>
+          <h3>NETWEB <small>Netweb Technologies India Limited</small></h3>
+          <p>Trigger-map candidate; execution gates pending.</p>
+        </div>
+        <div class="score-chip">73.0<span>/100</span></div>
+      </div>
+
+      <div class="metrics">
+
+      <div class="metric">
+        <span>Policy rating</span>
+        <b>Active Watch</b>
+        <small>PHASE1_RETEST_TRIGGER_MAP_GOVERNANCE_PENDING</small>
+      </div>
+
+
+      <div class="metric">
+        <span>Price / stage</span>
+        <b>4,816.0</b>
+        <small>STAGE_2 / RSI 68.7</small>
+      </div>
+
+
+      <div class="metric">
+        <span>RS</span>
+        <b>14.9</b>
+        <small>RS score 5.0/10</small>
+      </div>
+
+
+      <div class="metric">
+        <span>Paper slot</span>
+        <b>Rs. 14,448</b>
+        <small>3 sh / risk Rs. 1,004</small>
+      </div>
+
+      </div>
+
+      <section class="theme-box">
+        <h4>Theme Detail</h4>
+        <div class="theme-grid">
+          <div>
+            <span>Lens</span>
+            <b>AI, HPC, and data-center infrastructure</b>
+          </div>
+          <div>
+            <span>Policy Status</span>
+            <b>Technology / digital infrastructure</b>
+            <small>CROWDED / theme score 10.0/15</small>
+          </div>
+          <div>
+            <span>Stock Expression</span>
+            <b>Netweb is a direct digital-infrastructure momentum proxy.</b>
+          </div>
+          <div>
+            <span>Priority Impact</span>
+            <b>Attractive theme, but retest-only under no-chase discipline.</b>
+          </div>
+        </div>
+        <p>The theme is domestic compute infrastructure, AI servers, and high-performance computing demand.</p>
+        <div class="columns compact">
+          <section>
+            <h4>Theme Confirmation</h4>
+            <p>Fresh result cache, Stage 2 trend, and very high traded value.</p>
+          </section>
+          <section>
+            <h4>Theme Risk / Invalidation</h4>
+            <p>Valuation, order concentration, capacity execution, and extended price behavior.</p>
+            <p class="muted">Order pipeline or margin commentary disappoints, or the retest fails with volume.</p>
+          </section>
+        </div>
+      </section>
+
+      <div class="columns">
+        <section>
+          <h4>Score Components</h4>
+
+      <div class="scorebar">
+        <div class="scorebar-head"><span>Theme</span><b>10.0 / 15</b></div>
+        <div class="bar"><span style="width:66.7%"></span></div>
+      </div>
+
+
+      <div class="scorebar">
+        <div class="scorebar-head"><span>Fundamental</span><b>20.6 / 25</b></div>
+        <div class="bar"><span style="width:82.4%"></span></div>
+      </div>
+
+
+      <div class="scorebar">
+        <div class="scorebar-head"><span>Technical</span><b>14.9 / 25</b></div>
+        <div class="bar"><span style="width:59.6%"></span></div>
+      </div>
+
+
+      <div class="scorebar">
+        <div class="scorebar-head"><span>Liquidity</span><b>15.0 / 15</b></div>
+        <div class="bar"><span style="width:100.0%"></span></div>
+      </div>
+
+
+      <div class="scorebar">
+        <div class="scorebar-head"><span>Governance</span><b>6.0 / 10</b></div>
+        <div class="bar"><span style="width:60.0%"></span></div>
+      </div>
+
+
+      <div class="scorebar">
+        <div class="scorebar-head"><span>Valuation/RR</span><b>6.5 / 10</b></div>
+        <div class="bar"><span style="width:65.0%"></span></div>
+      </div>
+
+        </section>
+        <section>
+          <h4>Trigger Plan</h4>
+          <p class="strong">Break above 5296.44 with volume, or retest-hold near 4402.31; skip if &gt;5% above planned trigger.</p>
+          <div class="trade-grid">
+            <div><span>Stop</span><b>4,481.3</b></div>
+            <div><span>2R target</span><b>5,485.3</b></div>
+            <div><span>Turnover</span><b>563.5 cr</b></div>
+            <div><span>Volume ratio</span><b>1.0</b></div>
+          </div>
+          <p class="warning">Not an order. Governance/filing review and live trigger confirmation remain mandatory.</p>
+        </section>
+      </div>
+
+      <div class="columns">
+        <section>
+          <h4>Fundamental View</h4>
+          <p></p>
+
+      <div class="mini-table">
+        <table>
+          <thead><tr><th>Period</th><th>Label</th><th>Revenue Cr</th><th>PAT Cr</th><th>OPM</th><th>Revenue Chg</th><th>PAT Chg</th></tr></thead>
+          <tbody><tr><td>Latest quarter</td><td>Jun 2026</td><td>819.7</td><td>85.3</td><td>14.3%</td><td>172.1%</td><td>179.9%</td></tr>
+<tr><td>Previous quarter</td><td>Mar 2026</td><td>773.7</td><td>70.6</td><td>12.0%</td><td>5.9%</td><td>20.9%</td></tr>
+<tr><td>Year-ago quarter</td><td>Jun 2025</td><td>301.2</td><td>30.5</td><td>13.8%</td><td></td><td></td></tr>
+<tr><td>Latest annual</td><td>Mar 2026</td><td>2,183.6</td><td>205.8</td><td>12.4%</td><td>90.0%</td><td>80.9%</td></tr></tbody>
+        </table>
+      </div>
+      <p class="muted">Balance sheet/cash-flow cache is not complete for this symbol.</p>
+
+          <div class="ratio-grid"><div><span>Market cap</span><b>₹27423 Cr</b></div>
+<div><span>P/E</span><b>104.70</b></div>
+<div><span>P/B or book</span><b>37.81</b></div>
+<div><span>ROE</span><b>N/A (see financials)</b></div>
+<div><span>ROCE</span><b>NA</b></div>
+<div><span>Dividend yield</span><b>0.06%</b></div>
+<div><span>Promoters</span><b>66.98%</b></div>
+<div><span>FII/DII</span><b>9.27% / 5.91%</b></div></div>
+        </section>
+        <section>
+          <h4>Technical And Sector View</h4>
+          <p></p>
+          <p></p>
+          <div class="trade-grid">
+            <div><span>Tech price</span><b>4,816.0</b></div>
+            <div><span>20DMA / 50DMA</span><b>4,402.3 / 4,526.6</b></div>
+            <div><span>ADX</span><b>32.9</b></div>
+            <div><span>52W gap</span><b>-8.2%</b></div>
+          </div>
+        </section>
+      </div>
+
+      <div class="columns">
+        <section>
+          <h4>Strengths</h4>
+          <ul>
+            <li>overlaps one sampled small-cap fund; current Stage 2 trend; profit growth evidence</li>
+          </ul>
+        </section>
+        <section>
+          <h4>Risks And Kill Switches</h4>
+          <ul>
+            <li>GOVERNANCE_REVIEW_PENDING; WATCH_EXTENDED_FROM_20DMA</li>
+          </ul>
+        </section>
+      </div>
+
+      <section>
+        <h4>Source Trail</h4>
+        <p class="muted">Domains captured: bseindia.com, nseindia.com, screener.in</p>
+        <ul class="source-list"><li><a href="https://www.screener.in/company/NETWEB/consolidated/">Screener structured fundamentals</a><span>screener.in</span></li>
+<li><a href="https://www.nseindia.com/get-quotes/equity?symbol=NETWEB">NSE quote page</a><span>nseindia.com</span></li>
+<li><a href="https://www.bseindia.com/stock-share-price/netweb-technologies-india-ltd/NETWEB/543945/">BSE company page</a><span>bseindia.com</span></li>
+<li><a href="https://www.bseindia.com/stock-share-price/netweb-technologies-india-ltd/NETWEB/543945/corp-announcements/">BSE announcement: All</a><span>bseindia.com</span></li>
+<li><a href="https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=311ff15f-890a-4993-9a84-6520de3f195a.pdf">BSE announcement: Announcement under Regulation 30 (LODR)-Analyst / Investor Meet - Intimation4 Aug- Investo</a><span>bseindia.com</span></li>
+<li><a href="https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=f7262763-458d-4652-8553-7969ad92c7d3.pdf">BSE announcement: Shareholder Meeting / Postal Ballot-Scrutinizer&quot;s Report1 Aug</a><span>bseindia.com</span></li>
+<li><a href="https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=f61d7f70-daf7-4f03-a7e8-28a8eeb8996a.pdf">Concall presentation: Jul 2026</a><span>bseindia.com</span></li>
+<li><a href="https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=01b266d6-defa-46f0-acbc-b53b9debed80.pdf">Concall transcript: May 2026</a><span>bseindia.com</span></li></ul>
+      </section>
+    </article>
+
+
+    <article id="WELCORP" class="candidate retest">
+      <div class="candidate-head">
+        <div>
+          <span class="eyebrow">Retest trigger map / Rank 8</span>
+          <h3>WELCORP <small>Welspun Corp Limited</small></h3>
+          <p>Trigger-map candidate; execution gates pending.</p>
+        </div>
+        <div class="score-chip">72.3<span>/100</span></div>
+      </div>
+
+      <div class="metrics">
+
+      <div class="metric">
+        <span>Policy rating</span>
+        <b>Active Watch</b>
+        <small>PHASE1_RETEST_TRIGGER_MAP_GOVERNANCE_PENDING</small>
+      </div>
+
+
+      <div class="metric">
+        <span>Price / stage</span>
+        <b>1,819.6</b>
+        <small>STAGE_2 / RSI 80.0</small>
+      </div>
+
+
+      <div class="metric">
+        <span>RS</span>
+        <b>29.2</b>
+        <small>RS score 7.5/10</small>
+      </div>
+
+
+      <div class="metric">
+        <span>Paper slot</span>
+        <b>Rs. 14,557</b>
+        <small>8 sh / risk Rs. 1,456</small>
+      </div>
+
+      </div>
+
+      <section class="theme-box">
+        <h4>Theme Detail</h4>
+        <div class="theme-grid">
+          <div>
+            <span>Lens</span>
+            <b>Industrial pipes and energy infrastructure capex</b>
+          </div>
+          <div>
+            <span>Policy Status</span>
+            <b>Capital goods / industrial suppliers</b>
+            <small>CROWDED / theme score 11.0/15</small>
+          </div>
+          <div>
+            <span>Stock Expression</span>
+            <b>Welspun Corp gives cyclical industrial capex exposure.</b>
+          </div>
+          <div>
+            <span>Priority Impact</span>
+            <b>Retest-only because the technical gate is extended.</b>
+          </div>
+        </div>
+        <p>The theme is energy, water, and infrastructure pipe demand with operating leverage.</p>
+        <div class="columns compact">
+          <section>
+            <h4>Theme Confirmation</h4>
+            <p>Fresh result cache, high relative strength, Stage 2 trend, and strong liquidity.</p>
+          </section>
+          <section>
+            <h4>Theme Risk / Invalidation</h4>
+            <p>Cyclical order timing, commodity/input-cost swings, and extended RSI.</p>
+            <p class="muted">Order book/margin read-through weakens or RSI extension resolves through price damage.</p>
+          </section>
+        </div>
+      </section>
+
+      <div class="columns">
+        <section>
+          <h4>Score Components</h4>
+
+      <div class="scorebar">
+        <div class="scorebar-head"><span>Theme</span><b>11.0 / 15</b></div>
+        <div class="bar"><span style="width:73.3%"></span></div>
+      </div>
+
+
+      <div class="scorebar">
+        <div class="scorebar-head"><span>Fundamental</span><b>17.2 / 25</b></div>
+        <div class="bar"><span style="width:68.8%"></span></div>
+      </div>
+
+
+      <div class="scorebar">
+        <div class="scorebar-head"><span>Technical</span><b>16.6 / 25</b></div>
+        <div class="bar"><span style="width:66.4%"></span></div>
+      </div>
+
+
+      <div class="scorebar">
+        <div class="scorebar-head"><span>Liquidity</span><b>15.0 / 15</b></div>
+        <div class="bar"><span style="width:100.0%"></span></div>
+      </div>
+
+
+      <div class="scorebar">
+        <div class="scorebar-head"><span>Governance</span><b>6.0 / 10</b></div>
+        <div class="bar"><span style="width:60.0%"></span></div>
+      </div>
+
+
+      <div class="scorebar">
+        <div class="scorebar-head"><span>Valuation/RR</span><b>6.5 / 10</b></div>
+        <div class="bar"><span style="width:65.0%"></span></div>
+      </div>
+
+        </section>
+        <section>
+          <h4>Trigger Plan</h4>
+          <p class="strong">Break above 1880.62 with volume, or retest-hold near 1661.64; skip if &gt;5% above planned trigger.</p>
+          <div class="trade-grid">
+            <div><span>Stop</span><b>1,637.6</b></div>
+            <div><span>2R target</span><b>2,183.5</b></div>
+            <div><span>Turnover</span><b>189.5 cr</b></div>
+            <div><span>Volume ratio</span><b>1.4</b></div>
+          </div>
+          <p class="warning">Not an order. Governance/filing review and live trigger confirmation remain mandatory.</p>
+        </section>
+      </div>
+
+      <div class="columns">
+        <section>
+          <h4>Fundamental View</h4>
+          <p></p>
+
+      <div class="mini-table">
+        <table>
+          <thead><tr><th>Period</th><th>Label</th><th>Revenue Cr</th><th>PAT Cr</th><th>OPM</th><th>Revenue Chg</th><th>PAT Chg</th></tr></thead>
+          <tbody><tr><td>Latest quarter</td><td>Jun 2026</td><td>4,081.0</td><td>1,048.0</td><td>17.0%</td><td>14.9%</td><td>200.3%</td></tr>
+<tr><td>Previous quarter</td><td>Mar 2026</td><td>4,313.0</td><td>371.0</td><td>12.0%</td><td>-5.4%</td><td>182.5%</td></tr>
+<tr><td>Year-ago quarter</td><td>Jun 2025</td><td>3,551.0</td><td>349.0</td><td>15.0%</td><td></td><td></td></tr>
+<tr><td>Latest annual</td><td>Mar 2026</td><td>16,770.0</td><td>1,620.0</td><td>13.0%</td><td>20.0%</td><td>-14.8%</td></tr></tbody>
+        </table>
+      </div>
+      <p class="muted">Borrowings 2,355.0; Net debt 491.0; Assets 20,400.0; Operating CF 3,204.0; Net CF 365.0</p>
+
+          <div class="ratio-grid"><div><span>Market cap</span><b>48,045</b></div>
+<div><span>P/E</span><b>20.8</b></div>
+<div><span>P/B or book</span><b>347</b></div>
+<div><span>ROE</span><b>19.4</b></div>
+<div><span>ROCE</span><b>22.9</b></div>
+<div><span>Dividend yield</span><b>0.27</b></div>
+<div><span>Promoters</span><b>49.73%</b></div>
+<div><span>FII/DII</span><b>14.61% / 19.96%</b></div></div>
+        </section>
+        <section>
+          <h4>Technical And Sector View</h4>
+          <p></p>
+          <p></p>
+          <div class="trade-grid">
+            <div><span>Tech price</span><b>1,819.6</b></div>
+            <div><span>20DMA / 50DMA</span><b>1,661.6 / 1,523.7</b></div>
+            <div><span>ADX</span><b>40.4</b></div>
+            <div><span>52W gap</span><b>-2.3%</b></div>
+          </div>
+        </section>
+      </div>
+
+      <div class="columns">
+        <section>
+          <h4>Strengths</h4>
+          <ul>
+            <li>overlaps one sampled small-cap fund; high relative strength; current Stage 2 trend; profit growth evidence</li>
+<li>Company has delivered good profit growth of 20.9% CAGR over last 5 years</li>
+          </ul>
+        </section>
+        <section>
+          <h4>Risks And Kill Switches</h4>
+          <ul>
+            <li>extended RSI</li>
+<li>GOVERNANCE_REVIEW_PENDING; WATCH_RSI_EXTENDED</li>
+<li>Earnings include an other income of Rs.1,078 Cr.</li>
+          </ul>
+        </section>
+      </div>
+
+      <section>
+        <h4>Source Trail</h4>
+        <p class="muted">Domains captured: bseindia.com, nseindia.com, screener.in, welspuncorp.com</p>
+        <ul class="source-list"><li><a href="https://www.screener.in/company/WELCORP/consolidated/">Screener structured fundamentals</a><span>screener.in</span></li>
+<li><a href="https://www.nseindia.com/get-quotes/equity?symbol=WELCORP">NSE quote page</a><span>nseindia.com</span></li>
+<li><a href="https://www.bseindia.com/stock-share-price/welspun-corp-ltd/WELCORP/532144/">BSE company page</a><span>bseindia.com</span></li>
+<li><a href="https://www.bseindia.com/stock-share-price/welspun-corp-ltd/WELCORP/532144/corp-announcements/">BSE announcement: All</a><span>bseindia.com</span></li>
+<li><a href="https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=632a2429-1019-41d5-9e9b-43a377aabdc8.pdf">BSE announcement: Announcement under Regulation 30 (LODR)-Credit Rating5 Aug- CARE reaffirmed WCL ratings: A</a><span>bseindia.com</span></li>
+<li><a href="https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=b36223b8-3b3f-4d1d-9f7b-4f24495f8fe6.pdf">BSE announcement: Announcement under Regulation 30 (LODR)-Updates on Acquisition31 Jul- Welspun Corp complet</a><span>bseindia.com</span></li>
+<li><a href="https://www.welspuncorp.com/uploads/investor_data/investorreport_Financial%20year%202026%20-%202027_1713.pdf">Concall transcript: Jul 2026</a><span>welspuncorp.com</span></li>
+<li><a href="https://www.welspuncorp.com/uploads/investor_data/investorreport_Financial%20year%202025%20-%202026_1646.pdf">Concall transcript: May 2026</a><span>welspuncorp.com</span></li></ul>
+      </section>
+    </article>
+
+
+    <article id="RAINBOW" class="candidate retest">
+      <div class="candidate-head">
+        <div>
+          <span class="eyebrow">Retest trigger map / Rank 9</span>
+          <h3>RAINBOW <small>Rainbow Childrens Medicare Limited</small></h3>
+          <p>Trigger-map candidate; execution gates pending.</p>
+        </div>
+        <div class="score-chip">68.9<span>/100</span></div>
+      </div>
+
+      <div class="metrics">
+
+      <div class="metric">
+        <span>Policy rating</span>
+        <b>Active Watch</b>
+        <small>PHASE1_RETEST_TRIGGER_MAP_GOVERNANCE_PENDING</small>
+      </div>
+
+
+      <div class="metric">
+        <span>Price / stage</span>
+        <b>1,573.2</b>
+        <small>STAGE_2 / RSI 66.5</small>
+      </div>
+
+
+      <div class="metric">
+        <span>RS</span>
+        <b>10.9</b>
+        <small>RS score 5.5/10</small>
+      </div>
+
+
+      <div class="metric">
+        <span>Paper slot</span>
+        <b>Rs. 14,159</b>
+        <small>9 sh / risk Rs. 1,297</small>
+      </div>
+
+      </div>
+
+      <section class="theme-box">
+        <h4>Theme Detail</h4>
+        <div class="theme-grid">
+          <div>
+            <span>Lens</span>
+            <b>Specialty healthcare services and hospital capacity</b>
+          </div>
+          <div>
+            <span>Policy Status</span>
+            <b>Healthcare / specialty services</b>
+            <small>CROWDED / theme score 11.0/15</small>
+          </div>
+          <div>
+            <span>Stock Expression</span>
+            <b>Rainbow is the healthcare-services quality and expansion proxy.</b>
+          </div>
+          <div>
+            <span>Priority Impact</span>
+            <b>Retest-only; useful defensive-growth watch if price resets.</b>
+          </div>
+        </div>
+        <p>The theme is pediatric and maternity specialty healthcare with capacity-led growth.</p>
+        <div class="columns compact">
+          <section>
+            <h4>Theme Confirmation</h4>
+            <p>Fresh result cache, Stage 2 trend, operating-margin evidence, and sampled fund overlap.</p>
+          </section>
+          <section>
+            <h4>Theme Risk / Invalidation</h4>
+            <p>Capex ramp-up, occupancy, doctor availability, and valuation risk.</p>
+            <p class="muted">Occupancy/margin trend weakens or retest fails after extension.</p>
+          </section>
+        </div>
+      </section>
+
+      <div class="columns">
+        <section>
+          <h4>Score Components</h4>
+
+      <div class="scorebar">
+        <div class="scorebar-head"><span>Theme</span><b>11.0 / 15</b></div>
+        <div class="bar"><span style="width:73.3%"></span></div>
+      </div>
+
+
+      <div class="scorebar">
+        <div class="scorebar-head"><span>Fundamental</span><b>17.8 / 25</b></div>
+        <div class="bar"><span style="width:71.2%"></span></div>
+      </div>
+
+
+      <div class="scorebar">
+        <div class="scorebar-head"><span>Technical</span><b>15.6 / 25</b></div>
+        <div class="bar"><span style="width:62.4%"></span></div>
+      </div>
+
+
+      <div class="scorebar">
+        <div class="scorebar-head"><span>Liquidity</span><b>11.0 / 15</b></div>
+        <div class="bar"><span style="width:73.3%"></span></div>
+      </div>
+
+
+      <div class="scorebar">
+        <div class="scorebar-head"><span>Governance</span><b>6.0 / 10</b></div>
+        <div class="bar"><span style="width:60.0%"></span></div>
+      </div>
+
+
+      <div class="scorebar">
+        <div class="scorebar-head"><span>Valuation/RR</span><b>7.5 / 10</b></div>
+        <div class="bar"><span style="width:75.0%"></span></div>
+      </div>
+
+        </section>
+        <section>
+          <h4>Trigger Plan</h4>
+          <p class="strong">Break above 1626.10 with volume, or retest-hold near 1505.28; skip if &gt;5% above planned trigger.</p>
+          <div class="trade-grid">
+            <div><span>Stop</span><b>1,429.1</b></div>
+            <div><span>2R target</span><b>1,861.5</b></div>
+            <div><span>Turnover</span><b>14.7 cr</b></div>
+            <div><span>Volume ratio</span><b>1.1</b></div>
+          </div>
+          <p class="warning">Not an order. Governance/filing review and live trigger confirmation remain mandatory.</p>
+        </section>
+      </div>
+
+      <div class="columns">
+        <section>
+          <h4>Fundamental View</h4>
+          <p></p>
+
+      <div class="mini-table">
+        <table>
+          <thead><tr><th>Period</th><th>Label</th><th>Revenue Cr</th><th>PAT Cr</th><th>OPM</th><th>Revenue Chg</th><th>PAT Chg</th></tr></thead>
+          <tbody><tr><td>Latest quarter</td><td>Jun 2026</td><td>470.0</td><td>63.0</td><td>29.0%</td><td>33.1%</td><td>16.7%</td></tr>
+<tr><td>Previous quarter</td><td>Mar 2026</td><td>460.0</td><td>78.0</td><td>31.0%</td><td>2.2%</td><td>-19.2%</td></tr>
+<tr><td>Year-ago quarter</td><td>Jun 2025</td><td>353.0</td><td>54.0</td><td>29.0%</td><td></td><td></td></tr>
+<tr><td>Latest annual</td><td>Mar 2026</td><td>1,703.0</td><td>282.0</td><td>32.0%</td><td>12.3%</td><td>15.6%</td></tr></tbody>
+        </table>
+      </div>
+      <p class="muted">Borrowings 891.0; Net debt 487.0; Assets 2,775.0; Operating CF 420.0; Net CF 14.0</p>
+
+          <div class="ratio-grid"><div><span>Market cap</span><b>15,988</b></div>
+<div><span>P/E</span><b>55.8</b></div>
+<div><span>P/B or book</span><b>162</b></div>
+<div><span>ROE</span><b>15.9</b></div>
+<div><span>ROCE</span><b>17.4</b></div>
+<div><span>Dividend yield</span><b>0.22</b></div>
+<div><span>Promoters</span><b>49.84%</b></div>
+<div><span>FII/DII</span><b>16.03% / 22.56%</b></div></div>
+        </section>
+        <section>
+          <h4>Technical And Sector View</h4>
+          <p></p>
+          <p></p>
+          <div class="trade-grid">
+            <div><span>Tech price</span><b>1,573.2</b></div>
+            <div><span>20DMA / 50DMA</span><b>1,505.3 / 1,443.5</b></div>
+            <div><span>ADX</span><b>32.5</b></div>
+            <div><span>52W gap</span><b>-2.3%</b></div>
+          </div>
+        </section>
+      </div>
+
+      <div class="columns">
+        <section>
+          <h4>Strengths</h4>
+          <ul>
+            <li>owned by two sampled small-cap funds; current Stage 2 trend; healthy operating margin</li>
+<li>Company&#x27;s median sales growth is 22.8% of last 10 years</li>
+          </ul>
+        </section>
+        <section>
+          <h4>Risks And Kill Switches</h4>
+          <ul>
+            <li>GOVERNANCE_REVIEW_PENDING; WATCH_AGENT_ADDA_EXTENDED</li>
+<li>Stock is trading at 9.69 times its book value</li>
+          </ul>
+        </section>
+      </div>
+
+      <section>
+        <h4>Source Trail</h4>
+        <p class="muted">Domains captured: bseindia.com, nseindia.com, screener.in</p>
+        <ul class="source-list"><li><a href="https://www.screener.in/company/RAINBOW/consolidated/">Screener structured fundamentals</a><span>screener.in</span></li>
+<li><a href="https://www.nseindia.com/get-quotes/equity?symbol=RAINBOW">NSE quote page</a><span>nseindia.com</span></li>
+<li><a href="https://www.bseindia.com/stock-share-price/rainbow-childrens-medicare-ltd/RAINBOW/543524/">BSE company page</a><span>bseindia.com</span></li>
+<li><a href="https://www.bseindia.com/stock-share-price/rainbow-childrens-medicare-ltd/RAINBOW/543524/corp-announcements/">BSE announcement: All</a><span>bseindia.com</span></li>
+<li><a href="https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=8970d382-3968-4128-9b4c-cddf4546db10.pdf">BSE announcement: Announcement under Regulation 30 (LODR)-Earnings Call Transcript4 Aug- Earnings Call Trans</a><span>bseindia.com</span></li>
+<li><a href="https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=72f1dc2e-93bd-4229-82ec-5338b30404b0.pdf">BSE announcement: Announcement under Regulation 30 (LODR)-Analyst / Investor Meet - Outcome31 Jul- Audio rec</a><span>bseindia.com</span></li>
+<li><a href="https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=00f2af46-b715-47b0-9821-c0eb807fea45.pdf">Concall transcript: Jun 2026</a><span>bseindia.com</span></li></ul>
+      </section>
+    </article>
+
+
+    <article id="WEWORK" class="candidate retest">
+      <div class="candidate-head">
+        <div>
+          <span class="eyebrow">Retest trigger map / Rank 10</span>
+          <h3>WEWORK <small>Wework India Management Limited</small></h3>
+          <p>Trigger-map candidate; execution gates pending.</p>
+        </div>
+        <div class="score-chip">66.9<span>/100</span></div>
+      </div>
+
+      <div class="metrics">
+
+      <div class="metric">
+        <span>Policy rating</span>
+        <b>Active Watch</b>
+        <small>PHASE1_RETEST_TRIGGER_MAP_GOVERNANCE_PENDING</small>
+      </div>
+
+
+      <div class="metric">
+        <span>Price / stage</span>
+        <b>748.2</b>
+        <small>STAGE_2 / RSI 71.7</small>
+      </div>
+
+
+      <div class="metric">
+        <span>RS</span>
+        <b>23.3</b>
+        <small>RS score 7.5/10</small>
+      </div>
+
+
+      <div class="metric">
+        <span>Paper slot</span>
+        <b>Rs. 14,964</b>
+        <small>20 sh / risk Rs. 1,460</small>
+      </div>
+
+      </div>
+
+      <section class="theme-box">
+        <h4>Theme Detail</h4>
+        <div class="theme-grid">
+          <div>
+            <span>Lens</span>
+            <b>Flexible workspace and managed office demand</b>
+          </div>
+          <div>
+            <span>Policy Status</span>
+            <b>Business services</b>
+            <small>CROWDED / theme score 11.0/15</small>
+          </div>
+          <div>
+            <span>Stock Expression</span>
+            <b>WeWork India represents office-services growth rather than pure real-estate ownership.</b>
+          </div>
+          <div>
+            <span>Priority Impact</span>
+            <b>Retest-only; needs more listing-history and governance comfort.</b>
+          </div>
+        </div>
+        <p>The theme is enterprise adoption of flexible workspaces and managed office capacity.</p>
+        <div class="columns compact">
+          <section>
+            <h4>Theme Confirmation</h4>
+            <p>Fresh result cache, Stage 2 trend, healthy operating-margin evidence, and adequate liquidity.</p>
+          </section>
+          <section>
+            <h4>Theme Risk / Invalidation</h4>
+            <p>Lease liabilities, occupancy execution, cyclicality in office demand, and short market history.</p>
+            <p class="muted">Occupancy, margin, or cash-flow evidence weakens, or retest fails.</p>
+          </section>
+        </div>
+      </section>
+
+      <div class="columns">
+        <section>
+          <h4>Score Components</h4>
+
+      <div class="scorebar">
+        <div class="scorebar-head"><span>Theme</span><b>11.0 / 15</b></div>
+        <div class="bar"><span style="width:73.3%"></span></div>
+      </div>
+
+
+      <div class="scorebar">
+        <div class="scorebar-head"><span>Fundamental</span><b>14.8 / 25</b></div>
+        <div class="bar"><span style="width:59.2%"></span></div>
+      </div>
+
+
+      <div class="scorebar">
+        <div class="scorebar-head"><span>Technical</span><b>18.1 / 25</b></div>
+        <div class="bar"><span style="width:72.4%"></span></div>
+      </div>
+
+
+      <div class="scorebar">
+        <div class="scorebar-head"><span>Liquidity</span><b>13.0 / 15</b></div>
+        <div class="bar"><span style="width:86.7%"></span></div>
+      </div>
+
+
+      <div class="scorebar">
+        <div class="scorebar-head"><span>Governance</span><b>3.5 / 10</b></div>
+        <div class="bar"><span style="width:35.0%"></span></div>
+      </div>
+
+
+      <div class="scorebar">
+        <div class="scorebar-head"><span>Valuation/RR</span><b>6.5 / 10</b></div>
+        <div class="bar"><span style="width:65.0%"></span></div>
+      </div>
+
+        </section>
+        <section>
+          <h4>Trigger Plan</h4>
+          <p class="strong">Break above 802.45 with volume, or retest-hold near 720.66; skip if &gt;5% above planned trigger.</p>
+          <div class="trade-grid">
+            <div><span>Stop</span><b>675.2</b></div>
+            <div><span>2R target</span><b>894.2</b></div>
+            <div><span>Turnover</span><b>35.7 cr</b></div>
+            <div><span>Volume ratio</span><b>2.2</b></div>
+          </div>
+          <p class="warning">Not an order. Governance/filing review and live trigger confirmation remain mandatory.</p>
+        </section>
+      </div>
+
+      <div class="columns">
+        <section>
+          <h4>Fundamental View</h4>
+          <p></p>
+
+      <div class="mini-table">
+        <table>
+          <thead><tr><th>Period</th><th>Label</th><th>Revenue Cr</th><th>PAT Cr</th><th>OPM</th><th>Revenue Chg</th><th>PAT Chg</th></tr></thead>
+          <tbody><tr><td>Latest quarter</td><td>Jun 2026</td><td>683.8</td><td>-4.1</td><td>64.0%</td><td>27.7%</td><td>-71.3%</td></tr>
+<tr><td>Previous quarter</td><td>Mar 2026</td><td>696.1</td><td>65.9</td><td>64.7%</td><td>-1.8%</td><td>-106.2%</td></tr>
+<tr><td>Year-ago quarter</td><td>Jun 2025</td><td>535.3</td><td>-14.1</td><td>62.7%</td><td></td><td></td></tr>
+<tr><td>Latest annual</td><td>Mar 2026</td><td>2,440.0</td><td>75.0</td><td>64.0%</td><td>25.2%</td><td>-41.4%</td></tr></tbody>
+        </table>
+      </div>
+      <p class="muted">Borrowings 5,550.0; Net debt 5,282.0; Assets 7,092.0; Operating CF 1,734.0; Net CF 39.0</p>
+
+          <div class="ratio-grid"><div><span>Market cap</span><b>10,352</b></div>
+<div><span>P/E</span><b>117</b></div>
+<div><span>P/B or book</span><b>22.0</b></div>
+<div><span>ROE</span><b>31.6</b></div>
+<div><span>ROCE</span><b>20.7</b></div>
+<div><span>Dividend yield</span><b>0.00</b></div>
+<div><span>Promoters</span><b>48.30%</b></div>
+<div><span>FII/DII</span><b>19.64% / 25.90%</b></div></div>
+        </section>
+        <section>
+          <h4>Technical And Sector View</h4>
+          <p></p>
+          <p></p>
+          <div class="trade-grid">
+            <div><span>Tech price</span><b>748.2</b></div>
+            <div><span>20DMA / 50DMA</span><b>720.7 / 682.0</b></div>
+            <div><span>ADX</span><b>28.5</b></div>
+            <div><span>52W gap</span><b>-5.8%</b></div>
+          </div>
+        </section>
+      </div>
+
+      <div class="columns">
+        <section>
+          <h4>Strengths</h4>
+          <ul>
+            <li>overlaps one sampled small-cap fund; current Stage 2 trend; healthy operating margin</li>
+          </ul>
+        </section>
+        <section>
+          <h4>Risks And Kill Switches</h4>
+          <ul>
+            <li>GOVERNANCE_REVIEW_PENDING; WATCH_AGENT_ADDA_EXTENDED</li>
+<li>Stock is trading at 34.0 times its book value</li>
+<li>Though the company is reporting repeated profits, it is not paying out dividend</li>
+<li>Company has low interest coverage ratio.</li>
+<li>Promoter holding has decreased over last quarter: -1.12%</li>
+          </ul>
+        </section>
+      </div>
+
+      <section>
+        <h4>Source Trail</h4>
+        <p class="muted">Domains captured: bseindia.com, nseindia.com, screener.in</p>
+        <ul class="source-list"><li><a href="https://www.screener.in/company/WEWORK/consolidated/">Screener structured fundamentals</a><span>screener.in</span></li>
+<li><a href="https://www.nseindia.com/get-quotes/equity?symbol=WEWORK">NSE quote page</a><span>nseindia.com</span></li>
+<li><a href="https://www.bseindia.com/stock-share-price/wework-india-management-ltd/WEWORK/544570/">BSE company page</a><span>bseindia.com</span></li>
+<li><a href="https://www.bseindia.com/stock-share-price/wework-india-management-ltd/WEWORK/544570/corp-announcements/">BSE announcement: All</a><span>bseindia.com</span></li>
+<li><a href="https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=926feb1e-9dfb-4385-9ad1-558e833392aa.pdf">BSE announcement: Announcement under Regulation 30 (LODR)-Analyst / Investor Meet - Intimation4 Aug</a><span>bseindia.com</span></li>
+<li><a href="https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=416c78e3-ede0-441b-a534-e87790bf4bd4.pdf">BSE announcement: Announcement under Regulation 30 (LODR)-Newspaper Publication1 Aug- Newspaper publication </a><span>bseindia.com</span></li>
+<li><a href="https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=b7598bbb-8665-4b0f-86e4-927aa9b07347.pdf">Concall transcript: Jul 2026</a><span>bseindia.com</span></li>
+<li><a href="https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=a6c2d628-dddd-45db-9d06-0eda2831889b.pdf">Concall presentation: Jun 2026</a><span>bseindia.com</span></li></ul>
+      </section>
+    </article>
+
+  </main>
+  <footer>
+    Inputs are local Agent Adda policy-gate scores, local financial-cache rows, local technical setup snapshots, and Screener/company/exchange source links captured at generation time. This is a research artifact, not investment advice or an executable trading instruction.
+  </footer>
+</body>
+</html>

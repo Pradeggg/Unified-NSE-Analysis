@@ -1,0 +1,37 @@
+Agent Adda
+      Wed, 26 Aug 2026 · 18:21 IST
+
+        Report · swing_playbook.html · mode: both
+
+Balanced swing stance with 20 candidates; act only on intraday confirmation above triggers; max 1% risk per trade.
+Agent Adda Swing Trade Playbook — NSE (26 Aug 2026)
+Attached: Swing Trading Playbook (HTML). Generated 2026-08-26 18:12:05. Research-only; not investment advice.
+Key takeaways
+ Risk profile: Balanced; target 8–12 open positions; max 1.0% account risk per trade.
+ CUPID leads both frames (Score 74.8, STAGE_2): Tactical Trig Rs 286.83 / Stop Rs 266.10 / T1 Rs 317.93 / T2 Rs 328.29; Position Stop Rs 260.13 / T1 Rs 326.87 / T2 Rs 340.22.
+ Coverage: 10 Tactical and 10 Position candidates; Tactical stops ~7.2% vs Position ~9.3%; targets framed at 1.5R / 2.0R.
+ Staging skew: Mostly STAGE_2; PARADEEP is STAGE_1.
+ Relative strength highlights: INDSWFTLAB (RS 100.0), CUPID (RS 99.8), QUESS (RS 99.0).
+ Execution guardrails: Buy only above trigger; respect the initial stop; reduce size when stop distance is wide; recheck live liquidity before orders.
+Highlighted candidates
+ Tactical: CUPID (Trig Rs 286.83 | Stop Rs 266.10 | T1 Rs 317.93 | T2 Rs 328.29); CGCL (Trig Rs 258.91 | Stop Rs 240.20 | T1 Rs 286.98 | T2 Rs 296.34); RATNAVEER (Trig Rs 282.06 | Stop Rs 261.68 | T1 Rs 312.64 | T2 Rs 322.84).
+ Position: CUPID (Trig Rs 286.83 | Stop Rs 260.13 | T1 Rs 326.87 | T2 Rs 340.22); CGCL (Trig Rs 258.91 | Stop Rs 234.82 | T1 Rs 295.06 | T2 Rs 307.11); RATNAVEER (Trig Rs 282.06 | Stop Rs 255.81 | T1 Rs 321.44 | T2 Rs 334.57).
+What to watch
+ Intraday confirmation above trigger levels; use entries as confirmation triggers, not blind buy levels.
+ Recheck live liquidity before orders; reduce size when stop distance is wide (Position set is wider at ~9.3%).
+ STAGE_2 dominance; monitor PARADEEP (STAGE_1) for early trend development.
+ Prefer candidates over watchlist rows when breadth is cautious.
+How to use this
+ Size positions to ≤1.0% account risk; aim for 8–12 concurrent positions.
+ Place orders only on confirmation above the listed triggers; set and honor the initial stops.
+ Frame exits using the 1.5R / 2.0R targets; reassess if price fails to confirm.
+ Review the attached playbook for full tables and evidence scores per symbol.
+Disclaimer: Not investment advice or a trading recommendation. For research and learning only. Confirm live price, liquidity, and risk before action.
+
+  Regards,
+
+  Agent Adda
+
+  ShunyaAI · NSE Market Intelligence
+
+Not investment advice. For research and learning only. NSE EOD + live snapshot data.

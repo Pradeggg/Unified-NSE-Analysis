@@ -1,0 +1,19 @@
+Feature Group,Included Features,Primary Cost Driver,Recommended Model Route,Recommended Tier Gate,Cost Risk,Control Required
+Web app and subscriptions,Landing pages auth payments profile,Hosting auth analytics,No LLM,All,Low,Monitor infra and payment failures
+Talk 2 Stocks chat,Natural-language Q&A over stocks sectors indices,LLM tokens DB reads,gpt-4o-mini default with gpt-5-nano router,Starter+,Medium,Per-user token ledger and quota
+Intent routing,Symbol intent command extraction,Small JSON LLM calls,gpt-5-nano,All,Low,Strict schema and deterministic fallback
+Stock deep dive,Technicals fundamentals catalysts risks,LLM synthesis plus data queries,gpt-4o-mini; Luna for Plus/Pro,Starter+,Medium,Evidence-pack size limit
+Fundamental research,Results filings concalls valuation narrative,Document context and synthesis,Luna; Terra only premium,Plus/Pro,High,Deep-research quota
+Technical and stage analysis,Stage RS RSI VCP trend pivots,Compute and charts,Deterministic first,All,Low,Cache calculations
+Peer comparison,2-10 stock matrix and verdict,Large evidence pack,gpt-4o-mini or Luna,Plus+,Medium,Limit symbol count by tier
+Sector and index intelligence,Breadth rotation flows leaders laggards,Data refresh plus synthesis,Deterministic plus gpt-4o-mini,Starter+,Low/Medium,Batch reports
+EOD and weekend reports,Daily/weekly market reports,Report generation email storage,DeepSeek Flash or Luna batch,Plus+,Medium,Batch/off-peak generation
+Watchlists,Saved names reasons freshness,DB and scheduled checks,No LLM except summaries,Starter+,Low,Limit watchlist count
+Alerts and intraday monitoring,Price RSI stage breakout event alerts,Polling data email/push,LLM only for setup parsing,Plus/Pro,Medium,Polling frequency and alert caps
+Portfolio assessment,CSV upload holdings risk add/trim/exit,Analytics plus report synthesis,Luna for Pro,Pro+,Medium,Portfolio refresh quota
+Report export and sharing,HTML markdown PDF/email-ready output,Storage email rendering,Deterministic plus optional cover note,Plus+,Low/Medium,Export count cap
+Email delivery,Send reports and alerts,SMTP/API volume,No LLM required,Plus+,Low,Bounce and quota monitoring
+Voice briefing,STT TTS spoken Q&A,Audio minutes/chars,Sarvam or OpenAI speech,Pro+,Medium/High,Minutes cap
+Evidence trail and report QA,Source freshness validation,Storage and validation jobs,Mostly deterministic,All,Low,QA checklist and stale data labels
+Admin observability,Usage cost errors users plans,Logs database analytics,No LLM,Internal,Low,Budget circuit breakers
+

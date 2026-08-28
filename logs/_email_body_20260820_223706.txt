@@ -1,0 +1,52 @@
+Agent Adda
+      Thu, 20 Aug 2026 · 22:37 IST
+
+        Report · eod_market_report.html · mode: both
+
+    Mixed tape: NIFTY +0.64% to 24,231.85; BANKNIFTY +0.45% to 57,495.90; leadership in FMCG and Capital Markets, Defence & Aerospace under pressure.
+
+  EOD Market Report | 20 Aug 2026
+
+  Attached: EOD Market Report 2026-08-20 (eod_market_report.html). This note provides a brief executive summary; refer to the attachment for full detail.
+
+  Key takeaways
+
+    Indices: NIFTY rose 0.64% to 24,231.85 (day range 24,184.55–24,265.15); BANKNIFTY up 0.45% to 57,495.90 (57,431.80–57,702.95). Breadth mixed; confirmation needed next session.
+
+    Sector leadership: FMCG & Consumer Goods +2.16% with 75% advancers; Capital Markets +1.62% with 90% advancers; Private Banks +1.36% with 83% advancers; Realty +1.19% with 76% advancers.
+
+    Laggards: Defence & Aerospace -0.55% (3/8 advancing). Services (-0.19%) and Metals & Mining (-0.23%) faced headwinds with more decliners than advancers.
+
+    Top movers: KJMCFIN, SAMBANDAM, MPDL each +20%; KRONOX +20% on 58.9L shares. On the downside, TECILCHEM -10.74%.
+
+    Flows: Most active counters included BAJAJHIND +14.47% (2,565.6L), IDEA -0.28% (2,321.1L), and KWIL +15.27% (1,013.0L), indicating concentrated liquidity in FMCG and select telecom/infra names.
+
+  What to watch
+
+    Follow-through in FMCG & Consumer Goods and Capital Markets; monitor sugar-related names (e.g., BAJAJHIND, RENUKA) for sustained momentum.
+
+    Whether BANKNIFTY aligns more closely with NIFTY strength; watch for resolution of the 57,432–57,703 intraday range.
+
+    Potential mean-reversion in Defence & Aerospace and Metals & Mining after today’s softness.
+
+    Breadth confirmation: mixed participation today argues for validation in the next session.
+
+  Action items
+
+    Refresh sector allocations/watchlists to reflect FMCG and Capital Markets leadership; track liquidity clusters in BAJAJHIND, KWIL, and KRONOX.
+
+    Log report signals for follow-up: BALRAMCHIN flagged STAGE_2 BUY; IDEA flagged STAGE_2 BUY; TECILCHEM flagged STAGE_4 SELL.
+
+    Set alerts on index levels near today’s ranges (NIFTY 24,185–24,265; BANKNIFTY 57,432–57,703) for potential breakouts or failures.
+
+    Review the attached full report for sector breadth tables and the most active panel before the next session.
+
+    Data source: NSE EOD close (PostgreSQL). Intraday bars were not available for this session; hourly breadth and intraday candles are omitted. For research and learning only; not investment advice.
+
+  Regards,
+
+  Agent Adda
+
+  ShunyaAI · NSE Market Intelligence
+
+Not investment advice. For research and learning only. NSE EOD + live snapshot data.

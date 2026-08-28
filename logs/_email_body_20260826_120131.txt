@@ -1,0 +1,56 @@
+Agent Adda
+      Wed, 26 Aug 2026 · 12:01 IST
+
+        Report · midday_market.html · mode: both
+
+  Midday Market — 26 Aug 2026
+
+    One-line read: Rotational session with selective leadership; banks supportive; breadth needs confirmation in the next 60–90 minutes (NIFTY 24,290 −0.18%, Bank Nifty 57,891 +0.65%, Smallcap 250 +0.66%, India VIX 10.68 −3.54%).
+
+  This cover note summarizes the attached midday dashboard (midday_market.html). Research-only; educational market intelligence; not investment advice.
+
+  Key takeaways
+
+    Session context: Rotational; leadership is selective. Banking/financials are supportive to leading while headline NIFTY is weak intraday.
+
+    Indices: NIFTY −0.18% (weak read); Bank Nifty +0.65% and Financial Services +0.77% (leading); Smallcap/Microcap cohorts are leading with VIX easing.
+
+    Sectors: Strength in Cement, PSU Banks, Private Banks, Railways PSU; weakness in IT, CPSE and several consumption-linked baskets.
+
+    Top movers (12:00 IST): Gainers OLECTRA, DATAPATTNS, MOTILALOFS, COROMANDEL; Losers LICI, LENSKART, CUMMINSIND, ANANTRAJ.
+
+    Momentum watchlist (prior-day screen): RBA, AVADHSUGAR, KABRAEXTRU, TFCILTD, MACPOWER — use for monitoring, not for trade calls.
+
+    F&O context: Indices neutral; NIFTY PCR OI 0.83 (max pain 24,300), BANKNIFTY PCR OI 1.16 (max pain 57,800). Treat as context until price/OI/VWAP align.
+
+  What to watch (next 60–90 minutes)
+
+    Breadth confirmation across NIFTY, Bank Nifty, and broader indices; price holding above opening ranges with volume.
+
+    NIFTY to hold the key intraday range and avoid a failed second‑half breakout.
+
+    Financials to continue absorbing weakness; banks sustain leadership.
+
+    Small/Microcap strength to persist without a pickup in VIX.
+
+    Themes: capital markets, IT, metals, realty, and broad‑market quality momentum; track crude, USDINR/DXY, and FII/DII flow confirmation.
+
+  How to use this
+
+    Use as a market map: index direction, breadth, sectors, movers, momentum, F&O, and global cues.
+
+    Refine watchlists with momentum names; wait for price acceptance above opening range, improving breadth, and volume confirmation.
+
+    Avoid chasing extended movers (RSI > 80 or large gaps); check support distance and position sizing.
+
+    Treat F&O signals as context until PCR, OI buildup, price, and intraday VWAP/intraday range align; re-check near expiries.
+
+    Educational market intelligence only. This email and the attached report are for research and education; they are not investment advice, recommendations, or a substitute for suitability-based guidance. Markets involve risk, including capital loss. Consider consulting a SEBI-registered adviser before acting.
+
+  Regards,
+
+  Agent Adda
+
+  ShunyaAI · NSE Market Intelligence
+
+Not investment advice. For research and learning only. NSE EOD + live snapshot data.

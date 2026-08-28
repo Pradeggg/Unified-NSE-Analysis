@@ -210,7 +210,11 @@ def fetch_closes(symbols: list[str], period: str = "10d") -> dict:
     Returns {symbol: {"close": float, "prev": float, "date": str}} for all symbols.
     Uses .NS suffix for NSE.
     """
-    tickers = [s + ".NS" for s in symbols]
+    # ICICI Direct/broker aliases can differ from the NSE/yfinance symbol.
+    # Keep the fund ledger label intact while fetching the market price under
+    # the canonical exchange symbol.
+    ticker_aliases = {"RUBCORP": "RUBICON"}
+    tickers = [ticker_aliases.get(s, s) + ".NS" for s in symbols]
     result = {}
 
     for sym, ticker in zip(symbols, tickers):

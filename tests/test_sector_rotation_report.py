@@ -225,7 +225,107 @@ class SectorRotationReportTests(unittest.TestCase):
         self.assertIn("| POLYCAB | Polycab India | Capital Goods & Industrials |", markdown)
         self.assertIn("Research Overlay", html)
         self.assertIn("POLYCAB", html)
-        self.assertIn("Sector outside current top rotation cut", html)
+        self.assertNotIn("Report Visibility", html)
+        self.assertNotIn("Sector outside current top rotation cut", html)
+
+    def test_render_html_uses_eod_label_for_trading_day_posting(self):
+        sector_rank = pd.DataFrame(
+            [
+                {
+                    "SYMBOL": "NIFTY PHARMA",
+                    "SECTOR_NAME": "Pharma & Healthcare",
+                    "CLOSE": 1000,
+                    "RET_5D": 1.2,
+                    "RET_1M": 2.4,
+                    "RET_3M": 7.0,
+                    "RET_6M": 11.0,
+                    "RS_1M": 0.8,
+                    "ROTATION_SCORE": 5.2,
+                    "BREADTH_PCT50": 45,
+                }
+            ]
+        )
+        candidates = pd.DataFrame(
+            [
+                {
+                    "SYMBOL": "CUPID",
+                    "COMPANY_NAME": "Cupid Ltd",
+                    "SECTOR_NAME": "Pharma & Healthcare",
+                    "ANALYSIS_DATE": "2026-08-22",
+                }
+            ]
+        )
+
+        html = render_html_interactive(
+            sector_rank,
+            candidates,
+            pd.DataFrame(),
+            Path("source.csv"),
+            pd.Timestamp("2026-08-23"),
+            {"sectors": {}, "stocks": {}, "market_summary": ""},
+        )
+
+        self.assertIn("NSE Sector Rotation Report — EOD Friday, 21 Aug 2026", html)
+        self.assertIn("EOD Close: EOD Friday, 21 Aug 2026", html)
+        self.assertIn("Posting: Non-trading day · 2026-08-23", html)
+
+    def test_generate_narratives_backfills_missing_sector_narratives(self):
+        sector_rank = pd.DataFrame(
+            [
+                {
+                    "SECTOR_NAME": "Pharma & Healthcare",
+                    "SYMBOL": "NIFTY PHARMA",
+                    "RET_5D": -0.3,
+                    "RET_1M": 2.4,
+                    "RET_3M": 7.3,
+                    "RET_6M": 11.0,
+                    "RS_1M": 0.7,
+                    "ROTATION_SCORE": 5.2,
+                    "BREADTH_PCT50": 45,
+                    "CLOSE": 26359.75,
+                },
+                {
+                    "SECTOR_NAME": "Capital Markets",
+                    "SYMBOL": "NIFTY CAPITAL MKT",
+                    "RET_5D": 2.5,
+                    "RET_1M": 1.8,
+                    "RET_3M": -2.4,
+                    "RET_6M": 6.0,
+                    "RS_1M": 0.1,
+                    "ROTATION_SCORE": 4.4,
+                    "BREADTH_PCT50": 47,
+                    "CLOSE": 5423.15,
+                },
+                {
+                    "SECTOR_NAME": "Logistics & Transport",
+                    "SYMBOL": "NIFTY TRANS LOGIS",
+                    "RET_5D": -0.2,
+                    "RET_1M": 6.1,
+                    "RET_3M": 12.9,
+                    "RET_6M": 15.0,
+                    "RS_1M": 4.5,
+                    "ROTATION_SCORE": 4.0,
+                    "BREADTH_PCT50": 63,
+                    "CLOSE": 26624.85,
+                },
+            ]
+        )
+        candidates = pd.DataFrame(
+            [
+                {"SYMBOL": "CUPID", "SECTOR_NAME": "Pharma & Healthcare"},
+            ]
+        )
+
+        with patch.object(
+            sector_rotation_report,
+            "_generate_llm_narratives",
+            return_value={"market_summary": "", "sectors": {}, "stocks": {}},
+        ):
+            narratives = sector_rotation_report.generate_narratives(sector_rank, candidates)
+
+        self.assertIn("defensive-growth pocket", narratives["sectors"]["Pharma & Healthcare"]["narrative"])
+        self.assertIn("secondary rotation lane", narratives["sectors"]["Capital Markets"]["narrative"])
+        self.assertIn("cleaner mid-tier rotation pockets", narratives["sectors"]["Logistics & Transport"]["narrative"])
 
     def test_compute_supertrend_marks_persistent_uptrend_as_bullish(self):
         prices = pd.DataFrame(
@@ -1277,20 +1377,24 @@ class SectorRotationReportTests(unittest.TestCase):
             latest_report = Path(td) / "us_market_report.html"
             latest_report.write_text("<html><body>US report</body></html>")
 
-            html = sector_rotation_report.build_global_us_context_tab_html(latest_report)
+        html = sector_rotation_report.build_global_us_context_tab_html(latest_report)
 
         self.assertIn("Global / US Context", html)
-        self.assertIn("Standalone US/global market report", html)
-        self.assertIn("Open US/global report", html)
-        self.assertIn("us_market_report.html", html)
+        self.assertIn("cached Global / US snapshot", html)
+        self.assertIn("not a current global market read", html)
+        self.assertIn("Regime From Cache", html)
+        self.assertNotIn("Global markets are currently", html)
+        self.assertIn("Local cache-driven global backdrop", html)
+        self.assertNotIn("Open US/global report", html)
+        self.assertNotIn("us_market_report.html", html)
         self.assertNotIn("unavailable", html.lower())
 
     def test_global_us_context_tab_helper_handles_missing_latest_report(self):
         html = sector_rotation_report.build_global_us_context_tab_html(Path("missing-us-report.html"))
 
         self.assertIn("Global / US Context", html)
-        self.assertIn("US/global context is unavailable", html)
-        self.assertIn("sector rotation report still generated", html)
+        self.assertIn("Local cache-driven global backdrop", html)
+        self.assertIn("This tab uses local US/global cache only", html)
 
     def test_global_us_context_tab_is_rendered_without_breaking_existing_tabs(self):
         sector_rank = pd.DataFrame(

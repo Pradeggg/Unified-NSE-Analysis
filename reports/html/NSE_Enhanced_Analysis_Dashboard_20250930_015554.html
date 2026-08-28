@@ -1,0 +1,771 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NSE Enhanced Analysis Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: "Roboto", "Google Sans", "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #212121;
+            font-weight: 400;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 100%;
+            margin: 0 auto;
+            padding: 20px;
+            width: 100%;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 3rem;
+            font-weight: 300;
+            margin-bottom: 16px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            letter-spacing: -0.5px;
+        }
+
+        .header p {
+            font-size: 1.25rem;
+            font-weight: 400;
+            opacity: 0.9;
+        }
+
+        .section-header {
+            text-align: center;
+            margin-bottom: 2rem;
+            color: white;
+        }
+
+        .section-header h2 {
+            font-size: 2.5rem;
+            font-weight: 300;
+            margin-bottom: 0.5rem;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .section-header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        /* Multi-Timeframe Analysis Styles */
+        .analysis-section {
+            margin-top: 2rem;
+            padding: 2rem 0;
+        }
+        
+        .timeframe-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+        }
+        
+        .timeframe-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            border: 1px solid #e0e0e0;
+        }
+        
+        .timeframe-header h3 {
+            color: #2c3e50;
+            margin-bottom: 0.5rem;
+            font-size: 1.2rem;
+        }
+        
+        .timeframe-header p {
+            color: #666;
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+        }
+        
+        .timeframe-content {
+            min-height: 200px;
+        }
+        
+        /* Price Action Analysis Styles */
+        .price-action-section {
+            margin-top: 3rem;
+            padding: 2rem 0;
+        }
+        
+        .price-action-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+        }
+        
+        .price-action-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            border: 1px solid #e0e0e0;
+        }
+        
+        .price-action-header h3 {
+            color: #2c3e50;
+            margin-bottom: 0.5rem;
+            font-size: 1.2rem;
+        }
+        
+        .price-action-header p {
+            color: #666;
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+        }
+        
+        .price-action-content {
+            min-height: 200px;
+        }
+        
+        /* Export Buttons */
+        .export-buttons {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+        
+        .export-btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+        
+        .csv-btn {
+            background: #4CAF50;
+            color: white;
+        }
+        
+        .csv-btn:hover {
+            background: #45a049;
+            transform: translateY(-1px);
+        }
+        
+        .tradingview-btn {
+            background: #1976d2;
+            color: white;
+        }
+        
+        .tradingview-btn:hover {
+            background: #1565c0;
+            transform: translateY(-1px);
+        }
+        
+        /* Timeframe Analysis Styles */
+        .timeframe-stocks {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+        
+        .timeframe-stock {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 1rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .timeframe-stock:hover {
+            background: #e3f2fd;
+            border-color: #1976d2;
+            transform: translateY(-1px);
+        }
+        
+        .stock-symbol {
+            font-weight: 600;
+            color: #1976d2;
+            font-size: 1.1rem;
+        }
+        
+        .stock-price {
+            font-weight: 500;
+            color: #2c3e50;
+            font-size: 1rem;
+            margin: 0.25rem 0;
+        }
+        
+        .stock-metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+        
+        .metric {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+        
+        .metric .label {
+            font-size: 0.75rem;
+            color: #666;
+            font-weight: 500;
+        }
+        
+        .metric .value {
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+        
+        .metric .value.strong {
+            color: #4CAF50;
+        }
+        
+        .metric .value.medium {
+            color: #FF9800;
+        }
+        
+        .metric .value.weak {
+            color: #F44336;
+        }
+        
+        .metric .value.overbought {
+            color: #F44336;
+        }
+        
+        .metric .value.oversold {
+            color: #4CAF50;
+        }
+        
+        .metric .value.normal {
+            color: #2196F3;
+        }
+        
+        .metric .value.pattern {
+            color: #9C27B0;
+        }
+        
+        /* Price Action Analysis Styles */
+        .price-action-stocks {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+        
+        .price-action-stock {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 1rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .price-action-stock:hover {
+            background: #e3f2fd;
+            border-color: #1976d2;
+            transform: translateY(-1px);
+        }
+        
+        .stock-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+        }
+        
+        .analysis-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 0.5rem;
+        }
+        
+        .detail-row {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+        
+        .detail-row .label {
+            font-size: 0.75rem;
+            color: #666;
+            font-weight: 500;
+        }
+        
+        .detail-row .value {
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+        
+        .detail-row .value.strong {
+            color: #4CAF50;
+        }
+        
+        .detail-row .value.medium {
+            color: #FF9800;
+        }
+        
+        .detail-row .value.weak {
+            color: #F44336;
+        }
+        
+        .detail-row .value.breakout {
+            color: #4CAF50;
+        }
+        
+        .detail-row .value.no-breakout {
+            color: #F44336;
+        }
+        
+        .detail-row .value.yes {
+            color: #4CAF50;
+        }
+        
+        .detail-row .value.no {
+            color: #F44336;
+        }
+        
+        .loading {
+            text-align: center;
+            color: #666;
+            font-style: italic;
+            padding: 2rem;
+        }
+        
+        .no-data {
+            text-align: center;
+            color: #999;
+            font-style: italic;
+            padding: 2rem;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .section-header h2 {
+                font-size: 1.8rem;
+            }
+            
+            .timeframe-grid,
+            .price-action-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .export-buttons {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 NSE Enhanced Analysis Dashboard</h1>
+            <p>Multi-Timeframe & Price Action Analysis for High-Quality Liquid Stocks</p>
+            <p>✅ Filtered for Liquidity & Manipulation Protection</p>
+            <p>Analysis Date: 2025-09-30</p>
+        </div>
+        
+        <!-- Multi-Timeframe Analysis Section -->
+        <div class="analysis-section">
+            <div class="section-header">
+                <h2>📊 Multi-Timeframe Analysis</h2>
+                <p>Comprehensive bullish pattern analysis across Daily, Weekly, 14-day, and 30-day timeframes</p>
+            </div>
+            
+            <div class="timeframe-grid">
+                <div class="timeframe-card">
+                    <div class="timeframe-header">
+                        <h3>📈 Daily Bullish Patterns</h3>
+                        <p>Stocks showing bullish momentum on daily charts</p>
+                        <div class="export-buttons">
+                            <button onclick="exportToCSV('dailyBullish')" class="export-btn csv-btn">📊 CSV</button>
+                            <button onclick="exportSymbolsForTradingView('dailyBullish')" class="export-btn tradingview-btn">📈 TradingView</button>
+                        </div>
+                    </div>
+                    <div class="timeframe-content" id="dailyBullishContent">
+                        <div class="loading">Analyzing daily patterns...</div>
+                    </div>
+                </div>
+                
+                <div class="timeframe-card">
+                    <div class="timeframe-header">
+                        <h3>📅 Weekly Bullish Patterns</h3>
+                        <p>Stocks with strong weekly momentum</p>
+                        <div class="export-buttons">
+                            <button onclick="exportToCSV('weeklyBullish')" class="export-btn csv-btn">📊 CSV</button>
+                            <button onclick="exportSymbolsForTradingView('weeklyBullish')" class="export-btn tradingview-btn">📈 TradingView</button>
+                        </div>
+                    </div>
+                    <div class="timeframe-content" id="weeklyBullishContent">
+                        <div class="loading">Analyzing weekly patterns...</div>
+                    </div>
+                </div>
+                
+                <div class="timeframe-card">
+                    <div class="timeframe-header">
+                        <h3>📊 14-Day Bullish Patterns</h3>
+                        <p>Short-term bullish momentum analysis</p>
+                        <div class="export-buttons">
+                            <button onclick="exportToCSV('fourteenDayBullish')" class="export-btn csv-btn">📊 CSV</button>
+                            <button onclick="exportSymbolsForTradingView('fourteenDayBullish')" class="export-btn tradingview-btn">📈 TradingView</button>
+                        </div>
+                    </div>
+                    <div class="timeframe-content" id="fourteenDayBullishContent">
+                        <div class="loading">Analyzing 14-day patterns...</div>
+                    </div>
+                </div>
+                
+                <div class="timeframe-card">
+                    <div class="timeframe-header">
+                        <h3>📈 30-Day Bullish Patterns</h3>
+                        <p>Medium-term bullish trend analysis</p>
+                        <div class="export-buttons">
+                            <button onclick="exportToCSV('thirtyDayBullish')" class="export-btn csv-btn">📊 CSV</button>
+                            <button onclick="exportSymbolsForTradingView('thirtyDayBullish')" class="export-btn tradingview-btn">📈 TradingView</button>
+                        </div>
+                    </div>
+                    <div class="timeframe-content" id="thirtyDayBullishContent">
+                        <div class="loading">Analyzing 30-day patterns...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Price Action Analysis Section -->
+        <div class="price-action-section">
+            <div class="section-header">
+                <h2>🎯 Price Action Analysis</h2>
+                <p>Advanced price action patterns and candlestick analysis</p>
+            </div>
+            
+            <div class="price-action-grid">
+                <div class="price-action-card">
+                    <div class="price-action-header">
+                        <h3>🕯️ Bullish Candlestick Patterns</h3>
+                        <p>Classic bullish reversal and continuation patterns</p>
+                        <div class="export-buttons">
+                            <button onclick="exportToCSV('bullishCandlestick')" class="export-btn csv-btn">📊 CSV</button>
+                            <button onclick="exportSymbolsForTradingView('bullishCandlestick')" class="export-btn tradingview-btn">📈 TradingView</button>
+                        </div>
+                    </div>
+                    <div class="price-action-content" id="bullishCandlestickContent">
+                        <div class="loading">Analyzing candlestick patterns...</div>
+                    </div>
+                </div>
+                
+                <div class="price-action-card">
+                    <div class="price-action-header">
+                        <h3>📏 Support & Resistance Levels</h3>
+                        <p>Key price levels and breakout analysis</p>
+                        <div class="export-buttons">
+                            <button onclick="exportToCSV('supportResistance')" class="export-btn csv-btn">📊 CSV</button>
+                            <button onclick="exportSymbolsForTradingView('supportResistance')" class="export-btn tradingview-btn">📈 TradingView</button>
+                        </div>
+                    </div>
+                    <div class="price-action-content" id="supportResistanceContent">
+                        <div class="loading">Analyzing support/resistance...</div>
+                    </div>
+                </div>
+                
+                <div class="price-action-card">
+                    <div class="price-action-header">
+                        <h3>🌊 Volume Analysis</h3>
+                        <p>Volume patterns and institutional activity</p>
+                        <div class="export-buttons">
+                            <button onclick="exportToCSV('volumeAnalysis')" class="export-btn csv-btn">📊 CSV</button>
+                            <button onclick="exportSymbolsForTradingView('volumeAnalysis')" class="export-btn tradingview-btn">📈 TradingView</button>
+                        </div>
+                    </div>
+                    <div class="price-action-content" id="volumeAnalysisContent">
+                        <div class="loading">Analyzing volume patterns...</div>
+                    </div>
+                </div>
+                
+                <div class="price-action-card">
+                    <div class="price-action-header">
+                        <h3>⚡ Momentum Breakouts</h3>
+                        <p>Price and volume momentum analysis</p>
+                        <div class="export-buttons">
+                            <button onclick="exportToCSV('momentumBreakout')" class="export-btn csv-btn">📊 CSV</button>
+                            <button onclick="exportSymbolsForTradingView('momentumBreakout')" class="export-btn tradingview-btn">📈 TradingView</button>
+                        </div>
+                    </div>
+                    <div class="price-action-content" id="momentumBreakoutContent">
+                        <div class="loading">Analyzing momentum breakouts...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Multi-Timeframe Analysis Data
+        const timeframeData = {"dailyBullish":[{"symbol":"AVL","current_price":517.1,"momentum":12.56,"rsi":64.8,"pattern":"Bullish Flag"},{"symbol":"DIFFNKG","current_price":381.35,"momentum":8.55,"rsi":67.1,"pattern":"Ascending Triangle"},{"symbol":"DOMS","current_price":2692.2,"momentum":7.55,"rsi":69.8,"pattern":"Ascending Triangle"},{"symbol":"BECTORFOOD","current_price":1472,"momentum":7.27,"rsi":59.3,"pattern":"Ascending Triangle"},{"symbol":"BATAINDIA","current_price":1245.5,"momentum":7.15,"rsi":65.9,"pattern":"Ascending Triangle"}],"weeklyBullish":[{"symbol":"BVCL","current_price":47.02,"momentum":15.56,"rsi":60.7,"pattern":"Momentum Breakout"},{"symbol":"BATAINDIA","current_price":1245.5,"momentum":15.39,"rsi":65.9,"pattern":"Momentum Breakout"},{"symbol":"UNIECOM","current_price":151.74,"momentum":14.26,"rsi":69.9,"pattern":"Bullish Channel"},{"symbol":"ASHAPURMIN","current_price":551.35,"momentum":14.15,"rsi":60.8,"pattern":"Bullish Channel"},{"symbol":"COMSYN","current_price":152.88,"momentum":14.08,"rsi":70.4,"pattern":"Bullish Channel"}],"fourteenDayBullish":[{"symbol":"YATRA","current_price":153.88,"momentum":56.06,"rsi":67.4,"pattern":"Volume Breakout"},{"symbol":"CENTUM","current_price":2817.3,"momentum":32.96,"rsi":65.9,"pattern":"Bullish Continuation"},{"symbol":"CLEDUCATE","current_price":111.04,"momentum":29.7,"rsi":60,"pattern":"Bullish Continuation"},{"symbol":"UNIECOM","current_price":151.74,"momentum":27.61,"rsi":69.9,"pattern":"Bullish Continuation"},{"symbol":"INDOFARM","current_price":243.12,"momentum":25.05,"rsi":63.9,"pattern":"Bullish Continuation"}],"thirtyDayBullish":[{"symbol":"AVL","current_price":517.1,"momentum":24.59,"rsi":64.8,"pattern":"Strong Momentum"},{"symbol":"APOLSINHOT","current_price":1425.3,"momentum":4.1,"rsi":55.8,"pattern":"Strong Momentum"},{"symbol":"BIKAJI","current_price":801.35,"momentum":8.54,"rsi":61.8,"pattern":"Strong Momentum"},{"symbol":"ASKAUTOLTD","current_price":520,"momentum":10.32,"rsi":59.9,"pattern":"Strong Momentum"},{"symbol":"BLUESTARCO","current_price":1944,"momentum":11.04,"rsi":62.7,"pattern":"Strong Momentum"}]};
+
+        // Price Action Analysis Data
+        const priceActionData = {"bullishCandlestick":[{"symbol":"AVL","current_price":517.1,"pattern":"Bullish Engulfing","strength":"Strong","confirmation":"Volume"},{"symbol":"DIFFNKG","current_price":381.35,"pattern":"Bullish Engulfing","strength":"Strong","confirmation":"Volume"},{"symbol":"DOMS","current_price":2692.2,"pattern":"Bullish Engulfing","strength":"Medium","confirmation":"Volume"},{"symbol":"BECTORFOOD","current_price":1472,"pattern":"Bullish Engulfing","strength":"Medium","confirmation":"Volume"},{"symbol":"BATAINDIA","current_price":1245.5,"pattern":"Bullish Engulfing","strength":"Medium","confirmation":"Volume"}],"supportResistance":[{"symbol":"AVL","current_price":517.1,"support":491,"resistance":543,"breakout":true,"strength":"Strong"},{"symbol":"DIFFNKG","current_price":381.35,"support":362,"resistance":400,"breakout":true,"strength":"Strong"},{"symbol":"DOMS","current_price":2692.2,"support":2558,"resistance":2827,"breakout":true,"strength":"Medium"},{"symbol":"BECTORFOOD","current_price":1472,"support":1398,"resistance":1546,"breakout":true,"strength":"Medium"},{"symbol":"BATAINDIA","current_price":1245.5,"support":1183,"resistance":1308,"breakout":true,"strength":"Medium"}],"volumeAnalysis":[{"symbol":"APOLSINHOT","current_price":1425.3,"volumeRatio":2.5,"institutional":true,"pattern":"Accumulation"},{"symbol":"DALBHARAT","current_price":2408.6,"volumeRatio":2.5,"institutional":true,"pattern":"Accumulation"},{"symbol":"CENTUM","current_price":2817.3,"volumeRatio":2.5,"institutional":true,"pattern":"Accumulation"},{"symbol":"ASIANENE","current_price":373.3,"volumeRatio":2.5,"institutional":true,"pattern":"Accumulation"},{"symbol":"METROBRAND","current_price":1226.7,"volumeRatio":2.5,"institutional":true,"pattern":"Accumulation"}],"momentumBreakout":[{"symbol":"AVL","current_price":517.1,"momentum":12.56,"volume":1.7,"breakout":true,"strength":"Medium"},{"symbol":"DIFFNKG","current_price":381.35,"momentum":8.55,"volume":2,"breakout":true,"strength":"Medium"},{"symbol":"DOMS","current_price":2692.2,"momentum":7.55,"volume":1.9,"breakout":true,"strength":"Weak"},{"symbol":"BECTORFOOD","current_price":1472,"momentum":7.27,"volume":1.7,"breakout":true,"strength":"Weak"},{"symbol":"BATAINDIA","current_price":1245.5,"momentum":7.15,"volume":1,"breakout":false,"strength":"Weak"}]};
+
+        // Multi-Timeframe Analysis Functions
+        function populateTimeframeAnalysis() {
+            populateTimeframeCard("dailyBullishContent", timeframeData.dailyBullish, "Daily");
+            populateTimeframeCard("weeklyBullishContent", timeframeData.weeklyBullish, "Weekly");
+            populateTimeframeCard("fourteenDayBullishContent", timeframeData.fourteenDayBullish, "14-Day");
+            populateTimeframeCard("thirtyDayBullishContent", timeframeData.thirtyDayBullish, "30-Day");
+        }
+        
+        function populateTimeframeCard(containerId, data, timeframe) {
+            const container = document.getElementById(containerId);
+            
+            if (!data || data.length === 0) {
+                container.innerHTML = "<div class=\"no-data\">No stocks found for " + timeframe + " analysis</div>";
+                return;
+            }
+            
+            let html = '<div class="timeframe-stocks">';
+            data.forEach((stock, index) => {
+                const momentumClass = stock.momentum > 20 ? 'strong' : stock.momentum > 10 ? 'medium' : 'weak';
+                const rsiClass = stock.rsi > 70 ? 'overbought' : stock.rsi < 30 ? 'oversold' : 'normal';
+                
+                html += `
+                    <div class="timeframe-stock">
+                        <div class="stock-symbol">${stock.symbol}</div>
+                        <div class="stock-price">₹${stock.current_price}</div>
+                        <div class="stock-metrics">
+                            <div class="metric">
+                                <span class="label">Momentum:</span>
+                                <span class="value ${momentumClass}">${stock.momentum}%</span>
+                            </div>
+                            <div class="metric">
+                                <span class="label">RSI:</span>
+                                <span class="value ${rsiClass}">${stock.rsi}</span>
+                            </div>
+                            <div class="metric">
+                                <span class="label">Pattern:</span>
+                                <span class="value pattern">${stock.pattern}</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            html += '</div>';
+            container.innerHTML = html;
+        }
+        
+        // Price Action Analysis Functions
+        function populatePriceActionAnalysis() {
+            populatePriceActionCard("bullishCandlestickContent", priceActionData.bullishCandlestick, "Candlestick");
+            populatePriceActionCard("supportResistanceContent", priceActionData.supportResistance, "Support/Resistance");
+            populatePriceActionCard("volumeAnalysisContent", priceActionData.volumeAnalysis, "Volume");
+            populatePriceActionCard("momentumBreakoutContent", priceActionData.momentumBreakout, "Momentum");
+        }
+        
+        function populatePriceActionCard(containerId, data, type) {
+            const container = document.getElementById(containerId);
+            
+            if (!data || data.length === 0) {
+                container.innerHTML = "<div class=\"no-data\">No stocks found for " + type + " analysis</div>";
+                return;
+            }
+            
+            let html = '<div class="price-action-stocks">';
+            data.forEach((stock, index) => {
+                html += `
+                    <div class="price-action-stock">
+                        <div class="stock-header">
+                            <div class="stock-symbol">${stock.symbol}</div>
+                            <div class="stock-price">₹${stock.current_price}</div>
+                        </div>
+                        <div class="analysis-details">
+                            ${generateAnalysisDetails(stock, type)}
+                        </div>
+                    </div>
+                `;
+            });
+            html += '</div>';
+            container.innerHTML = html;
+        }
+        
+        function generateAnalysisDetails(stock, type) {
+            switch(type) {
+                case "Candlestick":
+                    return `
+                        <div class="detail-row">
+                            <span class="label">Pattern:</span>
+                            <span class="value">${stock.pattern}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="label">Strength:</span>
+                            <span class="value ${stock.strength.toLowerCase()}">${stock.strength}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="label">Confirmation:</span>
+                            <span class="value">${stock.confirmation}</span>
+                        </div>
+                    `;
+                case "Support/Resistance":
+                    return `
+                        <div class="detail-row">
+                            <span class="label">Support:</span>
+                            <span class="value">₹${stock.support}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="label">Resistance:</span>
+                            <span class="value">₹${stock.resistance}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="label">Breakout:</span>
+                            <span class="value ${stock.breakout ? 'breakout' : 'no-breakout'}">${stock.breakout ? 'Yes' : 'No'}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="label">Strength:</span>
+                            <span class="value ${stock.strength.toLowerCase()}">${stock.strength}</span>
+                        </div>
+                    `;
+                case "Volume":
+                    return `
+                        <div class="detail-row">
+                            <span class="label">Volume Ratio:</span>
+                            <span class="value">${stock.volumeRatio}x</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="label">Institutional:</span>
+                            <span class="value ${stock.institutional ? 'yes' : 'no'}">${stock.institutional ? 'Yes' : 'No'}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="label">Pattern:</span>
+                            <span class="value">${stock.pattern}</span>
+                        </div>
+                    `;
+                case "Momentum":
+                    return `
+                        <div class="detail-row">
+                            <span class="label">Momentum:</span>
+                            <span class="value">${stock.momentum}%</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="label">Volume:</span>
+                            <span class="value">${stock.volume}x</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="label">Breakout:</span>
+                            <span class="value ${stock.breakout ? 'breakout' : 'no-breakout'}">${stock.breakout ? 'Yes' : 'No'}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="label">Strength:</span>
+                            <span class="value ${stock.strength.toLowerCase()}">${stock.strength}</span>
+                        </div>
+                    `;
+                default:
+                    return '';
+            }
+        }
+
+        // Export Functions
+        function exportToCSV(analysisType) {
+            let data = [];
+            let filename = '';
+            
+            if (timeframeData[analysisType]) {
+                data = timeframeData[analysisType];
+                filename = `NSE_${analysisType}_Analysis.csv`;
+            } else if (priceActionData[analysisType]) {
+                data = priceActionData[analysisType];
+                filename = `NSE_${analysisType}_Analysis.csv`;
+            }
+            
+            if (data.length === 0) {
+                alert('No data available for export');
+                return;
+            }
+            
+            let csvContent = 'Symbol,Price,Momentum,RSI,Pattern\n';
+            data.forEach(stock => {
+                csvContent += `${stock.symbol},${stock.current_price},${stock.momentum || 'N/A'},${stock.rsi || 'N/A'},${stock.pattern || 'N/A'}\n`;
+            });
+            
+            downloadCSV(csvContent, filename);
+        }
+        
+        function exportSymbolsForTradingView(analysisType) {
+            let data = [];
+            
+            if (timeframeData[analysisType]) {
+                data = timeframeData[analysisType];
+            } else if (priceActionData[analysisType]) {
+                data = priceActionData[analysisType];
+            }
+            
+            if (data.length === 0) {
+                alert('No data available for export');
+                return;
+            }
+            
+            const symbols = data.map(stock => stock.symbol).join(',');
+            downloadText(symbols, `NSE_${analysisType}_TradingView.txt`);
+        }
+        
+        function downloadCSV(content, filename) {
+            const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', filename);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+        
+        function downloadText(content, filename) {
+            const blob = new Blob([content], { type: 'text/plain;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', filename);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // Initialize everything when page loads
+        document.addEventListener("DOMContentLoaded", () => {
+            populateTimeframeAnalysis();
+            populatePriceActionAnalysis();
+        });
+    </script>
+</body>
+</html>

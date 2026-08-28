@@ -1,0 +1,56 @@
+Agent Adda
+      Thu, 20 Aug 2026 · 22:31 IST
+
+        Report · sector_rotation.html · mode: both
+
+  NSE Sector Rotation — 20 Aug 2026
+
+  Cover note and executive summary of the attached report. Full report attached: sector_rotation.html
+
+    Market read: Rotation regime (60% confidence); Nifty 50 24,232 (+0.6%) with India VIX 10.6 (-6.6%); breadth weak but TRIN 0.69 bullish.
+
+  Key takeaways
+
+    Cycle and regime: Recovery phase (67% confidence) within a rotation regime; favours Banking, Capital Goods, Infrastructure, Cement; avoids defensives.
+
+    Flows: FIIs net -₹551 Cr over 5D (today -₹583 Cr); DIIs net +₹15,549 Cr over 5D (today +₹3,538 Cr) — overall flow signal neutral.
+
+    Breadth and internals: NIFTY 50 at 43% above 200DMA; Smallcap at 38%; A/D 1,566/1,064 (1.47); McClellan neutral (-19.8) with bearish divergence flagged, despite TRIN 0.69 (bullish).
+
+    Sector leadership: Capital Goods & Industrials leading (score 5.5; 1M +2.7%; RS +2.0%); EV & Auto Ancillaries strong (1M +7.4%; RS +6.7%; 71% >50DMA); Logistics & Transport (1M +6.1%; RS +5.4%; 60% >50DMA); Media & Entertainment (1M +5.5%; RS +4.8%).
+
+    Signals: 26 active model BUY signals across leaders; examples include UNIPARTS, HAPPYFORGE, GNA, SONACOMS, AEGISLOG, NRBBEARING, BOSCHLTD, SANSERA.
+
+    Global context: Correlation decoupling vs Gold and USDINR; crude oil correlation negative; U.S. equities modest positive correlation.
+
+  What to watch
+
+    Breadth improvement: resolution of bearish divergence (rising % above 200DMA; breadth thrusts; McClellan turning constructive).
+
+    Flows: a turn to net FII buying to reinforce risk appetite.
+
+    Volatility: sustained or further decline in India VIX from 10.6.
+
+    Sector levels: Capital Goods & Industrials sustaining above ~₹16,000; Logistics & Transport clearing ~₹27,000; EV/Auto maintaining breakout momentum.
+
+    Global linkages: persistence or reversal of decoupling with USDINR and Gold.
+
+  Action items
+
+    Prioritize monitoring of Capital Goods & Industrials and EV/Auto subsectors; keep position sizing moderate given mixed breadth and flow signals.
+
+    Use the candidate list in the attached report to build a watchlist; review model-derived entry/stop frameworks before any decision (e.g., UNIPARTS, HAPPYFORGE, NRBBEARING).
+
+    Validate liquidity, corporate events, and risk parameters independently; set alerts at the sector index levels noted above.
+
+    Reassess stance if the macro cycle shifts to Early Expansion with FII buying or if breadth weakens further.
+
+  Disclaimer: This summary reflects an AI/rules-based research report and is not investment advice. Validate all data and risks independently before making any financial decision.
+
+  Regards,
+
+  Agent Adda
+
+  ShunyaAI · NSE Market Intelligence
+
+Not investment advice. For research and learning only. NSE EOD + live snapshot data.

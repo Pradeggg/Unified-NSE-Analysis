@@ -1,0 +1,33 @@
+Agent Adda
+      Thu, 20 Aug 2026 · 22:40 IST
+
+        Report · results_analysis.html · mode: both
+
+Daily Results Analysis — 20 Aug 2026
+Market read: Mixed earnings day; MVK Agro posted outsized YoY gains while Panacea Biotec’s PAT contracted.
+Coverage: 5 companies reporting First or Fourth Quarter results. See the attached results_analysis.html for the full symbol-by-symbol breakdown.
+Key takeaways
+MVKAGRO (M.V.K. Agro Food Product Limited) — Q1: Verdict MIXED; Score 7; Revenue +396.3% YoY; PAT +933.33% YoY.
+PANACEABIO (Panacea Biotec Limited) — Q4: Verdict MIXED; Score 5; Revenue +19.72% YoY; PAT −44.44% YoY.
+EPACKPEB (Epack Prefab Technologies Limited) — Q4: Verdict MIXED; Score 6; Revenue +24.07% YoY; PAT +12.5% YoY.
+MANIPALHOS (Manipal Health Enterprises Limited) — Q1: Verdict MIXED; Score 6; YoY revenue/PAT figures not provided in the summary.
+SUPREMEENG (Supreme Engineering Limited) — Q4: Verdict UNKNOWN; summary metrics pending.
+Verdicts distribution: 4 MIXED, 1 UNKNOWN.
+What to watch
+For MVKAGRO, sustainability of the sharp YoY surge (base effects vs. operational drivers).
+For PANACEABIO, factors behind PAT compression and any signals on margin trajectory.
+For EPACKPEB, consistency of revenue growth and profitability trends into subsequent quarters.
+For MANIPALHOS and SUPREMEENG, additional disclosures/updates that clarify the MIXED and UNKNOWN verdicts.
+Action items
+Review the attached results_analysis.html for company-level details and scoring rationale.
+Flag MVKAGRO, PANACEABIO, and EPACKPEB for follow-up notes on drivers of YoY deltas.
+Update internal watchlists and prepare brief client talking points based on today’s outcomes.
+Set alerts to capture subsequent filings or commentary that may shift the verdicts.
+
+  Regards,
+
+  Agent Adda
+
+  ShunyaAI · NSE Market Intelligence
+
+Not investment advice. For research and learning only. NSE EOD + live snapshot data.

@@ -3,9 +3,9 @@ import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from company_intelligence import run_company_xray
-from company_intelligence_db import init_company_intelligence_db
-from company_website_indexer import crawl_company_website
+from company_intelligence.company_intelligence import run_company_xray
+from company_intelligence.company_intelligence_db import init_company_intelligence_db
+from company_intelligence.company_website_indexer import crawl_company_website
 
 
 class CompanyIntelligenceOrchestratorTests(unittest.TestCase):

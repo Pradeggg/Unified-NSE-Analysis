@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Chart · NSE:DAAWAT</title>
+  <script src="https://unpkg.com/lightweight-charts@4.2.3/dist/lightweight-charts.standalone.production.js"></script>
+  <style>
+    :root { --bg:#0b1220; --panel:#111827; --ink:#e5eef5; --muted:#8aa0b5; --line:#1f3347; --brand:#38bdf8; --on:#155e75; }
+    * { box-sizing:border-box; }
+    html, body { margin:0; height:100%; background:var(--bg); color:var(--ink); font:13px/1.4 ui-sans-serif,system-ui,sans-serif; }
+    .shell { display:grid; grid-template-columns:260px 1fr; grid-template-rows:auto 1fr; height:100%; }
+    aside { grid-row:1 / span 2; padding:16px; border-right:1px solid var(--line); overflow:auto; background:var(--panel); }
+    .toolbar { display:flex; flex-wrap:wrap; gap:6px; align-items:center; padding:8px 10px; border-bottom:1px solid var(--line); background:#0f172a; }
+    .group { display:flex; gap:4px; align-items:center; padding-right:8px; border-right:1px solid var(--line); }
+    .group:last-child { border:0; }
+    button { background:#1e293b; color:var(--ink); border:1px solid #334155; border-radius:6px; padding:4px 8px; cursor:pointer; }
+    button.active, button[aria-pressed="true"] { background:var(--on); border-color:#22d3ee; }
+    button:hover { border-color:var(--brand); }
+    .ohlc { color:var(--muted); font-variant-numeric:tabular-nums; }
+    h1 { font-size:18px; margin:0 0 6px; }
+    .sub, .note { color:var(--muted); font-size:12px; }
+    .warn { color:#fca5a5; }
+    .metric { padding:7px 0; border-bottom:1px solid var(--line); }
+    .metric span { display:block; color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:.04em; }
+    .stage { display:flex; flex-direction:column; min-width:0; min-height:0; }
+    .charts { display:grid; grid-template-rows:3fr 1fr 1fr; flex:1; min-height:0; }
+    .charts.hide-rsi { grid-template-rows:4fr 0 1fr; }
+    .charts.hide-macd { grid-template-rows:4fr 1fr 0; }
+    .charts.hide-rsi.hide-macd { grid-template-rows:1fr 0 0; }
+    #price, #rsi, #macd { width:100%; height:100%; min-height:0; border-bottom:1px solid var(--line); }
+    .charts.hide-rsi #rsi, .charts.hide-macd #macd { display:none; }
+    a { color:var(--brand); }
+    @media (max-width:900px) { .shell { grid-template-columns:1fr; } aside { grid-row:auto; } }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <aside>
+      <h1>NSE:DAAWAT</h1>
+      <p class="sub">Agent Adda studies · Asia/Kolkata · click legend buttons to hide lines</p>
+      <p class='warn'>No local OHLC bars. Use the TradingView link for the live chart.</p>
+      <div class='metric'><span>Agent Adda symbol</span><strong>DAAWAT</strong></div><div class='metric'><span>As of</span><strong>—</strong></div><div class='metric'><span>Price</span><strong>—</strong></div><div class='metric'><span>SMA 20</span><strong>—</strong></div><div class='metric'><span>SMA 50</span><strong>—</strong></div><div class='metric'><span>SMA 200</span><strong>—</strong></div><div class='metric'><span>RSI 14</span><strong>—</strong></div><div class='metric'><span>MACD</span><strong>—</strong></div><div class='metric'><span>Supertrend 10×3</span><strong>—</strong></div><div class='metric'><span>ADX 14</span><strong>—</strong></div><div class='metric'><span>Vol vs 20d</span><strong>—</strong></div><div class='metric'><span>Technical score</span><strong>—</strong></div><div class='metric'><span>Bars</span><strong>0</strong></div><div class='metric'><span>Data source</span><strong>missing</strong></div>
+      <p class="note">NSE cash names are blocked on TradingView's embed widget. Chart type, ranges, and studies are toggles on this page. <a href="https://www.tradingview.com/chart/?symbol=NSE:DAAWAT&amp;interval=D" target="_blank" rel="noopener">Open live TradingView</a></p>
+    </aside>
+    <div class="toolbar" role="toolbar" aria-label="Chart controls">
+      <div class="group" data-chart-types>
+        <button type="button" data-chart-type="candles" class="active" title="Candles">Candles</button>
+        <button type="button" data-chart-type="bars" title="OHLC bars">Bars</button>
+        <button type="button" data-chart-type="line" title="Close line">Line</button>
+        <button type="button" data-chart-type="area" title="Area">Area</button>
+      </div>
+      <div class="group" data-ranges>
+        <button type="button" data-range="1M">1M</button>
+        <button type="button" data-range="3M">3M</button>
+        <button type="button" data-range="6M">6M</button>
+        <button type="button" data-range="1Y">1Y</button>
+        <button type="button" data-range="ALL" class="active">All</button>
+      </div>
+      <div class="group" data-indicators>
+        <button type="button" data-indicator="volume" aria-pressed="true">Vol</button>
+        <button type="button" data-indicator="sma20" aria-pressed="true">SMA20</button>
+        <button type="button" data-indicator="sma50" aria-pressed="true">SMA50</button>
+        <button type="button" data-indicator="sma200" aria-pressed="true">SMA200</button>
+        <button type="button" data-indicator="supertrend" aria-pressed="true">ST</button>
+        <button type="button" data-indicator="rsi" aria-pressed="true">RSI</button>
+        <button type="button" data-indicator="macd" aria-pressed="true">MACD</button>
+      </div>
+      <div class="group">
+        <button type="button" data-tool="crosshair" class="active">Crosshair</button>
+        <button type="button" data-tool="hline">H-line</button>
+        <button type="button" data-tool="trend">Trend</button>
+        <button type="button" data-tool="clear">Clear lines</button>
+      </div>
+      <span class="ohlc" id="ohlc">O — H — L — C —</span>
+    </div>
+    <div class="stage">
+      <div class="charts" id="layout">
+        <div id="price"></div>
+        <div id="rsi"></div>
+        <div id="macd"></div>
+      </div>
+    </div>
+  </div>
+  <script>
+    const data = {"candles": [], "volume": [], "sma20": [], "sma50": [], "sma200": [], "rsi": [], "macd": [], "macd_signal": [], "macd_hist": [], "supertrend": [], "supertrend_state": null};
+    const candles = data.candles || [];
+    const dark = { layout: { background: { color: '#0b1220' }, textColor: '#9fb0c3' },
+      grid: { vertLines: { color: '#1f3347' }, horzLines: { color: '#1f3347' } },
+      rightPriceScale: { borderColor: '#1f3347' },
+      timeScale: { borderColor: '#1f3347', timeVisible: true },
+      crosshair: { mode: 0 } };
+    function makeChart(el, extra) {
+      const chart = LightweightCharts.createChart(el, Object.assign({ autosize: true }, dark, extra || {}));
+      new ResizeObserver(() => chart.applyOptions({ width: el.clientWidth, height: el.clientHeight })).observe(el);
+      return chart;
+    }
+    const priceEl = document.getElementById('price');
+    const layout = document.getElementById('layout');
+    const priceChart = makeChart(priceEl);
+    const rsiChart = makeChart(document.getElementById('rsi'), { timeScale: { visible: false, borderColor: '#1f3347' } });
+    const macdChart = makeChart(document.getElementById('macd'));
+    let priceSeries = null;
+    const overlays = {
+      volume: priceChart.addHistogramSeries({ priceFormat: { type: 'volume' }, priceScaleId: 'vol' }),
+      sma20: priceChart.addLineSeries({ color: '#38bdf8', lineWidth: 2, title: 'SMA 20' }),
+      sma50: priceChart.addLineSeries({ color: '#22c55e', lineWidth: 2, title: 'SMA 50' }),
+      sma200: priceChart.addLineSeries({ color: '#f97316', lineWidth: 2, title: 'SMA 200' }),
+      supertrend: priceChart.addLineSeries({ color: '#a78bfa', lineWidth: 2, title: 'Supertrend 10x3' })
+    };
+    priceChart.priceScale('vol').applyOptions({ scaleMargins: { top: 0.82, bottom: 0 } });
+    overlays.volume.setData(data.volume || []);
+    overlays.sma20.setData(data.sma20 || []);
+    overlays.sma50.setData(data.sma50 || []);
+    overlays.sma200.setData(data.sma200 || []);
+    overlays.supertrend.setData(data.supertrend || []);
+    rsiChart.addLineSeries({ color: '#c084fc', lineWidth: 2, title: 'RSI 14' }).setData(data.rsi || []);
+    macdChart.addHistogramSeries({ title: 'MACD hist' }).setData(data.macd_hist || []);
+    macdChart.addLineSeries({ color: '#38bdf8', lineWidth: 2, title: 'MACD' }).setData(data.macd || []);
+    macdChart.addLineSeries({ color: '#f59e0b', lineWidth: 2, title: 'Signal' }).setData(data.macd_signal || []);
+    function setChartType(type) {
+      if (priceSeries) priceChart.removeSeries(priceSeries);
+      if (type === 'bars') priceSeries = priceChart.addBarSeries({ upColor: '#14b8a6', downColor: '#f43f5e' });
+      else if (type === 'line') priceSeries = priceChart.addLineSeries({ color: '#e2e8f0', lineWidth: 2 });
+      else if (type === 'area') priceSeries = priceChart.addAreaSeries({ lineColor: '#38bdf8', topColor: '#38bdf855', bottomColor: '#38bdf800' });
+      else priceSeries = priceChart.addCandlestickSeries({ upColor: '#14b8a6', downColor: '#f43f5e', borderVisible: false, wickUpColor: '#14b8a6', wickDownColor: '#f43f5e' });
+      const seriesData = (type === 'line' || type === 'area')
+        ? candles.map(row => ({ time: row.time, value: row.close }))
+        : candles;
+      priceSeries.setData(seriesData);
+      document.querySelectorAll('[data-chart-type]').forEach(btn => btn.classList.toggle('active', btn.dataset.chartType === type));
+    }
+    setChartType('candles');
+    function setRange(key) {
+      if (!candles.length) return;
+      const last = candles[candles.length - 1].time;
+      const end = Date.parse(last + 'T00:00:00Z');
+      const days = { '1M': 31, '3M': 93, '6M': 186, '1Y': 366 }[key];
+      if (!days) { priceChart.timeScale().fitContent(); }
+      else {
+        const start = new Date(end - days * 86400000).toISOString().slice(0, 10);
+        priceChart.timeScale().setVisibleRange({ from: start, to: last });
+      }
+      document.querySelectorAll('[data-range]').forEach(btn => btn.classList.toggle('active', btn.dataset.range === key));
+    }
+    function setVisible(name, on) {
+      if (overlays[name]) overlays[name].applyOptions({ visible: on });
+      if (name === 'rsi') layout.classList.toggle('hide-rsi', !on);
+      if (name === 'macd') layout.classList.toggle('hide-macd', !on);
+      const btn = document.querySelector('[data-indicator="' + name + '"]');
+      if (btn) btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+    }
+    let tool = 'crosshair';
+    let trendStart = null;
+    const drawings = [];
+    function setTool(name) {
+      tool = name;
+      trendStart = null;
+      document.querySelectorAll('[data-tool]').forEach(btn => btn.classList.toggle('active', btn.dataset.tool === name));
+    }
+    priceChart.subscribeCrosshairMove(param => {
+      const bar = param && param.time ? candles.find(row => row.time === param.time) : candles[candles.length - 1];
+      if (!bar) return;
+      document.getElementById('ohlc').textContent =
+        'O ' + bar.open.toFixed(2) + '  H ' + bar.high.toFixed(2) + '  L ' + bar.low.toFixed(2) + '  C ' + bar.close.toFixed(2);
+    });
+    function clickPrice(param) {
+      if (!param || param.time == null || !priceSeries) return null;
+      if (param.seriesData && param.seriesData.get) {
+        const point = param.seriesData.get(priceSeries);
+        if (point) return point.close != null ? point.close : point.value;
+      }
+      return param.point ? priceSeries.coordinateToPrice(param.point.y) : null;
+    }
+    priceChart.subscribeClick(param => {
+      const value = clickPrice(param);
+      if (value == null) return;
+      if (tool === 'hline') {
+        drawings.push({ kind: 'hline', obj: priceSeries.createPriceLine({ price: value, color: '#fbbf24', lineWidth: 1, lineStyle: 2, axisLabelVisible: true, title: 'H ' + Number(value).toFixed(2) }) });
+      }
+      if (tool === 'trend') {
+        if (!trendStart) { trendStart = { time: param.time, value: Number(value) }; return; }
+        const line = priceChart.addLineSeries({ color: '#fbbf24', lineWidth: 2, lastValueVisible: false, priceLineVisible: false });
+        const points = [trendStart, { time: param.time, value: Number(value) }].sort((a, b) => a.time < b.time ? -1 : 1);
+        line.setData(points);
+        drawings.push({ kind: 'series', obj: line });
+        trendStart = null;
+      }
+    });
+    document.querySelector('[data-chart-types]').addEventListener('click', event => {
+      const type = event.target.dataset.chartType; if (type) setChartType(type);
+    });
+    document.querySelector('[data-ranges]').addEventListener('click', event => {
+      const range = event.target.dataset.range; if (range) setRange(range);
+    });
+    document.querySelector('[data-indicators]').addEventListener('click', event => {
+      const name = event.target.dataset.indicator;
+      if (!name) return;
+      const on = event.target.getAttribute('aria-pressed') !== 'true';
+      setVisible(name, on);
+    });
+    document.querySelectorAll('[data-tool]').forEach(btn => btn.addEventListener('click', () => {
+      if (btn.dataset.tool === 'clear') {
+        drawings.splice(0).forEach(item => {
+          try { if (item.kind === 'series') priceChart.removeSeries(item.obj); } catch (err) {}
+          try { if (item.kind === 'hline' && priceSeries) priceSeries.removePriceLine(item.obj); } catch (err) {}
+        });
+        return;
+      }
+      setTool(btn.dataset.tool);
+    }));
+    const charts = [priceChart, rsiChart, macdChart];
+    charts.forEach(source => {
+      source.timeScale().subscribeVisibleLogicalRangeChange(range => {
+        charts.forEach(target => { if (target !== source && range) target.timeScale().setVisibleLogicalRange(range); });
+      });
+    });
+    priceChart.timeScale().fitContent();
+  </script>
+</body>
+</html>

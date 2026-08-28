@@ -2,7 +2,7 @@ import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from company_xray_command import parse_company_xray_args, run_company_xray_from_args
+from company_intelligence.company_xray_command import parse_company_xray_args, run_company_xray_from_args
 
 
 class CompanyXrayCommandTests(unittest.TestCase):

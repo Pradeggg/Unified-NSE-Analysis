@@ -99,6 +99,27 @@ def _class_pct(value: Any) -> str:
 def _h(text: Any) -> str:
     return html.escape("" if text is None else str(text))
 
+def _soften_signal_words(text: str) -> str:
+    text = str(text or "")
+    if not text.strip():
+        return text
+    replacements = [
+        (r"\bSTRONG[_ ]?BUY\b", "Strong Bullish"),
+        (r"\bSTRONG[_ ]?SELL\b", "Strong Bearish"),
+        (r"\bWEAK[_ ]?HOLD\b", "Cautious"),
+        (r"\bSTRONG\\s+BUY\b", "Strong Bullish"),
+        (r"\bSTRONG\\s+SELL\b", "Strong Bearish"),
+        (r"\bBUY\\s+SIGNALS?\\b", "Bullish signals"),
+        (r"\bSELL\\s+SIGNALS?\\b", "Bearish signals"),
+        (r"\bBUY\b", "Bullish"),
+        (r"\bSELL\b", "Bearish"),
+        (r"\bHOLD\b", "Neutral"),
+    ]
+    out = text
+    for pattern, repl in replacements:
+        out = re.sub(pattern, repl, out, flags=re.IGNORECASE)
+    return out
+
 
 def _inline_markdown_html(text: str) -> str:
     """Render the small markdown subset used in generated commentary."""
@@ -110,7 +131,7 @@ def _inline_markdown_html(text: str) -> str:
 
 def _commentary_markdown_html(text: Any) -> str:
     """Safely render generated market commentary instead of showing raw markdown markers."""
-    raw = str(text or "").strip()
+    raw = _soften_signal_words(str(text or "")).strip()
     if not raw:
         return '<p class="muted">No commentary available for this session.</p>'
     paragraphs = [part.strip() for part in re.split(r"\n\s*\n", raw) if part.strip()]
@@ -226,11 +247,13 @@ def load_report_data(conn, report_date: date) -> dict[str, Any]:
         conn,
         """
         WITH bars AS (
+            -- Exclude zero-volume pre-market artifact bars
             SELECT symbol, timestamp AT TIME ZONE %s AS ts, open, high, low, close, volume
             FROM intraday.ohlcv_bars
             WHERE timeframe = '15m'
               AND symbol IN ('NIFTY', 'BANKNIFTY')
               AND (timestamp AT TIME ZONE %s)::date = %s
+              AND coalesce(volume, 0) > 0
         ),
         marked AS (
             SELECT *,
@@ -239,18 +262,31 @@ def load_report_data(conn, report_date: date) -> dict[str, Any]:
                    first_value(ts) OVER (PARTITION BY symbol ORDER BY high DESC, ts) AS high_time,
                    first_value(ts) OVER (PARTITION BY symbol ORDER BY low ASC, ts) AS low_time
             FROM bars
+        ),
+        -- Official prev-close-referenced index change from bhavcopy
+        idx_eod AS (
+            SELECT CASE index_symbol WHEN 'Nifty 50' THEN 'NIFTY' WHEN 'Nifty Bank' THEN 'BANKNIFTY' END AS symbol,
+                   change_pct AS eod_change_pct,
+                   prev_close
+            FROM market.index_eod
+            WHERE trade_date = %s AND index_symbol IN ('Nifty 50', 'Nifty Bank')
         )
-        SELECT symbol, min(ts) AS first_bar, max(ts) AS last_bar,
-               max(day_open) AS day_open, max(day_close) AS day_close,
-               max(high) AS day_high, min(low) AS day_low,
-               max(high_time) AS high_time, max(low_time) AS low_time,
-               round(((max(day_close)-max(day_open))/nullif(max(day_open),0)*100)::numeric, 2) AS day_pct,
-               sum(coalesce(volume,0)) AS volume
-        FROM marked
-        GROUP BY symbol
-        ORDER BY symbol
+        SELECT m.symbol, min(m.ts) AS first_bar, max(m.ts) AS last_bar,
+               max(m.day_open) AS day_open, max(m.day_close) AS day_close,
+               max(m.high) AS day_high, min(m.low) AS day_low,
+               max(m.high_time) AS high_time, max(m.low_time) AS low_time,
+               -- Prefer official index EOD change_pct (prev_close-referenced)
+               coalesce(
+                   max(i.eod_change_pct),
+                   round(((max(m.day_close)-max(m.day_open))/nullif(max(m.day_open),0)*100)::numeric, 2)
+               ) AS day_pct,
+               sum(coalesce(m.volume,0)) AS volume
+        FROM marked m
+        LEFT JOIN idx_eod i ON i.symbol = m.symbol
+        GROUP BY m.symbol
+        ORDER BY m.symbol
         """,
-        (IST_LABEL, IST_LABEL, report_date),
+        (IST_LABEL, IST_LABEL, report_date, report_date),
     )
     hourly = _query(
         conn,
@@ -325,31 +361,46 @@ def load_report_data(conn, report_date: date) -> dict[str, Any]:
             ORDER BY symbol, snapshot_date DESC
         ),
         bars AS (
+            -- Exclude zero-volume pre-market artifact bars (e.g. 09:00 yfinance tick)
+            -- that contaminate first_value(open) with stale or incorrect prices.
             SELECT b.symbol, b.timestamp AT TIME ZONE %s AS ts, b.open, b.high, b.low, b.close, b.volume
             FROM intraday.ohlcv_bars b
             WHERE b.timeframe = '15m'
               AND b.symbol NOT IN ('NIFTY','BANKNIFTY','FINNIFTY','MIDCPNIFTY')
               AND (b.timestamp AT TIME ZONE %s)::date = %s
+              AND coalesce(b.volume, 0) > 0
         ),
         marked AS (
             SELECT *,
                    first_value(open) OVER (PARTITION BY symbol ORDER BY ts) AS day_open,
                    first_value(close) OVER (PARTITION BY symbol ORDER BY ts DESC) AS day_close
             FROM bars
+        ),
+        -- Official prev-close-referenced daily change from bhavcopy EOD
+        eod_chg AS (
+            SELECT symbol, change_pct AS eod_change_pct
+            FROM market.equity_eod
+            WHERE trade_date = %s AND series = 'EQ' AND change_pct IS NOT NULL
         )
         SELECT m.symbol, s.company_name, coalesce(nullif(s.sector,''), 'Unclassified') AS sector,
                s.market_cap_cat, s.stage, s.trading_signal, s.technical_score, s.relative_strength,
                max(m.day_open) AS day_open, max(m.day_close) AS day_close,
                max(m.high) AS day_high, min(m.low) AS day_low,
-               round(((max(m.day_close)-max(m.day_open))/nullif(max(m.day_open),0)*100)::numeric, 2) AS day_pct,
+               -- Prefer official EOD change_pct (prev_close-referenced); fall back to
+               -- intraday open-to-close only when EOD data is unavailable.
+               coalesce(
+                   max(e.eod_change_pct),
+                   round(((max(m.day_close)-max(m.day_open))/nullif(max(m.day_open),0)*100)::numeric, 2)
+               ) AS day_pct,
                sum(coalesce(m.volume,0)) AS volume
         FROM marked m
         LEFT JOIN latest_stage s ON s.symbol = m.symbol
+        LEFT JOIN eod_chg e ON e.symbol = m.symbol
         GROUP BY m.symbol, s.company_name, s.sector, s.market_cap_cat, s.stage,
                  s.trading_signal, s.technical_score, s.relative_strength
         ORDER BY day_pct DESC NULLS LAST
         """,
-        (report_date, IST_LABEL, IST_LABEL, report_date),
+        (report_date, IST_LABEL, IST_LABEL, report_date, report_date),
     )
     hourly_leaders = _query(
         conn,
@@ -708,6 +759,7 @@ def svg_breadth(data: dict[str, Any]) -> str:
     width, height = 880, 280
     pad = 40
     max_count = max([(_f(r.get("adv")) or 0) + (_f(r.get("decl")) or 0) for r in rows] or [1])
+    max_count = max(max_count, 1)
     slot = (width - pad * 2) / max(len(rows), 1)
     parts = [
         f"<svg viewBox='0 0 {width} {height}' role='img' aria-label='Hourly advance decline bars'>",
@@ -1091,8 +1143,8 @@ def _session_label(nifty_pct: Any, bank_pct: Any, best_breadth: Any, weak_breadt
     return "Mixed Market Tape", "Index action and breadth need confirmation next session."
 
 
-def _latest_report_href(filename: str) -> str:
-    return f"/reports/{filename}"
+def _public_report_href(slug: str, report_date: str) -> str:
+    return f"/stocks/reports/{slug}-{report_date}"
 
 
 def _stock_detail_payload(data: dict[str, Any]) -> str:
@@ -1168,15 +1220,14 @@ def build_html(data: dict[str, Any]) -> str:
         weak_breadth.get("adv_pct"),
     )
     report_links = [
-        ("Sector Rotation", "sector_rotation.html"),
-        ("Stage 2 Tracker", "stage2_tracker.html"),
-        ("Top Picks", "top_picks.html"),
-        ("Swing Playbook", "swing_playbook.html"),
-        ("Portfolio Lab", "portfolio_strategy_lab.html"),
+        ("Sector Rotation", "sector-rotation"),
+        ("Stage 2 Tracker", "stage2-tracker"),
+        ("Top Picks", "top-picks"),
+        ("Swing Playbook", "swing-playbook"),
     ]
     report_pack_html = "".join(
-        f"<a class='report-link' href='{_h(_latest_report_href(filename))}'>{_h(label)}</a>"
-        for label, filename in report_links
+        f"<a class='report-link' href='{_h(_public_report_href(slug, report_date))}'>{_h(label)}</a>"
+        for label, slug in report_links
     )
     style = """
     :root{
@@ -1191,17 +1242,17 @@ def build_html(data: dict[str, Any]) -> str:
     --green:var(--good);--red:var(--risk);--amber:var(--watch);--blue:var(--primary-alt);
     }
     *{box-sizing:border-box} html{scroll-behavior:smooth} body{margin:0;background:var(--bg);color:var(--text);font-family:'Inter','Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;font-size:14px;line-height:1.6}
-    .wrap{max-width:1360px;margin:0 auto;padding:24px}.eyebrow{color:var(--muted);font-size:12px;text-transform:uppercase;font-weight:850;letter-spacing:.08em}
+    .wrap{width:100%;max-width:1360px;margin:0 auto;padding:24px;overflow-x:hidden}.eyebrow{color:var(--muted);font-size:12px;text-transform:uppercase;font-weight:850;letter-spacing:.08em}
     header.hero{background:#ffffff;border:1px solid var(--line);border-radius:8px;padding:22px;box-shadow:var(--shadow);margin-bottom:16px}
     .hero-top{display:flex;justify-content:space-between;gap:18px;align-items:flex-start}.title-block{max-width:760px}h1{margin:4px 0 8px;font-size:38px;line-height:1.06;letter-spacing:0}h2{font-size:19px;margin:0 0 14px}h3{font-size:15px;margin:0 0 8px;color:#223a37}.sub{color:var(--muted);font-size:14px}
     .session-badge{min-width:260px;border-left:4px solid var(--blue);padding:8px 0 8px 14px}.session-badge b{display:block;font-size:18px}.session-badge span{display:block;margin-top:4px;color:var(--muted);font-size:13px}
     .nav{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0 0}.nav a,.report-link{display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:999px;padding:7px 10px;background:#fbfcfb;color:#243331;text-decoration:none;font-size:12px;font-weight:850}.nav a:hover,.report-link:hover{border-color:#95aaa5;background:#eef4f2}
     .report-pack{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:16px;padding-top:14px;border-top:1px solid var(--soft-line)}
-    .grid{display:grid;gap:16px}.kpis{grid-template-columns:repeat(4,minmax(0,1fr))}.three{grid-template-columns:repeat(3,minmax(0,1fr))}.two{grid-template-columns:1.18fr .82fr}.halves{grid-template-columns:1fr 1fr}
-    .card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:16px;box-shadow:0 1px 0 rgba(23,35,34,.04)}.section{margin-top:16px}.kpi .label{color:var(--muted);font-size:11px;text-transform:uppercase;font-weight:850;letter-spacing:.08em}.kpi .value{font-size:25px;font-weight:900;margin-top:5px;line-height:1.15}.kpi .note{margin-top:6px;color:var(--muted);font-size:13px}
+    .grid{display:grid;gap:16px}.grid>*{min-width:0}.kpis{grid-template-columns:repeat(4,minmax(0,1fr))}.three{grid-template-columns:repeat(3,minmax(0,1fr))}.two{grid-template-columns:minmax(0,1.18fr) minmax(0,.82fr)}.halves{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .card{min-width:0;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:16px;box-shadow:0 1px 0 rgba(23,35,34,.04)}.section{margin-top:16px}.kpi .label{color:var(--muted);font-size:11px;text-transform:uppercase;font-weight:850;letter-spacing:.08em}.kpi .value{font-size:25px;font-weight:900;margin-top:5px;line-height:1.15}.kpi .note{margin-top:6px;color:var(--muted);font-size:13px}
     .pulse{display:grid;gap:10px}.pulse-row{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--soft-line)}.pulse-row:last-child{border-bottom:0}.pulse-row span{color:var(--muted);font-size:13px}.pulse-row b{text-align:right}
     .pos{color:var(--green)}.neg{color:var(--red)}.flat{color:var(--amber)}.info{color:var(--blue)}
-    .table-scroll{overflow-x:auto;border:1px solid var(--soft-line);border-radius:8px}.table-scroll table{min-width:760px}table{width:100%;border-collapse:collapse;font-size:13px}th,td{border-bottom:1px solid var(--soft-line);padding:9px 8px;text-align:left;vertical-align:top}th{color:#51625f;font-size:11px;text-transform:uppercase;letter-spacing:.06em;background:#fafbfb}tr:last-child td{border-bottom:0}
+    .table-scroll{width:100%;max-width:100%;overflow-x:auto;border:1px solid var(--soft-line);border-radius:8px}.table-scroll table{min-width:760px}table{width:100%;border-collapse:collapse;font-size:13px}th,td{border-bottom:1px solid var(--soft-line);padding:9px 8px;text-align:left;vertical-align:top}th{color:#51625f;font-size:11px;text-transform:uppercase;letter-spacing:.06em;background:#fafbfb}tr:last-child td{border-bottom:0}
     .pill{display:inline-flex;border-radius:999px;padding:3px 9px;font-size:12px;font-weight:850;background:#eef4f2;color:#24413e}.pill.pos{background:#dcfce7;color:#166534}.pill.neg{background:#fee2e2;color:#991b1b}
     .event{display:grid;grid-template-columns:70px 1fr;gap:10px;padding:10px 0;border-bottom:1px solid var(--soft-line)}.event:last-child{border-bottom:0}.time{font-weight:900;color:#214744}.commentary{font-size:16px;max-width:92ch}.commentary p{margin:0 0 14px}.commentary p:last-child{margin-bottom:0}.commentary strong{color:#172322}.commentary ul{margin:0 0 14px 18px;padding:0}.commentary li{margin:4px 0}.muted{color:var(--muted)}
     .heat{display:inline-block;min-width:62px;font-weight:900;text-align:center;border-radius:6px;color:#fff;padding:3px 8px}.heat.g1{background:#166534}.heat.g2{background:#16a34a}.heat.n{background:#a16207}.heat.r1{background:#dc2626}.heat.r2{background:#991b1b}

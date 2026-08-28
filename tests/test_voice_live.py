@@ -1,6 +1,6 @@
 import unittest
 
-from voice_live import is_stop_phrase, run_voice_live_session
+from voice.voice_live import is_stop_phrase, run_voice_live_session
 
 
 class VoiceLiveTests(unittest.TestCase):

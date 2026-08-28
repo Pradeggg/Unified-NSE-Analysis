@@ -1,0 +1,4 @@
+interface:
+  display_name: "TradingView Chart"
+  short_description: "Open NSE charts with Agent Adda indicators"
+  default_prompt: "Use $tradingview-chart to open an NSE chart with SMA 20/50/200, RSI, MACD, Supertrend, ADX, and volume, and also write a Cursor Canvas with 5m intraday plus daily SMA LineCharts for the same symbol."

@@ -1,0 +1,35 @@
+Agent Adda
+      Wed, 26 Aug 2026 · 19:18 IST
+
+        Report · sector_rotation.html · mode: both
+
+Rotation regime (60% confidence) in early Recovery; India VIX 10.4, falling 5.9%; Nifty 50 24,208 (-0.5%); FIIs/DIIs net buyers; breadth weak with a bullish divergence setup.
+NSE Sector Rotation — EOD Wednesday, 26 Aug 2026
+Sector Rotation Report — 26 Aug 2026 has been published to Agent Adda Market Intelligence. Attached: sector_rotation.html. Below is a concise, research-only summary derived from the report (not investment advice).
+Key takeaways
+ Market regime and cycle: Rotation (60% confidence; duration 1 day) within an early Recovery phase; model risk posture: moderately aggressive; defensives de-emphasized.
+ Institutional flows: FIIs +₹2,152 Cr (5D) and DIIs +₹14,811 Cr (5D); today FIIs +₹503 Cr, DIIs +₹6,425 Cr — supportive of rotation.
+ Breadth and internals: NIFTY 50 43% >200DMA; Smallcap 38% >200DMA; McClellan Osc +6.7 with bullish cross; TRIN 0.93 (neutral); A/D 1,450/1,181 (1.23); bearish divergence noted.
+ Sector leadership: Banking–PSU (score 5.8; 1M +3.7%; RS +1.9%; 58% >50DMA); Metals & Mining (score 4.8; 1M +8.5%; RS +6.8%; 75% >50DMA); Capital Goods (score 5.4; 1M +3.5%; RS +1.7%).
+ Mid-tier & laggards: Logistics & Transport (score 2.9; 1M +5.0%; RS +3.2%; 67% >50DMA) shows usable trend; Infrastructure (score 2.6; 1M -0.1%; 33% >50DMA) remains weak; Banking–Private (score 4.5; 1M +1.2%; RS -0.5%; 60% >50DMA) near benchmark.
+ Signals and macro: 21 BUY signals out of 28 candidates (e.g., KARURVYSYA, KTKBANK, HAPPYFORGE, UNIPARTS, APARINDS, WELCORP, WELSPUNLIV). India VIX 10.4 (falling); decoupling alerts in Gold and USDINR.
+ What to watch
+ Breadth confirmation: Improvement in % of stocks above 50DMA/200DMA alongside sustained A/D >1.0.
+ TRIN and McClellan: A shift of TRIN from neutral toward bullish, while McClellan stays positive, to validate rotation strength.
+ Nifty trend vs. breadth: A sustained Nifty downtrend with deteriorating breadth would warrant caution; the opposite would bolster recovery odds.
+ Sector follow-through: Whether PSU Banks and Metals maintain relative strength; stabilization in Infrastructure; Banking–Private RS moving toward 0.
+ Global correlations: Persistence of Gold and USDINR decoupling; fuel and freight inputs for Logistics sensitivity.
+ How to use this
+ Use rotation scores, relative strength, and breadth to prioritize sector-level research during early recovery phases.
+ Map current holdings to leading sectors (PSU Banks, Metals, Capital Goods) and monitor mid-tier pockets (Logistics) for improving rotation; treat defensives cautiously within this regime.
+ Leverage the model’s candidate list as a research queue only; independently validate fundamentals, liquidity, events, and risk before any decision.
+ Track daily risk indicators (TRIN, McClellan Oscillator, India VIX, breadth) to update the sector stance as signals evolve.
+ Disclaimer: This email summarizes an AI/rules-based research report. It is not investment advice or a trading recommendation. Validate all data and risks independently.
+
+  Regards,
+
+  Agent Adda
+
+  ShunyaAI · NSE Market Intelligence
+
+Not investment advice. For research and learning only. NSE EOD + live snapshot data.

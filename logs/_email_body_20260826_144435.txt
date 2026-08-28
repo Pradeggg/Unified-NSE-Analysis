@@ -1,0 +1,193 @@
+Agent Adda Intraday Live Commentary
+
+                  2026-08-26 14:43:44 IST | 15-minute scheduled update
+
+                  Market: NIFTY 24,280 -0.23%, BANKNIFTY 57,880 +0.64%, VIX 10.83 -2.18%, breadth 421A/328D
+
+                Cycle
+5
+Tracked
+15
+Candidates
+4
+Changed
+1
+
+            Trading Stance
+
+        Trading Stance
+
+          TRADE
+           - Trade only qualified setup(s); avoid chasing.
+
+          Use only the named trade-window candidates and respect invalidation.
+
+          Reasons: Fresh alerts: 4; Alert candidates: 4; closing_drive / NO_TRADE_WINDOW; volume confirmation missing
+
+            Sharp Movers
+
+        Symbol
+        Move
+        Chg / LTP
+        Read
+
+      KOTAKBANKSharp Rise+3.5% / 415.55approaching resistance
+
+            Current Read From The Tracker
+
+        Symbol
+        Gate
+        Read
+
+      JINDALSTEL
+1,176 / n/aTRADE NOW / Option Buy OKL-ACTIVE - Trig 1,176 | Stop 1,172 | T1 1,183/2.0R - Near Breakout + Volume
+ICICIGI
+1,595 / n/aTRADE NOW / Option Buy OKS-ACTIVE - Trig 1,595 | Stop 1,604 | T1 1,583/1.3R - Volume Spike
+JSWENERGY
+545.00 / n/aTRADE NOW / Option Buy OKS-ACTIVE - Trig 545.00 | Stop 547.78 | T1 541.29/1.3R - Volume Spike
+NMDC
+87.99 / n/aWATCH ONLY / Prefer FuturesL-ACTIVE - Trig 87.99 | Stop 87.77 | T1 88.61/2.8R - Near Breakout + Volume
+LICHSGFIN
+525.78 / n/aWATCH ONLY / Prefer FuturesL-ACTIVE - Trig 525.78 | Stop 523.75 | T1 529.95/2.0R - Near Breakout + Volume
+HINDALCO
+1,055 / +0.4%WATCH ONLY / Prefer FuturesL-ACTIVE - Trig 1,054 | Stop 1,052 | T1 1,060/2.7R - Near Breakout + Volume
+ZYDUSLIFE
+1,148 / n/aWATCH ONLY / Prefer FuturesL-ACTIVE - Trig 1,148 | Stop 1,143 | T1 1,157/1.9R - Near Breakout + Volume
+
+            Options Execution
+
+        Symbol
+        Verdict
+        Contract
+        Risk Notes
+
+      JINDALSTELNO OPTIONS TRADE
+No options structure (NO OPTIONS STRATEGY)CE
+Prem n/a | BE n/a | n/a | IV n/afno_context
+ICICIGIUSE SPREAD
+Avoid stock option near expiry (NO OPTIONS STRATEGY)PE ATM 1,600
+Prem 34.00 | BE 1,566 | 29-Sep-2026 / 0D | IV 18.0✅ IV 18.0% is low — reasonable cost for buyers; ✅ IV rank 7% — historically cheap
+JSWENERGYUSE SPREAD
+Avoid stock option near expiry (NO OPTIONS STRATEGY)PE ATM 550.00
+Prem 14.00 | BE 536.00 | 29-Sep-2026 / 0D | IV 18.0✅ IV 18.0% is low — reasonable cost for buyers; ✅ IV rank 7% — historically cheap
+NMDCUSE SPREAD
+Avoid stock option near expiry (NO OPTIONS STRATEGY)CE ATM 100.00
+Prem 0.32 | BE 100.32 | 29-Sep-2026 / 0D | IV 18.0✅ IV 18.0% is low — reasonable cost for buyers; ✅ IV rank 7% — historically cheap
+LICHSGFINUSE SPREAD
+Avoid stock option near expiry (NO OPTIONS STRATEGY)CE ATM 550.00
+Prem 6.10 | BE 556.10 | 29-Sep-2026 / 0D | IV 18.0✅ IV 18.0% is low — reasonable cost for buyers; ✅ IV rank 7% — historically cheap
+HINDALCOUSE SPREAD
+Avoid stock option near expiry (NO OPTIONS STRATEGY)CE ATM 1,040
+Prem 41.15 | BE 1,081 | 29-Sep-2026 / 0D | IV 18.0✅ IV 18.0% is low — reasonable cost for buyers; ✅ IV rank 7% — historically cheap
+
+            Cycle Changes
+
+            NewHINDALCO, ICICIGI, JINDALSTEL, JSWENERGY, LICHSGFIN, NATIONALUM, NMDC, SAIL, ZYDUSLIFE
+ActiveJINDALSTEL, ICICIGI, JSWENERGY, NMDC, LICHSGFIN, HINDALCO, ZYDUSLIFE, SAIL, DIXON
+ChangedDIXON near trigger / watch -> short active
+
+            Narrative / Commentary
+
+                  State-Machine Commentary
+
+                  Current read from the tracker
+•Tape: NIFTY 24,280 -0.23%, BANKNIFTY 57,880 +0.64%, VIX 10.83 (-2.18%), breadth 421A/328D. Regime: neutral — “Trade only clean trigger/retest setups.”
+
+•Active posture (by alignment):
+
+•Shorts aligned with F&O bearish and volume: ICICIGI, JSWENERGY — both have “TRADE NOW,” Option Buy OK; note trade_timing is NO_TRADE_WINDOW (closing-drive, no persisted edge).
+
+•Longs with volume but F&O not supportive: NMDC, LICHSGFIN, ZYDUSLIFE, SAIL (sideways), HINDALCO (F&O bearish) — all “WATCH ONLY.”
+
+•JINDALSTEL long has volume and RR; F&O unavailable — “TRADE NOW,” Option Buy OK; options execution missing_evidence.
+
+•DIXON short active by MTF levels, but “AVOID” (not directional per engine; F&O unavailable).
+
+ 
+Cycle changes
+•New added (all level-specific with final_action and options_suitability):
+
+•HINDALCO LONG 1054.1/1052.03→1059.71 RR 2.71 — WATCH ONLY, Prefer Futures; conflict: F&O bearish vs long trigger.
+
+•ICICIGI SHORT 1594.7/1603.64→1582.78 RR 1.33 — TRADE NOW, Option Buy OK; F&O bearish aligned.
+
+•JINDALSTEL LONG 1175.67/1171.84→1183.43 RR 2.03 — TRADE NOW, Option Buy OK; F&O unavailable; options execution missing_evidence.
+
+•JSWENERGY SHORT 545.0/547.78→541.29 RR 1.33 — TRADE NOW, Option Buy OK; F&O bearish aligned.
+
+... commentary truncated for email readability; see the cycle log for full detail.
+
+            Source Health
+
+            get_live_market_overview ok | get_top_gainers_losers ok | get_nse_quotes ok: yfinance (NSE batch) | scan_symbols_intraday ok | strategy_time_gate ok: supertrend_breakout,near_breakout_volume,vcp,volume,darvas | fno_context ok | edge_memory ok: 0 | full universe rescan ok: scanned 210, tracking 15 | options_execution ok
+
+            Alert Candidates
+
+                      Priority: NMDC, HINDALCO, LICHSGFIN, JINDALSTEL. Confirm trigger hold and invalidation before acting.
+
+            Priority Queue
+
+        Symbol
+        LTP
+        Levels
+        Gate / Read
+
+      NMDC
+LONG87.99
+n/aTrig 87.99 | Stop 87.77 | T1 88.61 | RR 2.8WATCH ONLY / Prefer Futures / score 62
+long active - Near Breakout + Volume - Near pivot 87.9; distance -0.27%; volume 7.3x; ATR 0.35%
+HINDALCO
+LONG1,055
++0.4%Trig 1,054 | Stop 1,052 | T1 1,060 | RR 2.7WATCH ONLY / Prefer Futures / score 36
+long active - Near Breakout + Volume - Near pivot 1053.05; distance -0.22%; volume 2.0x; ATR 0.27%
+LICHSGFIN
+LONG525.78
+n/aTrig 525.78 | Stop 523.75 | T1 529.95 | RR 2.0WATCH ONLY / Prefer Futures / score 62
+long active - Near Breakout + Volume - Near pivot 525.25; distance -0.19%; volume 1.5x; ATR 0.4%
+JINDALSTEL
+LONG1,176
+n/aTrig 1,176 | Stop 1,172 | T1 1,183 | RR 2.0TRADE NOW / Option Buy OK / score 67
+long active - Near Breakout + Volume - Near pivot 1174.5; distance -0.17%; volume 2.4x; ATR 0.33%
+
+            Active Trades
+
+        Symbol
+        LTP
+        Levels
+        Gate / Read
+
+      NMDC
+LONG87.99
+n/aTrig 87.99 | Stop 87.77 | T1 88.61 | RR 2.8WATCH ONLY / Prefer Futures / score 62
+long active - Near Breakout + Volume - Near pivot 87.9; distance -0.27%; volume 7.3x; ATR 0.35%
+HINDALCO
+LONG1,055
++0.4%Trig 1,054 | Stop 1,052 | T1 1,060 | RR 2.7WATCH ONLY / Prefer Futures / score 36
+long active - Near Breakout + Volume - Near pivot 1053.05; distance -0.22%; volume 2.0x; ATR 0.27%
+LICHSGFIN
+LONG525.78
+n/aTrig 525.78 | Stop 523.75 | T1 529.95 | RR 2.0WATCH ONLY / Prefer Futures / score 62
+long active - Near Breakout + Volume - Near pivot 525.25; distance -0.19%; volume 1.5x; ATR 0.4%
+JINDALSTEL
+LONG1,176
+n/aTrig 1,176 | Stop 1,172 | T1 1,183 | RR 2.0TRADE NOW / Option Buy OK / score 67
+long active - Near Breakout + Volume - Near pivot 1174.5; distance -0.17%; volume 2.4x; ATR 0.33%
+
+            Near Trigger / Watch
+
+        Symbol
+        LTP
+        Levels
+        Gate / Read
+
+      No near-trigger watches passed the alert filter.
+
+            Risk Rules
+
+                  - Active means the state machine sees the trigger already engaged; near-trigger means wait for confirmation.
+
+                  - Stops are invalidation references, not guaranteed execution prices.
+
+                  - Skip names where spread, liquidity, option premium, or volatility makes execution poor.
+
+                Research only. Not investment advice. Validate liquidity, spread, option premium, and execution risk before acting.

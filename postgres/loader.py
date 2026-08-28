@@ -51,7 +51,7 @@ _load_project_env()
 PG_DSN  = (
     os.environ.get("AGENT_ADDA_PG_DSN")
     or os.environ.get("PG_DSN")
-    or "dbname=nse_market user=nse_admin host=/tmp"
+    or "dbname=nse_market user=nse_admin host=127.0.0.1 port=5432"
 )
 FUNDAMENTAL_SCORE_CSVS = [
     DATA / "fundamental_scores_database.csv",
@@ -59,6 +59,7 @@ FUNDAMENTAL_SCORE_CSVS = [
     BASE / "archive" / "repo-cleanup-20260511" / "organized" / "data" / "fundamental_scores_database.csv",
     BASE / "archive" / "fundamental_scores_database.csv",
 ]
+FUNDAMENTAL_EXPORTS_DIR = DATA / "exports" / "fundamentals"
 SCREENER_FUND_CACHE = DATA / "_sector_rotation_fund_cache.csv"
 WORKING_SECTOR_OUTPUT = BASE / "working-sector" / "output"
 
@@ -224,9 +225,13 @@ def equity_eod_csv_paths():
     # NOTE: DATA / "data" / ... paths removed — they reference a stale nested
     # directory (data/data/) left over from a legacy layout and should never
     # be read. The two correct locations are data/nse-raw/ and data/ directly.
+    #
+    # Order matters for deduplication: big historical CSV first, then nse-raw.
+    # The dedup dict keeps the LAST writer for each (date, symbol, series) key,
+    # so nse-raw (processed second) wins and provides clean recent data.
     candidates = [
-        DATA / "nse-raw" / "nse_sec_full_data.csv",
         DATA / "nse_sec_full_data.csv",
+        DATA / "nse-raw" / "nse_sec_full_data.csv",
     ]
     seen = set()
     paths = []
@@ -257,6 +262,13 @@ def _equity_rows_from_csv(csv_path: Path):
         prev_close = safe_float(r.get("PREVCLOSE"))
         change_abs = (close - prev_close) if prev_close is not None else None
         change_pct = safe_numeric_8_4((close - prev_close) / prev_close * 100) if prev_close not in (None, 0) else None
+        # TOTTRDVAL is in rupees; cap at 1e11 (₹10,000 crore) to filter bhavcopy
+        # format glitches. Even the most liquid NSE stocks (RELIANCE, HDFCBANK)
+        # rarely exceed ₹3,000–5,000 crore daily turnover. Values above this
+        # threshold are corrupt artifacts from the combined historical CSV where
+        # the R-script writes TOTTRDVAL in a different unit for some dates.
+        _tottrdval = safe_float(r.get("TOTTRDVAL"))
+        turnover_raw = _tottrdval if (_tottrdval is not None and _tottrdval <= 1e11) else None
         rows.append({
             "trade_date": dt,
             "symbol": sym.strip().upper(),
@@ -270,7 +282,7 @@ def _equity_rows_from_csv(csv_path: Path):
             "change_abs": change_abs,
             "change_pct": change_pct,
             "volume": safe_int(r.get("TOTTRDQTY")),
-            "turnover_cr": safe_float(r.get("TOTTRDVAL")),
+            "turnover_cr": turnover_raw,
             "total_trades": safe_int(r.get("TOTALTRADES")),
             "week52_high": safe_float(r.get("HI_52_WK")),
             "week52_low": safe_float(r.get("LO_52_WK")),
@@ -302,6 +314,33 @@ def load_equity_eod(cur):
     dates = sorted({r["trade_date"] for r in rows})
     suffix = f" ({dates[0]} → {dates[-1]})" if dates else ""
     print(f"  market.equity_eod: {n} rows upserted{suffix}")
+
+    # Backfill prev_close + change_pct/change_abs for rows where the source CSV
+    # did not include PREVCLOSE (e.g. nse_sec_full_data.csv rebuilt from PG).
+    # Uses LAG() window function partitioned by symbol+series.
+    cur.execute("""
+        WITH prev AS (
+            SELECT trade_date, symbol, series,
+                   LAG(close) OVER (PARTITION BY symbol, series ORDER BY trade_date)
+                       AS prev_close_calc
+            FROM market.equity_eod
+        )
+        UPDATE market.equity_eod e
+        SET prev_close = p.prev_close_calc,
+            change_abs = ROUND((e.close - p.prev_close_calc)::numeric, 4),
+            change_pct = ROUND(
+                ((e.close - p.prev_close_calc) / p.prev_close_calc * 100)::numeric, 4)
+        FROM prev p
+        WHERE e.trade_date = p.trade_date
+          AND e.symbol     = p.symbol
+          AND e.series     = p.series
+          AND e.prev_close IS NULL
+          AND p.prev_close_calc IS NOT NULL
+          AND p.prev_close_calc > 0
+    """)
+    filled = cur.rowcount
+    if filled:
+        print(f"  market.equity_eod: backfilled prev_close for {filled} rows via LAG()")
     return n
 
 
@@ -719,7 +758,74 @@ def load_fundamental_scores(cur):
                 "financial_strength", "institutional_backing", "processed_date",
                 "processing_batch", "batch_number", "source_file", "loaded_at"])
     print(f"  scores.fundamental_scores: {n} rows from {path.name}")
+
+    # On a fresh environment the structured financial tables may be empty.
+    # Bootstrap them from the git-committed exports if available.
+    _bootstrap_structured_financials(cur)
+
     return n
+
+
+def _bootstrap_structured_financials(cur):
+    """Load data/exports/fundamentals/ CSVs into structured financial tables
+    if those tables are empty (first-run bootstrap on a fresh environment)."""
+    exports = FUNDAMENTAL_EXPORTS_DIR
+    if not exports.exists():
+        return
+
+    table_map = {
+        "quarterly_results.csv": ("scores.quarterly_results", ["symbol", "period_label"]),
+        "annual_results.csv":    ("scores.annual_results",    ["symbol", "period_label"]),
+        "balance_sheet.csv":     ("scores.balance_sheet",     ["symbol", "period_label"]),
+        "cash_flow.csv":         ("scores.cash_flow",         ["symbol", "period_label"]),
+        "fundamentals.csv":      ("scores.fundamentals",      ["symbol"]),
+    }
+
+    for fname, (table, pk_cols) in table_map.items():
+        fpath = exports / fname
+        if not fpath.exists():
+            continue
+        short = table.split(".")[-1]
+        cur.execute(f"SELECT COUNT(*) FROM {table}")
+        existing = cur.fetchone()[0]
+        import csv as _csv
+        with open(fpath) as f:
+            file_rows = sum(1 for _ in f) - 1
+        if existing >= file_rows:
+            continue  # already loaded, skip
+        print(f"  {table}: bootstrapping {file_rows} rows from exports/")
+        with open(fpath) as f:
+            reader = _csv.DictReader(f)
+            rows_data = list(reader)
+        if not rows_data:
+            continue
+        cols = [c for c in rows_data[0].keys()
+                if not (table == "scores.fundamentals" and c == "updated_date")]
+        col_names = ",".join(f'"{c}"' for c in cols)
+        placeholders = ",".join(["%s"] * len(cols))
+        conflict = ",".join(f'"{c}"' for c in pk_cols)
+        update_cols = [c for c in cols if c not in pk_cols]
+        if update_cols:
+            updates = ",".join(f'"{c}"=EXCLUDED."{c}"' for c in update_cols)
+            sql = (f"INSERT INTO {table} ({col_names}) VALUES ({placeholders}) "
+                   f"ON CONFLICT ({conflict}) DO UPDATE SET {updates}")
+        else:
+            sql = (f"INSERT INTO {table} ({col_names}) VALUES ({placeholders}) "
+                   f"ON CONFLICT ({conflict}) DO NOTHING")
+        count = 0
+        for row in rows_data:
+            if table == "scores.fundamentals" and "updated_date" in row:
+                row["updated_at"] = row.pop("updated_date") or None
+            vals = [None if v in ("", "None") else v for k, v in row.items()
+                    if k in cols or (k == "updated_at" and "updated_at" in cols)]
+            vals = [None if v in ("", "None") else v for v in (row.get(c) for c in cols)]
+            try:
+                cur.execute(sql, vals)
+                count += 1
+            except Exception:
+                cur.connection.rollback()
+        cur.connection.commit()
+        print(f"  {table}: {count} rows bootstrapped")
 
 
 # ---------------------------------------------------------------------------
@@ -1374,6 +1480,8 @@ def main():
         load_breadth(cur)
         load_ma_breadth(cur)
         load_global_index_levels(cur)
+        load_corporate_events(cur)
+        load_insider_alerts(cur)
         load_deals_today(cur)
         if not args.skip_fno:
             load_fno_today(cur)

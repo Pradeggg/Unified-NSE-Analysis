@@ -11,7 +11,7 @@ from typing import Any, Iterable
 
 
 ROOT = Path(__file__).resolve().parents[1]
-BUILDER = ROOT / "Mutual Funds" / "working" / "build_midcap_leaders.py"
+BUILDER = ROOT / "mutual_funds" / "working" / "build_midcap_leaders.py"
 
 
 def _display_date(run_date: str) -> str:

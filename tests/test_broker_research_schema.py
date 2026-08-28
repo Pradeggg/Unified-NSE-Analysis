@@ -1,4 +1,4 @@
-from company_intelligence_pg import REQUIRED_TABLES, schema_sql
+from company_intelligence.company_intelligence_pg import REQUIRED_TABLES, schema_sql
 
 
 BROKER_TABLES = [

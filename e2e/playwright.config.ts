@@ -22,6 +22,15 @@ export default defineConfig({
       },
     },
 
+    {
+      name: "talk2stocks",
+      testMatch: "**/talk2stocks.spec.ts",
+      use: {
+        ...devices["Desktop Chrome"],
+        baseURL: process.env.T2S_BASE_URL || API_BASE,
+      },
+    },
+
     /* ── Plugin project: Chromium with extension loaded ────────────── */
     {
       name: "plugin",

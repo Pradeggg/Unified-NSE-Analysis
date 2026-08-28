@@ -1,24 +1,24 @@
 SECTOR_NAME,MACRO_TAILWIND,MACRO_DETAIL
-Banking & Finance,0.48,"India VIX(+0.3), Nifty 50(+0.2)"
-Financial Services,0.48,"India VIX(+0.3), Nifty 50(+0.2)"
-Media & Entertainment,0.48,"India VIX(+0.2), Nifty 50(+0.2)"
-PSU Bank,0.48,"India VIX(+0.3), Nifty 50(+0.2)"
-Private Bank,0.48,"India VIX(+0.3), Nifty 50(+0.2)"
-Realty,0.36,"India VIX(+0.2), Nifty 50(+0.1)"
-Defence,0.35,"Nifty 50(+0.2), India VIX(+0.2)"
-Telecom,0.35,"India VIX(+0.2), Nifty 50(+0.2)"
-Consumer Discretionary,0.35,"India VIX(+0.2), Nifty 50(+0.2)"
-Oil & Gas,0.35,"India VIX(+0.2), Nifty 50(+0.2)"
-Energy,0.35,"India VIX(+0.2), Nifty 50(+0.2)"
-Defence & Shipbuilding,0.35,"Nifty 50(+0.2), India VIX(+0.2)"
-Chemicals,0.31,"India VIX(+0.2), Nifty 50(+0.1)"
-Technology,0.26,"India VIX(+0.1), Nifty 50(+0.1)"
-IT,0.26,"India VIX(+0.1), Nifty 50(+0.1)"
-Automobile,0.26,"India VIX(+0.1), Nifty 50(+0.1)"
-Auto,0.26,"India VIX(+0.1), Nifty 50(+0.1)"
-Metals & Mining,0.19,India VIX(+0.2)
-Infrastructure,0.19,India VIX(+0.2)
-Capital Goods,0.19,India VIX(+0.2)
-Healthcare,-0.31,"India VIX(-0.2), Nifty 50(-0.1)"
-Pharma,-0.31,"India VIX(-0.2), Nifty 50(-0.1)"
-FMCG,-0.31,"India VIX(-0.2), Nifty 50(-0.1)"
+FMCG,0.34,India VIX(+0.4)
+Pharma,0.34,India VIX(+0.4)
+Healthcare,0.34,India VIX(+0.4)
+Auto,-0.25,India VIX(-0.3)
+Automobile,-0.25,India VIX(-0.3)
+IT,-0.25,India VIX(-0.3)
+Technology,-0.25,India VIX(-0.3)
+Defence & Shipbuilding,-0.34,India VIX(-0.4)
+Energy,-0.34,India VIX(-0.4)
+Defence,-0.34,India VIX(-0.4)
+Telecom,-0.34,India VIX(-0.4)
+Chemicals,-0.34,India VIX(-0.4)
+Consumer Discretionary,-0.34,India VIX(-0.4)
+Oil & Gas,-0.34,India VIX(-0.4)
+Capital Goods,-0.37,India VIX(-0.4)
+Metals & Mining,-0.37,India VIX(-0.4)
+Infrastructure,-0.37,India VIX(-0.4)
+Media & Entertainment,-0.41,"India VIX(-0.5), Nifty 50(+0.1)"
+Realty,-0.44,India VIX(-0.5)
+PSU Bank,-0.51,India VIX(-0.6)
+Private Bank,-0.51,India VIX(-0.6)
+Financial Services,-0.51,India VIX(-0.6)
+Banking & Finance,-0.51,India VIX(-0.6)

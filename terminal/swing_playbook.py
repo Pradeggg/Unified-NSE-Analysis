@@ -44,6 +44,7 @@ OPTIONAL_DEFAULTS: dict[str, Any] = {
     "quantity": 0.0,
     "avg_cost": 0.0,
     "position_value": 0.0,
+    "portfolio_sl_price": 0.0,
 }
 
 
@@ -187,6 +188,7 @@ def normalize_candidate_frame(raw: pd.DataFrame) -> tuple[pd.DataFrame, list[str
         "quantity",
         "avg_cost",
         "position_value",
+        "portfolio_sl_price",
     ]
     for column in numeric_columns:
         frame[column] = pd.to_numeric(frame[column], errors="coerce").fillna(
@@ -350,7 +352,10 @@ def _to_candidate(row: pd.Series, *, sleeve: str) -> PlaybookCandidate:
 def rank_swing_candidates(
     frame: pd.DataFrame, *, top_n: int = 10
 ) -> tuple[list[PlaybookCandidate], list[PlaybookCandidate]]:
-    tactical_rows = frame[frame["stage"].isin(["STAGE_1", "STAGE_2", "STAGE_3"])].copy()
+    # Stage 1 is accumulation/watchlist — not an active swing entry zone.
+    # Stage 2 is the preferred long-only swing zone; Stage 3 is included only
+    # for near-top momentum trades where the score is high enough to qualify.
+    tactical_rows = frame[frame["stage"].isin(["STAGE_2", "STAGE_3"])].copy()
     tactical_rows = tactical_rows[tactical_rows["close"] > 0]
     tactical = [_to_candidate(row, sleeve="TACTICAL") for _, row in tactical_rows.iterrows()]
 
@@ -369,12 +374,20 @@ def _portfolio_label(row: pd.Series) -> tuple[str, str]:
     close = _num(row.get("close"))
     sma20 = _num(row.get("sma_20"))
     sma50 = _num(row.get("sma_50"))
+    portfolio_sl = _num(row.get("portfolio_sl_price", 0))
+    # Stop-loss breach: current price has closed below the reference stop level.
+    # Note: described as a condition for research review, not a trading directive.
+    if close > 0 and portfolio_sl > 0 and close < portfolio_sl:
+        return "STOP_LOSS_BREACH", (
+            f"price ₹{close:.2f} has closed below the reference stop ₹{portfolio_sl:.2f} — "
+            f"review position against your own risk parameters"
+        )
     if stage in {"STAGE_4"} or (close > 0 and sma50 > 0 and close < sma50 and rs < 50):
-        return "EXIT_WATCH", "stage or RS has degraded and price is below key trend support"
-    if stage == "STAGE_3" or (close > 0 and sma20 > 0 and close < sma20):
-        return "TIGHTEN_STOP", "trend is weakening or price is below short-term support"
+        return "EXIT_WATCH", "stage or RS has degraded and price is below key trend support — review risk"
+    if stage in {"STAGE_3", "STAGE_1"} or (close > 0 and sma20 > 0 and close < sma20):
+        return "REVIEW_STOP", "trend is weakening or price is below short-term support; consider reviewing stop levels"
     if stage == "STAGE_2" and tech >= 75 and rs >= 70 and close > sma20 > 0:
-        return "ADD_OK", "holding remains strong and has a defined add trigger"
+        return "CANDIDATE_ADD", "setup remains constructive; validate live conditions before any action"
     if tech >= 60 and rs >= 55:
         return "HOLD", "evidence remains acceptable"
     return "NO_FRESH_ADD", "not a sell, but fresh capital is not justified"
@@ -465,7 +478,15 @@ def render_markdown(
         lines.extend(f"- {warning}" for warning in warnings)
     else:
         lines.append("- No missing optional evidence was detected in the candidate frame.")
-    lines.extend(["", "Not investment advice. For research and learning only."])
+    lines.extend([
+        "",
+        "---",
+        "**DISCLAIMER:** This report is for research and educational purposes only. It does not constitute "
+        "investment advice, a buy or sell recommendation, or a research report under the SEBI (Research Analysts) "
+        "Regulations, 2014. Agent Adda is not a SEBI-registered research analyst or investment adviser. All signals, "
+        "scores, reference prices, and labels are model outputs and must not be treated as personalized investment "
+        "advice. Consult a SEBI-registered adviser before acting on any information here.",
+    ])
     return "\n".join(lines)
 
 
@@ -509,9 +530,9 @@ def _fmt_pct(value: float | None) -> str:
 
 def _badge_class(value: str) -> str:
     normalized = (value or "").strip().upper().replace(" ", "_")
-    if normalized in {"CANDIDATE", "ADD_OK", "STRONG_BUY", "BUY"}:
+    if normalized in {"CANDIDATE", "ADD_OK", "CANDIDATE_ADD", "STRONG_BUY", "BUY"}:
         return "badge-good"
-    if normalized in {"WATCHLIST", "HOLD", "TIGHTEN_STOP", "INTRADAY_CONFIRM"}:
+    if normalized in {"WATCHLIST", "HOLD", "TIGHTEN_STOP", "REVIEW_STOP", "INTRADAY_CONFIRM"}:
         return "badge-watch"
     if normalized in {"EXIT_WATCH", "NO_FRESH_ADD", "SELL", "AVOID"}:
         return "badge-risk"
@@ -751,8 +772,8 @@ def _render_swing_playbook_html(
       <div class="metric-card"><div class="metric-label">Portfolio Actions</div><div class="metric-value">{len(portfolio_actions)}</div><div class="metric-sub">holding-aware actions</div></div>
     </div>
     <div class="overview-grid">
-      <div class="card callout"><h2>Daily Action Sheet</h2><p>{best_html}</p><ul class="list-clean"><li>Risk profile: Balanced; max 1.0% account risk per trade; target 8-12 open positions.</li><li>Use entries as confirmation triggers, not blind buy levels.</li><li>Prefer candidates over watchlist rows when breadth is cautious.</li></ul></div>
-      <div class="card risk-callout"><h3>Execution Guardrails</h3><ul class="list-clean"><li>Buy only above trigger.</li><li>Respect the initial stop.</li><li>Reduce size when stop distance is wide.</li><li>Recheck live liquidity before orders.</li></ul></div>
+      <div class="card callout"><h2>Research Scan Summary</h2><p>{best_html}</p><ul class="list-clean"><li>Risk profile context: balanced setups with defined reference levels — validate live conditions independently.</li><li>Trigger prices are reference levels for further research, not entry instructions.</li><li>Prefer candidates over watchlist rows when breadth is cautious.</li></ul></div>
+      <div class="card risk-callout"><h3>Research Checklist</h3><ul class="list-clean"><li>Confirm trigger level against live price and volume before drawing conclusions.</li><li>Reference stop levels indicate where the thesis may be invalidated — set your own limits independently.</li><li>Reduce notional exposure when reference stop distance is wide.</li><li>Verify live liquidity and current price independently before any action.</li></ul></div>
     </div>
   </section>
   <section id="tab-tactical" class="tab-pane">
@@ -769,9 +790,11 @@ def _render_swing_playbook_html(
   </section>
   <section id="tab-warnings" class="tab-pane">
     <div class="card"><h2>Source Freshness And Warnings</h2><ul class="list-clean">{warnings_html}</ul></div>
-    <div class="card"><h2>Disclaimer</h2><p>Not investment advice. For research and learning only.</p></div>
+    <div class="card"><h2>Disclaimer</h2><p><strong>This report is for research and educational purposes only. It does not constitute investment advice, a buy or sell recommendation, or a research report as defined under the SEBI (Research Analysts) Regulations, 2014. Agent Adda is not a SEBI-registered research analyst or investment adviser. All signals, scores, reference prices, and labels in this report are model outputs and must not be treated as personalized investment advice. Past signals do not guarantee future results. Markets involve risk, including loss of capital. Consult a SEBI-registered investment adviser or research analyst before acting on any information presented here.</strong></p></div>
   </section>
-  <div class="footer">Generated by Agent Adda Swing Playbook.</div>
+  <div class="footer" style="background:#fff3cd;color:#856404;border-top:2px solid #ffc107;padding:1rem 2rem;font-size:.85rem;">
+    ⚠️ <strong>Research only — not SEBI-registered investment advice.</strong> All signals and reference prices are model outputs for educational use. Verify independently before any action.
+  </div>
 </main>
 <script>{js}</script>
 </body>
@@ -931,11 +954,18 @@ def load_candidates_from_postgres(options: SwingPlaybookOptions) -> pd.DataFrame
                   AND volume > 0
                 ORDER BY turnover_cr DESC NULLS LAST, volume DESC NULLS LAST
                 LIMIT %(limit)s
+            ),
+            -- Current portfolio holdings from fund_position_history (latest snapshot)
+            portfolio AS (
+                SELECT DISTINCT ON (symbol) symbol, qty, entry_price AS avg_cost, sl_price
+                FROM portfolio.fund_position_history
+                ORDER BY symbol, snapshot_date DESC
             )
             SELECT
                 s.symbol,
                 {instrument_select}
-                l.close,
+                -- For portfolio holdings not in the liquid top-N, fetch close from EOD directly
+                COALESCE(l.close, ph_eod.close, 0) AS close,
                 l.volume,
                 l.turnover_cr,
                 s.stage,
@@ -951,14 +981,33 @@ def load_candidates_from_postgres(options: SwingPlaybookOptions) -> pd.DataFrame
                 0.0 AS sma_50,
                 0.0 AS sma_200,
                 0.0 AS atr_14,
-                1.0 AS volume_ratio_20d
+                1.0 AS volume_ratio_20d,
+                -- Portfolio holding flag and position data
+                CASE WHEN ph.symbol IS NOT NULL THEN TRUE ELSE FALSE END AS is_portfolio_holding,
+                COALESCE(ph.qty, 0) AS quantity,
+                COALESCE(ph.avg_cost, 0) AS avg_cost,
+                COALESCE(ph.qty * l.close, 0) AS position_value,
+                COALESCE(ph.sl_price, 0) AS portfolio_sl_price
             FROM scores.stage_snapshots s
             JOIN latest ON latest.snapshot_date = s.snapshot_date
-            JOIN liquid l ON l.symbol = s.symbol
+            -- Use outer join so portfolio holdings appear even if below liquidity threshold
+            LEFT JOIN liquid l ON l.symbol = s.symbol
+            LEFT JOIN portfolio ph ON ph.symbol = s.symbol
+            -- Direct EOD price lookup for portfolio holdings not captured in liquid CTE
+            LEFT JOIN market.equity_eod ph_eod
+                ON ph_eod.symbol = s.symbol
+               AND ph_eod.trade_date = (SELECT trade_date FROM latest_eod)
+               AND ph_eod.series = 'EQ'
+               AND ph.symbol IS NOT NULL
             {instrument_join}
             {vcp_join}
             WHERE s.snapshot_date = latest.snapshot_date
-            ORDER BY COALESCE(s.technical_score, 0) DESC, COALESCE(s.relative_strength, 0) DESC
+              -- Include row if it's either liquid enough OR is a portfolio holding
+              AND (l.symbol IS NOT NULL OR ph.symbol IS NOT NULL)
+            ORDER BY
+                CASE WHEN ph.symbol IS NOT NULL THEN 0 ELSE 1 END,  -- holdings first
+                COALESCE(s.technical_score, 0) DESC,
+                COALESCE(s.relative_strength, 0) DESC
         """
         frame = pd.read_sql_query(query, conn, params={"limit": limit})
     if frame.empty:

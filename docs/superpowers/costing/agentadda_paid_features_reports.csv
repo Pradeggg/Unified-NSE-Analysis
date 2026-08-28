@@ -1,0 +1,37 @@
+Category,Feature or Report,Free,Starter,Plus,Pro,Power,Frequency / Limit,Monetization Rationale,Cost Risk,Control Required
+Feature,Basic Talk 2 Stocks chat,Capped,Yes,Yes,Yes,Yes,Daily quota,Acquisition and daily engagement,Medium,Per-user token quota
+Feature,Higher daily chat quota,No,10/day,20/day,50/day,Fair-use,Monthly plan quota,Direct usage monetization,Medium,Hard caps and throttling
+Feature,Follow-up context memory,No,Short,Medium,Long,Long + saved sessions,Session-level,Retention and quality,Medium,Context compaction
+Feature,Watchlists,1,2,5,15,Custom,Per account,High retention with low COGS,Low,Watchlist count caps
+Feature,Stage 2 tracker access,Preview,Yes,Yes,Yes,Yes,Daily/EOD,Differentiated Agent Adda signal surface,Low,Delayed preview for Free
+Feature,Advanced screeners,No,Limited,Yes,Yes,Yes,Daily/EOD,Strong paid conversion feature,Low,Feature flags
+Feature,Peer comparison,No,2 stocks,5 stocks,10 stocks,Baskets,On demand,Clear tier boundary,Medium,Symbol count cap
+Feature,Portfolio upload,No,No,Lite,Full,Full + history,Monthly/weekly,Strong Pro upsell,Medium,Upload and refresh caps
+Feature,Portfolio sell/add/trim review,No,No,Monthly,Weekly,On demand,Quota-based,High willingness-to-pay,Medium,Deep-review quota
+Feature,Alert subscriptions,No,EOD,EOD + limited intraday,Intraday + email,Advanced multi-channel,Plan-based,Recurring utility,Medium/High,Frequency and channel caps
+Feature,Email report delivery,No,No,Yes,Yes,Yes,Plan-based,Convenience and distribution,Low,Bounce and send limits
+Feature,Export/share reports,No,Limited,Yes,Yes,Branded/custom,Plan-based,Team-sharing value,Medium,Export count caps
+Feature,Voice briefing,No,No,Limited,Yes,Yes,Minutes/chars cap,Premium UX,High,Audio quota
+Feature,Evidence trail,Basic,Yes,Full,Full,Full,All reports,Trust feature,Low,Source freshness checks
+Feature,Broker/news research overlay,No,Limited,Yes,Yes,Yes,On demand,Insight layer,Medium,Source/date validation
+Feature,API / CSV export,No,No,Limited,Yes,Bulk,Monthly quota,Power-user monetization,Medium,Export quotas
+Feature,Custom report packs,No,No,No,Limited,Yes,Monthly,Workflow automation,Medium,Pack quota
+Report,Daily EOD Market Report,No,Preview,Full,Full,Full,Daily,Saves daily market review time,Medium,Batch generation
+Report,Weekend Market Report,No,No,Full,Full,Full,Weekly,High-value planning artifact,Medium,Batch generation
+Report,Sector Rotation Report,Preview,Limited,Full,Full,Full,Daily/EOD,Leadership and risk areas,Low/Medium,Delay/free truncation
+Report,Stage 2 Tracker,Preview,Full,Full,Full,Full,Daily/EOD,Idea discovery workflow,Low,Universe cap for low tiers
+Report,Top Picks / Buy Candidates,No,No,Full,Full,Full,Daily/weekly,Research shortlist,Medium,Research-only framing
+Report,Must-Sell / Risk Review,No,No,No,Full,Full,Weekly/on demand,Portfolio risk control,Medium,Portfolio quota
+Report,Portfolio Assessment Report,No,No,Lite,Full,Full + history,Weekly/on demand,Personalized value,Medium,Upload/report quota
+Report,Individual Stock Deep Dive,No,Limited,Quota,Full,Full,On demand,Core research artifact,Medium/High,Deep-dive quota
+Report,Fundamental Deep Research Report,No,No,Limited,Quota,Quota+,On demand,Higher value and higher LLM/document cost,High,Premium quota
+Report,Peer Battle Report,No,No,Full,Full,Full,On demand,Allocation comparison,Medium,Symbol count cap
+Report,Results / Earnings Review,No,Limited,Full,Full,Full,Event-driven,Timely post-result interpretation,Medium,Event quota
+Report,Concall Summary + Key Questions,No,No,Limited,Full,Full,Event-driven,Document-grounded research,Medium/High,Document page cap
+Report,Broker/Analyst Consensus Overlay,No,Limited,Full,Full,Full,Event-driven,Market narrative and target changes,Medium,Source validation
+Report,FII/DII + Flow Dashboard,No,Full,Full,Full,Full,Daily,Macro/market context,Low,Cache daily
+Report,Intraday Options / F&O Alerts,No,No,No,Full,Full,Intraday,High engagement,High,Strict risk and frequency caps
+Report,Watchlist Change Report,No,No,Full,Full,Full,Daily/weekly,What changed in tracked names,Low/Medium,Watchlist cap
+Report,Small/Mid Cap Fund Review,No,No,No,Full,Full,Weekly,Premium curation workflow,Medium,Research quota
+Report,Evidence QA Report,No,No,No,Limited,Full,On demand,Trust/compliance for shared artifacts,Low/Medium,QA checklist
+Report,Branded Shareable HTML Report,No,No,Limited,Full,Custom,On demand,Professional shareability,Medium,Export quota

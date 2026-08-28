@@ -1,0 +1,374 @@
+# Curated Research Sources (v1)
+#
+# This file is the source of truth for feed-like sources (RSS/Atom/official feeds).
+# The sync+ingest tool upserts these rows into PostgreSQL:
+#   company_intel.research_sources
+#
+# Notes:
+# - Keep sources curated and ToS-safe (prefer official RSS/Atom and press-release feeds).
+# - Do not add “crawl the whole site” sources here (Phase 1 is feeds only).
+# - `symbol` is optional; leave empty for market-wide feeds.
+#
+# Example (fill in a real feed URL):
+# - source_name: "Example Markets Feed"
+#   source_kind: "rss"
+#   source_url: "https://example.com/markets/rss"
+#   source_tier: 3
+#   document_type: "news_rss"
+#   symbol: ""
+#   tags: { region: "IN", topics: ["markets"] }
+#   is_active: false
+#   notes: "Replace with a verified RSS/Atom URL."
+
+version: 1
+
+sources:
+  # ── Economic Times (ET) — official RSS list + terms: https://economictimes.indiatimes.com/rss.cms
+  - source_name: "Economic Times - Markets"
+    source_kind: "rss"
+    source_url: "https://economictimes.indiatimes.com/markets/rssfeeds/1977021501.cms"
+    source_tier: 3
+    document_type: "news_rss"
+    symbol: ""
+    tags: { publisher: "ET", topics: ["markets"] }
+    is_active: true
+    notes: "General markets feed (use excerpts only; link back to ET)."
+
+  - source_name: "Economic Times - Stocks"
+    source_kind: "rss"
+    source_url: "https://economictimes.indiatimes.com/markets/stocks/rssfeeds/2146842.cms"
+    source_tier: 3
+    document_type: "news_rss"
+    symbol: ""
+    tags: { publisher: "ET", topics: ["stocks"] }
+    is_active: true
+    notes: "Company/stock news; evidence stored as title+summary only."
+
+  - source_name: "Economic Times - News (general)"
+    source_kind: "rss"
+    source_url: "https://economictimes.indiatimes.com/news/rssfeeds/1715249553.cms"
+    source_tier: 3
+    document_type: "news_rss"
+    symbol: ""
+    tags: { publisher: "ET", topics: ["news"] }
+    is_active: true
+    notes: "General ET news; keep as market-wide context."
+
+  - source_name: "Economic Times - Defence"
+    source_kind: "rss"
+    source_url: "https://economictimes.indiatimes.com/news/defence/rssfeeds/46687796.cms"
+    source_tier: 3
+    document_type: "news_rss"
+    symbol: ""
+    tags: { publisher: "ET", topics: ["defence"] }
+    is_active: true
+    notes: "Sector overlay: defence."
+
+  # ── Moneycontrol — RSS endpoints (titles + short summaries only)
+  - source_name: "Moneycontrol - Latest News"
+    source_kind: "rss"
+    source_url: "https://www.moneycontrol.com/rss/latestnews.xml"
+    source_tier: 3
+    document_type: "news_rss"
+    symbol: ""
+    tags: { publisher: "Moneycontrol", topics: ["news"] }
+    is_active: true
+    notes: "Requires browser-like User-Agent; tool fetcher retries with browser UA."
+
+  - source_name: "Moneycontrol - Business"
+    source_kind: "rss"
+    source_url: "https://www.moneycontrol.com/rss/business.xml"
+    source_tier: 3
+    document_type: "news_rss"
+    symbol: ""
+    tags: { publisher: "Moneycontrol", topics: ["business"] }
+    is_active: true
+    notes: "Requires browser-like User-Agent; tool fetcher retries with browser UA."
+
+  # ── LiveMint — RSS feeds: https://www.livemint.com/rss
+  - source_name: "LiveMint - Markets"
+    source_kind: "rss"
+    source_url: "https://www.livemint.com/rss/markets"
+    source_tier: 3
+    document_type: "news_rss"
+    symbol: ""
+    tags: { publisher: "LiveMint", topics: ["markets"] }
+    is_active: true
+    notes: "Curated markets feed; store excerpt only; link back to LiveMint."
+
+  - source_name: "LiveMint - Companies"
+    source_kind: "rss"
+    source_url: "https://www.livemint.com/rss/companies"
+    source_tier: 3
+    document_type: "news_rss"
+    symbol: ""
+    tags: { publisher: "LiveMint", topics: ["companies"] }
+    is_active: true
+    notes: "Company news; evidence stored as title+summary only."
+
+  # ── Business Standard — RSS listing: https://www.business-standard.com/rss-feeds/listing
+  - source_name: "Business Standard - Latest"
+    source_kind: "rss"
+    source_url: "https://www.business-standard.com/rss/latest.rss"
+    source_tier: 3
+    document_type: "news_rss"
+    symbol: ""
+    tags: { publisher: "BusinessStandard", topics: ["news"] }
+    is_active: true
+    notes: "General feed; store excerpt only."
+
+  - source_name: "Business Standard - Markets"
+    source_kind: "rss"
+    source_url: "https://www.business-standard.com/rss/markets-106.rss"
+    source_tier: 3
+    document_type: "news_rss"
+    symbol: ""
+    tags: { publisher: "BusinessStandard", topics: ["markets"] }
+    is_active: true
+    notes: "Markets feed; store excerpt only."
+
+  - source_name: "Business Standard - Banking"
+    source_kind: "rss"
+    source_url: "https://www.business-standard.com/rss/industry/banking-21703.rss"
+    source_tier: 3
+    document_type: "news_rss"
+    symbol: ""
+    tags: { publisher: "BusinessStandard", topics: ["banking"] }
+    is_active: true
+    notes: "Banks/NBFC overlay-friendly."
+
+  - source_name: "Business Standard - Auto"
+    source_kind: "rss"
+    source_url: "https://www.business-standard.com/rss/industry/auto-21701.rss"
+    source_tier: 3
+    document_type: "news_rss"
+    symbol: ""
+    tags: { publisher: "BusinessStandard", topics: ["auto"] }
+    is_active: true
+    notes: "Auto overlay-friendly."
+
+  - source_name: "Business Standard - Quarterly Results"
+    source_kind: "rss"
+    source_url: "https://www.business-standard.com/rss/companies/quarterly-results-10103.rss"
+    source_tier: 3
+    document_type: "news_rss"
+    symbol: ""
+    tags: { publisher: "BusinessStandard", topics: ["results"] }
+    is_active: true
+    notes: "Results/event-friendly feed."
+
+  # ── BusinessLine — default RSS feed
+  - source_name: "BusinessLine - Default"
+    source_kind: "rss"
+    source_url: "https://www.thehindubusinessline.com/feeder/default.rss"
+    source_tier: 3
+    document_type: "news_rss"
+    symbol: ""
+    tags: { publisher: "BusinessLine", topics: ["business"] }
+    is_active: true
+    notes: "General business feed; excerpt only."
+
+  # ── Official / regulator feeds (Tier 1–2). These are high-authority evidence sources.
+  - source_name: "NSE - Online Announcements"
+    source_kind: "rss"
+    source_url: "https://nsearchives.nseindia.com/content/RSS/Online_announcements.xml"
+    source_tier: 1
+    document_type: "nse_announcements_rss"
+    symbol: ""
+    tags: { publisher: "NSE", topics: ["announcements"] }
+    is_active: true
+    notes: "Primary evidence; not news. Stored as evidence chunks with category inferred from document_type."
+
+  - source_name: "NSE - Circulars"
+    source_kind: "rss"
+    source_url: "https://nsearchives.nseindia.com/content/RSS/Circulars.xml"
+    source_tier: 1
+    document_type: "nse_circulars_rss"
+    symbol: ""
+    tags: { publisher: "NSE", topics: ["circulars"] }
+    is_active: true
+    notes: "Primary evidence."
+
+  - source_name: "RBI - Press Releases"
+    source_kind: "rss"
+    source_url: "https://rbi.org.in/pressreleases_rss.xml"
+    source_tier: 2
+    document_type: "rbi_press_rss"
+    symbol: ""
+    tags: { publisher: "RBI", topics: ["press_releases"] }
+    is_active: true
+    notes: "Policy/central bank evidence."
+
+  - source_name: "RBI - Notifications"
+    source_kind: "rss"
+    source_url: "https://rbi.org.in/notifications_rss.xml"
+    source_tier: 2
+    document_type: "rbi_notifications_rss"
+    symbol: ""
+    tags: { publisher: "RBI", topics: ["notifications"] }
+    is_active: true
+    notes: "Policy/central bank evidence."
+
+  - source_name: "SEBI - Latest Updates"
+    source_kind: "rss"
+    source_url: "https://www.sebi.gov.in/sebirss.xml"
+    source_tier: 2
+    document_type: "sebi_updates_rss"
+    symbol: ""
+    tags: { publisher: "SEBI", topics: ["regulatory"] }
+    is_active: true
+    notes: "Regulatory evidence."
+
+  - source_name: "PIB - All Releases"
+    source_kind: "rss"
+    source_url: "https://pib.gov.in/RssMain.aspx?ModId=6&Lang=9&Regid=1"
+    source_tier: 2
+    document_type: "pib_releases_rss"
+    symbol: ""
+    tags: { publisher: "PIB", topics: ["government"] }
+    is_active: true
+    notes: "Government announcements; good for policy/capex cues."
+
+  # ── RBI additional high-authority feeds (Tier 2)
+  - source_name: "RBI - Speeches"
+    source_kind: "rss"
+    source_url: "https://www.rbi.org.in/speeches_rss.xml"
+    source_tier: 2
+    document_type: "rbi_speeches_rss"
+    symbol: ""
+    tags: { publisher: "RBI", topics: ["speeches"] }
+    is_active: true
+    notes: "Policy tone + supervisory signals; useful for banks/NBFC."
+
+  - source_name: "RBI - Publications"
+    source_kind: "rss"
+    source_url: "https://www.rbi.org.in/Publication_rss.xml"
+    source_tier: 2
+    document_type: "rbi_publications_rss"
+    symbol: ""
+    tags: { publisher: "RBI", topics: ["publications"] }
+    is_active: true
+    notes: "RBI reports/bulletins; macro/regulatory evidence."
+
+  - source_name: "RBI - Tenders"
+    source_kind: "rss"
+    source_url: "https://www.rbi.org.in/tenders_rss.xml"
+    source_tier: 2
+    document_type: "rbi_tenders_rss"
+    symbol: ""
+    tags: { publisher: "RBI", topics: ["tenders"] }
+    is_active: false
+    notes: "Optional; tends to be operational rather than market-moving."
+
+  # ── BSE notices/circulars (Tier 1). Not the same as corporate announcements.
+  - source_name: "BSE - Notices"
+    source_kind: "rss"
+    source_url: "https://www.bseindia.com/data/xml/notices.xml"
+    source_tier: 1
+    document_type: "bse_notices_rss"
+    symbol: ""
+    tags: { publisher: "BSE", topics: ["notices"] }
+    is_active: true
+    notes: "Exchange notices/circulars; primary evidence (useful for market structure/compliance)."
+
+  # ── Financial Express (Indian Express Group) — section feeds
+  - source_name: "Financial Express - Market"
+    source_kind: "rss"
+    source_url: "https://www.financialexpress.com/market/feed/"
+    source_tier: 3
+    document_type: "news_rss"
+    symbol: ""
+    tags: { publisher: "FinancialExpress", topics: ["markets"] }
+    is_active: false
+    notes: "Feed returned invalid XML in this environment; keep disabled until verified."
+
+  - source_name: "Financial Express - Banking & Finance"
+    source_kind: "rss"
+    source_url: "https://www.financialexpress.com/industry/banking-finance/feed/"
+    source_tier: 3
+    document_type: "news_rss"
+    symbol: ""
+    tags: { publisher: "FinancialExpress", topics: ["banking_finance"] }
+    is_active: false
+    notes: "Returned HTTP 410 Gone in this environment; keep disabled."
+
+  - source_name: "Financial Express - Infrastructure"
+    source_kind: "rss"
+    source_url: "https://www.financialexpress.com/infrastructure/feed/"
+    source_tier: 3
+    document_type: "news_rss"
+    symbol: ""
+    tags: { publisher: "FinancialExpress", topics: ["infrastructure"] }
+    is_active: false
+    notes: "Feed returned invalid XML in this environment; keep disabled until verified."
+
+  # ── The Indian Express — curated business/market feeds (broad but finance-relevant)
+  - source_name: "Indian Express - Business"
+    source_kind: "rss"
+    source_url: "https://indianexpress.com/section/business/feed/"
+    source_tier: 3
+    document_type: "news_rss"
+    symbol: ""
+    tags: { publisher: "IndianExpress", topics: ["business"] }
+    is_active: true
+    notes: "Broad business feed; excerpt only."
+
+  - source_name: "Indian Express - Market"
+    source_kind: "rss"
+    source_url: "https://indianexpress.com/section/business/market/feed/"
+    source_tier: 3
+    document_type: "news_rss"
+    symbol: ""
+    tags: { publisher: "IndianExpress", topics: ["markets"] }
+    is_active: true
+    notes: "Markets feed; excerpt only."
+
+  - source_name: "Indian Express - Banking and Finance"
+    source_kind: "rss"
+    source_url: "https://indianexpress.com/section/business/banking-and-finance/feed/"
+    source_tier: 3
+    document_type: "news_rss"
+    symbol: ""
+    tags: { publisher: "IndianExpress", topics: ["banking_finance"] }
+    is_active: true
+    notes: "Banks/NBFC overlay-friendly."
+
+  - source_name: "Indian Express - Companies"
+    source_kind: "rss"
+    source_url: "https://indianexpress.com/section/business/companies/feed/"
+    source_tier: 3
+    document_type: "news_rss"
+    symbol: ""
+    tags: { publisher: "IndianExpress", topics: ["companies"] }
+    is_active: true
+    notes: "Company news feed; excerpt only."
+
+  - source_name: "Indian Express - Economy"
+    source_kind: "rss"
+    source_url: "https://indianexpress.com/section/business/economy/feed/"
+    source_tier: 3
+    document_type: "news_rss"
+    symbol: ""
+    tags: { publisher: "IndianExpress", topics: ["economy"] }
+    is_active: true
+    notes: "Macro/economy feed; excerpt only."
+
+  - source_name: "Indian Express - Commodities"
+    source_kind: "rss"
+    source_url: "https://indianexpress.com/section/business/commodities/feed/"
+    source_tier: 3
+    document_type: "news_rss"
+    symbol: ""
+    tags: { publisher: "IndianExpress", topics: ["commodities"] }
+    is_active: true
+    notes: "Commodities feed; useful for input-cost overlays."
+
+  - source_name: "Indian Express - Auto Travel"
+    source_kind: "rss"
+    source_url: "https://indianexpress.com/section/auto-travel/feed/"
+    source_tier: 3
+    document_type: "news_rss"
+    symbol: ""
+    tags: { publisher: "IndianExpress", topics: ["auto"] }
+    is_active: true
+    notes: "Auto overlay-friendly."

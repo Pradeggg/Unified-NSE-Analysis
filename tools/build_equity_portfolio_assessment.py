@@ -288,9 +288,16 @@ def connect_db() -> Any:
 
 
 def fetch_rows(conn: Any, sql: str, params: tuple[Any, ...] = ()) -> list[dict[str, Any]]:
-    with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-        cur.execute(sql, params)
-        return [dict(row) for row in cur.fetchall()]
+    try:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute(sql, params)
+            return [dict(row) for row in cur.fetchall()]
+    except Exception:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        raise
 
 
 def fetch_one(conn: Any, sql: str, params: tuple[Any, ...] = ()) -> dict[str, Any]:
@@ -456,62 +463,77 @@ def fetch_db_evidence(conn: Any, symbols: list[str], isins: list[str]) -> dict[s
         ),
         "symbol",
     )
-    broker = index_by(
-        fetch_rows(
+    broker: dict[str, dict[str, Any]] = {}
+    try:
+        broker = index_by(
+            fetch_rows(
+                conn,
+                """
+                SELECT f.symbol,
+                       count(*) AS broker_fact_count,
+                       string_agg(DISTINCT r.broker_code, ', ' ORDER BY r.broker_code) AS broker_sources,
+                       string_agg(DISTINCT r.report_title, ' | ' ORDER BY r.report_title) AS broker_titles,
+                       string_agg(
+                           DISTINCT concat_ws(': ', f.fact_type, NULLIF(left(f.fact_value, 120), '')),
+                           ' | '
+                           ORDER BY concat_ws(': ', f.fact_type, NULLIF(left(f.fact_value, 120), ''))
+                       ) AS broker_fact_summary
+                FROM company_intel.broker_research_facts f
+                JOIN company_intel.broker_reports r ON r.broker_report_id = f.broker_report_id
+                WHERE f.symbol = ANY(%s)
+                GROUP BY f.symbol
+                """,
+                (resolved_symbols,),
+            ),
+            "symbol",
+        )
+    except Exception:
+        broker = {}
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+
+    try:
+        sector_context_rows = fetch_rows(
             conn,
             """
-            SELECT f.symbol,
-                   count(*) AS broker_fact_count,
-                   string_agg(DISTINCT r.broker_code, ', ' ORDER BY r.broker_code) AS broker_sources,
-                   string_agg(DISTINCT r.report_title, ' | ' ORDER BY r.report_title) AS broker_titles,
-                   string_agg(
-                       DISTINCT concat_ws(': ', f.fact_type, NULLIF(left(f.fact_value, 120), '')),
-                       ' | '
-                       ORDER BY concat_ws(': ', f.fact_type, NULLIF(left(f.fact_value, 120), ''))
-                   ) AS broker_fact_summary
-            FROM company_intel.broker_research_facts f
-            JOIN company_intel.broker_reports r ON r.broker_report_id = f.broker_report_id
-            WHERE f.symbol = ANY(%s)
-            GROUP BY f.symbol
+            WITH latest AS (SELECT max(snapshot_date) AS d FROM scores.stage_snapshots),
+                 wanted AS (
+                     SELECT DISTINCT sector
+                     FROM scores.stage_snapshots s, latest
+                     WHERE s.snapshot_date = latest.d
+                       AND s.symbol = ANY(%s)
+                       AND sector IS NOT NULL
+                       AND sector <> ''
+                 )
+            SELECT i.sector,
+                   count(*) AS sector_stock_count,
+                   avg(s.change_1m_pct) AS sector_avg_1m_pct,
+                   avg(s.relative_strength) AS sector_avg_rs,
+                   avg(s.technical_score) AS sector_avg_technical,
+                   avg(coalesce(s.enhanced_fund_score, s.fundamental_score)) AS sector_avg_fundamental,
+                   count(*) FILTER (WHERE s.trading_signal IN ('BUY', 'STRONG_BUY')) AS sector_buy_count,
+                   count(*) FILTER (
+                       WHERE upper(coalesce(s.stage, '')) LIKE '%%STAGE_2%%'
+                   ) AS sector_stage2_count
+            FROM scores.stage_snapshots s
+            JOIN scores.stage_snapshots i
+              ON i.snapshot_date = s.snapshot_date
+             AND i.symbol = s.symbol,
+                 latest, wanted
+            WHERE s.snapshot_date = latest.d
+              AND i.sector = wanted.sector
+            GROUP BY i.sector
             """,
             (resolved_symbols,),
-        ),
-        "symbol",
-    )
-
-    sector_context_rows = fetch_rows(
-        conn,
-        """
-        WITH latest AS (SELECT max(snapshot_date) AS d FROM scores.stage_snapshots),
-             wanted AS (
-                 SELECT DISTINCT sector
-                 FROM scores.stage_snapshots s, latest
-                 WHERE s.snapshot_date = latest.d
-                   AND s.symbol = ANY(%s)
-                   AND sector IS NOT NULL
-                   AND sector <> ''
-             )
-        SELECT i.sector,
-               count(*) AS sector_stock_count,
-               avg(s.change_1m_pct) AS sector_avg_1m_pct,
-               avg(s.relative_strength) AS sector_avg_rs,
-               avg(s.technical_score) AS sector_avg_technical,
-               avg(coalesce(s.enhanced_fund_score, s.fundamental_score)) AS sector_avg_fundamental,
-               count(*) FILTER (WHERE s.trading_signal IN ('BUY', 'STRONG_BUY')) AS sector_buy_count,
-               count(*) FILTER (
-                   WHERE upper(coalesce(s.stage, '')) LIKE '%%STAGE_2%%'
-               ) AS sector_stage2_count
-        FROM scores.stage_snapshots s
-        JOIN scores.stage_snapshots i
-          ON i.snapshot_date = s.snapshot_date
-         AND i.symbol = s.symbol,
-             latest, wanted
-        WHERE s.snapshot_date = latest.d
-          AND i.sector = wanted.sector
-        GROUP BY i.sector
-        """,
-        (resolved_symbols,),
-    )
+        )
+    except Exception:
+        sector_context_rows = []
+        try:
+            conn.rollback()
+        except Exception:
+            pass
     sector_context = index_by(sector_context_rows, "sector")
 
     return {

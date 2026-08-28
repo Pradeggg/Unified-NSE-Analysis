@@ -1,0 +1,2610 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NSE Market Analysis Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: "Roboto", "Google Sans", "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #212121;
+            font-weight: 400;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 100%;
+            margin: 0 auto;
+            padding: 20px;
+            width: 100%;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 3rem;
+            font-weight: 300;
+            margin-bottom: 16px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            letter-spacing: -0.5px;
+        }
+
+        .header p {
+            font-size: 1.25rem;
+            font-weight: 400;
+            opacity: 0.95;
+            letter-spacing: 0.2px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 32px 24px;
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+            text-align: center;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .stat-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 16px 48px rgba(0,0,0,0.2);
+        }
+
+        .stat-number {
+            font-size: 3rem;
+            font-weight: 300;
+            color: #1976d2;
+            margin-bottom: 12px;
+            line-height: 1;
+        }
+
+        .stat-label {
+            color: #616161;
+            font-size: 0.875rem;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 1.25px;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .chart-container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 32px;
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .chart-title {
+            font-size: 1.5rem;
+            font-weight: 500;
+            margin-bottom: 24px;
+            color: #1976d2;
+            text-align: center;
+            letter-spacing: 0.2px;
+        }
+
+        .index-analysis-container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 32px;
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+            margin-bottom: 32px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .index-title {
+            font-size: 1.5rem;
+            font-weight: 500;
+            margin-bottom: 24px;
+            color: #1976d2;
+            text-align: center;
+            letter-spacing: 0.2px;
+        }
+
+        .index-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+        }
+
+        .index-card {
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 1px solid rgba(0,0,0,0.05);
+        }
+
+        .index-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+        }
+
+        .index-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .index-name {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #212121;
+        }
+
+        .index-score {
+            font-size: 1.5rem;
+            font-weight: 700;
+            padding: 8px 12px;
+            border-radius: 8px;
+            background: rgba(0,0,0,0.05);
+        }
+
+        .index-details {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .index-level {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #1976d2;
+        }
+
+        .index-metrics {
+            display: flex;
+            gap: 16px;
+            font-size: 0.9rem;
+        }
+
+        .metric {
+            padding: 4px 8px;
+            background: rgba(0,0,0,0.05);
+            border-radius: 4px;
+            font-weight: 500;
+        }
+
+        .index-signals {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .signal {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: white;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .trend {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            background: rgba(0,0,0,0.1);
+            color: #616161;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .heatmap-container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 32px;
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+            margin-bottom: 32px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .heatmap-title {
+            font-size: 1.5rem;
+            font-weight: 500;
+            margin-bottom: 24px;
+            color: #1976d2;
+            text-align: center;
+            letter-spacing: 0.2px;
+        }
+
+        .heatmap-grid {
+            display: grid;
+            grid-template-columns: repeat(10, 1fr);
+            gap: 3px;
+            margin-bottom: 20px;
+        }
+
+        .heatmap-cell {
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: white;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            min-width: 40px;
+            min-height: 40px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .heatmap-cell:hover {
+            transform: scale(1.15);
+            z-index: 10;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+        }
+
+        .heatmap-cell.excellent { background: linear-gradient(135deg, #4CAF50, #66BB6A); }
+        .heatmap-cell.good { background: linear-gradient(135deg, #8BC34A, #9CCC65); }
+        .heatmap-cell.moderate { background: linear-gradient(135deg, #FFC107, #FFD54F); }
+        .heatmap-cell.poor { background: linear-gradient(135deg, #FF9800, #FFB74D); }
+        .heatmap-cell.very-poor { background: linear-gradient(135deg, #F44336, #EF5350); }
+
+        .heatmap-legend {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9rem;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 3px;
+        }
+
+        .breadth-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .breadth-card {
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            color: white;
+            font-weight: 600;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .breadth-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+        }
+
+        .breadth-card.bullish { background: linear-gradient(135deg, #4CAF50, #66BB6A); }
+        .breadth-card.neutral { background: linear-gradient(135deg, #FFC107, #FFD54F); }
+        .breadth-card.bearish { background: linear-gradient(135deg, #F44336, #EF5350); }
+
+        .stocks-table-container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 32px;
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            overflow-x: auto;
+            max-width: 100%;
+            position: relative;
+        }
+        
+        .stocks-table-container::before {
+            content: "← Scroll horizontally to see all columns →";
+            position: absolute;
+            top: 10px;
+            right: 20px;
+            background: rgba(25, 118, 210, 0.1);
+            color: #1976d2;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            z-index: 10;
+        }
+
+        .table-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .table-title {
+            font-size: 1.5rem;
+            font-weight: 500;
+            color: #1976d2;
+            letter-spacing: 0.2px;
+        }
+
+        .filters {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .filter-btn {
+            padding: 10px 20px;
+            border: 2px solid #1976d2;
+            background: rgba(255, 255, 255, 0.9);
+            color: #1976d2;
+            border-radius: 24px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            font-size: 0.875rem;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+        }
+
+        .filter-btn.active,
+        .filter-btn:hover {
+            background: #1976d2;
+            color: white;
+            box-shadow: 0 4px 12px rgba(25, 118, 210, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .search-box {
+            padding: 12px 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 24px;
+            font-size: 0.875rem;
+            outline: none;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            background: rgba(255, 255, 255, 0.9);
+        }
+
+        .search-box:focus {
+            border-color: #1976d2;
+            box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.1);
+            background: white;
+        }
+
+        .stocks-table {
+            width: 100%;
+            min-width: 1200px;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+
+        .stocks-table th {
+            background: #f5f5f5;
+            padding: 16px 12px;
+            text-align: left;
+            font-weight: 600;
+            color: #1976d2;
+            border-bottom: 2px solid #e0e0e0;
+            font-size: 0.875rem;
+            letter-spacing: 0.5px;
+            cursor: pointer;
+            user-select: none;
+            transition: background-color 0.2s ease;
+            position: relative;
+        }
+
+        .stocks-table th:hover {
+            background: #e3f2fd;
+        }
+
+        .stocks-table th.sortable {
+            position: relative;
+        }
+
+        .stocks-table th.sort-asc {
+            background: #e8f5e8;
+        }
+
+        .stocks-table th.sort-desc {
+            background: #ffe8e8;
+        }
+
+        .stocks-table td {
+            padding: 12px;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 0.875rem;
+        }
+
+        .stocks-table tr:hover {
+            background: rgba(25, 118, 210, 0.04);
+            transition: background 0.2s ease;
+        }
+
+        .signal-badge {
+            padding: 6px 12px;
+            border-radius: 16px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-align: center;
+            letter-spacing: 0.5px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .signal-strong-buy { background: linear-gradient(135deg, #4CAF50, #66BB6A); color: white; }
+        .signal-buy { background: linear-gradient(135deg, #8BC34A, #9CCC65); color: white; }
+        .signal-hold { background: linear-gradient(135deg, #FFC107, #FFD54F); color: #333; }
+        .signal-weak-hold { background: linear-gradient(135deg, #FF9800, #FFB74D); color: white; }
+        .signal-sell { background: linear-gradient(135deg, #F44336, #EF5350); color: white; }
+
+        .trend-badge {
+            padding: 6px 12px;
+            border-radius: 16px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-align: center;
+            letter-spacing: 0.5px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .trend-strong-bullish { background: linear-gradient(135deg, #4CAF50, #66BB6A); color: white; }
+        .trend-bullish { background: linear-gradient(135deg, #8BC34A, #9CCC65); color: white; }
+        .trend-neutral { background: linear-gradient(135deg, #FFC107, #FFD54F); color: #333; }
+        .trend-bearish { background: linear-gradient(135deg, #FF9800, #FFB74D); color: white; }
+        .trend-strong-bearish { background: linear-gradient(135deg, #F44336, #EF5350); color: white; }
+
+        .market-cap-badge {
+            padding: 6px 12px;
+            border-radius: 16px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-align: center;
+            letter-spacing: 0.5px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .market-cap-large_cap { background: linear-gradient(135deg, #2196F3, #42A5F5); color: white; }
+        .market-cap-mid_cap { background: linear-gradient(135deg, #9C27B0, #BA68C8); color: white; }
+        .market-cap-small_cap { background: linear-gradient(135deg, #FF5722, #FF7043); color: white; }
+        .market-cap-micro_cap { background: linear-gradient(135deg, #607D8B, #90A4AE); color: white; }
+
+        .positive { color: #2E7D32; font-weight: 600; }
+        .negative { color: #D32F2F; font-weight: 600; }
+        
+        /* Chart Styles */
+        .chart-section {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #dee2e6;
+        }
+        
+        .chart-controls {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+        
+        .chart-btn {
+            padding: 0.5rem 1rem;
+            border: 1px solid #dee2e6;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.875rem;
+            transition: all 0.2s ease;
+        }
+        
+        .chart-btn:hover {
+            background: #e9ecef;
+        }
+        
+        .chart-btn.active {
+            background: #1976d2;
+            color: white;
+            border-color: #1976d2;
+        }
+        
+        .chart-wrapper {
+            position: relative;
+            height: 300px;
+            margin-bottom: 1rem;
+        }
+        
+        .volume-chart-wrapper {
+            position: relative;
+            height: 100px;
+        }
+        
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 200px;
+            color: #666;
+            font-size: 1rem;
+        }
+        
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #1976d2;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            padding: 2.5rem;
+            max-width: 550px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 24px 80px rgba(0, 0, 0, 0.25);
+            transform: scale(0.7);
+            opacity: 0;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .modal-overlay.active .modal-content {
+            transform: scale(1);
+            opacity: 1;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .modal-title {
+            font-size: 1.75rem;
+            font-weight: 500;
+            color: #1976d2;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            letter-spacing: 0.2px;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #666;
+            padding: 0.5rem;
+            border-radius: 50%;
+            transition: all 0.2s ease;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-close:hover {
+            background: #f0f0f0;
+            color: #333;
+        }
+
+        .stock-details {
+            display: grid;
+            gap: 1rem;
+        }
+
+        .detail-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            padding: 1.5rem;
+            background: rgba(25, 118, 210, 0.04);
+            border-radius: 12px;
+            border-left: 4px solid #1976d2;
+            transition: all 0.2s ease;
+        }
+
+        .detail-row:hover {
+            background: rgba(25, 118, 210, 0.08);
+            transform: translateX(4px);
+        }
+
+        .detail-item {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .detail-label {
+            font-size: 0.75rem;
+            color: #616161;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 500;
+        }
+
+        .detail-value {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: #212121;
+        }
+
+        .detail-value.positive { color: #4CAF50; }
+        .detail-value.negative { color: #F44336; }
+
+        .signal-badge-modal {
+            padding: 6px 12px;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            text-align: center;
+            display: inline-block;
+        }
+
+        .signal-strong-buy-modal { background: #4CAF50; color: white; }
+        .signal-buy-modal { background: #8BC34A; color: white; }
+        .signal-hold-modal { background: #FFC107; color: #333; }
+        .signal-weak-hold-modal { background: #FF9800; color: white; }
+        .signal-sell-modal { background: #F44336; color: white; }
+
+        .trend-badge-modal {
+            padding: 6px 12px;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            text-align: center;
+            display: inline-block;
+        }
+
+        .trend-strong-bullish-modal { background: #4CAF50; color: white; }
+        .trend-bullish-modal { background: #8BC34A; color: white; }
+        .trend-neutral-modal { background: #FFC107; color: #333; }
+        .trend-bearish-modal { background: #FF9800; color: white; }
+        .trend-strong-bearish-modal { background: #F44336; color: white; }
+
+        .market-cap-badge-modal {
+            padding: 6px 12px;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            text-align: center;
+            display: inline-block;
+        }
+
+        .market-cap-large_cap-modal { background: #2196F3; color: white; }
+        .market-cap-mid_cap-modal { background: #9C27B0; color: white; }
+        .market-cap-small_cap-modal { background: #FF5722; color: white; }
+        .market-cap-micro_cap-modal { background: #607D8B; color: white; }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .heatmap-grid {
+                grid-template-columns: repeat(10, 1fr);
+                font-size: 0.5rem;
+            }
+            
+            .heatmap-cell {
+                min-width: 30px;
+                min-height: 30px;
+                font-size: 0.5rem;
+            }
+            
+            .heatmap-legend {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .breadth-summary {
+                grid-template-columns: 1fr;
+            }
+            
+            .table-header {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 15px;
+            }
+            
+            .filters {
+                justify-content: center;
+                flex-wrap: wrap;
+            }
+            
+            .stocks-table-container {
+                padding: 16px;
+                overflow-x: auto;
+            }
+            
+            .stocks-table {
+                min-width: 1000px;
+                font-size: 0.8rem;
+            }
+            
+            .stocks-table th,
+            .stocks-table td {
+                padding: 8px 6px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .heatmap-grid {
+                grid-template-columns: repeat(10, 1fr);
+                font-size: 0.4rem;
+            }
+            
+            .heatmap-cell {
+                min-width: 25px;
+                min-height: 25px;
+                font-size: 0.4rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 NSE Market Analysis Dashboard</h1>
+            <p>Comprehensive Technical Analysis with CAN SLIM & Minervini Indicators</p>
+        </div>
+
+        <!-- Index Analysis Section -->
+        <div class="index-analysis-container">
+            <div class="index-title">🏛️ NSE Indices Analysis</div>
+            <div class="index-grid">
+                <div class="index-card">
+                    <div class="index-header">
+                        <div class="index-name">Nifty Bank</div>
+                        <div class="index-score" style="color: #4CAF50;">73</div>
+                    </div>
+                    <div class="index-details">
+                        <div class="index-level">₹59,216.05</div>
+                        <div class="index-metrics">
+                            <span class="metric">RSI: 72.6</span>
+                            <span class="metric" style="color: #4CAF50;">50D: +9.5%</span>
+                            <span class="metric" style="color: #4CAF50;">RS: +5%</span>
+                        </div>
+                        <div class="index-signals">
+                            <span class="signal" style="background: #8BC34A;">BUY</span>
+                            <span class="trend">STRONG_BULLISH</span>
+                        </div>
+                    </div>
+                </div>
+                                <div class="index-card">
+                    <div class="index-header">
+                        <div class="index-name">Nifty 50</div>
+                        <div class="index-score" style="color: #4CAF50;">71</div>
+                    </div>
+                    <div class="index-details">
+                        <div class="index-level">₹26,052.65</div>
+                        <div class="index-metrics">
+                            <span class="metric">RSI: 63.9</span>
+                            <span class="metric" style="color: #4CAF50;">50D: +5.4%</span>
+                            <span class="metric" style="color: #4CAF50;">RS: +0.9%</span>
+                        </div>
+                        <div class="index-signals">
+                            <span class="signal" style="background: #8BC34A;">BUY</span>
+                            <span class="trend">STRONG_BULLISH</span>
+                        </div>
+                    </div>
+                </div>
+                                <div class="index-card">
+                    <div class="index-header">
+                        <div class="index-name">Nifty Auto</div>
+                        <div class="index-score" style="color: #4CAF50;">71</div>
+                    </div>
+                    <div class="index-details">
+                        <div class="index-level">₹27,434.45</div>
+                        <div class="index-metrics">
+                            <span class="metric">RSI: 60.8</span>
+                            <span class="metric" style="color: #4CAF50;">50D: +6.4%</span>
+                            <span class="metric" style="color: #4CAF50;">RS: +1.9%</span>
+                        </div>
+                        <div class="index-signals">
+                            <span class="signal" style="background: #8BC34A;">BUY</span>
+                            <span class="trend">STRONG_BULLISH</span>
+                        </div>
+                    </div>
+                </div>
+                                <div class="index-card">
+                    <div class="index-header">
+                        <div class="index-name">Nifty 200</div>
+                        <div class="index-score" style="color: #4CAF50;">69</div>
+                    </div>
+                    <div class="index-details">
+                        <div class="index-level">₹14,531.85</div>
+                        <div class="index-metrics">
+                            <span class="metric">RSI: 62.8</span>
+                            <span class="metric" style="color: #4CAF50;">50D: +5.3%</span>
+                            <span class="metric" style="color: #4CAF50;">RS: +0.7%</span>
+                        </div>
+                        <div class="index-signals">
+                            <span class="signal" style="background: #8BC34A;">BUY</span>
+                            <span class="trend">STRONG_BULLISH</span>
+                        </div>
+                    </div>
+                </div>
+                                <div class="index-card">
+                    <div class="index-header">
+                        <div class="index-name">Nifty Metal</div>
+                        <div class="index-score" style="color: #4CAF50;">68</div>
+                    </div>
+                    <div class="index-details">
+                        <div class="index-level">₹10,384.15</div>
+                        <div class="index-metrics">
+                            <span class="metric">RSI: 49.8</span>
+                            <span class="metric" style="color: #4CAF50;">50D: +7.3%</span>
+                            <span class="metric" style="color: #4CAF50;">RS: +2.8%</span>
+                        </div>
+                        <div class="index-signals">
+                            <span class="signal" style="background: #8BC34A;">BUY</span>
+                            <span class="trend">STRONG_BULLISH</span>
+                        </div>
+                    </div>
+                </div>
+                                <div class="index-card">
+                    <div class="index-header">
+                        <div class="index-name">Nifty 100</div>
+                        <div class="index-score" style="color: #4CAF50;">66</div>
+                    </div>
+                    <div class="index-details">
+                        <div class="index-level">₹26,640.5</div>
+                        <div class="index-metrics">
+                            <span class="metric">RSI: 62.2</span>
+                            <span class="metric" style="color: #4CAF50;">50D: +5.1%</span>
+                            <span class="metric" style="color: #4CAF50;">RS: +0.5%</span>
+                        </div>
+                        <div class="index-signals">
+                            <span class="signal" style="background: #8BC34A;">BUY</span>
+                            <span class="trend">STRONG_BULLISH</span>
+                        </div>
+                    </div>
+                </div>
+                                <div class="index-card">
+                    <div class="index-header">
+                        <div class="index-name">Nifty Pharma</div>
+                        <div class="index-score" style="color: #4CAF50;">62</div>
+                    </div>
+                    <div class="index-details">
+                        <div class="index-level">₹22,727.65</div>
+                        <div class="index-metrics">
+                            <span class="metric">RSI: 60.2</span>
+                            <span class="metric" style="color: #4CAF50;">50D: +3.5%</span>
+                            <span class="metric" style="color: #F44336;">RS: -1.1%</span>
+                        </div>
+                        <div class="index-signals">
+                            <span class="signal" style="background: #FFC107;">HOLD</span>
+                            <span class="trend">STRONG_BULLISH</span>
+                        </div>
+                    </div>
+                </div>
+                                <div class="index-card">
+                    <div class="index-header">
+                        <div class="index-name">Nifty 500</div>
+                        <div class="index-score" style="color: #4CAF50;">61</div>
+                    </div>
+                    <div class="index-details">
+                        <div class="index-level">₹23,906.3</div>
+                        <div class="index-metrics">
+                            <span class="metric">RSI: 60.1</span>
+                            <span class="metric" style="color: #4CAF50;">50D: +4.6%</span>
+                            <span class="metric" style="color: #4CAF50;">RS: +0%</span>
+                        </div>
+                        <div class="index-signals">
+                            <span class="signal" style="background: #FFC107;">HOLD</span>
+                            <span class="trend">STRONG_BULLISH</span>
+                        </div>
+                    </div>
+                </div>
+                                <div class="index-card">
+                    <div class="index-header">
+                        <div class="index-name">Nifty IT</div>
+                        <div class="index-score" style="color: #8BC34A;">57</div>
+                    </div>
+                    <div class="index-details">
+                        <div class="index-level">₹37,044.65</div>
+                        <div class="index-metrics">
+                            <span class="metric">RSI: 62.2</span>
+                            <span class="metric" style="color: #4CAF50;">50D: +4.4%</span>
+                            <span class="metric" style="color: #F44336;">RS: -0.1%</span>
+                        </div>
+                        <div class="index-signals">
+                            <span class="signal" style="background: #FFC107;">HOLD</span>
+                            <span class="trend">BULLISH</span>
+                        </div>
+                    </div>
+                </div>
+                                <div class="index-card">
+                    <div class="index-header">
+                        <div class="index-name">Nifty FMCG</div>
+                        <div class="index-score" style="color: #FFC107;">32</div>
+                    </div>
+                    <div class="index-details">
+                        <div class="index-level">₹55,380.8</div>
+                        <div class="index-metrics">
+                            <span class="metric">RSI: 45</span>
+                            <span class="metric" style="color: #F44336;">50D: -2.8%</span>
+                            <span class="metric" style="color: #F44336;">RS: -7.3%</span>
+                        </div>
+                        <div class="index-signals">
+                            <span class="signal" style="background: #F44336;">SELL</span>
+                            <span class="trend">STRONG_BULLISH</span>
+                        </div>
+                    </div>
+                </div>
+                            </div>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-number">827</div>
+                <div class="stat-label">Total Stocks Analyzed</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">0</div>
+                <div class="stat-label">Strong Buy Signals</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">20</div>
+                <div class="stat-label">Buy Signals</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">31.9</div>
+                <div class="stat-label">Average Technical Score</div>
+            </div>
+        </div>
+        <div class="heatmap-container">
+            <div class="heatmap-title">🔥 Market Breadth Heat Map</div>
+            <div id="breadthHeatmap" class="heatmap-grid"></div>
+            <div class="heatmap-legend">
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #4CAF50;"></div>
+                    <span>Excellent (80+)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #8BC34A;"></div>
+                    <span>Good (65-79)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #FFC107;"></div>
+                    <span>Moderate (50-64)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #FF9800;"></div>
+                    <span>Poor (35-49)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #F44336;"></div>
+                    <span>Very Poor (<35)</span>
+                </div>
+            </div>
+            <div class="breadth-summary">
+                <div class="breadth-card bullish">
+                    <div style="font-size: 1.5rem;">20</div>
+                    <div>Bullish Stocks</div>
+                </div>
+                <div class="breadth-card neutral">
+                    <div style="font-size: 1.5rem;">114</div>
+                    <div>Neutral Stocks</div>
+                </div>
+                <div class="breadth-card bearish">
+                    <div style="font-size: 1.5rem;">693</div>
+                    <div>Bearish Stocks</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="stocks-table-container">
+            <div class="table-header">
+                <div class="table-title">📋 Top 50 Stocks Analysis</div>
+                <div class="filters">
+                    <input type="text" id="stockSearch" class="search-box" placeholder="Search stocks...">
+                    <button class="filter-btn active" data-filter="all">All</button>
+                    <button class="filter-btn" data-filter="strong-buy">Strong Buy</button>
+                    <button class="filter-btn" data-filter="buy">Buy</button>
+                    <button class="filter-btn" data-filter="large-cap">Large Cap</button>
+                    <button class="filter-btn" data-filter="mid-cap">Mid Cap</button>
+                    <button class="filter-btn" data-filter="small-cap">Small Cap</button>
+                    <button class="filter-btn" data-filter="micro-cap">Micro Cap</button>
+                </div>
+            </div>
+            <table class="stocks-table" id="stocksTable">
+                <thead>
+                    <tr>
+                        <th class="sortable" data-sort="rank">Rank</th>
+                        <th class="sortable" data-sort="symbol">Stock</th>
+                        <th class="sortable" data-sort="companyName">Company Name</th>
+                        <th class="sortable" data-sort="marketCap">Market Cap</th>
+                        <th class="sortable" data-sort="currentPrice">Price</th>
+                        <th class="sortable" data-sort="change1D">1D</th>
+                        <th class="sortable" data-sort="change1W">1W</th>
+                        <th class="sortable" data-sort="change1M">1M</th>
+                        <th class="sortable" data-sort="technicalScore">Tech Score</th>
+                        <th class="sortable" data-sort="rsi">RSI</th>
+                        <th class="sortable" data-sort="relativeStrength">RS</th>
+                        <th class="sortable" data-sort="canSlim">CAN SLIM</th>
+                        <th class="sortable" data-sort="minervini">Minervini</th>
+                        <th class="sortable" data-sort="fundamental">Fundamental</th>
+                        <th class="sortable" data-sort="trendSignal">Trend</th>
+                        <th class="sortable" data-sort="tradingSignal">Signal</th>
+                    </tr>
+                </thead>
+                <tbody id="stocksTableBody">
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Modal for stock details -->
+    <div class="modal-overlay" id="stockModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title" id="modalStockSymbol"></div>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="stock-details" id="modalStockDetails">
+            </div>
+            
+            <!-- Chart Section -->
+            <div class="chart-section">
+                <div class="chart-controls">
+                    <button class="chart-btn active" data-period="1M">1M</button>
+                    <button class="chart-btn" data-period="3M">3M</button>
+                    <button class="chart-btn" data-period="6M">6M</button>
+                    <button class="chart-btn" data-period="1Y">1Y</button>
+                    <button class="chart-btn" data-period="ALL">ALL</button>
+                </div>
+                <div class="chart-wrapper">
+                    <div class="loading" id="chartLoading">
+                        <div class="spinner"></div>
+                        Loading chart data...
+                    </div>
+                    <canvas id="stockChart" style="display: none;"></canvas>
+                </div>
+                <div class="volume-chart-wrapper">
+                    <canvas id="volumeChart" style="display: none;"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Stock data from analysis
+        const stocksData = [
+            {
+                rank: 1,
+                symbol: "AVANTIFEED",
+                companyName: "AVANTI FEEDS LIMITED",
+                marketCap: "LARGE_CAP",
+                currentPrice: 841.65,
+                change1D: 9.75,
+                change1W: 14.73,
+                change1M: 21.39,
+                technicalScore: 77.3,
+                rsi: 78.7,
+                relativeStrength: 20.89,
+                canSlim: 20,
+                minervini: 10,
+                fundamental: 60,
+                trendSignal: "STRONG_BULLISH",
+                tradingSignal: "BUY"
+            },
+            {
+                rank: 2,
+                symbol: "BHARATFORG",
+                companyName: "BHARAT FORGE LTD",
+                marketCap: "MID_CAP",
+                currentPrice: 1446.2,
+                change1D: 3.55,
+                change1W: 4.1,
+                change1M: 15.91,
+                technicalScore: 76.7,
+                rsi: 75.9,
+                relativeStrength: 22.8,
+                canSlim: 18,
+                minervini: 16,
+                fundamental: 54.83,
+                trendSignal: "STRONG_BULLISH",
+                tradingSignal: "BUY"
+            },
+            {
+                rank: 3,
+                symbol: "BELRISE",
+                companyName: "BELRISE INDUSTRIES LTD",
+                marketCap: "MID_CAP",
+                currentPrice: 164.76,
+                change1D: 2.4,
+                change1W: 6.6,
+                change1M: 9.74,
+                technicalScore: 74,
+                rsi: 66.7,
+                relativeStrength: 12.59,
+                canSlim: 16,
+                minervini: 16,
+                fundamental: 53.29,
+                trendSignal: "STRONG_BULLISH",
+                tradingSignal: "BUY"
+            },
+            {
+                rank: 4,
+                symbol: "CUPID",
+                companyName: "CUPID LIMITED",
+                marketCap: "MID_CAP",
+                currentPrice: 331.17,
+                change1D: 5.58,
+                change1W: 18.52,
+                change1M: 31.42,
+                technicalScore: 72.7,
+                rsi: 81.4,
+                relativeStrength: 78.9,
+                canSlim: 20,
+                minervini: 12,
+                fundamental: 52.86,
+                trendSignal: "STRONG_BULLISH",
+                tradingSignal: "BUY"
+            },
+            {
+                rank: 5,
+                symbol: "BANKBARODA",
+                companyName: "BANK OF BARODA",
+                marketCap: "MID_CAP",
+                currentPrice: 293.3,
+                change1D: 1.68,
+                change1W: 2.91,
+                change1M: 8.05,
+                technicalScore: 71.3,
+                rsi: 70.3,
+                relativeStrength: 18.46,
+                canSlim: 14,
+                minervini: 17,
+                fundamental: 53.65,
+                trendSignal: "STRONG_BULLISH",
+                tradingSignal: "BUY"
+            },
+            {
+                rank: 6,
+                symbol: "BORANA",
+                companyName: "BORANA WEAVES LIMITED",
+                marketCap: "SMALL_CAP",
+                currentPrice: 308.95,
+                change1D: 9.32,
+                change1W: 14.9,
+                change1M: 39.6,
+                technicalScore: 71.3,
+                rsi: 87.9,
+                relativeStrength: 39.5,
+                canSlim: 20,
+                minervini: 10,
+                fundamental: 58.26,
+                trendSignal: "STRONG_BULLISH",
+                tradingSignal: "BUY"
+            },
+            {
+                rank: 7,
+                symbol: "LATENTVIEW",
+                companyName: "LATENT VIEW ANALYTICS LTD",
+                marketCap: "MID_CAP",
+                currentPrice: 494.25,
+                change1D: 5.18,
+                change1W: 2.37,
+                change1M: 14.96,
+                technicalScore: 70,
+                rsi: 63.9,
+                relativeStrength: 11.77,
+                canSlim: 18,
+                minervini: 18,
+                fundamental: 0,
+                trendSignal: "STRONG_BULLISH",
+                tradingSignal: "BUY"
+            },
+            {
+                rank: 8,
+                symbol: "APEX",
+                companyName: "APEX FROZEN FOODS LIMITED",
+                marketCap: "SMALL_CAP",
+                currentPrice: 288.19,
+                change1D: -1.35,
+                change1W: 7.39,
+                change1M: 25.29,
+                technicalScore: 70,
+                rsi: 72.1,
+                relativeStrength: 25.23,
+                canSlim: 20,
+                minervini: 4,
+                fundamental: 57.85,
+                trendSignal: "STRONG_BULLISH",
+                tradingSignal: "BUY"
+            },
+            {
+                rank: 9,
+                symbol: "ARVIND",
+                companyName: "ARVIND LIMITED",
+                marketCap: "MICRO_CAP",
+                currentPrice: 356.95,
+                change1D: 3.06,
+                change1W: 7.34,
+                change1M: 16.12,
+                technicalScore: 70,
+                rsi: 68.6,
+                relativeStrength: 18.57,
+                canSlim: 18,
+                minervini: 12,
+                fundamental: 57.39,
+                trendSignal: "BULLISH",
+                tradingSignal: "BUY"
+            },
+            {
+                rank: 10,
+                symbol: "SANSERA",
+                companyName: "SANSERA ENGINEERING LTD",
+                marketCap: "MICRO_CAP",
+                currentPrice: 1579.7,
+                change1D: 2.12,
+                change1W: 1.66,
+                change1M: 8.97,
+                technicalScore: 70,
+                rsi: 66,
+                relativeStrength: 16.72,
+                canSlim: 16,
+                minervini: 20,
+                fundamental: 0,
+                trendSignal: "STRONG_BULLISH",
+                tradingSignal: "BUY"
+            },
+            {
+                rank: 11,
+                symbol: "MANOMAY",
+                companyName: "MANOMAY TEX INDIA LTD",
+                marketCap: "MICRO_CAP",
+                currentPrice: 233.16,
+                change1D: 3.74,
+                change1W: 3.57,
+                change1M: 13.39,
+                technicalScore: 69.3,
+                rsi: 71.7,
+                relativeStrength: 35.61,
+                canSlim: 20,
+                minervini: 18,
+                fundamental: 0,
+                trendSignal: "STRONG_BULLISH",
+                tradingSignal: "BUY"
+            },
+            {
+                rank: 12,
+                symbol: "IMFA",
+                companyName: "INDIAN METALS & FERRO",
+                marketCap: "MID_CAP",
+                currentPrice: 1343.3,
+                change1D: 4.55,
+                change1W: -2.01,
+                change1M: 23.54,
+                technicalScore: 68.7,
+                rsi: 60.8,
+                relativeStrength: 45.01,
+                canSlim: 20,
+                minervini: 14,
+                fundamental: 0,
+                trendSignal: "STRONG_BULLISH",
+                tradingSignal: "BUY"
+            },
+            {
+                rank: 13,
+                symbol: "SJS",
+                companyName: "SJS ENTERPRISES LIMITED",
+                marketCap: "SMALL_CAP",
+                currentPrice: 1758.3,
+                change1D: 2.39,
+                change1W: 0.59,
+                change1M: 14.92,
+                technicalScore: 68.7,
+                rsi: 67.2,
+                relativeStrength: 19.62,
+                canSlim: 16,
+                minervini: 18,
+                fundamental: 0,
+                trendSignal: "STRONG_BULLISH",
+                tradingSignal: "BUY"
+            },
+            {
+                rank: 14,
+                symbol: "LTIM",
+                companyName: "LTIMINDTREE LIMITED",
+                marketCap: "LARGE_CAP",
+                currentPrice: 5972,
+                change1D: 3.75,
+                change1W: 1.33,
+                change1M: 6.71,
+                technicalScore: 67.3,
+                rsi: 66.6,
+                relativeStrength: 10.49,
+                canSlim: 16,
+                minervini: 16,
+                fundamental: 0,
+                trendSignal: "STRONG_BULLISH",
+                tradingSignal: "BUY"
+            },
+            {
+                rank: 15,
+                symbol: "PNB",
+                companyName: "PUNJAB NATIONAL BANK",
+                marketCap: "MID_CAP",
+                currentPrice: 125.06,
+                change1D: 2.19,
+                change1W: 2.13,
+                change1M: 5.89,
+                technicalScore: 67.3,
+                rsi: 66,
+                relativeStrength: 15.35,
+                canSlim: 12,
+                minervini: 20,
+                fundamental: 0,
+                trendSignal: "STRONG_BULLISH",
+                tradingSignal: "BUY"
+            },
+            {
+                rank: 16,
+                symbol: "BANCOINDIA",
+                companyName: "BANCO PRODUCTS (I) LTD",
+                marketCap: "MID_CAP",
+                currentPrice: 787.45,
+                change1D: 1.23,
+                change1W: -1.21,
+                change1M: 8.52,
+                technicalScore: 67.3,
+                rsi: 53.8,
+                relativeStrength: 20.27,
+                canSlim: 13,
+                minervini: 15,
+                fundamental: 54.64,
+                trendSignal: "STRONG_BULLISH",
+                tradingSignal: "BUY"
+            },
+            {
+                rank: 17,
+                symbol: "ZOTA",
+                companyName: "ZOTA HEALTH CARE LIMITED",
+                marketCap: "MICRO_CAP",
+                currentPrice: 1648.6,
+                change1D: 4.7,
+                change1W: 7.58,
+                change1M: 5.42,
+                technicalScore: 67.3,
+                rsi: 64.5,
+                relativeStrength: 19.77,
+                canSlim: 18,
+                minervini: 14,
+                fundamental: 0,
+                trendSignal: "STRONG_BULLISH",
+                tradingSignal: "BUY"
+            },
+            {
+                rank: 18,
+                symbol: "INTELLECT",
+                companyName: "INTELLECT DESIGN ARENA",
+                marketCap: "LARGE_CAP",
+                currentPrice: 1142.8,
+                change1D: 5.01,
+                change1W: -0.45,
+                change1M: 20.11,
+                technicalScore: 66,
+                rsi: 59.8,
+                relativeStrength: 15.35,
+                canSlim: 18,
+                minervini: 16,
+                fundamental: 0,
+                trendSignal: "BULLISH",
+                tradingSignal: "BUY"
+            },
+            {
+                rank: 19,
+                symbol: "AUBANK",
+                companyName: "AU SMALL FINANCE BANK LTD",
+                marketCap: "MID_CAP",
+                currentPrice: 925.65,
+                change1D: 0.6,
+                change1W: 4.94,
+                change1M: 6.99,
+                technicalScore: 65.3,
+                rsi: 72.9,
+                relativeStrength: 25.1,
+                canSlim: 14,
+                minervini: 8,
+                fundamental: 55,
+                trendSignal: "STRONG_BULLISH",
+                tradingSignal: "BUY"
+            },
+            {
+                rank: 20,
+                symbol: "SILVER360",
+                companyName: "360ONEAMC - SILVER360",
+                marketCap: "MICRO_CAP",
+                currentPrice: 154.25,
+                change1D: 1.9,
+                change1W: 0.05,
+                change1M: 2.08,
+                technicalScore: 65.3,
+                rsi: 56.5,
+                relativeStrength: 22.01,
+                canSlim: 16,
+                minervini: 13,
+                fundamental: 0,
+                trendSignal: "STRONG_BULLISH",
+                tradingSignal: "BUY"
+            },
+            {
+                rank: 21,
+                symbol: "BSE",
+                companyName: "BSE LIMITED",
+                marketCap: "LARGE_CAP",
+                currentPrice: 2898.3,
+                change1D: 2.27,
+                change1W: 4.43,
+                change1M: 16.21,
+                technicalScore: 64.7,
+                rsi: 73.9,
+                relativeStrength: 26.35,
+                canSlim: 16,
+                minervini: 9,
+                fundamental: 61.34,
+                trendSignal: "BULLISH",
+                tradingSignal: "HOLD"
+            },
+            {
+                rank: 22,
+                symbol: "BHEL",
+                companyName: "BHEL",
+                marketCap: "LARGE_CAP",
+                currentPrice: 289.2,
+                change1D: 0.03,
+                change1W: 0.75,
+                change1M: 23.72,
+                technicalScore: 64.7,
+                rsi: 75.9,
+                relativeStrength: 28.73,
+                canSlim: 15,
+                minervini: 11,
+                fundamental: 53.94,
+                trendSignal: "STRONG_BULLISH",
+                tradingSignal: "HOLD"
+            },
+            {
+                rank: 23,
+                symbol: "M&MFIN",
+                companyName: "M&M FIN. SERVICES LTD",
+                marketCap: "MID_CAP",
+                currentPrice: 329.85,
+                change1D: 2.15,
+                change1W: 6.63,
+                change1M: 11.12,
+                technicalScore: 64.7,
+                rsi: 72.4,
+                relativeStrength: 22.46,
+                canSlim: 18,
+                minervini: 13,
+                fundamental: 0,
+                trendSignal: "STRONG_BULLISH",
+                tradingSignal: "HOLD"
+            },
+            {
+                rank: 24,
+                symbol: "GSLSU",
+                companyName: "GLOBAL SURFACES LIMITED",
+                marketCap: "MICRO_CAP",
+                currentPrice: 131.9,
+                change1D: 6,
+                change1W: 2.17,
+                change1M: 21.1,
+                technicalScore: 64.7,
+                rsi: 64.8,
+                relativeStrength: 15.16,
+                canSlim: 18,
+                minervini: 14,
+                fundamental: 0,
+                trendSignal: "BULLISH",
+                tradingSignal: "HOLD"
+            },
+            {
+                rank: 25,
+                symbol: "BPCL",
+                companyName: "BHARAT PETROLEUM CORP  LT",
+                marketCap: "MID_CAP",
+                currentPrice: 365.65,
+                change1D: -1.67,
+                change1W: -2.61,
+                change1M: 8.28,
+                technicalScore: 64,
+                rsi: 58,
+                relativeStrength: 11.58,
+                canSlim: 11,
+                minervini: 12,
+                fundamental: 62.6,
+                trendSignal: "STRONG_BULLISH",
+                tradingSignal: "HOLD"
+            },
+            {
+                rank: 26,
+                symbol: "CANFINHOME",
+                companyName: "CAN FIN HOMES LTD",
+                marketCap: "MICRO_CAP",
+                currentPrice: 890.3,
+                change1D: -1.82,
+                change1W: 0.69,
+                change1M: 6.2,
+                technicalScore: 64,
+                rsi: 61.7,
+                relativeStrength: 11.88,
+                canSlim: 12,
+                minervini: 10,
+                fundamental: 55.87,
+                trendSignal: "STRONG_BULLISH",
+                tradingSignal: "HOLD"
+            },
+            {
+                rank: 27,
+                symbol: "CIGNITITEC",
+                companyName: "CIGNITI TECHNOLOGIES LTD",
+                marketCap: "MICRO_CAP",
+                currentPrice: 1793.9,
+                change1D: 3.84,
+                change1W: 1.36,
+                change1M: 8.16,
+                technicalScore: 64,
+                rsi: 64.5,
+                relativeStrength: 5.02,
+                canSlim: 8,
+                minervini: 13,
+                fundamental: 52.61,
+                trendSignal: "BULLISH",
+                tradingSignal: "HOLD"
+            },
+            {
+                rank: 28,
+                symbol: "CHENNPETRO",
+                companyName: "CHENNAI PETROLEUM CORP LT",
+                marketCap: "MID_CAP",
+                currentPrice: 1060.4,
+                change1D: -3.3,
+                change1W: 2.54,
+                change1M: 36.68,
+                technicalScore: 63.3,
+                rsi: 69.6,
+                relativeStrength: 47.14,
+                canSlim: 15,
+                minervini: 6,
+                fundamental: 68.3,
+                trendSignal: "STRONG_BULLISH",
+                tradingSignal: "HOLD"
+            },
+            {
+                rank: 29,
+                symbol: "AWL",
+                companyName: "AWL AGRI BUSINESS LIMITED",
+                marketCap: "SMALL_CAP",
+                currentPrice: 275.8,
+                change1D: 2.47,
+                change1W: 1.06,
+                change1M: 6.67,
+                technicalScore: 63.3,
+                rsi: 58.4,
+                relativeStrength: -1.36,
+                canSlim: 4,
+                minervini: 20,
+                fundamental: 63.12,
+                trendSignal: "STRONG_BULLISH",
+                tradingSignal: "HOLD"
+            },
+            {
+                rank: 30,
+                symbol: "STYLAMIND",
+                companyName: "STYLAM INDUSTRIES LIMITED",
+                marketCap: "MICRO_CAP",
+                currentPrice: 2051.2,
+                change1D: 1.32,
+                change1W: 8.13,
+                change1M: 8.56,
+                technicalScore: 63.3,
+                rsi: 58.3,
+                relativeStrength: 22.24,
+                canSlim: 18,
+                minervini: 11,
+                fundamental: 0,
+                trendSignal: "BULLISH",
+                tradingSignal: "HOLD"
+            },
+            {
+                rank: 31,
+                symbol: "KMEW",
+                companyName: "KNOWLEDGE MARINE & EN W L",
+                marketCap: "MICRO_CAP",
+                currentPrice: 2813.2,
+                change1D: 3.81,
+                change1W: 2.75,
+                change1M: 25.56,
+                technicalScore: 63.3,
+                rsi: 64.7,
+                relativeStrength: 55,
+                canSlim: 15,
+                minervini: 16,
+                fundamental: 0,
+                trendSignal: "STRONG_BULLISH",
+                tradingSignal: "HOLD"
+            },
+            {
+                rank: 32,
+                symbol: "PERSISTENT",
+                companyName: "PERSISTENT SYSTEMS LTD",
+                marketCap: "LARGE_CAP",
+                currentPrice: 6316,
+                change1D: 3.89,
+                change1W: 2.96,
+                change1M: 8.06,
+                technicalScore: 62.7,
+                rsi: 72.7,
+                relativeStrength: 13.13,
+                canSlim: 16,
+                minervini: 12,
+                fundamental: 0,
+                trendSignal: "STRONG_BULLISH",
+                tradingSignal: "HOLD"
+            },
+            {
+                rank: 33,
+                symbol: "BANKINDIA",
+                companyName: "BANK OF INDIA",
+                marketCap: "SMALL_CAP",
+                currentPrice: 148.59,
+                change1D: 1.43,
+                change1W: 1.32,
+                change1M: 14.5,
+                technicalScore: 62.7,
+                rsi: 71.7,
+                relativeStrength: 26.28,
+                canSlim: 15,
+                minervini: 13,
+                fundamental: 52.66,
+                trendSignal: "STRONG_BULLISH",
+                tradingSignal: "HOLD"
+            },
+            {
+                rank: 34,
+                symbol: "BALAJITELE",
+                companyName: "BALAJI TELEFILMS LTD.",
+                marketCap: "MICRO_CAP",
+                currentPrice: 121.66,
+                change1D: -1.43,
+                change1W: 2.9,
+                change1M: 4.16,
+                technicalScore: 62.7,
+                rsi: 53.6,
+                relativeStrength: 44.98,
+                canSlim: 14,
+                minervini: 8,
+                fundamental: 53.41,
+                trendSignal: "BULLISH",
+                tradingSignal: "HOLD"
+            },
+            {
+                rank: 35,
+                symbol: "GRMOVER",
+                companyName: "GRM OVERSEAS LIMITED",
+                marketCap: "SMALL_CAP",
+                currentPrice: 494.35,
+                change1D: 4.36,
+                change1W: 12.07,
+                change1M: 19.57,
+                technicalScore: 62,
+                rsi: 75.8,
+                relativeStrength: 33.32,
+                canSlim: 18,
+                minervini: 14,
+                fundamental: 0,
+                trendSignal: "STRONG_BULLISH",
+                tradingSignal: "HOLD"
+            },
+            {
+                rank: 36,
+                symbol: "CANBK",
+                companyName: "CANARA BANK",
+                marketCap: "LARGE_CAP",
+                currentPrice: 150.38,
+                change1D: 0.93,
+                change1W: 4.74,
+                change1M: 17.86,
+                technicalScore: 61.3,
+                rsi: 84.6,
+                relativeStrength: 34.26,
+                canSlim: 15,
+                minervini: 10,
+                fundamental: 54.62,
+                trendSignal: "STRONG_BULLISH",
+                tradingSignal: "HOLD"
+            },
+            {
+                rank: 37,
+                symbol: "SEQUENT",
+                companyName: "SEQUENT SCIENTIFIC LTD.",
+                marketCap: "MID_CAP",
+                currentPrice: 252,
+                change1D: 1.79,
+                change1W: 5.79,
+                change1M: 26.84,
+                technicalScore: 61.3,
+                rsi: 74.3,
+                relativeStrength: 38.29,
+                canSlim: 20,
+                minervini: 6,
+                fundamental: 0,
+                trendSignal: "STRONG_BULLISH",
+                tradingSignal: "HOLD"
+            },
+            {
+                rank: 38,
+                symbol: "CUB",
+                companyName: "CITY UNION BANK LTD",
+                marketCap: "SMALL_CAP",
+                currentPrice: 274.35,
+                change1D: -1.58,
+                change1W: 9,
+                change1M: 21.2,
+                technicalScore: 61.3,
+                rsi: 69.6,
+                relativeStrength: 34.02,
+                canSlim: 15,
+                minervini: 8,
+                fundamental: 54.17,
+                trendSignal: "STRONG_BULLISH",
+                tradingSignal: "HOLD"
+            },
+            {
+                rank: 39,
+                symbol: "AUROPHARMA",
+                companyName: "AUROBINDO PHARMA LTD",
+                marketCap: "SMALL_CAP",
+                currentPrice: 1235.8,
+                change1D: -0.28,
+                change1W: 4.41,
+                change1M: 12.41,
+                technicalScore: 61.3,
+                rsi: 73.9,
+                relativeStrength: 14.86,
+                canSlim: 13,
+                minervini: 8,
+                fundamental: 67.41,
+                trendSignal: "STRONG_BULLISH",
+                tradingSignal: "HOLD"
+            },
+            {
+                rank: 40,
+                symbol: "CARTRADE",
+                companyName: "CARTRADE TECH LIMITED",
+                marketCap: "SMALL_CAP",
+                currentPrice: 3101.3,
+                change1D: -2.52,
+                change1W: -2.39,
+                change1M: 26.4,
+                technicalScore: 61.3,
+                rsi: 60.2,
+                relativeStrength: 15.51,
+                canSlim: 15,
+                minervini: 8,
+                fundamental: 52.67,
+                trendSignal: "STRONG_BULLISH",
+                tradingSignal: "HOLD"
+            },
+            {
+                rank: 41,
+                symbol: "AVL",
+                companyName: "ADITYA VISION LIMITED",
+                marketCap: "MICRO_CAP",
+                currentPrice: 537.15,
+                change1D: 2.43,
+                change1W: 0.34,
+                change1M: -3.73,
+                technicalScore: 60.7,
+                rsi: 47.2,
+                relativeStrength: 12.37,
+                canSlim: 8,
+                minervini: 12,
+                fundamental: 73.11,
+                trendSignal: "BULLISH",
+                tradingSignal: "HOLD"
+            },
+            {
+                rank: 42,
+                symbol: "COFORGE",
+                companyName: "COFORGE LIMITED",
+                marketCap: "LARGE_CAP",
+                currentPrice: 1858.2,
+                change1D: 4.14,
+                change1W: 1.67,
+                change1M: 6.34,
+                technicalScore: 60,
+                rsi: 62.7,
+                relativeStrength: 2.74,
+                canSlim: 6,
+                minervini: 14,
+                fundamental: 54.71,
+                trendSignal: "BULLISH",
+                tradingSignal: "HOLD"
+            },
+            {
+                rank: 43,
+                symbol: "SONACOMS",
+                companyName: "SONA BLW PRECISION FRGS L",
+                marketCap: "MID_CAP",
+                currentPrice: 506.95,
+                change1D: 3.77,
+                change1W: 1.85,
+                change1M: 9.92,
+                technicalScore: 60,
+                rsi: 69.3,
+                relativeStrength: 8.1,
+                canSlim: 14,
+                minervini: 14,
+                fundamental: 0,
+                trendSignal: "BULLISH",
+                tradingSignal: "HOLD"
+            },
+            {
+                rank: 44,
+                symbol: "HCLTECH",
+                companyName: "HCL TECHNOLOGIES LTD",
+                marketCap: "LARGE_CAP",
+                currentPrice: 1662.6,
+                change1D: 4.23,
+                change1W: 4.3,
+                change1M: 11.18,
+                technicalScore: 59.3,
+                rsi: 75.2,
+                relativeStrength: 8.85,
+                canSlim: 16,
+                minervini: 14,
+                fundamental: 0,
+                trendSignal: "BULLISH",
+                tradingSignal: "HOLD"
+            },
+            {
+                rank: 45,
+                symbol: "ATHERENERG",
+                companyName: "ATHER ENERGY LIMITED",
+                marketCap: "MID_CAP",
+                currentPrice: 685,
+                change1D: 2.48,
+                change1W: 8.98,
+                change1M: -5.15,
+                technicalScore: 59.3,
+                rsi: 56.5,
+                relativeStrength: 32.28,
+                canSlim: 10,
+                minervini: 8,
+                fundamental: 63.36,
+                trendSignal: "BULLISH",
+                tradingSignal: "HOLD"
+            },
+            {
+                rank: 46,
+                symbol: "IDBI",
+                companyName: "IDBI BANK LIMITED",
+                marketCap: "MID_CAP",
+                currentPrice: 104.62,
+                change1D: 2.05,
+                change1W: 4.65,
+                change1M: 11.18,
+                technicalScore: 59.3,
+                rsi: 63.8,
+                relativeStrength: 10.89,
+                canSlim: 13,
+                minervini: 12,
+                fundamental: 0,
+                trendSignal: "STRONG_BULLISH",
+                tradingSignal: "HOLD"
+            },
+            {
+                rank: 47,
+                symbol: "360ONE",
+                companyName: "360 ONE WAM LIMITED",
+                marketCap: "SMALL_CAP",
+                currentPrice: 1119.2,
+                change1D: 3.82,
+                change1W: 2.77,
+                change1M: -5.42,
+                technicalScore: 59.3,
+                rsi: 56.1,
+                relativeStrength: 3.04,
+                canSlim: 5,
+                minervini: 20,
+                fundamental: 44.42,
+                trendSignal: "BEARISH",
+                tradingSignal: "HOLD"
+            },
+            {
+                rank: 48,
+                symbol: "RNBDENIMS",
+                companyName: "RNBDENIMS",
+                marketCap: "MICRO_CAP",
+                currentPrice: 129.2,
+                change1D: 4.9,
+                change1W: 3.53,
+                change1M: 3.48,
+                technicalScore: 59.3,
+                rsi: 54.8,
+                relativeStrength: 20.46,
+                canSlim: 16,
+                minervini: 14,
+                fundamental: 0,
+                trendSignal: "NEUTRAL",
+                tradingSignal: "HOLD"
+            },
+            {
+                rank: 49,
+                symbol: "CSBBANK",
+                companyName: "CSB BANK LIMITED",
+                marketCap: "MICRO_CAP",
+                currentPrice: 421.4,
+                change1D: -0.26,
+                change1W: -1.08,
+                change1M: -0.55,
+                technicalScore: 59.3,
+                rsi: 55.9,
+                relativeStrength: 11.71,
+                canSlim: 8,
+                minervini: 12,
+                fundamental: 62.59,
+                trendSignal: "BULLISH",
+                tradingSignal: "HOLD"
+            },
+            {
+                rank: 50,
+                symbol: "MOTHERSON",
+                companyName: "SAMVRDHNA MTHRSN INTL LTD",
+                marketCap: "MID_CAP",
+                currentPrice: 112.16,
+                change1D: 2.94,
+                change1W: 5.89,
+                change1M: 6.04,
+                technicalScore: 58.7,
+                rsi: 66.2,
+                relativeStrength: 11.64,
+                canSlim: 14,
+                minervini: 14,
+                fundamental: 0,
+                trendSignal: "BULLISH",
+                tradingSignal: "HOLD"
+            }
+        ];
+
+
+        // Initialize charts (removed Trading Signal and Market Cap charts)
+        function initializeCharts() {
+            // Charts removed as requested
+        }
+
+        // Global variables for sorting
+        let currentSortColumn = null;
+        let currentSortDirection = "asc";
+
+        // Populate stocks table
+        function populateStocksTable(data = stocksData) {
+            const tbody = document.getElementById("stocksTableBody");
+            tbody.innerHTML = "";
+
+            data.forEach((stock, index) => {
+                const row = document.createElement("tr");
+                row.innerHTML = `
+                    <td>${index + 1}</td>
+                    <td><strong>${stock.symbol}</strong></td>
+                    <td>${stock.companyName}</td>
+                    <td><span class="market-cap-badge market-cap-${stock.marketCap.toLowerCase()}">${stock.marketCap.replace("_", " ")}</span></td>
+                    <td>₹${stock.currentPrice.toLocaleString()}</td>
+                    <td class="${stock.change1D >= 0 ? "positive" : "negative"}">${stock.change1D >= 0 ? "+" : ""}${stock.change1D.toFixed(2)}%</td>
+                    <td class="${stock.change1W >= 0 ? "positive" : "negative"}">${stock.change1W >= 0 ? "+" : ""}${stock.change1W.toFixed(2)}%</td>
+                    <td class="${stock.change1M >= 0 ? "positive" : "negative"}">${stock.change1M >= 0 ? "+" : ""}${stock.change1M.toFixed(2)}%</td>
+                    <td><strong>${stock.technicalScore.toFixed(1)}</strong></td>
+                    <td>${stock.rsi.toFixed(1)}</td>
+                    <td class="${stock.relativeStrength >= 0 ? "positive" : "negative"}">${stock.relativeStrength >= 0 ? "+" : ""}${stock.relativeStrength.toFixed(2)}%</td>
+                    <td>${stock.canSlim}</td>
+                    <td>${stock.minervini}</td>
+                    <td>${stock.fundamental.toFixed(1)}</td>
+                    <td><span class="trend-badge trend-${stock.trendSignal.toLowerCase().replace("_", "-")}">${stock.trendSignal.replace("_", " ")}</span></td>
+                    <td><span class="signal-badge signal-${stock.tradingSignal.toLowerCase().replace("_", "-")}">${stock.tradingSignal.replace("_", " ")}</span></td>
+                `;
+                
+                row.style.cursor = "pointer";
+                row.addEventListener("click", () => showStockDetails(stock));
+                tbody.appendChild(row);
+            });
+        }
+
+        // Sorting functionality
+        function sortTable(column) {
+            const tbody = document.getElementById("stocksTableBody");
+            const rows = Array.from(tbody.querySelectorAll("tr"));
+            
+            // Remove sort classes from all headers
+            document.querySelectorAll(".stocks-table th").forEach(th => {
+                th.classList.remove("sort-asc", "sort-desc");
+            });
+            
+            // Determine sort direction
+            if (currentSortColumn === column) {
+                currentSortDirection = currentSortDirection === "asc" ? "desc" : "asc";
+            } else {
+                currentSortDirection = "asc";
+            }
+            currentSortColumn = column;
+            
+            // Add sort class to current header
+            const header = document.querySelector(`th[data-sort="${column}"]`);
+            header.classList.add(`sort-${currentSortDirection}`);
+            
+            // Sort the data
+            const sortedData = [...stocksData].sort((a, b) => {
+                let aVal, bVal;
+                
+                switch(column) {
+                    case "rank":
+                        return currentSortDirection === "asc" ? 0 : 0;
+                    case "symbol":
+                    case "companyName":
+                    case "marketCap":
+                    case "trendSignal":
+                    case "tradingSignal":
+                        aVal = a[column].toString().toLowerCase();
+                        bVal = b[column].toString().toLowerCase();
+                        break;
+                    case "currentPrice":
+                    case "change1D":
+                    case "change1W":
+                    case "change1M":
+                    case "technicalScore":
+                    case "rsi":
+                    case "relativeStrength":
+                    case "canSlim":
+                    case "minervini":
+                    case "fundamental":
+                        aVal = parseFloat(a[column]) || 0;
+                        bVal = parseFloat(b[column]) || 0;
+                        break;
+                    default:
+                        aVal = a[column];
+                        bVal = b[column];
+                }
+                
+                if (aVal < bVal) return currentSortDirection === "asc" ? -1 : 1;
+                if (aVal > bVal) return currentSortDirection === "asc" ? 1 : -1;
+                return 0;
+            });
+            
+            // Update the table with sorted data
+            populateStocksTable(sortedData);
+        }
+
+        // Setup table sorting
+        function setupTableSorting() {
+            document.querySelectorAll(".stocks-table th.sortable").forEach(th => {
+                th.addEventListener("click", () => {
+                    const column = th.getAttribute("data-sort");
+                    sortTable(column);
+                });
+            });
+        }
+
+        // Generate Market Breadth Heat Map
+        function generateBreadthHeatmap() {
+            const heatmapContainer = document.getElementById("breadthHeatmap");
+            heatmapContainer.innerHTML = "";
+
+            // Sort stocks by technical score (highest to lowest)
+            const sortedStocks = [...stocksData].sort((a, b) => b.technicalScore - a.technicalScore);
+
+            // Create organized grid with 10 columns and 5 rows
+            for (let row = 0; row < 5; row++) {
+                // Add row label for top performers
+                if (row === 0) {
+                    const rowLabel = document.createElement("div");
+                    rowLabel.className = "heatmap-row-label";
+                    rowLabel.textContent = "🏆 Top 10 Performers (Rank 1-10)";
+                    heatmapContainer.appendChild(rowLabel);
+                } else if (row === 1) {
+                    const rowLabel = document.createElement("div");
+                    rowLabel.className = "heatmap-row-label";
+                    rowLabel.textContent = "🥈 Strong Performers (Rank 11-20)";
+                    heatmapContainer.appendChild(rowLabel);
+                } else if (row === 2) {
+                    const rowLabel = document.createElement("div");
+                    rowLabel.className = "heatmap-row-label";
+                    rowLabel.textContent = "🥉 Good Performers (Rank 21-30)";
+                    heatmapContainer.appendChild(rowLabel);
+                } else if (row === 3) {
+                    const rowLabel = document.createElement("div");
+                    rowLabel.className = "heatmap-row-label";
+                    rowLabel.textContent = "📊 Average Performers (Rank 31-40)";
+                    heatmapContainer.appendChild(rowLabel);
+                } else if (row === 4) {
+                    const rowLabel = document.createElement("div");
+                    rowLabel.className = "heatmap-row-label";
+                    rowLabel.textContent = "📈 Lower Performers (Rank 41-50)";
+                    heatmapContainer.appendChild(rowLabel);
+                }
+
+                // Create cells for this row
+                for (let col = 0; col < 10; col++) {
+                    const index = row * 10 + col;
+                    if (index < sortedStocks.length) {
+                        const stock = sortedStocks[index];
+                        const cell = document.createElement("div");
+                        cell.className = `heatmap-cell ${getHeatmapScoreClass(stock.technicalScore)}`;
+                        
+                        // Use shorter text for mobile or show full symbol on hover
+                        const displayText = stock.symbol.length > 4 ? stock.symbol.substring(0, 4) : stock.symbol;
+                        cell.textContent = displayText;
+                        cell.title = `${stock.companyName} (${stock.symbol})\nScore: ${stock.technicalScore}\nSignal: ${stock.tradingSignal}\nRank: ${index + 1}`;
+                        
+                        // Add click event to show details
+                        cell.addEventListener("click", () => {
+                            showStockDetails(stock);
+                        });
+                        
+                        heatmapContainer.appendChild(cell);
+                    }
+                }
+            }
+        }
+
+        // Get heat map score class
+        function getHeatmapScoreClass(score) {
+            if (score >= 80) return "excellent";
+            if (score >= 65) return "good";
+            if (score >= 50) return "moderate";
+            if (score >= 35) return "poor";
+            return "very-poor";
+        }
+
+        // Show stock details in a beautiful modal
+        function showStockDetails(stock) {
+            const modal = document.getElementById("stockModal");
+            const modalSymbol = document.getElementById("modalStockSymbol");
+            const modalDetails = document.getElementById("modalStockDetails");
+            
+            // Update modal title with company name and symbol
+            modalSymbol.textContent = `${stock.companyName} (${stock.symbol})`;
+            
+            // Create detailed content
+            const detailsHTML = `
+                <div class="detail-row">
+                    <div class="detail-item">
+                        <div class="detail-label">Company Name</div>
+                        <div class="detail-value">${stock.companyName}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Stock Symbol</div>
+                        <div class="detail-value">${stock.symbol}</div>
+                    </div>
+                </div>
+                
+                <div class="detail-row">
+                    <div class="detail-item">
+                        <div class="detail-label">Technical Score</div>
+                        <div class="detail-value">${stock.technicalScore}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Trading Signal</div>
+                        <div class="signal-badge-modal signal-${stock.tradingSignal.toLowerCase().replace("_", "-")}-modal">${stock.tradingSignal.replace("_", " ")}</div>
+                    </div>
+                </div>
+                
+                <div class="detail-row">
+                    <div class="detail-item">
+                        <div class="detail-label">Market Cap</div>
+                        <div class="market-cap-badge-modal market-cap-${stock.marketCap.toLowerCase()}-modal">${stock.marketCap.replace("_", " ")}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Current Price</div>
+                        <div class="detail-value">₹${stock.currentPrice.toLocaleString()}</div>
+                    </div>
+                </div>
+                
+                <div class="detail-row">
+                    <div class="detail-item">
+                        <div class="detail-label">RSI</div>
+                        <div class="detail-value">${stock.rsi.toFixed(1)}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Relative Strength</div>
+                        <div class="detail-value ${stock.relativeStrength >= 0 ? "positive" : "negative"}">${stock.relativeStrength >= 0 ? "+" : ""}${stock.relativeStrength.toFixed(2)}%</div>
+                    </div>
+                </div>
+                
+                <div class="detail-row">
+                    <div class="detail-item">
+                        <div class="detail-label">CAN SLIM Score</div>
+                        <div class="detail-value">${stock.canSlim}/25</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Minervini Score</div>
+                        <div class="detail-value">${stock.minervini}/20</div>
+                    </div>
+                </div>
+                
+                <div class="detail-row">
+                    <div class="detail-item">
+                        <div class="detail-label">Fundamental Score</div>
+                        <div class="detail-value">${stock.fundamental.toFixed(1)}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Trend Signal</div>
+                        <div class="trend-badge-modal trend-${stock.trendSignal.toLowerCase().replace("_", "-")}-modal">${stock.trendSignal.replace("_", " ")}</div>
+                    </div>
+                </div>
+                
+                <div class="detail-row">
+                    <div class="detail-item">
+                        <div class="detail-label">1 Day Change</div>
+                        <div class="detail-value ${stock.change1D >= 0 ? "positive" : "negative"}">${stock.change1D >= 0 ? "+" : ""}${stock.change1D.toFixed(2)}%</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">1 Week Change</div>
+                        <div class="detail-value ${stock.change1W >= 0 ? "positive" : "negative"}">${stock.change1W >= 0 ? "+" : ""}${stock.change1W.toFixed(2)}%</div>
+                    </div>
+                </div>
+                
+                <div class="detail-row">
+                    <div class="detail-item">
+                        <div class="detail-label">1 Month Change</div>
+                        <div class="detail-value ${stock.change1M >= 0 ? "positive" : "negative"}">${stock.change1M >= 0 ? "+" : ""}${stock.change1M.toFixed(2)}%</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Analysis Date</div>
+                        <div class="detail-value">2025-11-19</div>
+                    </div>
+                </div>
+            `;
+            
+            modalDetails.innerHTML = detailsHTML;
+            
+            // Show modal with animation
+            modal.classList.add("active");
+            
+            // Load chart data and setup controls
+            currentStock = stock;
+            loadStockChart(stock.symbol);
+            setupChartControls();
+            
+            // Close modal when clicking outside
+            modal.addEventListener("click", function(e) {
+                if (e.target === modal) {
+                    closeModal();
+                }
+            });
+            
+            // Close modal with Escape key
+            document.addEventListener("keydown", function(e) {
+                if (e.key === "Escape" && modal.classList.contains("active")) {
+                    closeModal();
+                }
+            });
+        }
+        
+        // Close modal function
+        function closeModal() {
+            const modal = document.getElementById("stockModal");
+            modal.classList.remove("active");
+            
+            // Destroy charts to free memory
+            if (stockChart) {
+                stockChart.destroy();
+                stockChart = null;
+            }
+            if (volumeChart) {
+                volumeChart.destroy();
+                volumeChart = null;
+            }
+        }
+
+        // Filter functionality
+        function setupFilters() {
+            const filterBtns = document.querySelectorAll(".filter-btn");
+            const searchBox = document.getElementById("stockSearch");
+
+            filterBtns.forEach(btn => {
+                btn.addEventListener("click", () => {
+                    filterBtns.forEach(b => b.classList.remove("active"));
+                    btn.classList.add("active");
+                    applyFilters();
+                });
+            });
+
+            searchBox.addEventListener("input", applyFilters);
+        }
+
+        function applyFilters() {
+            const activeFilter = document.querySelector(".filter-btn.active").dataset.filter;
+            const searchTerm = document.getElementById("stockSearch").value.toLowerCase();
+
+            let filteredData = stocksData.filter(stock => {
+                const matchesSearch = stock.symbol.toLowerCase().includes(searchTerm) || 
+                                    stock.companyName.toLowerCase().includes(searchTerm);
+                let matchesFilter = true;
+
+                switch (activeFilter) {
+                    case "strong-buy":
+                        matchesFilter = stock.tradingSignal === "STRONG_BUY";
+                        break;
+                    case "buy":
+                        matchesFilter = stock.tradingSignal === "BUY";
+                        break;
+                    case "large-cap":
+                        matchesFilter = stock.marketCap === "LARGE_CAP";
+                        break;
+                    case "mid-cap":
+                        matchesFilter = stock.marketCap === "MID_CAP";
+                        break;
+                    case "small-cap":
+                        matchesFilter = stock.marketCap === "SMALL_CAP";
+                        break;
+                    case "micro-cap":
+                        matchesFilter = stock.marketCap === "MICRO_CAP";
+                        break;
+                }
+
+                return matchesSearch && matchesFilter;
+            });
+
+            populateStocksTable(filteredData);
+        }
+
+        // Chart variables
+        let stockChart = null;
+        let volumeChart = null;
+        let currentStock = null;
+
+        // Chart functions
+        function loadStockChart(symbol) {
+            console.log("Loading chart for symbol:", symbol);
+            const chartLoading = document.getElementById("chartLoading");
+            const stockChartCanvas = document.getElementById("stockChart");
+            const volumeChartCanvas = document.getElementById("volumeChart");
+            
+            // Show loading
+            chartLoading.style.display = "flex";
+            stockChartCanvas.style.display = "none";
+            volumeChartCanvas.style.display = "none";
+            
+            // Generate sample chart data
+            setTimeout(() => {
+                const chartData = generateSampleChartData(symbol);
+                createCandlestickChart(chartData);
+                createVolumeChart(chartData);
+                
+                // Hide loading, show charts
+                chartLoading.style.display = "none";
+                stockChartCanvas.style.display = "block";
+                volumeChartCanvas.style.display = "block";
+            }, 1000);
+        }
+
+        function generateSampleChartData(symbol) {
+            const data = [];
+            const basePrice = stocksData.find(s => s.symbol === symbol)?.currentPrice || 100;
+            let currentPrice = basePrice;
+            const startDate = new Date();
+            startDate.setDate(startDate.getDate() - 200);
+            
+            for (let i = 0; i < 200; i++) {
+                const date = new Date(startDate);
+                date.setDate(date.getDate() + i);
+                
+                const change = (Math.random() - 0.5) * 0.05;
+                const open = currentPrice;
+                const close = open * (1 + change);
+                const high = Math.max(open, close) * (1 + Math.random() * 0.02);
+                const low = Math.min(open, close) * (1 - Math.random() * 0.02);
+                const volume = Math.floor(Math.random() * 1000000) + 100000;
+                
+                data.push({
+                    x: date,
+                    o: open,
+                    h: high,
+                    l: low,
+                    c: close,
+                    v: volume
+                });
+                
+                currentPrice = close;
+            }
+            
+            return data;
+        }
+
+        function createCandlestickChart(data) {
+            console.log("Creating OHLC chart with data:", data.length, "points");
+            const ctx = document.getElementById("stockChart").getContext("2d");
+            if (stockChart) { stockChart.destroy(); }
+            
+            try {
+                // Create datasets for OHLC and Moving Averages (using numeric indices)
+                const highData = data.map((d, index) => ({ x: index, y: d.h }));
+                const lowData = data.map((d, index) => ({ x: index, y: d.l }));
+                const openData = data.map((d, index) => ({ x: index, y: d.o }));
+                const closeData = data.map((d, index) => ({ x: index, y: d.c }));
+                
+                // Moving averages data
+                const sma20Data = data.map((d, index) => ({ x: index, y: d.sma20 })).filter(d => d.y !== null);
+                const sma50Data = data.map((d, index) => ({ x: index, y: d.sma50 })).filter(d => d.y !== null);
+                const sma100Data = data.map((d, index) => ({ x: index, y: d.sma100 })).filter(d => d.y !== null);
+                const sma200Data = data.map((d, index) => ({ x: index, y: d.sma200 })).filter(d => d.y !== null);
+
+                stockChart = new Chart(ctx, {
+                    type: "line",
+                    data: {
+                        datasets: [
+                            { label: "Close", data: closeData, borderColor: "#1976d2", backgroundColor: "rgba(25, 118, 210, 0.1)", borderWidth: 2, pointRadius: 0, fill: true, tension: 0.1 },
+                            { label: "SMA 20", data: sma20Data, borderColor: "#ff9800", backgroundColor: "transparent", borderWidth: 1, pointRadius: 0, tension: 0, borderDash: [5, 5] },
+                            { label: "SMA 50", data: sma50Data, borderColor: "#9c27b0", backgroundColor: "transparent", borderWidth: 1, pointRadius: 0, tension: 0, borderDash: [5, 5] },
+                            { label: "SMA 100", data: sma100Data, borderColor: "#4caf50", backgroundColor: "transparent", borderWidth: 1, pointRadius: 0, tension: 0, borderDash: [5, 5] },
+                            { label: "SMA 200", data: sma200Data, borderColor: "#f44336", backgroundColor: "transparent", borderWidth: 2, pointRadius: 0, tension: 0, borderDash: [5, 5] }
+                        ]
+                    },
+                    options: {
+                        responsive: true, maintainAspectRatio: false,
+                        plugins: { legend: { display: true, position: "top" } },
+                        scales: {
+                            x: {
+                                type: "linear",
+                                ticks: {
+                                    maxTicksLimit: 10,
+                                    callback: function(value, index, values) {
+                                        if (data[Math.floor(value)]) {
+                                            const date = new Date(data[Math.floor(value)].x);
+                                            return date.toLocaleDateString("en-US", { 
+                                                month: "short", 
+                                                day: "numeric",
+                                                year: "numeric"
+                                            });
+                                        }
+                                        return "";
+                                    }
+                                }
+                            },
+                            y: { position: "right" }
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error("Error creating OHLC chart:", error);
+            }
+        }
+
+        function createVolumeChart(data) {
+            const ctx = document.getElementById("volumeChart").getContext("2d");
+            if (volumeChart) { volumeChart.destroy(); }
+            try {
+                const volumeData = data.map((d, index) => ({
+                    x: index,
+                    y: d.v
+                }));
+                volumeChart = new Chart(ctx, {
+                    type: "bar",
+                    data: {
+                        datasets: [{ label: "Volume", data: volumeData, backgroundColor: "#1976d2", borderColor: "#1976d2", borderWidth: 1 }]
+                    },
+                    options: {
+                        responsive: true, maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            x: {
+                                type: "linear",
+                                display: false
+                            },
+                            y: { position: "right", beginAtZero: true }
+                        }
+                    }
+                });
+            } catch (error) { console.error("Error creating volume chart:", error); }
+        }
+
+        function setupChartControls() {
+            const chartBtns = document.querySelectorAll(".chart-btn");
+            chartBtns.forEach(btn => {
+                btn.addEventListener("click", () => {
+                    chartBtns.forEach(b => b.classList.remove("active"));
+                    btn.classList.add("active");
+                    const period = btn.dataset.period;
+                    console.log(`Loading chart data for period: ${period}`);
+                });
+            });
+        }
+
+        // Initialize everything when page loads
+        document.addEventListener("DOMContentLoaded", () => {
+            initializeCharts();
+            populateStocksTable(stocksData);
+            generateBreadthHeatmap();
+            setupFilters();
+            setupTableSorting();
+        });
+    </script>
+
+
+</body>
+</html>

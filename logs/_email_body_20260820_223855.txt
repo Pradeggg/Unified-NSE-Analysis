@@ -1,0 +1,92 @@
+Agent Adda
+      Thu, 20 Aug 2026 · 22:38 IST
+
+        Report · swing_playbook.html · mode: both
+
+    Market read: Swing risk on (Balanced). Use intraday confirmation above triggers; respect stops.
+
+  Attached: Swing Trading Playbook (NSE). Below is a concise summary to guide today’s execution.
+
+  Key takeaways
+
+    WABAG leads the playbook (Score 88.7). Tactical trigger Rs 2,078.48; stop Rs 1,928.25; targets Rs 2,303.82 / Rs 2,378.93 (1.5R / 2.0R).
+
+    Leadership cluster: NETWEB (87.9), TITAN (87.1), NAM-INDIA (86.8), SHRIRAMFIN (86.6) — all Stage 2 momentum candidates.
+
+    Risk framework: Balanced profile; max 1.0% account risk per trade; target 8–12 open positions.
+
+    Execution guardrails: Buy only above trigger; respect initial stops; size down when stop distance is wide; recheck live liquidity.
+
+    Stop distances: ~7.2% for Tactical setups; ~9.3% for Position setups.
+
+    Portfolio actions: none this run (candidates only).
+
+  Leaders and trigger levels (Tactical)
+
+      Symbol
+      Trigger
+      Stop
+      T1
+      T2
+
+      WABAG
+      Rs 2,078.48
+      Rs 1,928.25
+      Rs 2,303.82
+      Rs 2,378.93
+
+      NETWEB
+      Rs 5,474.00
+      Rs 5,078.35
+      Rs 6,067.47
+      Rs 6,265.29
+
+      TITAN
+      Rs 5,118.68
+      Rs 4,748.72
+      Rs 5,673.63
+      Rs 5,858.61
+
+      NAM-INDIA
+      Rs 1,244.83
+      Rs 1,154.85
+      Rs 1,379.78
+      Rs 1,424.77
+
+      SHRIRAMFIN
+      Rs 1,139.48
+      Rs 1,057.12
+      Rs 1,263.02
+      Rs 1,304.20
+
+  What to watch
+
+    Intraday confirmation above triggers for leaders: WABAG (Rs 2,078.48), NETWEB (Rs 5,474.00), TITAN (Rs 5,118.68).
+
+    Liquidity checks before orders; reduce size where spreads or depth are thinner.
+
+    Stage 2 momentum follow-through vs. pullbacks; favor clean continuation structures (per VCP/RS scores).
+
+    Market breadth; favor candidates over watchlist rows when conditions are cautious (no watchlist this run).
+
+  Action items
+
+    Set alerts at listed triggers; enter only on confirmation.
+
+    Size each trade to a max 1.0% account risk; cap to 8–12 concurrent positions.
+
+    Place initial stops as shown; consider trailing only after ~1.0–1.5R progress.
+
+    Revalidate live price and liquidity at execution time.
+
+    Use the attached playbook for full scoring detail and Position-mode levels.
+
+    Research only. Not investment advice or a trading recommendation. Confirm live price, liquidity, and risk before action. Generated 20 Aug 2026 by Agent Adda Swing Playbook.
+
+  Regards,
+
+  Agent Adda
+
+  ShunyaAI · NSE Market Intelligence
+
+Not investment advice. For research and learning only. NSE EOD + live snapshot data.

@@ -23,11 +23,15 @@ load_dotenv()
 EMBED_BACKEND = os.environ.get("KB_EMBED_BACKEND", "openai").lower().strip()
 EMBED_MODEL   = os.environ.get("KB_EMBED_MODEL", "text-embedding-3-small")
 ST_MODEL      = os.environ.get("KB_ST_MODEL", "sentence-transformers/all-MiniLM-L6-v2")
+# PG 2026-08-25: Ollama local embedding backend
+OLLAMA_MODEL  = os.environ.get("KB_OLLAMA_MODEL", "nomic-embed-text")
+OLLAMA_BASE   = os.environ.get("KB_OLLAMA_BASE", "http://localhost:11434").rstrip("/")
 EMBED_BATCH   = 64
 
 _COLLECTION_SUFFIX = {
     "openai": "",                      # legacy / existing data stays in kb_chunks / kb_qa
     "sentence-transformers": "_st",    # PG: separate space for 384-d vectors
+    "ollama": "_ol",                   # PG 2026-08-25: Ollama local embeddings
 }
 
 
@@ -56,12 +60,26 @@ class KBVectorStore:
     def _resolve_backend(self, requested: str) -> str:
         if requested == "sentence-transformers":
             return "sentence-transformers"
+        if requested == "ollama":
+            return "ollama"
         if requested == "auto":
-            # PG: cheap probe — if no OPENAI_API_KEY, skip straight to ST.
+            # PG: cheap probe — if no OPENAI_API_KEY, try Ollama, then ST.
             if not os.environ.get("OPENAI_API_KEY"):
+                if self._probe_ollama():
+                    return "ollama"
                 return "sentence-transformers"
-            return "openai"  # will fall through to ST inside _embed on failure
+            return "openai"
         return "openai"
+
+    @staticmethod
+    def _probe_ollama() -> bool:
+        """Check if Ollama server is reachable."""
+        try:
+            import urllib.request  # noqa: WPS433
+            urllib.request.urlopen(f"{OLLAMA_BASE}/api/tags", timeout=2)
+            return True
+        except Exception:
+            return False
 
     # ─── embedding ─────────────────────────────────────────────────────
     def _make_openai(self):
@@ -105,9 +123,32 @@ class KBVectorStore:
         )
         return [list(map(float, v)) for v in vecs]
 
+    # PG 2026-08-25: Ollama local embedding backend
+    def _embed_ollama(self, texts: list[str]) -> list[list[float]]:
+        """Embed via local Ollama server (e.g. nomic-embed-text, mxbai-embed-large)."""
+        import json as _json
+        import urllib.request as _req  # noqa: WPS433
+
+        out: list[list[float]] = []
+        for i in range(0, len(texts), EMBED_BATCH):
+            batch = texts[i : i + EMBED_BATCH]
+            payload = _json.dumps({"model": OLLAMA_MODEL, "input": batch}).encode()
+            req = _req.Request(
+                f"{OLLAMA_BASE}/api/embed",
+                data=payload,
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            with _req.urlopen(req, timeout=60) as resp:
+                body = _json.loads(resp.read())
+            out.extend(body["embeddings"])
+        return out
+
     def _embed(self, texts: list[str]) -> list[list[float]]:
         if self._backend == "sentence-transformers":
             return self._embed_st(texts)
+        if self._backend == "ollama":
+            return self._embed_ollama(texts)
         return self._embed_openai(texts)
 
     # ─── upsert ────────────────────────────────────────────────────────

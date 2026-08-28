@@ -1,0 +1,4 @@
+Fixed Cost Case,Fixed Cost INR,Blended ARPU INR,Blended Variable COGS/User INR,Contribution/User INR,Breakeven Subscribers,Subscribers for 20% Margin,Commercial Readout
+Lean Beta,15000,320,99.6,220.4,69,96,"100 users clears 20% margin if infra stays lean"
+Production Low,25000,320,99.6,220.4,114,160,"Need ~160 users for 20% margin at same price/mix"
+Production High,40000,320,99.6,220.4,182,256,"Need ~256 users for 20% margin before market-data license"

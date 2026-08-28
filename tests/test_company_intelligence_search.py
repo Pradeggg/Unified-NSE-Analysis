@@ -4,8 +4,8 @@ import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from company_intelligence_db import init_company_intelligence_db
-from company_intelligence_search import (
+from company_intelligence.company_intelligence_db import init_company_intelligence_db
+from company_intelligence.company_intelligence_search import (
     build_search_queries,
     complete_search_run,
     log_search_attempt,

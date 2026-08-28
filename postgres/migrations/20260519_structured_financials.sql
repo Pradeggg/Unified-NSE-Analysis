@@ -100,6 +100,7 @@ CREATE TABLE IF NOT EXISTS scores.cash_flow (
     investing_cf    NUMERIC(20,4),
     financing_cf    NUMERIC(20,4),
     net_cf          NUMERIC(20,4),
+    free_cash_flow  NUMERIC(20,4),
     source          TEXT        NOT NULL DEFAULT 'screener',
     source_url      TEXT,
     raw_json        JSONB,

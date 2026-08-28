@@ -1,0 +1,68 @@
+Agent Adda
+      Tue, 25 Aug 2026 · 18:12 IST
+
+        Report · swing_playbook.html · mode: both
+
+    Market read: Risk Allowed; balanced swing profile with 20 Stage‑1/2 candidates — act only on intraday trigger confirmation.
+
+  Swing Trade Playbook — 25 Aug 2026
+
+  Full report attached: swing_playbook.html. Summary below is research-only and not investment advice.
+
+  Key takeaways
+
+    Profile: Swing Risk YES, balanced; target 8–12 open positions; cap 1.0% account risk per trade.
+
+    Tactical leaders (shorter-horizon, ~7.2% stop distance, 1.5R/2.0R targets):
+
+      • KALYANKJIL — Trigger Rs 609.59, Stop Rs 565.53, T1 Rs 675.67, T2 Rs 697.70 (Score 90.9; Stage 1; RS 98.8)
+
+      • WELCORP — Trigger Rs 2,335.02, Stop Rs 2,166.25, T1 Rs 2,588.17, T2 Rs 2,672.56 (Score 90.7; Stage 2; RS 99.3)
+
+      • COFORGE — Trigger Rs 1,910.62, Stop Rs 1,772.52, T1 Rs 2,117.76, T2 Rs 2,186.81 (Score 90.6; Stage 1; RS 93.2)
+
+    Position leaders (wider-stop, ~9.3% stop distance, 1.5R/2.0R targets):
+
+      • WELCORP — Trigger Rs 2,335.02, Stop Rs 2,117.70, T1 Rs 2,661.00, T2 Rs 2,769.66
+
+      • LAURUSLABS — Trigger Rs 1,820.02, Stop Rs 1,650.63, T1 Rs 2,074.10, T2 Rs 2,158.80
+
+      • TVSMOTOR — Trigger Rs 4,433.90, Stop Rs 4,021.24, T1 Rs 5,052.89, T2 Rs 5,259.22
+
+    Setups concentrate in Stage 1–2 names with high technical and RS scores; many exhibit VCP-style patterns.
+
+    Execution guardrails: buy only above trigger; respect initial stop; reduce size when stop distance is wide; recheck live liquidity before orders.
+
+    No portfolio actions in this run (no holdings provided); focus on candidates list.
+
+  What to watch
+
+    Intraday confirmation prints above listed triggers; avoid anticipatory entries.
+
+    Liquidity and spreads on mid/small caps (e.g., QUADFUTURE, CUPID, HFCL) before sizing.
+
+    Follow-through to 1.5R/2.0R targets; adjust stops to reduce gap risk post-entry.
+
+    Relative Strength persistence in leaders (KALYANKJIL, WELCORP, COFORGE, LAURUSLABS, TVSMOTOR).
+
+  Action items
+
+    Review the attached HTML report for full tables and evidence; shortlist within your universe and liquidity constraints.
+
+    Place alerts at triggers; predefine initial stops and 1.5R/2.0R target brackets.
+
+    Risk-manage: max 1.0% account risk per trade; aim for 8–12 concurrent positions.
+
+    Reconfirm live price, depth, and slippage estimates before orders; reduce size if stop distance widens.
+
+    Document entries/exits for post-trade review; adhere to execution guardrails.
+
+  Source: Agent Adda Swing Playbook (generated 2026-08-24 18:51:31). Research-only. Not investment advice or a trading recommendation.
+
+  Regards,
+
+  Agent Adda
+
+  ShunyaAI · NSE Market Intelligence
+
+Not investment advice. For research and learning only. NSE EOD + live snapshot data.

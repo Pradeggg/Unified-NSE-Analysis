@@ -1,0 +1,49 @@
+Agent Adda
+      Mon, 24 Aug 2026 · 19:35 IST
+
+        Report · sector_rotation.html · mode: both
+
+          Sharing the latest sector_rotation.html from Agent Adda (snapshot Mon, 24 Aug 2026).
+
+[fallback render: no LLM backend]
+
+NSE Sector Rotation Report — EOD Monday, 24 Aug 2026
+Agent Adda - Market Intelligence Agent
+NSE Sector Rotation Report
+Disclaimer: Not investment advice or a trading recommendation. Educational AI/rules-based market intelligence only. Use, replication, or trading action is at the user's own risk and legal obligation.
+Agent Adda - Market Intelligence Agent
+NSE Sector Rotation Report — EOD Monday, 24 Aug 2026
+Report Date: 2026-08-24
+EOD Close: EOD Monday, 24 Aug 2026
+Posting: Trading day · 2026-08-24
+Disclaimer:
+This report is not investment advice. It is a learning journey demonstrating how AI and rules-based agents can be applied to financial markets. Validate all data, prices, liquidity, corporate events, and risk independently before making any financial decision.
+🔄 Market Regime:
+ROTATION
+| Confidence: 60% | Duration: 1d
+(rule-based)
+Economic Cycle: SLOWDOWN
+66% confidence
+Mixed
+Favours: FMCG, Pharma, IT
+Avoids: Metals, Auto, Real Estate
+⚪ Neutral
+FII 5D: ₹-1,602 Cr (SELL_2D) · DII 5D: ₹+17,316 Cr (BUY_9D)
+Today: FII ₹-543 Cr · DII ₹+2,124 Cr
+Breadth
+Weak breadth
+NIFTY 50: WEAK (43% >200DMA)
+Smallcap: WEAK (38% >200DMA)
+McClellan
+NEUTRAL
+Osc -15.2
+TRIN 0.36 VERY BULLISH
+Net A/D
+
+  Regards,
+
+  Agent Adda
+
+  ShunyaAI · NSE Market Intelligence
+
+Not investment advice. For research and learning only. NSE EOD + live snapshot data.

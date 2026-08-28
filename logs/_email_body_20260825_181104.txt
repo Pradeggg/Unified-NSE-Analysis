@@ -1,0 +1,50 @@
+Agent Adda
+      Tue, 25 Aug 2026 · 18:11 IST
+
+        Report · stage2_tracker.html · mode: both
+
+  Attached: Stage 2 Breakout Tracker — 25 Aug 2026 (HTML). Also accessible at: https://agentadda.in/stocks/reports/stage2-tracker-2026-08-25
+
+  Comparator shows -314 Stage 2 delta (0 new, 314 exits) with no logged transitions; likely a data reset—underlying S2 list displays mixed moves.
+
+  Date: 25 Aug 2026 (EOD)  |  Formula: stage2-fund-ready-v2  |  Source: PostgreSQL/scores.stage_snapshots + market.equity_eod; SQLite stage_changes  |  Generated: 2026-08-25 18:06
+
+  Key takeaways
+
+    Day-over-day history (2026-08-25 vs 2026-08-24) recorded S2 Δ = -314, with 0 new entrants and 314 exits, and "No stage moves" flagged—points to a technical reset in the comparator rather than fundamental transitions.
+
+    Performance dispersion across S2 names: advances led by APOLLOPIPE (+8.95%), ENTERO (+6.75%), TFCILTD (+5.76%), PAYTM (+5.82%), SPORTKING (+6.24%), SIGMAADV (+4.99%), VALIANTLAB (+4.93%), CYIENTDLM (+4.55%).
+
+    Largest declines within S2 cohort included RPTECH (−10.10%), KRONOX (−9.36%), TDPOWERSYS (−6.50%), QUADFUTURE (−6.44%), RAIN (−6.18%).
+
+    Sector representation remains broad: BFSI (ICICIBANK, CHOLAFIN, SHRIRAMFIN, UNIONBANK), Autos (BAJAJ-AUTO, EICHERMOT, TVSMOTOR), Industrials/Capital Goods (KEI, SIEMENS, LT, VOLTAMP), Pharma/Healthcare (DIVISLAB, AUROPHARMA, TORNTPHARM, GLAND, GLENMARK).
+
+    Presence of gold/liquidity proxies within S2 universe (e.g., GOLDETF, GOLDIETF, HDFCGOLD, BSLGOLDETF, CASHIETF, LIQUIDADD/PLUS) indicates concurrent interest in defensive or cash-like exposures.
+
+  What to watch
+
+    Next EOD snapshot to confirm whether the -314 S2 delta normalizes; if it persists, treat as a structural change in the comparator series.
+
+    Daily Stage Transitions for confirmation of genuine upgrades/downgrades (latest panel reported “No stage moves”).
+
+    Follow-through in BFSI, Autos, Industrials, and Pharma leaders; monitor high-volatility names cited above for reversal risk.
+
+    VCP Strategy/Setups sections currently show “No data available” — watch for updates in subsequent runs.
+
+  How to use this
+
+    Use the S2 roster as a research universe; verify price/volume confirmation, upcoming events, and liquidity before any decisions.
+
+    Cross-check the day-over-day comparator anomaly against the next snapshot before acting on breadth signals.
+
+    Incorporate risk controls (position sizing, stops) and independent validation of all data.
+
+    Important: This email and the attached report are for research purposes only and do not constitute investment advice or a recommendation to buy/sell any security.
+
+  Regards,
+
+  Agent Adda
+
+  ShunyaAI · NSE Market Intelligence
+
+Not investment advice. For research and learning only. NSE EOD + live snapshot data.

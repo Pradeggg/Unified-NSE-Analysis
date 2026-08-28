@@ -13,6 +13,14 @@ import re
 import time
 from typing import Any
 
+# Load .env from parent finance/ directory so launchd agents pick up API keys
+# without embedding secrets in the plist.  Best-effort — never raises.
+try:
+    from dotenv import load_dotenv as _load_dotenv
+    _load_dotenv(Path(__file__).resolve().parent.parent.parent / ".env", override=False)
+except Exception:
+    pass
+
 from rich import box
 from rich.console import Console, Group
 from rich.panel import Panel
@@ -161,14 +169,30 @@ def load_fno_intraday_universe() -> list[str]:
         latest = files[-1]
         import pandas as pd
 
-        df = pd.read_csv(latest, usecols=lambda col: str(col).upper() in {"SYMBOL", "INSTRUMENT"})
-        if "SYMBOL" not in df.columns:
+        df = pd.read_csv(
+            latest,
+            usecols=lambda col: str(col).upper() in {
+                "SYMBOL",
+                "INSTRUMENT",
+                "TCKRSYMB",
+                "FININSTRMTP",
+            },
+        )
+        columns_by_upper = {str(col).upper(): col for col in df.columns}
+        symbol_col = columns_by_upper.get("SYMBOL") or columns_by_upper.get("TCKRSYMB")
+        instrument_col = columns_by_upper.get("INSTRUMENT") or columns_by_upper.get("FININSTRMTP")
+        if symbol_col is None:
             return list(DEFAULT_FNO_INTRADAY_UNIVERSE)
-        if "INSTRUMENT" in df.columns:
-            df = df[df["INSTRUMENT"].astype(str).str.upper().isin({"STF", "STO", "FUTSTK", "OPTSTK", "FUTIDX", "OPTIDX"})]
+        if instrument_col:
+            df = df[
+                df[instrument_col]
+                .astype(str)
+                .str.upper()
+                .isin({"STF", "STO", "FUTSTK", "OPTSTK", "FUTIDX", "OPTIDX", "IDF", "IDO"})
+            ]
         symbols = [
             str(symbol).strip().upper()
-            for symbol in df["SYMBOL"].dropna().unique().tolist()
+            for symbol in df[symbol_col].dropna().unique().tolist()
             if str(symbol).strip()
         ]
         merged = list(dict.fromkeys([*DEFAULT_FNO_INTRADAY_UNIVERSE, *symbols]))
@@ -1373,6 +1397,51 @@ def write_intraday_cycle_log(record: dict[str, Any], path: Path) -> Path:
     return path
 
 
+def _stream_intraday_alerts_enabled() -> bool:
+    return os.environ.get("AGENTADDA_INTRADAY_ALERTS_STREAM", "").strip().lower() in {"1", "true", "yes"}
+
+
+def _stream_intraday_alerts_ingest_url() -> str:
+    # Intentionally no hardcoded default endpoint.
+    # If streaming is desired, set one of:
+    # - AGENTADDA_INTRADAY_ALERTS_INGEST_URL
+    # - AGENTADDA_STREAM_INGEST_URL
+    return (
+        os.environ.get("AGENTADDA_INTRADAY_ALERTS_INGEST_URL")
+        or os.environ.get("AGENTADDA_STREAM_INGEST_URL")
+        or ""
+    ).strip()
+
+
+def _stream_intraday_alerts_token() -> str:
+    return (os.environ.get("AGENTADDA_INTRADAY_ALERTS_TOKEN") or os.environ.get("AGENTADDA_STREAM_TOKEN") or "").strip()
+
+
+def _push_intraday_alerts_stream(lines: list[str], *, ts: str, source: str) -> None:
+    if not _stream_intraday_alerts_enabled():
+        return
+    token = _stream_intraday_alerts_token()
+    if not token:
+        return
+    url = _stream_intraday_alerts_ingest_url()
+    if not url:
+        return
+    payload_lines = [str(line).strip() for line in (lines or []) if str(line).strip()]
+    if not payload_lines:
+        return
+    try:
+        import requests  # type: ignore
+
+        requests.post(
+            url,
+            json={"lines": payload_lines[:80], "ts": ts, "source": source},
+            headers={"Authorization": f"Bearer {token}"},
+            timeout=8,
+        )
+    except Exception:
+        return
+
+
 def write_intraday_latest_snapshot(
     *,
     state: LiveDashboardState,
@@ -1532,6 +1601,22 @@ def write_intraday_latest_snapshot(
     if email_result:
         lines.extend(["## Email", "", f"- Status: {email_result.get('message')}", f"- Subject: {email_result.get('subject', 'n/a')}", ""])
     path.write_text("\n".join(lines), encoding="utf-8")
+
+    try:
+        ts = (state.last_updated_at or datetime.now()).strftime("%Y-%m-%d %H:%M:%S")
+        stream_lines = [
+            f"cycle={state.cycle} market={state.market_context or 'n/a'} fresh={len(fresh_candidates)} candidates={len(candidates)}",
+            f"stance={stance.get('label','n/a')} · {stance.get('action','n/a')} · {stance.get('headline','n/a')}",
+        ]
+        if fresh_candidates:
+            for item in fresh_candidates[:10]:
+                stream_lines.append(
+                    f"ALERT {item.symbol} {item.side} {item.status} rr={_fmt(item.rr, 1)} px={_fmt(item.last_price)} decision={(item.decision or {}).get('final_action','n/a')}"
+                )
+        _push_intraday_alerts_stream(stream_lines, ts=ts, source="intraday_alerts")
+    except Exception:
+        pass
+
     return path
 
 
@@ -3205,9 +3290,12 @@ def config_from_args(args: argparse.Namespace) -> IntradayAlertConfig:
         if remember_symbols and symbols:
             save_intraday_alert_symbols(symbols, state_path)
     else:
-        symbols = _equity_alert_symbols(load_intraday_alert_symbols(state_path))
-        if not symbols:
-            symbols = _equity_alert_symbols(load_fno_intraday_universe())
+        # Always scan the full F&O universe when no explicit --symbols basket is
+        # given.  The saved state file records a previously-passed --symbols basket
+        # so the user doesn't have to retype it; loading it here silently shrank the
+        # scan universe to whatever was tracked in a prior session (e.g. 2 stale
+        # symbols), bypassing the full-universe rescan entirely.
+        symbols = _equity_alert_symbols(load_fno_intraday_universe())
 
     return IntradayAlertConfig(
         symbols=symbols,
@@ -3249,6 +3337,44 @@ def main(argv: list[str] | None = None) -> int:
         except Exception:
             backend = None
     config = config_from_args(args)
+
+    # Tee stdout → terminal + persistent log file so `tail -f` works even when
+    # launched via launchd/osascript (where the terminal has no stdout redirect).
+    import sys as _sys
+    _log_dir = Path.home() / ".agent-adda" / "logs"
+    _log_dir.mkdir(parents=True, exist_ok=True)
+    _log_file_path = _log_dir / "intraday_alerts.log"
+    try:
+        _log_fh = _log_file_path.open("a", encoding="utf-8", errors="replace", buffering=1)
+
+        class _Tee:
+            def __init__(self, real, fh):
+                self._real = real
+                self._fh = fh
+            def write(self, s):
+                self._real.write(s)
+                try:
+                    self._fh.write(s)
+                except Exception:
+                    pass
+                return len(s)
+            def flush(self):
+                self._real.flush()
+                try:
+                    self._fh.flush()
+                except Exception:
+                    pass
+            def fileno(self):
+                return self._real.fileno()
+            def isatty(self):
+                return self._real.isatty()
+            def __getattr__(self, name):
+                return getattr(self._real, name)
+
+        _sys.stdout = _Tee(_sys.stdout, _log_fh)
+    except Exception:
+        pass  # best-effort — never block startup
+
     run_intraday_alert_commentary(config, backend=backend)
     return 0
 

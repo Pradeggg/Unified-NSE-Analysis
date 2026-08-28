@@ -1,0 +1,2 @@
+[console_scripts]
+agent-adda = agent_adda.cli:main

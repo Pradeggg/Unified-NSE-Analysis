@@ -118,6 +118,47 @@ def test_icloud_provider_defaults_to_icloud_smtp(monkeypatch):
     assert cfg["from_addr"] == "pgorai@icloud.com"
 
 
+def test_icloud_sent_archive_uses_special_use_mailbox(monkeypatch):
+    calls = {}
+
+    class FakeIMAP:
+        def __init__(self, host, port, timeout):
+            calls["connect"] = (host, port, timeout)
+
+        def login(self, user, password):
+            calls["login"] = (user, password)
+            return "OK", []
+
+        def list(self):
+            return "OK", [
+                b'(\\HasNoChildren) "/" "Archive"',
+                b'(\\HasNoChildren \\Sent) "/" "Sent Messages"',
+            ]
+
+        def append(self, folder, flags, date_time, message):
+            calls["append"] = (folder, flags, message)
+            return "OK", [b"saved"]
+
+        def logout(self):
+            calls["logout"] = True
+
+    monkeypatch.setattr(email_dispatcher.imaplib, "IMAP4_SSL", FakeIMAP)
+    message = email_dispatcher.MimeEmailMessage()
+    message["Subject"] = "Archive check"
+    message.set_content("Hello")
+
+    folder = email_dispatcher._archive_icloud_sent_copy(
+        message,
+        {"user": "pgorai@icloud.com", "password": "app-password"},
+    )
+
+    assert folder == "Sent Messages"
+    assert calls["connect"] == ("imap.mail.me.com", 993, 45)
+    assert calls["login"] == ("pgorai@icloud.com", "app-password")
+    assert calls["append"][0] == '"Sent Messages"'
+    assert calls["logout"] is True
+
+
 def test_applemail_provider_dispatches_via_applemail_script(tmp_path, monkeypatch):
     monkeypatch.setenv("AGENT_ADDA_EMAIL_PROVIDER", "applemail")
     monkeypatch.setenv("SMTP_FROM", "pgorai@icloud.com")

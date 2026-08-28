@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Agent Adda — Weekend Market Review LaunchAgent
+  ==============================================
+  Runs the broader market weekend recap every Saturday at 10:15 IST.
+
+  Install / update:
+    cp com.agentadda.weekend_market_review.plist ~/Library/LaunchAgents/
+    launchctl unload ~/Library/LaunchAgents/com.agentadda.weekend_market_review.plist 2>/dev/null; true
+    launchctl load   ~/Library/LaunchAgents/com.agentadda.weekend_market_review.plist
+
+  Manual trigger:
+    launchctl start com.agentadda.weekend_market_review
+
+  Logs:
+    tail -f ~/.agent-adda/logs/weekend_market_review.log
+-->
+<plist version="1.0">
+<dict>
+
+    <key>Label</key>
+    <string>com.agentadda.weekend_market_review</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Users/pradeepgorai/Documents/Projects/finance/Unified-NSE-Analysis/.venv/bin/python3</string>
+        <string>/Users/pradeepgorai/Documents/Projects/finance/Unified-NSE-Analysis/scripts/run_weekend_market_review.py</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/pradeepgorai/Documents/Projects/finance/Unified-NSE-Analysis</string>
+
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Hour</key>
+        <integer>10</integer>
+        <key>Minute</key>
+        <integer>15</integer>
+        <key>Weekday</key>
+        <integer>6</integer>
+    </dict>
+
+    <key>StandardOutPath</key>
+    <string>/Users/pradeepgorai/.agent-adda/logs/weekend_market_review.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>/Users/pradeepgorai/.agent-adda/logs/weekend_market_review_err.log</string>
+
+    <key>ProcessType</key>
+    <string>Background</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/Users/pradeepgorai/Documents/Projects/finance/Unified-NSE-Analysis/.venv/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+        <key>PYTHONPATH</key>
+        <string>/Users/pradeepgorai/Documents/Projects/finance/Unified-NSE-Analysis</string>
+        <key>PYTHONUNBUFFERED</key>
+        <string>1</string>
+        <key>AGENT_ADDA_EMAIL_PROVIDER</key>
+        <string>gmail</string>
+    </dict>
+
+</dict>
+</plist>

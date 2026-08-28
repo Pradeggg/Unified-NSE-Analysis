@@ -4,8 +4,8 @@ import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from company_index_command import parse_company_index_args, run_company_index
-from company_intelligence_db import init_company_intelligence_db
+from company_intelligence.company_index_command import parse_company_index_args, run_company_index
+from company_intelligence.company_intelligence_db import init_company_intelligence_db
 
 
 class CompanyIndexCommandTests(unittest.TestCase):

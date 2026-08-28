@@ -1,0 +1,24 @@
+Agent Adda
+      Fri, 28 Aug 2026 · 15:42 IST
+
+        Report · fund_dashboard.html · mode: attachment
+
+    Fund Dashboard — Aug 2026
+
+    Sent: Fri, 28 Aug 2026 · 15:42 IST
+
+    Attachment: fund_dashboard.html
+
+    Detailed description: Refreshed Agent Adda Aug 2026 Fund Dashboard as of 28 Aug 2026 15:40 IST. Portfolio now has 20 open positions: 11 Small-Cap and 9 Mid-Cap. Small-Cap P&L is +₹63,282 (+21.6%) and Mid-Cap P&L is +₹89,799 (+49.2%). The dashboard includes current prices, individual position details, Fund Rules Status, RS Leaders, Today's Price Movement, six realized exits, candidate queues, alerts, stop-loss monitoring, and the tightened risk policy: Small-Cap stop −7%, Mid-Cap stop −6%, trail at +20%, book 25% at +30% and another 25% at +40%. Current alert summary: 1 critical, 5 warnings, 4 positive. Live prices were fetched for all 20 active symbols and 53 news articles were processed; 17 of 20 stocks received AI news summaries. Please treat this as AI-assisted research and education, not personalised investment advice or a recommendation. Agent Adda is not a SEBI-registered Investment Adviser, Research Analyst, broker or portfolio manager. Verify material figures independently and consult a SEBI-registered professional for personalised advice.
+
+    Composer note: no LLM backend
+
+      Research-only market intelligence; not investment advice.
+
+  Regards,
+
+  Agent Adda
+
+  ShunyaAI · NSE Market Intelligence
+
+Not investment advice. For research and learning only. NSE EOD + live snapshot data.

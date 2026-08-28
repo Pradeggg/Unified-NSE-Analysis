@@ -1,0 +1,13 @@
+Type,Bundle / Add-on,Suggested Tier / Price,Included Items / Usage,Primary Value,Cost Risk,Control Required
+Bundle,Market Pulse Pack,Plus,"Daily EOD Market Report; Weekend Market Report; Sector Rotation; FII/DII Flow Dashboard",Daily/weekly market planning,Medium,Batch generation and email limits
+Bundle,Idea Discovery Pack,Plus,"Stage 2 Tracker; Top Picks; Peer Battle; Watchlist Change Report",Shortlist creation and follow-up research,Medium,Research-only framing and quota
+Bundle,Portfolio Risk Pack,Pro,"Portfolio Assessment; Must-Sell Review; Add/Trim Review; Concentration Risk",Personalized risk control,Medium,Portfolio refresh and deep-review quota
+Bundle,Earnings Pack,Pro,"Results Review; Concall Summary; Broker Overlay; Open Questions",Event-driven research workflow,Medium/High,Document page and event quotas
+Bundle,Trader Alert Pack,Pro/Power,"Intraday Alerts; F&O/Option Watch; VWAP/ORB Alerts; Breakout Monitor",High-engagement monitoring,High,Frequency caps and disclaimers
+Bundle,Research Desk Pack,Power,"Deep Stock Research; Custom HTML Exports; Evidence QA; Bulk Reports",Team-grade research desk,High,Bulk quota and premium model routing
+Add-on,Extra Deep Research Pack,₹199,"10 additional deep reports",Monetizes high-cost synthesis,High,Hard report count cap
+Add-on,Portfolio History Pack,₹199/month,"Historical portfolio snapshots and change tracking",Retention and longitudinal insights,Medium,Storage and refresh caps
+Add-on,Intraday Alert Pack,₹299/month,"Higher-frequency alerts and email delivery",Trading-day engagement,High,Polling and email caps
+Add-on,Voice Briefing Pack,₹149/month,"Daily audio briefings",Premium convenience,Medium/High,Minutes/characters cap
+Add-on,Team Share/Export Pack,₹499/month,"Branded exports and shared report links",Professional sharing,Medium,Export/share-link quota
+Add-on,Custom Research Pack,₹999+,"Bespoke watchlists and report packs",High-value custom workflow,High,Manual approval or capped automation

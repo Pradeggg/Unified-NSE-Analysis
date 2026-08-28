@@ -1,0 +1,60 @@
+Agent Adda
+      Thu, 27 Aug 2026 · 12:01 IST
+
+        Report · midday_market.html · mode: both
+
+Risk-off session at 12:00 IST: breadth weak, Bank Nifty lagging; reassess leadership over the next 60–90 minutes.
+
+Agent Adda Midday Market — 27 Aug 2026
+
+Cover note: Attached is the Midday Market report for 27 Aug 2026 (midday_market.html). Below is a concise, research-only summary to support second-half decision-making. Educational market intelligence — not investment advice.
+
+As of 12:00 IST. MIXED global backdrop. Research-only.
+
+Key takeaways
+
+  Risk tone: NIFTY 50 24,162 (-0.19%), Bank Nifty 57,750 (-0.06%), Smallcap 250 18,463 (+0.04%); India VIX 11.07 (+4.75%) — volatility rising.
+
+  Leadership narrow: Strength in Consumer Durables, India Defence, Pharma, Healthcare; weaker pockets include Capital Markets, Waves, Cement, Dividend Opportunities 50, Media, IT, Metal.
+
+  Movers (12:00): WELCORP +3.53%, DELHIVERY +3.37%, ADANIENSOL +2.62%, SONACOMS +1.91%; laggards ALOKINDS -4.88%, AFFLE -2.34%, HINDZINC -1.82%, BSOFT -1.72%.
+
+  F&O context (neutral): NIFTY PCR OI 0.56 (max pain 24,200); BANKNIFTY PCR 1.12 (max pain 57,800). Stock OI signals skew BEAR across several names — context layer only.
+
+  Global/FX/commodities: US -0.05%, Asia -0.30%; Gold +1.35%, Crude -1.05%, Copper +1.58%; USDINR +2.09%, DXY -0.02%.
+
+What to watch (next 60–90 minutes)
+
+  Confirmation of breadth across NIFTY, Bank Nifty, and broader indices; avoid reading strength as durable without follow-through.
+
+  NIFTY holding the key intraday range and avoiding a failed second-half breakout.
+
+  Bank Nifty closing the lag or Financial Services absorbing weakness.
+
+  Small/microcap firmness versus the path of VIX.
+
+  Sector follow-through: Consumer Durables, PSU banks, Pharma, Defence, Auto if weakness persists; watch Capital Markets, IT, Metals, Realty for rotation or reversal.
+
+  Crude, USDINR, DXY, and FII/DII flow confirmation.
+
+How to use this
+
+  Treat as a market map: index direction, breadth, sectors, movers, momentum, F&O, and global cues.
+
+  Refine watchlists using momentum names (e.g., INDSWFTLAB, AVADHSUGAR, KABRAEXTRU, RBA, STYLEBAAZA) as watchlist inputs, not a trade list.
+
+  Seek price above opening range, improving breadth, and volume confirmation before acting; manage position size and support distances.
+
+  Avoid chasing leaders with RSI > 80 or large one-day gaps.
+
+  Treat F&O as neutral unless price, PCR, OI buildup, and VWAP/intraday-range align.
+
+  Important: This email provides educational market intelligence and research-only context. It is not investment advice, not a recommendation or solicitation. Markets involve risk, including capital loss. Verify independently and consider consulting a SEBI-registered adviser.
+
+  Regards,
+
+  Agent Adda
+
+  ShunyaAI · NSE Market Intelligence
+
+Not investment advice. For research and learning only. NSE EOD + live snapshot data.

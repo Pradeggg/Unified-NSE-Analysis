@@ -1,0 +1,86 @@
+{
+  "symbol": "LEGACY_TATA_COFFEE",
+  "portfolio": {
+    "symbol": "LEGACY_TATA_COFFEE",
+    "inputs": "TATCO",
+    "company_name": "TATA COFFEE LTD",
+    "isin": "INE493A01027",
+    "qty": "25",
+    "avg_cost": "326.70",
+    "broker_price": "344.80",
+    "cost_value": "8167.50",
+    "market_value": "8620.00",
+    "realized_pnl": "0.00",
+    "unrealized_pnl": "452.50",
+    "unrealized_pct": "5.54",
+    "mapping_status": "LEGACY_OR_UNMAPPED"
+  },
+  "collected_at": "2026-08-18T08:56:21",
+  "source_trail": [
+    "get_symbol_snapshot",
+    "get_technical_setup",
+    "scrape_screener_in",
+    "explain_intraday_setup"
+  ],
+  "errors": [],
+  "snapshot": {
+    "symbol": "LEGACY_TATA_COFFEE",
+    "data_source": "PostgreSQL scores.stage_snapshots",
+    "error": "LEGACY_TATA_COFFEE not found in DB snapshot",
+    "missing_evidence": [
+      "stage_snapshot"
+    ],
+    "evidence_coverage": "missing",
+    "snapshot_date": "2026-08-17"
+  },
+  "technical": {
+    "symbol": "LEGACY_TATA_COFFEE",
+    "error": "No price history available; on-demand fetch returned no usable EOD bars",
+    "missing_evidence": [
+      "price_history"
+    ],
+    "data_source": "missing"
+  },
+  "fundamentals": {
+    "symbol": "LEGACY_TATA_COFFEE",
+    "error": "404 Client Error: Not Found for url: https://www.screener.in/company/LEGACY_TATA_COFFEE/",
+    "source_url": "https://www.screener.in/company/LEGACY_TATA_COFFEE/"
+  },
+  "cached_financials": {
+    "symbol": "LEGACY_TATA_COFFEE",
+    "data_source": "PostgreSQL financial statement cache",
+    "pg_sources": [
+      "scores.quarterly_results",
+      "scores.annual_results",
+      "scores.balance_sheet",
+      "scores.cash_flow"
+    ],
+    "quarterly": [],
+    "annual": [],
+    "balance_sheet": [],
+    "cash_flow": [],
+    "section_counts": {
+      "quarterly": 0,
+      "annual": 0,
+      "balance_sheet": 0,
+      "cash_flow": 0
+    },
+    "error": "No cached PostgreSQL financial statement rows found for LEGACY_TATA_COFFEE",
+    "missing_evidence": [
+      "cached_financials"
+    ]
+  },
+  "trade_setup": {
+    "symbol": "LEGACY_TATA_COFFEE",
+    "timeframe": "15m",
+    "data_mode": "intraday",
+    "source": "PostgreSQL intraday.ohlcv_bars",
+    "error": "No PostgreSQL intraday.ohlcv_bars for LEGACY_TATA_COFFEE at 15m; No yfinance candles available to seed PostgreSQL intraday.ohlcv_bars"
+  },
+  "verdict": "Cautious / Review",
+  "chart_history": {
+    "symbol": "LEGACY_TATA_COFFEE",
+    "error": "no EOD price history available",
+    "bars": []
+  }
+}

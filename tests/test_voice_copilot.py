@@ -3,7 +3,7 @@ import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from voice_copilot import run_voice_query
+from voice.voice_copilot import run_voice_query
 
 
 class VoiceCopilotTests(unittest.TestCase):

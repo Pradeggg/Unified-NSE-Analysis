@@ -1,0 +1,56 @@
+Agent Adda
+      Fri, 28 Aug 2026 · 10:31 IST
+
+        Report · morning_market.html · mode: both
+
+  Market read (10:30 IST): Selective risk‑on — broader market leading, VIX easing; Bank Nifty yet to confirm.
+
+  Agent Adda Morning Market — 28 Aug 2026
+
+  Attached: morning_market.html. This cover note provides a concise, evidence-led summary from today’s NSE opening dashboard. Educational research only; not investment advice.
+
+  Key takeaways
+
+    Indices and volatility: NIFTY 50 24,169 (+0.33%); Midcap 100 +0.22%, Smallcap 100 +0.29%, Smallcap 250 +0.43%, Microcap 250 +0.40%. India VIX 10.8 (-2.39%) — breadth supportive, volatility easing.
+
+    Banks/financials: NIFTY BANK 57,517 (+0.01%) and Financial Services +0.05% are flat/lagging; confirmation needed in the first 15–30 minutes.
+
+    Sector leadership: IT +3.11%; Digital and Growth sectors firm. Weaker pockets include Cement (-0.77%), Defence (-0.65%), Tourism (-0.56%), FMCG (-0.16%).
+
+    Top movers (10:30 IST): SAGILITY +4.13% (top gainer); WHIRLPOOL -3.16% (top loser). Other notable: EXIDEIND +3.39%, SCI +3.18%; HINDCOPPER -0.57%.
+
+    F&O and global: NIFTY PCR 0.91 (neutral; max pain 24,200); BANKNIFTY PCR 1.10 (constructive) — price/VWAP confirmation needed. US +1.15%, Asia +0.56%; Copper +1.59%, Crude -0.32%; USDINR +0.13%, DXY +0.02%.
+
+  What to watch
+
+    NIFTY holding above the opening range high after 15–30 minutes.
+
+    Bank Nifty follow-through or absorption by financial services.
+
+    Small/microcap strength persisting without a rise in VIX.
+
+    Intraday trends in crude, USDINR, DXY, and FII/DII flow confirmation.
+
+    Sector tape: capital markets, IT, metals, realty; monitor consumer durables, PSU banks, pharma, defence, and auto if weakness persists.
+
+  How to use this
+
+    Use as an opening framework to update watchlists and risk exposure.
+
+    Avoid chasing leaders with RSI > 80 or large one-day gap-ups.
+
+    Treat F&O as neutral until price, PCR/OI buildup, and VWAP/opening-range align.
+
+    Prefer sectors showing both index strength and stock-level breadth.
+
+    Be expiry-aware: NIFTY weekly expiry 1 Sep 2026; Bank Nifty 29 Sep 2026 — recheck OI/PCR after the first 30–60 minutes.
+
+  This email is for education and general market research only and is not investment advice, a recommendation, or a solicitation. Levels and readings reflect the attached report’s evidence as of 10:30 IST on 28 Aug 2026. Markets carry risk, including capital loss. Verify independently and consult a SEBI-registered investment adviser or qualified professional before acting.
+
+  Regards,
+
+  Agent Adda
+
+  ShunyaAI · NSE Market Intelligence
+
+Not investment advice. For research and learning only. NSE EOD + live snapshot data.

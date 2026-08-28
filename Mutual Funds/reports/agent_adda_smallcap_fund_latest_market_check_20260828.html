@@ -1,0 +1,313 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Agent Adda Smallcap Portfolio - Latest Market Check</title>
+  <style>
+    :root {
+      --ink:#17222b; --muted:#63717c; --line:#dbe3e8; --paper:#fff; --soft:#f5f8fa;
+      --green:#0e6b52; --amber:#9a6a00; --red:#9a332b; --blue:#1f5d8f;
+    }
+    * { box-sizing:border-box; }
+    body { margin:0; background:#fbfcfd; color:var(--ink); font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif; }
+    header, main, footer { padding:24px 32px; }
+    header, footer { background:var(--paper); border-bottom:1px solid var(--line); }
+    footer { border-top:1px solid var(--line); border-bottom:0; color:var(--muted); }
+    h1 { margin:0 0 6px; font-size:28px; letter-spacing:0; }
+    h2 { margin:26px 0 12px; font-size:20px; letter-spacing:0; }
+    h3 { margin:0 0 7px; font-size:16px; letter-spacing:0; }
+    p { margin:0 0 10px; }
+    a { color:var(--blue); text-decoration:none; }
+    a:hover { text-decoration:underline; }
+    .meta, .summary, .index-grid, .notes { display:grid; gap:10px; }
+    .meta { display:flex; flex-wrap:wrap; margin-top:12px; color:var(--muted); }
+    .pill { border:1px solid var(--line); border-radius:8px; padding:7px 9px; background:var(--soft); }
+    .summary { grid-template-columns:repeat(6,minmax(130px,1fr)); }
+    .index-grid { grid-template-columns:repeat(3,minmax(150px,1fr)); }
+    .notes { grid-template-columns:repeat(3,minmax(0,1fr)); }
+    .metric, .note-card, .decision { background:var(--paper); border:1px solid var(--line); border-radius:8px; padding:12px; }
+    .metric span, td span, small { display:block; color:var(--muted); }
+    .metric b { display:block; margin-top:3px; font-size:21px; }
+    .decision { border-left:5px solid var(--green); background:#eef7f2; margin:14px 0; }
+    .warning { border-left:5px solid var(--amber); background:#fff8e8; }
+    .table-wrap { overflow:auto; border:1px solid var(--line); border-radius:8px; background:var(--paper); }
+    table { width:100%; min-width:1500px; border-collapse:collapse; }
+    th, td { border-bottom:1px solid var(--line); padding:9px 8px; text-align:left; vertical-align:top; }
+    th { background:#eef3f5; color:#31434f; font-size:12px; }
+    .ok { color:var(--green); font-weight:700; }
+    .watch { color:var(--amber); font-weight:700; }
+    .bad { color:var(--red); font-weight:700; }
+    .wait { color:#52606a; font-weight:700; }
+    @media (max-width:1100px) {
+      .summary, .index-grid, .notes { grid-template-columns:repeat(2,minmax(0,1fr)); }
+    }
+    @media (max-width:720px) {
+      header, main, footer { padding:16px; }
+      h1 { font-size:23px; }
+      .summary, .index-grid, .notes { grid-template-columns:1fr; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Agent Adda Smallcap Portfolio - Latest Market Check</h1>
+    <p>Portfolio state, shadow trigger-map P&L, trigger status, and market context for the Phase 1 smallcap paper-portfolio candidates.</p>
+    <div class="meta">
+      <span class="pill">Generated: 2026-08-28 22:34 IST</span>
+      <span class="pill">Input: Mutual Funds/extracted/agent_adda_smallcap_phase1_evidence_packs_20260806.csv</span>
+      <span class="pill">Quote source: yfinance via Agent Adda live quote</span>
+      <span class="pill">Research only</span>
+    </div>
+  </header>
+  <main>
+    <section class="summary">
+      
+      <div class="metric">
+        <span>Actual portfolio NAV</span>
+        <b>Rs. 500,000</b>
+        <small>no portfolio-specific paper orders</small>
+      </div>
+    
+      
+      <div class="metric">
+        <span>Actual portfolio P&amp;L</span>
+        <b>Rs. 0</b>
+        <small>watchlist only</small>
+      </div>
+    
+      
+      <div class="metric">
+        <span>Clean shadow P&amp;L</span>
+        <b>Rs. 245</b>
+        <small>0.39% on model exposure</small>
+      </div>
+    
+      
+      <div class="metric">
+        <span>Retest shadow P&amp;L</span>
+        <b>Rs. 49</b>
+        <small>0.17% on model exposure</small>
+      </div>
+    
+      
+      <div class="metric">
+        <span>All shadow P&amp;L</span>
+        <b>Rs. 294</b>
+        <small>0.06% of NAV</small>
+      </div>
+    
+      
+      <div class="metric">
+        <span>Active triggers</span>
+        <b>0</b>
+        <small>deterministic trigger count</small>
+      </div>
+    
+    </section>
+
+    <section class="decision">
+      <h2>Decision</h2>
+      <p><b>Portfolio status: WAIT / no paper order.</b> The official smallcap paper portfolio still has zero exposure, zero open risk, and zero P&L because the evidence packs created a trigger map, not executed trades.</p>
+      <p>The clean watchlist is slightly negative on a shadow mark-to-market basis, while the retest reserve is positive. That is useful information, but it does not override the no-chase and governance gates.</p>
+    </section>
+
+    <section class="decision warning">
+      <h2>Market Read</h2>
+      <p>Smallcaps remain near leadership territory, but the Aug 7 tape is not a clean risk-on confirmation: benchmarks opened weak, oil/geopolitical risk is active, and the local Aug 6 EOD smallcap indexes were already close to 52-week highs. This supports watchlist discipline rather than forced deployment.</p>
+    </section>
+
+    <h2>Index Context</h2>
+    <section class="index-grid">
+      <div class="metric">
+        <span>Nifty 50</span>
+        <b>24,175.65</b>
+        <small>0.35% / 2026-08-28</small>
+      </div>
+    
+
+      <div class="metric">
+        <span>Nifty Bank</span>
+        <b>57,496.30</b>
+        <small>-0.02% / 2026-08-28</small>
+      </div>
+    
+
+      <div class="metric">
+        <span>Nifty Smallcap 100</span>
+        <b>20,080.00</b>
+        <small>NA / 2026-08-28</small>
+      </div>
+    
+
+      <div class="metric">
+        <span>NIFTY 50 EOD</span>
+        <b>24,175.65</b>
+        <small>0.35% / 2026-08-28</small>
+      </div>
+    
+
+      <div class="metric">
+        <span>NIFTY BANK EOD</span>
+        <b>57,496.30</b>
+        <small>-0.02% / 2026-08-28</small>
+      </div>
+    
+
+      <div class="metric">
+        <span>NIFTY 500 EOD</span>
+        <b>23,528.55</b>
+        <small>0.20% / 2026-08-28</small>
+      </div>
+    
+
+      <div class="metric">
+        <span>NIFTY SMALLCAP 250 EOD</span>
+        <b>18,496.15</b>
+        <small>0.34% / 2026-08-28</small>
+      </div>
+    
+
+      <div class="metric">
+        <span>NIFTY SMALLCAP 100 EOD</span>
+        <b>20,080.00</b>
+        <small>0.20% / 2026-08-28</small>
+      </div>
+    
+
+      <div class="metric">
+        <span>NIFTY MIDCAP 100 EOD</span>
+        <b>64,069.50</b>
+        <small>0.05% / 2026-08-28</small>
+      </div>
+    </section>
+
+    <h2>External Market Notes</h2>
+    <section class="notes">
+            <article class="note-card">
+              <h3>Economic Times</h3>
+              <p>Indian market opened lower as oil rose on Strait of Hormuz concerns; Nifty 50 traded near 24,600, broader Midcap 100 and Smallcap 100 were marginally red, while NSE breadth was slightly positive at 1,297 advances versus 1,042 declines.</p>
+              <a href="https://economictimes.indiatimes.com/markets/stocks/news/sensex-drops-over-200-points-nifty-tests-23600-as-strait-of-hormuz-tensions-rattle-oil-markets/articleshow/133020628.cms">2026-08-07 09:40 IST</a>
+            </article>
+            
+
+            <article class="note-card">
+              <h3>Investing.com UK</h3>
+              <p>Nifty Smallcap 250 was quoted around 18,360, with an intraday range shown near 18,301.70-18,404.45 and 52-week range near 14,143.45-18,407.40.</p>
+              <a href="https://uk.investing.com/indices/nifty-smallcap-250">2026-08-07 crawl</a>
+            </article>
+            
+
+            <article class="note-card">
+              <h3>Economic Times</h3>
+              <p>Smallcap leadership had already strengthened earlier in the week, with Nifty Smallcap 250 near a fresh 52-week high and earnings/valuation reset cited as support.</p>
+              <a href="https://economictimes.indiatimes.com/markets/stocks/news/nifty-smallcap-250-hits-52-week-high-as-ola-electric-other-stocks-rally-up-to-7-what-lies-ahead/articleshow/132903983.cms">2026-08-05 13:21 IST</a>
+            </article>
+            </section>
+
+    <h2>Candidate Trigger And Shadow P&L</h2>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Stock</th><th>Bucket / Theme</th><th>Latest</th><th>Reference</th><th>Day H/L</th><th>Breakout</th><th>Retest</th><th>Stop</th><th>Model Slot</th><th>Trigger State</th><th>Shadow P&L</th>
+          </tr>
+        </thead>
+        <tbody>
+      <tr>
+        <td><b>SYRMA</b><span>Syrma SGS Technology Ltd</span></td>
+        <td>Clean trigger map<span>India EMS and manufacturing scale-up</span></td>
+        <td>1,474.30<span>-1.45% today</span></td>
+        <td>1,439.30<span>2.43% vs reference</span></td>
+        <td>1,505.00 / 1,470.00<span>28-Aug-2026 22:34:45</span></td>
+        <td>1,558.43<span>5.71% away</span></td>
+        <td>1,426.62<span>3.34% above</span></td>
+        <td>1,295.37<span>13.81% cushion</span></td>
+        <td>Rs. 19,166<span>qty 13</span></td>
+        <td class="wait">NO_TRIGGER_WAIT<span>No mapped breakout/retest trigger has confirmed.</span></td>
+        <td>Rs. 455<span>0.09% NAV</span></td>
+      </tr>
+    
+
+      <tr>
+        <td><b>KARURVYSYA</b><span>Karur Vysya Bank Limited</span></td>
+        <td>Clean trigger map<span>Private-bank credit cycle and regional lending franchise</span></td>
+        <td>346.00<span>0.00% today</span></td>
+        <td>335.50<span>3.13% vs reference</span></td>
+        <td>350.85 / 344.45<span>28-Aug-2026 22:34:47</span></td>
+        <td>355.32<span>2.69% away</span></td>
+        <td>337.08<span>2.65% above</span></td>
+        <td>313.74<span>10.28% cushion</span></td>
+        <td>Rs. 15,224<span>qty 44</span></td>
+        <td class="watch">NEAR_BREAKOUT<span>Within 3% of breakout; prepare trigger but no order yet.</span></td>
+        <td>Rs. 462<span>0.09% NAV</span></td>
+      </tr>
+    
+
+      <tr>
+        <td><b>AEGISVOPAK</b><span>Aegis Vopak Terminals Limited</span></td>
+        <td>Clean trigger map<span>Energy storage, terminals, and logistics infrastructure</span></td>
+        <td>269.90<span>2.43% today</span></td>
+        <td>276.30<span>-2.32% vs reference</span></td>
+        <td>272.45 / 262.00<span>28-Aug-2026 22:34:48</span></td>
+        <td>314.60<span>16.56% away</span></td>
+        <td>282.91<span>-4.60% above</span></td>
+        <td>248.67<span>8.54% cushion</span></td>
+        <td>Rs. 14,575<span>qty 54</span></td>
+        <td class="bad">RETEST_UNDER_PRESSURE<span>Retest zone was lost intraday; no order.</span></td>
+        <td>Rs. -346<span>-0.07% NAV</span></td>
+      </tr>
+    
+
+      <tr>
+        <td><b>VMART</b><span>V-Mart Retail Ltd.</span></td>
+        <td>Clean trigger map<span>Value retail and discretionary consumption recovery</span></td>
+        <td>819.65<span>-1.96% today</span></td>
+        <td>838.85<span>-2.29% vs reference</span></td>
+        <td>841.00 / 805.20<span>28-Aug-2026 22:34:49</span></td>
+        <td>896.88<span>9.42% away</span></td>
+        <td>789.86<span>3.77% above</span></td>
+        <td>769.72<span>6.49% cushion</span></td>
+        <td>Rs. 13,934<span>qty 17</span></td>
+        <td class="wait">NO_TRIGGER_WAIT<span>No mapped breakout/retest trigger has confirmed.</span></td>
+        <td>Rs. -326<span>-0.07% NAV</span></td>
+      </tr>
+    
+
+      <tr>
+        <td><b>SONACOMS</b><span>Sona BLW Precision Forgings Limited</span></td>
+        <td>Retest trigger map<span>EV and premium auto-component content</span></td>
+        <td>815.00<span>-0.49% today</span></td>
+        <td>817.60<span>-0.32% vs reference</span></td>
+        <td>824.60 / 803.05<span>28-Aug-2026 22:34:50</span></td>
+        <td>852.44<span>4.59% away</span></td>
+        <td>789.26<span>3.26% above</span></td>
+        <td>735.84<span>10.76% cushion</span></td>
+        <td>Rs. 14,670<span>qty 18</span></td>
+        <td class="wait">NO_TRIGGER_WAIT<span>No mapped breakout/retest trigger has confirmed.</span></td>
+        <td>Rs. -47<span>-0.01% NAV</span></td>
+      </tr>
+    
+
+      <tr>
+        <td><b>RAINBOW</b><span>Rainbow Childrens Medicare Limited</span></td>
+        <td>Retest trigger map<span>Specialty healthcare services and hospital capacity</span></td>
+        <td>1,442.80<span>0.12% today</span></td>
+        <td>1,433.20<span>0.67% vs reference</span></td>
+        <td>1,457.80 / 1,430.60<span>28-Aug-2026 22:34:51</span></td>
+        <td>1,662.16<span>15.20% away</span></td>
+        <td>1,503.70<span>-4.05% above</span></td>
+        <td>1,289.88<span>11.86% cushion</span></td>
+        <td>Rs. 14,428<span>qty 10</span></td>
+        <td class="bad">RETEST_UNDER_PRESSURE<span>Retest zone was lost intraday; no order.</span></td>
+        <td>Rs. 96<span>0.02% NAV</span></td>
+      </tr>
+    </tbody>
+      </table>
+    </div>
+  </main>
+  <footer>
+    Actual portfolio P&L is zero because no portfolio-specific paper order has been created. Shadow P&L assumes the model quantities from the 2026-08-06 evidence pack were hypothetically entered at their reference prices; it is diagnostic only, not a trade record.
+  </footer>
+</body>
+</html>

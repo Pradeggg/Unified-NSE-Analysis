@@ -237,7 +237,7 @@ def apply_cycle_to_candidates(candidates: pd.DataFrame, cycle_info: dict[str, An
     out["INVESTMENT_SCORE"] = (
         pd.to_numeric(out["INVESTMENT_SCORE_BASE"], errors="coerce").fillna(0)
         + pd.to_numeric(out["CYCLE_ADJUSTMENT"], errors="coerce").fillna(0)
-    ).round(2)
+    ).clip(upper=100).round(2)
     sort_cols = [c for c in ["INVESTMENT_SCORE", "TECHNICAL_SCORE", "RELATIVE_STRENGTH"] if c in out.columns]
     if sort_cols:
         out = out.sort_values(sort_cols, ascending=False).reset_index(drop=True)

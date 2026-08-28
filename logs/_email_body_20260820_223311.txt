@@ -1,0 +1,35 @@
+Agent Adda
+      Thu, 20 Aug 2026 · 22:33 IST
+
+        Report · stage2_tracker.html · mode: both
+
+NSE Sector Rotation — Stage 2 Tracker (20 Aug 2026)
+Attached: stage2_tracker.html (full report and screens)
+Market read: Stage 2 breadth rose to 364 (+8 DoD); upgrades (23) outpaced downgrades (15) while distribution at the tail increased (28 S3→S4); many leaders look extended on RSI.
+Key takeaways
+  Stage 2 cohort: 364 vs 356 prior day (net +8). On a week lookback (vs 13 Aug), Stage 2 remains materially higher after last week’s broad rotation.
+  Upgrade/downgrade balance: S1→S2 (6) and S3→S2 (17) totaled 23 upgrades vs 15 S2→S3 downgrades; breadth improved modestly day-over-day.
+  Distribution at the tail: S3→S4 downgrades at 28 indicate ongoing pressure among laggards despite improving leaders.
+  Momentum is hot: Several leaders show elevated RSI (e.g., HAPPYFORGE ~96, WELCORP ~94, TFCILTD ~92, IRIS CLOTHINGS ~91, AVADH SUG & ENERGY ~91), aligning with frequent NO CHASE/WATCH flags.
+  Fund-ready Stage 2 (fundamental gate ≥65): Examples include NAM-INDIA (RSI ~64, Tech ~93; ADD), MONARCH (RSI ~51; ADD), LLOYDSME (RSI ~31; ACCUMULATE), VADILAL INDUSTRIES (RSI ~55; ADD), LAURUSLABS (RSI ~52; ADD), OFSS (RSI ~66; ADD).
+  Leadership mix: Strength spans Pharma & Healthcare, Capital Goods/Industrials, FMCG, Chemicals, and Auto Components; micro/small caps remain prominent in the advance.
+What to watch
+  Breadth durability: Can Stage 2 hold above ~350 with upgrades (S1→S2, S3→S2) continuing to outpace S2→S3?
+  Overbought unwind risk: Elevated-RSI names (e.g., HAPPYFORGE, WELCORP, TFCILTD, IRIS CLOTHINGS, AVADH SUG & ENERGY) may need cooling off; look for lower-risk entries.
+  Quality filter: Prioritize candidates with full fundamental coverage and ADD/ACCUMULATE actions; treat RESEARCH REQUIRED names (e.g., MOREPEN LAB, IRIS CLOTHINGS) with caution pending evidence.
+  Micro/small-cap leadership: Monitor liquidity and gap risk; reversals can be abrupt if sentiment turns.
+Action items
+  Use the attachment: Open stage2_tracker.html. Filter for Stage 2 = true, Fund Action = ADD/ACCUMULATE, RSI 45–70, Tech Score ≥90 or RS ≥98.
+  Build the focus list: Start with NAM-INDIA, MONARCH, LAURUSLABS, RATEGAIN, OFSS, NAVINFLUOR; validate setups against 21–50 DMA and prior base highs.
+  Execution discipline: Avoid chasing NO CHASE names; wait for pullbacks or tight consolidations with RS intact.
+  Risk controls: Size positions to volatility; use stop-loss levels near the 50-DMA or recent base lows.
+  Daily review: Track S1→S2 + S3→S2 vs S2→S3 and watch if S3→S4 stays >20/day as an early caution signal.
+For internal use. This summary reflects the attached report data as of 20 Aug 2026 EOD.
+
+  Regards,
+
+  Agent Adda
+
+  ShunyaAI · NSE Market Intelligence
+
+Not investment advice. For research and learning only. NSE EOD + live snapshot data.

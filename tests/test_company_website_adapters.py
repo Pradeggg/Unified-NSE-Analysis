@@ -1,7 +1,7 @@
 import json
 import unittest
 
-from company_website_adapters import DmartInvestorAdapter, get_company_site_adapter
+from company_intelligence.company_website_adapters import DmartInvestorAdapter, get_company_site_adapter
 
 
 class CompanyWebsiteAdaptersTests(unittest.TestCase):

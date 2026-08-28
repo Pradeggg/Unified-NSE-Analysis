@@ -1,0 +1,236 @@
+{
+  "company": {
+    "name": "Thyrocare Technologies Limited",
+    "symbol": "THYROCARE",
+    "exchange": "NSE",
+    "currency": "INR",
+    "unit": "crore",
+    "scope": "consolidated",
+    "as_of_date": "2026-08-20",
+    "price": 579.25,
+    "market_cap": 9222.0,
+    "shares_crore": 15.92
+  },
+  "annuals": [
+    {
+      "period": "FY2023",
+      "revenue": 527,
+      "operating_profit": 123,
+      "pat": 64,
+      "eps": 4.06,
+      "cfo": 129,
+      "capex": 41,
+      "equity": 534,
+      "borrowings": 23,
+      "cash": null,
+      "roce_pct": null,
+      "roe_pct": null
+    },
+    {
+      "period": "FY2024",
+      "revenue": 572,
+      "operating_profit": 140,
+      "pat": 69,
+      "eps": 4.45,
+      "cfo": 168,
+      "capex": 61,
+      "equity": 527,
+      "borrowings": 42,
+      "cash": null,
+      "roce_pct": null,
+      "roe_pct": null
+    },
+    {
+      "period": "FY2025",
+      "revenue": 687.35,
+      "operating_profit": 190,
+      "pat": 90.75,
+      "eps": 5.70,
+      "cfo": 179.91,
+      "capex": 33.48,
+      "equity": 547,
+      "borrowings": 25,
+      "cash": null,
+      "roce_pct": 27.46,
+      "roe_pct": 18.23
+    },
+    {
+      "period": "FY2026",
+      "revenue": 829.04,
+      "operating_profit": 262.04,
+      "pat": 162.85,
+      "eps": 10.27,
+      "cfo": 213.24,
+      "capex": 20.88,
+      "equity": 585,
+      "borrowings": 51,
+      "cash": null,
+      "roce_pct": 34.91,
+      "roe_pct": 28.4
+    }
+  ],
+  "latest_quarter": {
+    "period": "Q1 FY2027",
+    "comparison_period": "Q1 FY2026",
+    "revenue": 240.02,
+    "comparison_revenue": 193.03,
+    "operating_profit": 77.27,
+    "comparison_operating_profit": 57.77,
+    "pat": 51.33,
+    "comparison_pat": 38.29,
+    "eps": 3.23,
+    "exceptional_after_tax": 0
+  },
+  "valuation_scenarios": [
+    {
+      "name": "Bear: growth normalizes and multiple compresses",
+      "forward_eps": 11.5,
+      "pe": 35
+    },
+    {
+      "name": "Base: mid-to-high-teens growth with stable margins",
+      "forward_eps": 13.5,
+      "pe": 45
+    },
+    {
+      "name": "Bull: Q1 momentum sustains with operating leverage",
+      "forward_eps": 15.0,
+      "pe": 55
+    }
+  ],
+  "sources": [
+    {
+      "title": "Thyrocare Annual Report FY2025-26",
+      "url": "https://investor.thyrocare.com/wp-content/uploads/2026/06/Annual-Report_25-26.pdf",
+      "date": "2026-06-08",
+      "tier": 1,
+      "supports": ["annuals", "cash_flow", "segments", "governance", "contingent_liabilities"]
+    },
+    {
+      "title": "Thyrocare Q1 FY2027 investor presentation",
+      "url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=e9387855-c527-4ea7-b1f3-8dc8270dd778.pdf",
+      "date": "2026-07-24",
+      "tier": 1,
+      "supports": ["latest_quarter", "operating_metrics", "segments"]
+    },
+    {
+      "title": "Thyrocare Q1 FY2027 earnings-call transcript",
+      "url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=c3d826e4-58a3-4476-b5f0-b486f3ada8fc.pdf",
+      "date": "2026-07-29",
+      "tier": 1,
+      "supports": ["management_commentary", "growth_guidance", "radiology_review"]
+    },
+    {
+      "title": "API Holdings NCD repayment and release of pledge over Thyrocare shares",
+      "url": "https://www.bseindia.com/stockinfo/AnnPdfOpen.aspx?Pname=b285d564-ff77-4a0e-b0ce-ad51f450b340.pdf",
+      "date": "2026-08-19",
+      "tier": 1,
+      "supports": ["promoter_pledge", "governance"]
+    },
+    {
+      "title": "Thyrocare consolidated financial history and ratios",
+      "url": "https://www.screener.in/company/THYROCARE/consolidated/",
+      "date": "2026-08-20",
+      "tier": 2,
+      "supports": ["annuals", "ratios", "shareholding", "market_cap"]
+    },
+    {
+      "title": "NSE Thyrocare quote page",
+      "url": "https://www.nseindia.com/get-quotes/equity?symbol=THYROCARE",
+      "date": "2026-08-20",
+      "tier": 1,
+      "supports": ["price"]
+    },
+    {
+      "title": "Thyrocare business and laboratory network",
+      "url": "https://investor.thyrocare.com/details-of-business/",
+      "date": "2026-08-20",
+      "tier": 1,
+      "supports": ["business_model", "moat"]
+    }
+  ],
+  "qualitative": {
+    "verdict": {
+      "business_quality": "High-quality, asset-efficient national diagnostics platform with a scalable B2B franchise and partnership model.",
+      "financial_quality": "Strong margins, returns and cash conversion; balance-sheet leverage is modest, although dividend payout has historically absorbed much of earnings.",
+      "growth_durability": "Pathology growth is broad-based, but Q1 FY2027 is above management's retained mid-to-high-teens guidance and should not be extrapolated mechanically.",
+      "valuation_comfort": "Current valuation embeds substantial execution success; the base scenario offers limited upside and the bear case shows meaningful multiple-compression risk.",
+      "stance": "Research watch / conditional starter only after price and valuation discipline; not a personalized recommendation."
+    },
+    "thesis": [
+      "Pathology revenue has compounded through franchise expansion, partnerships, higher patient volumes and selective pricing.",
+      "The B2B-led, automated hub-and-spoke network creates utilization and turnaround-time advantages while limiting customer-acquisition expense.",
+      "Q1 FY2027 showed simultaneous revenue, gross-margin, EBITDA and PAT improvement, rather than earnings growth driven by exceptional income.",
+      "The August 2026 promoter-pledge release removes an important governance and financing overhang.",
+      "The current price still requires sustained execution because the stock trades at roughly 51 times trailing earnings."
+    ],
+    "moat": [
+      "Nationwide sample logistics, automation and 44-lab processing network create scale economies and rapid turnaround.",
+      "More than 11,700 active franchisees and health-platform partnerships provide distribution without a purely B2C acquisition-cost model.",
+      "Broad test menu, preventive-care brands and quality accreditation support trust and cross-selling."
+    ],
+    "growth_drivers": [
+      "Maturation of recently added franchisees and penetration of under-served districts.",
+      "Partnership growth with hospitals, insurers, corporates and health-tech platforms.",
+      "Specialty diagnostics including allergy, genomics, microbiome and exome sequencing.",
+      "Higher tests per patient and revenue per patient, alongside selective pricing.",
+      "Potential simplification or divestment of the lower-growth radiology portfolio."
+    ],
+    "risks": [
+      "Valuation compression if growth reverts toward management's mid-to-high-teens guidance.",
+      "Franchise churn or weak productivity from rapid additions could dilute operating leverage.",
+      "High dividend payout can constrain reinvestment flexibility despite strong cash generation.",
+      "Reagent-rental commitments create supplier concentration and minimum-purchase obligations.",
+      "Parent-company and related-party exposure remains relevant despite the pledge release.",
+      "Radiology has weaker growth and strategic uncertainty, including a possible divestment process.",
+      "Aggressive competition, price pressure, regulation and diagnostic-quality failures could impair trust."
+    ],
+    "governance": [
+      "The FY2026 auditor did not report a qualification or emphasis of matter.",
+      "Investment in Nueclear Healthcare was a key audit matter and should remain under impairment review.",
+      "The promoter pledge reported in the FY2026 annual report was released after API Holdings repaid the relevant NCDs in August 2026.",
+      "Promoter ownership fell from about 71% to 60.92%; institutional ownership increased, but the reason and counterparties for the reduction should remain documented.",
+      "Material related-party transactions with Docon require continuing audit-committee and shareholder scrutiny."
+    ],
+    "monitorables": [
+      "Pathology revenue growth versus retained mid-to-high-teens guidance.",
+      "Franchise additions, churn and revenue per mature franchise.",
+      "Gross margin and EBITDA margin after wage, lab and specialty-diagnostics investment.",
+      "Partnership concentration and the economics of API Holdings ecosystem volumes.",
+      "Radiology divestment outcome and any impairment or capital-allocation impact.",
+      "Dividend payout versus reinvestment in specialty diagnostics.",
+      "Any re-pledging, promoter dilution or new parent-level financing linkage."
+    ]
+  },
+  "institutional": {
+    "segment_analysis": [
+      "FY2026 pathology/diagnostic-testing revenue was INR772.53 crore, about 93% of consolidated revenue; imaging was INR53.14 crore, about 6%.",
+      "Q1 FY2027 pathology revenue grew about 26% while radiology revenue declined 4%; radiology EBITDA improved due to cost and centre rationalization.",
+      "Franchise revenue reached INR143 crore and partnership revenue INR71 crore in Q1 FY2027, growing 27% and 26% respectively.",
+      "Patients grew 17%, tests 28%, tests per patient 9%, and revenue per patient 7% year on year in Q1 FY2027."
+    ],
+    "peer_context": [
+      "Direct peer comparison requires matching pathology-versus-imaging mix and consolidated scope; the current 51x trailing P/E already values Thyrocare as a high-quality growth diagnostic platform rather than a mature laboratory business.",
+      "Thyrocare's asset-efficient B2B orientation supports higher margin potential, while peers with heavier owned retail networks may have different customer-acquisition and capital-intensity economics."
+    ],
+    "management_commentary": [
+      "Management retained mid-to-high-teens FY2027 growth guidance despite Q1 consolidated growth of 24%, citing seasonality and the early stage of the year.",
+      "Management expects no significant specialty-diagnostics capex over the next year because central-platform investment is largely complete.",
+      "Management indicated the imaging strategic-review/divestment process could take about six months, without a definitive transaction at the Q1 call date.",
+      "Management cautioned that franchise maturation takes time and that the growth thesis depends on retention and low churn."
+    ],
+    "shareholding": [
+      "Promoter holding was 60.92% in June 2026 versus about 71% through September 2025.",
+      "FII holding rose to 5.43% and DII holding was 20.92% in June 2026.",
+      "The pledge over the promoter's 60.92% holding was released in August 2026 following repayment of API Holdings' INR1,700 crore NCDs."
+    ],
+    "red_team_questions": [
+      "How much Q1 growth came from sustainable patient and franchise productivity versus temporary pricing or channel incentives?",
+      "Will rapid franchise additions create churn, lower unit economics or service-quality inconsistency?",
+      "Can the company sustain a 32% EBITDA margin while investing in laboratories, people, branding and specialty diagnostics?",
+      "What is the fair economic value of Nueclear and could a radiology exit crystallize an impairment?",
+      "Does high dividend distribution reflect capital efficiency or limited independent capital-allocation flexibility under the parent?",
+      "At more than 50 times trailing earnings, what downside follows if FY2027 EPS reaches only INR11.5-12 rather than INR13.5-15?"
+    ]
+  }
+}

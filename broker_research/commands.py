@@ -7,7 +7,7 @@ import subprocess
 from dataclasses import dataclass
 from typing import Any
 
-from company_intelligence_pg import connect, get_company_aliases, upsert_company
+from company_intelligence.company_intelligence_pg import connect, get_company_aliases, upsert_company
 
 from .discovery import discover_report_links, score_report_match
 from .extract import extract_and_store_facts_from_pages

@@ -113,6 +113,10 @@ synthesis_intent must match the primary tool in tool_plan:
 Stock-market rules:
 - Resolve pronouns like it/this/these from conversation_context, not from the
   current text alone.
+- Tool args must contain real resolved NSE symbols only. Never emit schema
+  placeholders such as NSE_SYMBOL, RESOLVED_NSE_SYMBOL, <SYMBOL>, or
+  <RESOLVED_NSE_SYMBOL>. If the exact symbol is not known, use
+  fallback_to_deterministic so the deterministic resolver can bind it.
 - For sales, EPS, profit, quarterly results, shareholding, valuation, or
   business questions, prefer PostgreSQL cached fundamentals first, then
   screener.in evidence, then exchange filings when useful.
@@ -299,8 +303,50 @@ def _validate_tool_plan(raw: Any) -> list[tuple[str, dict[str, Any]]]:
             return []
         if tool not in ALLOWED_TOOLS:
             return []
+        if not _tool_args_have_real_symbols(tool, args):
+            return []
         plan.append((tool, dict(args)))
     return plan
+
+
+_SYMBOL_ARG_TOOLS = frozenset({
+    "resolve_symbol",
+    "get_symbol_snapshot",
+    "get_symbol_quick_analysis",
+    "get_technical_setup",
+    "get_sector_context",
+    "get_cached_financials",
+    "scrape_screener_in",
+    "get_latest_results",
+    "search_nse_announcements",
+    "search_bse_filings",
+    "search_latest_catalysts",
+})
+
+def _looks_like_placeholder_symbol(value: Any) -> bool:
+    text = str(value or "").strip()
+    normalized = re.sub(r"[^A-Z0-9]+", "_", text.upper()).strip("_")
+    return (
+        not text
+        or "<" in text
+        or ">" in text
+        or normalized in {"SYMBOL", "NSE_SYMBOL", "RESOLVED_SYMBOL", "RESOLVED_NSE_SYMBOL", "TICKER"}
+    )
+
+
+def _tool_args_have_real_symbols(tool: str, args: dict[str, Any]) -> bool:
+    if tool == "resolve_symbol":
+        query = args.get("query") or args.get("symbol") or args.get("ticker")
+        return not _looks_like_placeholder_symbol(query)
+    if tool in _SYMBOL_ARG_TOOLS:
+        symbol = args.get("symbol") or args.get("ticker")
+        if symbol is None:
+            return False
+        return not _looks_like_placeholder_symbol(symbol)
+    symbols = args.get("symbols")
+    if isinstance(symbols, list):
+        return bool(symbols) and all(not _looks_like_placeholder_symbol(item) for item in symbols)
+    return True
 
 
 def _clarification_questions(data: dict[str, Any]) -> list[ClarificationQuestion]:

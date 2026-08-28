@@ -29,7 +29,9 @@ Produce an evidence-led, reproducible company analysis. Treat the bundled CLI as
 
    From Claude's compatibility wrapper, use the same repository-root command. For a machine-readable result, select `--format json`. For a portable report with embedded styling, select `--format html --output REPORT.html`.
 8. Review the generated calculations against source documents. Add qualitative material that cannot be computed: moat, industry structure, management execution, capital allocation, governance, catalysts, and key monitorables.
-9. Deliver the conclusion first via `qualitative.verdict`: business quality, financial quality, growth durability, valuation comfort, and stance. Clearly separate reported facts, calculations, management claims, and analyst assumptions.
+9. For every major table, write a section-level insight using the LLM prompt pattern: `What changed? Why did it change? What does it imply for the business or valuation? What should be checked next?` Apply this to score interpretation, quarterly results, balance sheet/cash flow, annual-report findings, concalls/filings, valuation, and risks. A raw table without interpretation is incomplete.
+10. Read the annual report page/section by page where available and extract business model, product/capacity mix, customer/geography concentration, capital allocation, management outlook, governance/audit flags, and explicit risk disclosures. Mark management statements as management claims and reconcile reported figures to exchange filings.
+11. Deliver the conclusion first via `qualitative.verdict`: business quality, financial quality, growth durability, valuation comfort, and stance. Clearly separate reported facts, calculations, management claims, and analyst assumptions.
 
 ## Required analytical standards
 
@@ -54,6 +56,7 @@ Produce an evidence-led, reproducible company analysis. Treat the bundled CLI as
 8. Risks, governance, and shareholding
 9. Valuation scenarios and margin of safety
 10. Monitorables, source list, and disclaimer
+11. Section insights and annual-report read-through
 
 ## Resources
 

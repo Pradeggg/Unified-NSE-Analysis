@@ -1,0 +1,39 @@
+Agent Adda
+      Wed, 26 Aug 2026 · 18:24 IST
+
+        Report · eod_market_report.html · mode: both
+
+NSE EOD Market Report — 26 Aug 2026
+Mixed tape: NIFTY -0.56% closed at its session low; BANKNIFTY +0.25% held gains; breadth weakest at noon (29.3% advancers).
+The EOD Market Report — 26 Aug 2026 is now available on Agent Adda Market Intelligence.
+Live report URL: https://agentadda.in/stocks/reports/eod-market-report-2026-08-26
+Attachment: eod_market_report.html
+NIFTY24,207.75 (-0.56%); range 24,207.75–24,378.00; closed at day low
+BANKNIFTY57,783.75 (+0.25%); range 57,636.00–57,995.70; closed higher
+
+Key takeaways
+Index divergence: NIFTY finished at 24,207.75 (-0.56%) while BANKNIFTY held gains at 57,783.75 (+0.25%).
+Intraday breadth swung from +58.5% (09:00 best) to +29.3% (12:00 trough), with only a partial 13:00 recovery to 37.5%.
+Participation: volume peaked near the open at 14,973,355 shares (09:00), indicating elevated scrutiny around the open.
+Sector dispersion: Capital Markets led (+1359.45% avg; 360ONE +2716.28%) while Chemicals was the pressure pocket (ACEINTEG -98.5%).
+Banks were relatively resilient (ICICIBANK +1.02%, AXISBANK +0.93%, SBIN +0.56%); HDFCBANK was most active (50.7L) despite -0.29%.
+What to watch next session
+Confirmation from breadth: does the market recover from the noon trough or sustain divergence versus price?
+Bank leadership follow-through and its read-through for headline indices.
+Ongoing volatility in Capital Markets and Chemicals; behavior of 360ONE and ACEINTEG as risk markers.
+Whether the 09:00 volume spike reflected distribution or accumulation.
+How to use this
+Time decisions with Hourly Advance/Decline and Breadth Swing; look for breadth aligning with stabilizing price.
+Use Stage and Signal flags in the report to prioritize watchlist candidates and manage risk.
+Review exposure to sectors with outsized moves; tighten risk in pressured groups, scale into leaders only on confirmation.
+Cross-check the most-active list against liquidity requirements before placing orders.
+Research use only: This material is for research and learning purposes and is not investment advice. Coverage reflects a stored intraday 15m universe and may not represent full NSE breadth.
+— Agent Adda Market Intelligence
+
+  Regards,
+
+  Agent Adda
+
+  ShunyaAI · NSE Market Intelligence
+
+Not investment advice. For research and learning only. NSE EOD + live snapshot data.

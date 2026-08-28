@@ -1,0 +1,12 @@
+Plan,Users,Price INR/User,Revenue INR,Variable COGS INR/User,Total Variable COGS INR,Contribution INR,Fixed Cost Allocation INR,Operating Profit INR,Operating Margin %,Notes
+Starter,50,149,7450,30,1500,5950,7500,-1550,-20.8%,Plan-level view before cross-plan subsidy
+Plus,35,299,10465,90,3150,7315,5250,2065,19.7%,Near 20% margin on standalone allocation
+Pro,12,799,9588,280,3360,6228,1800,4428,46.2%,Strong margin if deep research capped
+Power,3,1499,4497,650,1950,2547,450,2097,46.6%,Requires fair-use controls
+Total,100,320,32000,99.6,9960,22040,15000,7040,22.0%,Base 100-user paid beta mix; price and COGS/user are blended averages
+All Starter,100,149,14900,30,3000,11900,15000,-3100,-20.8%,Not viable at 100 users with fixed cost
+All Plus,100,299,29900,90,9000,20900,15000,5900,19.7%,Almost clears 20% target
+All Pro,100,799,79900,280,28000,51900,15000,36900,46.2%,Commercially attractive but usage must be capped
+Base Mix - Production Infra Low,100,320,32000,99.6,9960,22040,25000,-2960,-9.3%,Same user mix with public FastAPI managed PG and workers at low production estimate
+Base Mix - Production Infra High,100,320,32000,99.6,9960,22040,40000,-17960,-56.1%,Same user mix with higher production infra before market-data license
+Plus Price 399 - Production Infra Low,100,399,39900,90,9000,30900,25000,5900,14.8%,Plus needs around 425 to clear 20% margin with 25k fixed cost

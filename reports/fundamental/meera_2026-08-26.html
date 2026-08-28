@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Agent Adda Research | MEERA (MEERA) | Research</title>
+  <style>
+    
+    
+    :root{
+      --bg:#0d1117;--bg2:#111820;--panel:#161b22;--line:#30363d;
+      --ink:#f8faff;--muted:#a8b3bf;--subtle:#788391;
+      --sky:#0ea5e9;--sky2:#38bdf8;--green:#22c55e;--amber:#f59e0b;--red:#f43f5e;
+      --display:"Playfair Display",Georgia,"Times New Roman",serif;
+      --sans:"Plus Jakarta Sans",Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+      --mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace;
+    }
+    *{box-sizing:border-box} html{scroll-behavior:smooth}
+    body{margin:0;background:linear-gradient(180deg,var(--bg),var(--bg2) 36%,var(--bg));color:var(--ink);font:14px/1.65 var(--sans);-webkit-font-smoothing:antialiased}
+    a{color:var(--sky2);text-decoration:none} a:hover{text-decoration:underline}
+    .page{max-width:1240px;margin:0 auto;padding:26px 24px 64px}
+    .topbar{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:10px 0 22px;border-bottom:1px solid var(--line)}
+    .brand{display:flex;align-items:center;gap:12px;font-weight:700;color:var(--ink)}
+    .mark{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:#f8faff;color:#0d1117;font:700 14px var(--sans)}
+    .nav{display:flex;gap:10px;flex-wrap:wrap;color:var(--muted);font-size:12px}
+    .nav a,.status-pill{color:var(--muted);padding:6px 10px;border:1px solid var(--line);border-radius:999px;background:#ffffff08}
+    .status-pill{color:#fde68a;border-color:#f59e0b66;background:#f59e0b14;font-weight:800;text-transform:uppercase;letter-spacing:.06em}
+    .hero{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(310px,.75fr);gap:28px;padding:44px 0 30px;align-items:end}
+    .eyebrow{display:inline-flex;align-items:center;gap:8px;color:var(--sky2);font-weight:700;text-transform:uppercase;font-size:11px;letter-spacing:.12em;margin-bottom:16px}
+    .dot{width:8px;height:8px;border-radius:50%;background:var(--sky)}
+    h1,h2,h3{font-family:var(--display);line-height:1.12;margin:0;color:var(--ink);letter-spacing:0}
+    h1{font-size:clamp(39px,6vw,74px);font-weight:700} h1 span{color:var(--sky2)}
+    h2{font-size:32px} h3{font-size:20px;margin:4px 0 10px}
+    .subtitle{max-width:780px;margin:18px 0 0;color:#d6d3d1;font-size:17px;line-height:1.7}
+    .meta{margin-top:18px;color:var(--subtle);font-size:12px}
+    .hero-panel,.card{background:linear-gradient(180deg,var(--panel),#111820);border:1px solid var(--line);border-radius:8px;padding:16px}
+    .hero-panel{padding:18px;box-shadow:0 20px 70px #00000055}
+    .price{font:700 42px/1 var(--sans);letter-spacing:0;color:var(--ink)}
+    .move{font:700 16px var(--mono);color:var(--green);margin-top:8px}
+    .verdict{margin-top:18px;padding-top:18px;border-top:1px solid var(--line);color:#d6d3d1}
+    .badge-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px}
+    .badge{font-size:11px;font-weight:700;text-transform:uppercase;color:var(--sky2);border:1px solid #0ea5e955;background:#0ea5e912;border-radius:999px;padding:5px 9px}
+    section{padding:28px 0;border-top:1px solid var(--line)}
+    .section-head{display:flex;align-items:end;justify-content:space-between;gap:18px;margin-bottom:18px}
+    .section-note{max-width:590px;color:var(--muted);font-size:13px}
+    p{margin:0 0 14px;color:#d6d3d1}
+    .grid{display:grid;gap:14px}.grid.cols-4{grid-template-columns:repeat(4,minmax(0,1fr))}.grid.cols-3{grid-template-columns:repeat(3,minmax(0,1fr))}.grid.cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .metric-label{color:var(--subtle);font-size:11px;text-transform:uppercase;font-weight:700;letter-spacing:.08em}
+    .metric-value{display:block;font-size:24px;font-weight:800;line-height:1.15;margin-top:7px;color:var(--ink)}
+    .metric-detail{display:block;color:var(--muted);font-size:12px;margin-top:6px}
+    .green{color:var(--green)}.amber{color:var(--amber)}.red{color:var(--red)}.muted{color:var(--muted)}
+    .table-wrap{overflow-x:visible;border:1px solid var(--line);border-radius:8px;background:#0d1117;margin-bottom:14px}
+    table{width:100%;border-collapse:collapse;table-layout:fixed;min-width:0}
+    th,td{padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top;text-align:right;white-space:normal;overflow-wrap:anywhere;word-break:normal;font-size:12px;line-height:1.35}
+    th:first-child,td:first-child{text-align:left;width:23%}
+    th{font-size:9.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);background:#161b22;font-weight:800}
+    td{color:#d6d3d1}tr:last-child td{border-bottom:0}
+    .narrative{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:18px}
+    .pullquote{font-family:var(--display);font-size:28px;line-height:1.25;color:var(--ink);border-left:4px solid var(--sky);padding-left:18px;margin:0 0 18px}
+    .callout{border-left:4px solid var(--sky);background:#0ea5e912;border-radius:8px;padding:14px 16px;color:#d6d3d1}
+    .risk-callout{border-left-color:var(--red);background:#f43f5e12}
+    .chart-frame{border:1px solid var(--line);border-radius:8px;overflow:hidden;background:#0b1220;box-shadow:0 20px 70px #00000055}
+    .chart-image{display:block;width:100%;height:auto;background:#0b1220}
+    .score{display:grid;grid-template-columns:160px 1fr 58px;gap:12px;align-items:center;margin:12px 0}
+    .score-name{color:var(--muted);font-size:12px;display:flex;align-items:center;gap:8px}
+    .swatch{width:9px;height:9px;border-radius:50%;display:inline-block;background:var(--score-color)}
+    .score-track{height:14px;border-radius:999px;background:#27313d;overflow:hidden;border:1px solid #ffffff10}
+    .score-fill{display:block;height:100%;border-radius:999px;background:var(--score-color);box-shadow:0 0 18px var(--score-glow)}
+    .score-num{font:800 12px var(--mono);color:var(--score-color);text-align:center;border:1px solid var(--score-glow);background:#ffffff08;border-radius:999px;padding:3px 0}
+    .score.fund{--score-color:#22c55e;--score-glow:#22c55e66}.score.invest{--score-color:#38bdf8;--score-glow:#38bdf866}.score.earnings{--score-color:#a78bfa;--score-glow:#a78bfa66}.score.growth{--score-color:#34d399;--score-glow:#34d39966}.score.strength{--score-color:#f59e0b;--score-glow:#f59e0b66}.score.institutional{--score-color:#fb7185;--score-glow:#fb718566}.score.tech{--score-color:#06b6d4;--score-glow:#06b6d466}
+    .mini-bars{display:grid;grid-template-columns:repeat(5,minmax(46px,1fr));align-items:end;gap:10px;height:190px;padding:14px;border:1px solid var(--line);border-radius:8px;background:#0d1117}
+    .bar{display:flex;flex-direction:column;justify-content:end;gap:7px;height:100%;min-width:0}.bar span:first-child{display:block;background:linear-gradient(180deg,var(--sky2),#0369a1);border-radius:6px 6px 0 0;min-height:12px}.bar b{font:700 11px var(--mono);color:#d6d3d1;text-align:center}.bar small{color:var(--subtle);font-size:10px;text-align:center}
+    ul{margin:0;padding-left:18px;color:#d6d3d1}li{margin:7px 0}
+    .source-list{columns:2;column-gap:24px}.source-list li{break-inside:avoid;color:var(--muted)}
+    .footer{margin-top:28px;padding:18px;border:1px solid #f43f5e55;background:#f43f5e12;border-radius:8px;color:#fecdd3}
+    code,.mono{font-family:var(--mono)}
+    @media(max-width:980px){.hero,.narrative{grid-template-columns:1fr}.grid.cols-4,.grid.cols-3,.grid.cols-2{grid-template-columns:1fr}.source-list{columns:1}}
+    @media(max-width:620px){.page{padding:18px 14px 44px}.topbar,.section-head{align-items:flex-start;flex-direction:column}.price{font-size:34px}.score{grid-template-columns:125px 1fr 48px}th,td{padding:5px 4px;font-size:10px;line-height:1.25}th{font-size:8.5px;letter-spacing:0;text-transform:none}th:first-child,td:first-child{width:24%}}
+  </style>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Playfair+Display:wght@400;700&display=swap">
+</head>
+<body>
+<div class="page">
+  <header class="topbar">
+    <div class="brand"><div class="mark">AA</div><span>AgentAdda Market Intelligence</span></div>
+    <nav class="nav" aria-label="Report sections"><span class="status-pill">Research</span><a href="#fundamentals">Fundamentals</a><a href="#chart">Chart</a><a href="#technicals">Technicals</a><a href="#brokers">Brokers</a><a href="#risks">Risks</a></nav>
+  </header>
+
+  <section class="hero">
+    <div>
+      <div class="eyebrow"><span class="dot"></span> Comprehensive stock research | MEERA</div>
+      <h1>MEERA <span>(<a class="symbol-link" href="https://www.nseindia.com/get-quotes/equity?symbol=MEERA" target="_blank" rel="noopener">MEERA</a>)</span></h1>
+      <p class="subtitle">MEERA — research snapshot with technical and fundamentals context.</p>
+      <p class="meta">Data refreshed 26 Aug 2026. Technical snapshot: —. Prices are delayed/EOD unless explicitly marked otherwise. Financials in INR crore unless stated.</p>
+    </div>
+    <aside class="hero-panel">
+      <div class="metric-label">Live delayed price</div><div class="price">—</div><div class="move"> | RSI —</div>
+      <div class="verdict"><strong>Research stance:</strong> Business quality and earnings trend matter more than day-to-day price noise. Technicals: Stage 1, RSI —, ADX —. Fundamentals: —.</div>
+      <div class="badge-row"><span class="badge">EFS —</span><span class="badge">Tech —</span><span class="badge">RSI —</span><span class="badge">Stage 1</span></div>
+    </aside>
+  </section>
+
+  <section>
+    <div class="grid cols-4"><div class="card"><span class="metric-label">Market cap</span><strong class="metric-value">INR — Cr</strong><span class="metric-detail">Cached fundamentals</span></div><div class="card"><span class="metric-label">P/E</span><strong class="metric-value">—x</strong><span class="metric-detail">Trailing</span></div><div class="card"><span class="metric-label">Latest quarter revenue</span><strong class="metric-value">— Cr</strong><span class="metric-detail">YoY —</span></div><div class="card"><span class="metric-label">Latest quarter PAT</span><strong class="metric-value">— Cr</strong><span class="metric-detail">YoY —</span></div><div class="card"><span class="metric-label">ROCE</span><strong class="metric-value">Not available%</strong><span class="metric-detail">Screener/cached</span></div><div class="card"><span class="metric-label">ROE</span><strong class="metric-value">Not available%</strong><span class="metric-detail">Screener/cached</span></div><div class="card"><span class="metric-label">Book value</span><strong class="metric-value">INR —</strong><span class="metric-detail">Per share</span></div><div class="card"><span class="metric-label">Vol ratio (EOD)</span><strong class="metric-value">—x</strong><span class="metric-detail">Vs 20D avg</span></div></div>
+  </section>
+
+  <section>
+    <div class="section-head"><h2>Investment Read</h2><p class="section-note">Separate the company from the entry: business quality first, timing second.</p></div>
+    <div class="narrative">
+      <div class="card"><p class="pullquote">The edge is in staying with strong fundamentals — and demanding a sane entry.</p><p>MEERA combines the latest available financial extract with the technical snapshot. Latest quarter: revenue — Cr (YoY —), PAT — Cr (YoY —). The next step is to reconcile these headline numbers with the annual report, exchange filings, and cash-flow quality.</p></div>
+      <div class="card"><h3>Decision Frame</h3><ul><li><strong>Business:</strong> understand where moat comes from.</li><li><strong>Financials:</strong> prefer consistent cash conversion.</li><li><strong>Technical:</strong> Stage 1, RSI —.</li><li><strong>Action bias:</strong> buy-on-pullback beats chase.</li><li><strong>Invalidation:</strong> thesis break + trend break.</li></ul></div>
+    </div>
+  </section>
+
+  <section id="fundamentals">
+    <div class="section-head"><h2>Fundamental Scores</h2><p class="section-note">Agent Adda scores from snapshot (stage_snapshot). Useful ranking signals — not standalone buy/sell rules.</p></div>
+    <div class="grid cols-2">
+      <div class="card"><div class="score fund"><span class="score-name"><span class="swatch"></span>Enhanced fund score</span><span class="score-track"><span class="score-fill" style="width:0%"></span></span><span class="score-num">—</span></div><div class="score invest"><span class="score-name"><span class="swatch"></span>Investment score</span><span class="score-track"><span class="score-fill" style="width:0%"></span></span><span class="score-num">—</span></div><div class="score earnings"><span class="score-name"><span class="swatch"></span>Earnings quality</span><span class="score-track"><span class="score-fill" style="width:0%"></span></span><span class="score-num">—</span></div><div class="score growth"><span class="score-name"><span class="swatch"></span>Sales growth</span><span class="score-track"><span class="score-fill" style="width:0%"></span></span><span class="score-num">—</span></div><div class="score strength"><span class="score-name"><span class="swatch"></span>Financial strength</span><span class="score-track"><span class="score-fill" style="width:0%"></span></span><span class="score-num">—</span></div><div class="score institutional"><span class="score-name"><span class="swatch"></span>Institutional bias</span><span class="score-track"><span class="score-fill" style="width:0%"></span></span><span class="score-num">—</span></div><div class="score tech"><span class="score-name"><span class="swatch"></span>Technical score</span><span class="score-track"><span class="score-fill" style="width:0%"></span></span><span class="score-num">—</span></div></div>
+      <div class="card"><h3>Score Interpretation</h3><div class="callout">Scores unavailable in offline mode for this symbol — treat this as fundamentals + technical context only.</div></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head"><h2>Company Overview</h2><p class="section-note">Company overview from the available fundamentals extract; source gaps are stated rather than filled with scraper metadata.</p></div>
+    <div class="grid cols-3"><div class="card"><h3>Business</h3><p>The source extract did not return a reliable business description; use the linked exchange and annual-report sources before forming a business view.</p></div><div class="card"><h3>Pros</h3><p>—</p></div><div class="card"><h3>Cons</h3><p>—</p></div></div>
+  </section>
+
+  <section>
+    <div class="section-head"><h2>Historical P&amp;L</h2><p class="section-note">0 annual periods returned from the fundamentals extract. Revenue and PAT trend are not interpretable from the available extract.</p></div>
+    <div class="table-wrap"><table><thead><tr><th>Period</th><th>Revenue</th><th>Op. Profit</th><th>OPM</th><th>PAT</th><th>EPS</th><th>Payout</th></tr></thead><tbody><tr><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td></tr></tbody></table></div>
+    <div class="mini-bars">—</div>
+  </section>
+
+  <section>
+    <div class="section-head"><h2>Quarterly Results</h2><p class="section-note">0 quarterly periods are available. Latest quarter revenue was — Cr and PAT — Cr; the latest sequential change was revenue — and PAT —. Use the next filing to test whether the latest growth rate is recurring and whether operating margin and cash conversion are moving with earnings.</p></div>
+    <div class="table-wrap"><table><thead><tr><th>Quarter</th><th>Revenue</th><th>Op. Profit</th><th>OPM</th><th>PAT</th><th>EPS</th></tr></thead><tbody><tr><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td></tr></tbody></table></div>
+  </section>
+
+  <section>
+    <div class="section-head"><h2>Balance Sheet And Cash Flow</h2><p class="section-note">0 balance-sheet/cash-flow periods are available. Latest reported borrowings are — Cr, CFO is — Cr, and FCF is — Cr. Read these alongside PAT, working-capital movements, capex, and financing flows: profit growth is higher quality when it converts to operating cash without repeated debt or equity funding.</p></div>
+    <div class="grid cols-2"><div class="table-wrap"><table><thead><tr><th>Balance sheet item</th><th>FY-2</th><th>FY-1</th><th>FY</th></tr></thead><tbody><tr><td>Equity Capital</td></tr><tr><td>Reserves</td></tr><tr><td>Borrowings+</td></tr><tr><td>Total Liabilities</td></tr><tr><td>Fixed Assets+</td></tr><tr><td>Total Assets</td></tr></tbody></table></div><div class="table-wrap"><table><thead><tr><th>Cash flow item</th><th>FY-2</th><th>FY-1</th><th>FY</th></tr></thead><tbody><tr><td>CFO</td></tr><tr><td>CFI</td></tr><tr><td>CFF</td></tr><tr><td>FCF</td></tr><tr><td>Net Cash</td></tr></tbody></table></div></div>
+    <div class="callout risk-callout">Cash conversion is the key counterweight to the reported profit trend. Reconcile CFO versus PAT, inventory and receivables, capex, borrowings, and financing inflows against the audited annual report and latest exchange filing before increasing confidence in the thesis.</div>
+  </section>
+
+  <section>
+    <div class="section-head"><h2>Concall, Filings And News</h2><p class="section-note">Evidence reviewed: 0 concall artifacts and 0 exchange/company announcements. The read-through below distinguishes reported numbers, management claims, and checks required before relying on the catalyst.</p></div>
+    <div class="grid cols-3"><div class="card"><h3>Annual report and management read-through</h3><ul><li><strong>Quarter context (Latest quarter):</strong> Revenue — Cr (— YoY), PAT — Cr (— YoY).</li><li><strong>Annual report source:</strong> no direct annual-report URL was returned by the extractor; do not treat the cached P&L as a completed annual-report review.</li><li><strong>Analytical check:</strong> compare the latest result with the annual report for margin durability, cash conversion, leverage, segment mix, and management guidance; separate reported facts from management claims.</li></ul></div><div class="card"><h3>Concall evidence and what to test</h3><ul><li>No dated concall materials were available.</li></ul></div><div class="card"><h3>Recent announcements and implications</h3><ul><li><strong>Meera Industries CMD appointed as CFO Feb 2026 — governance flag:</strong> Feb 13 2026: Board appointed Dharmesh V Desai (CMD) additionally as CFO and KMP. Also announced 1:2 share split (face value Rs 10 to Rs 5, record date Mar 6, 2026). Internal auditor D D R &amp; Co resigned May 29, 2026.</li><li><strong>Meera Industries promoter holding 61.69%, zero pledge:</strong> Promoter holding stable at 61.69% Dec 2025 to Mar 2026. Dharmesh Desai 32.3%, Bijalben Desai 29.1%. No pledge disclosures. Zero FII/DII/MF institutional holding. Public float 38.3%.</li><li><strong>Global TFO twisting machines market USD 2.2B growing to USD 3.8B by 2032:</strong> Global TFO market CAGR 6.2%. Asia-Pacific fastest growing at 8% CAGR. Demand driven by MMF technical textiles, carpet yarn, specialty yarns. India PLI scheme driving downstream capex (Rs 10,683 cr outlay FY26-30).</li></ul></div></div>
+    <div class="callout">This section separates reported facts, management claims, and verification tasks. Read announcements as potential catalysts only: confirm the next exchange result, balance-sheet movement, cash-flow statement, and any dilution or project milestones before changing the thesis.</div>
+  </section>
+
+  <section>
+    <div class="section-head"><h2>Sector And Competitive Context</h2><p class="section-note">Sector and peer claims are shown only when a same-date comparable dataset is available.</p></div>
+    <div class="table-wrap"><table><thead><tr><th>Lens</th><th>Read-through</th></tr></thead><tbody><tr><td>Sector</td><td>Not available</td></tr><tr><td>Data quality</td><td>No peer ranking asserted without comparable same-date observations.</td></tr><tr><td>Next check</td><td>Compare growth, margins, balance-sheet risk, valuation, and relative strength with the company’s listed peers.</td></tr></tbody></table></div>
+    <div class="table-wrap"><p class="section-note">Peer ranking omitted: no comparable same-date peer dataset was supplied, so this report does not manufacture a self-comparison row.</p></div>
+  </section>
+
+  <section id="chart">
+    <div class="section-head"><h2>Equity Chart V1</h2><p class="section-note">Chart unavailable (no cached EOD bars).</p></div>
+    <div class="chart-frame"><img class="chart-image" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==" alt="MEERA chart (unavailable)"></div>
+    <p class="meta">—</p>
+  </section>
+
+  <section id="technicals">
+    <div class="section-head"><h2>Technical Analysis</h2><p class="section-note">Technical setup from cached snapshot (if available).</p></div>
+    <div class="grid cols-2"><div class="table-wrap"><table><thead><tr><th>Indicator</th><th>Value</th><th>Note</th></tr></thead><tbody><tr><td>Stage</td><td>Stage 1</td><td>Weinstein stage</td></tr><tr><td>Signal</td><td>—</td><td>Snapshot</td></tr><tr><td>RSI</td><td>—</td><td>Momentum</td></tr><tr><td>ADX</td><td>—</td><td>Trend strength</td></tr><tr><td>SMA20/50/200</td><td>— / — / —</td><td>Trend context</td></tr><tr><td>Supertrend</td><td>—</td><td>Trend filter</td></tr></tbody></table></div><div class="table-wrap"><table><thead><tr><th>Ratio</th><th>Value</th></tr></thead><tbody><tr><td>Market cap</td><td>INR — Cr</td></tr><tr><td>P/E</td><td>—x</td></tr><tr><td>ROCE</td><td>Not available%</td></tr><tr><td>ROE</td><td>Not available%</td></tr><tr><td>Book value</td><td>INR —</td></tr><tr><td>High / Low</td><td>— / —</td></tr><tr><td>Dividend yield</td><td>—%</td></tr></tbody></table></div></div>
+    <div class="card"><h3>Weinstein And O'Neil Read</h3><h3>Stan Weinstein Stage Analysis</h3><p>The snapshot labels the stock <strong>Stage 1</strong> (Stage 1 / base). Weinstein stage describes the position of price within a multi-month trend: Stage 1 is a base, Stage 2 an advance, Stage 3 a topping range, and Stage 4 a decline. It is a context framework, not a forecast or standalone trade signal.</p><p><strong>Evidence check:</strong> price is not above all the 20/50/200-day averages, and the moving averages are not fully stacked bullishly (— / — / —). RSI is — (not available); ADX is — (not available); Supertrend is <strong>—</strong>. A bullish stage with weak momentum, a broken moving-average stack, or a conflicting Supertrend reading is a lower-quality setup.</p><div class="callout">Stage 2 confirmation requires a sustained advance, a successful breakout or higher low, constructive volume/relative strength, and a retest that holds. Do not infer confirmation from one strong candle; define the invalidation level before entry and avoid chasing an extended move.</div><h3 style='margin-top:14px'>William O’Neil / CAN SLIM Lens</h3><p><strong>C — Current earnings:</strong> latest PAT growth is — and revenue growth is —; confirm the next two quarters and check whether margin and CFO support the growth. <strong>A — Annual earnings:</strong> latest annual revenue growth is —; fill the missing periods before claiming a multi-year CAGR. <strong>N — New:</strong> identify a new product, customer, capacity addition, or catalyst and distinguish company guidance from delivered results. <strong>S — Supply/demand:</strong> price/volume confirmation matters; share issuance, promoter selling, or thin liquidity can weaken the setup. <strong>L — Leader:</strong> relative strength is not available; compare against the correct sector and Nifty benchmark rather than using price alone. <strong>I — Institutions:</strong> institutional-bias score is not available; verify actual ownership trend. <strong>M — Market:</strong> confirm that the broader index and sector are supportive. The practical conclusion is a watchlist-quality setup only when earnings acceleration, leadership, volume, and a definable risk point align.</p></div>
+  </section>
+
+  <section id="brokers">
+    <div class="section-head"><h2>Broker And Market View</h2><p class="section-note">Broker/analyst evidence is shown only when dated source results are returned.</p></div>
+    <div class="card"><div class="callout">FY26 standalone revenue Rs 36.75 cr (-8.7% YoY), net profit Rs 0.85 cr (-78% YoY). Consolidated revenue Rs 37.83 cr, NP Rs 0.98 cr. FY25 revenue Rs 40.26 cr, NP Rs 3.89 cr. | Q1 FY27: revenue Rs 12.35 cr (+30% YoY), net profit Rs 71.34 lakh (+10% YoY). Machine division revenue Rs 861.4 lakh (+19% YoY). Plastic (CPP) division Rs 373.2 lakh (+66% YoY), turned profitable at Rs 16.09 lakh vs loss | Q4 FY26 net sales Rs 8.82 cr (+19.2% YoY). Operating loss Rs 0.64 cr. Weakest quarter in recent history. CPP Films startup costs cited as margin drag.</div></div>
+  </section>
+
+  <section>
+    <div class="section-head"><h2>Valuation Scenarios</h2><p class="section-note">Valuation scenarios require EPS and P/E data.</p></div>
+    <div class="table-wrap"><table><thead><tr><th>Scenario</th><th>Forward EPS</th><th>P/E</th><th>Implied value</th><th>vs current</th><th>Condition required</th></tr></thead><tbody><tr><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td></tr></tbody></table></div>
+  </section>
+
+  <section id="risks">
+    <div class="section-head"><h2>Issues And Risks</h2><p class="section-note">Generic risk framework; replace with annual-report-specific risks when the report is parsed.</p></div>
+    <div class="table-wrap"><table><thead><tr><th>Risk</th><th>Why it matters</th><th>Severity</th><th>What to monitor</th></tr></thead><tbody><tr><td>Demand / earnings</td><td>Cyclicality, customer concentration, or weak volume can make recent growth non-recurring.</td><td class="amber">Medium</td><td>Orders, volume, segment mix, and next two quarters.</td></tr><tr><td>Working capital</td><td>Receivables and inventory can absorb cash even when accounting profit rises.</td><td class="amber">Medium</td><td>CFO versus PAT, working-capital days, and FCF.</td></tr><tr><td>Leverage / capex</td><td>Debt-funded expansion increases fixed obligations and execution risk.</td><td class="amber">Medium</td><td>Borrowings, interest cover, capex milestones, and funding source.</td></tr><tr><td>Governance / disclosure</td><td>Related parties, auditor remarks, pledges, or inconsistent reporting can change the thesis.</td><td class="amber">Medium</td><td>Annual-report notes, exchange filings, auditor qualifications, and dilution.</td></tr><tr><td>Valuation / entry</td><td>A good business can still deliver poor returns when expectations are already high.</td><td class="amber">Medium</td><td>Earnings delivery, peer multiples, trend support, and risk point.</td></tr></tbody></table></div>
+  </section>
+
+  <section>
+    <div class="section-head"><h2>Evidence Trail</h2><p class="section-note">Source-first trail for review.</p></div>
+    <ul class="source-list"><li>Local cache: reports/portfolio/ric_sherlock_cache/MEERA.json</li><li><a href="https://www.screener.in/company/MEERA/">Screener consolidated page</a>.</li><li><a href="https://tradebrains.in/meera-industries-bags-7-95-cr-textile-machinery-order-from-dnb-textiles/" target="_blank">Meera Industries bags Rs 7.95 cr order from DNB Textiles</a>.</li><li><a href="https://scanx.trade/stock-market-news/orders-deals/meera-industries-limited-secures-2-03-crore-order-for-high-performance-filament-twister/33026536" target="_blank">Meera Industries secures Rs 2.03 cr order for filament twister</a>.</li><li><a href="https://hdfcsky.com/news/meera-industries-stock-gained-more-than-1-percent-today-as-company-got-new-order-of-135000" target="_blank">Meera Industries USD 135,000 export orders H2 FY26</a>.</li><li><a href="https://scanx.trade/stock-market-news/earnings/meera-industries-unveils-h1-fy26-results-diversification-into-cpp-films-and-global-expansion/25010814" target="_blank">Meera Industries exports to 39 countries with US subsidiary</a>.</li></ul>
+    <div class="footer"><strong>Research-only disclaimer:</strong> This Agent Adda report is independent research for review, not personalized investment advice and not a buy/sell recommendation. Markets involve risk, including loss of capital. Verify all figures against company filings, exchange disclosures, and current market data before acting. SEBI-registered intermediaries may have suitability, risk-profiling, and disclosure obligations; this note is not a substitute for advice from a SEBI-registered investment adviser or research analyst.</div>
+  </section>
+</div>
+</body>
+</html>

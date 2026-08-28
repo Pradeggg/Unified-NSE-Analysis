@@ -1,21 +1,34 @@
-"""Knowledge Base pipeline for Agent Adda — financial sources → vector DB.
+"""Knowledge Base for Agent Adda.
 
-Pipeline stages:
-    fetch    → download PDFs/HTML from data/financial_sources_registry.json
-    chunk    → split documents into logical, semantic chunks with provenance
-    qa       → generate Q&A pairs for each chunk (LLM gpt-4o-mini)
-    index    → embed and store in ChromaDB
-    query    → semantic search the knowledge base
+Two complementary layers
+─────────────────────────
+Layer 1 — Tools/Skills/Commands (BM25, always fast, zero LLM)
+    Query via:  python -m knowledge_base query "..."
+    API:        from knowledge_base import query_tools, get_context
+    Covers:     138 launcher entries, 5 skill YAMLs, 9 project skills,
+                9 MCP tools, 13 curated workflow definitions.
 
-Layout on disk:
-    data/knowledge_base/
-        raw/<source_id>/<YYYY-MM-DD>/<filename>     # downloaded artefacts
-        manifest.jsonl                              # one row per fetch attempt
-        chunks.jsonl                                # one row per chunk + metadata
-        qa.jsonl                                    # generated Q&A pairs
-        chroma/                                     # persistent ChromaDB store
+Layer 2 — Financial Documents (ChromaDB, requires embeddings)
+    Query via:  python -m knowledge_base ask "..."
+    API:        from knowledge_base import query_kb, KBVectorStore
+    Covers:     SEBI / RBI / CRISIL / broker research PDFs
+    Backends:   KB_EMBED_BACKEND = openai | sentence-transformers | ollama | auto
 
-PG-kb: kept self-contained so it can be invoked from nse_agent.py via /kb command.
+Layer 3 — Live Web Search (DuckDuckGo, on-demand)
+    Query via:  python -m knowledge_base query "..." --web
+    API:        from knowledge_base import web_search, format_web_block
+    Returns:    [{title, url, snippet, domain, score}] — finance domains boosted
+    Use when:   you need the latest real-world data alongside the command to run
+
+Token usage analytics
+──────────────────────
+    python -m knowledge_base tokens          # 7-day summary
+    python -m knowledge_base tokens --days 30
+    API: from knowledge_base import get_tracker; get_tracker().stats()
+
+Financial document pipeline stages:
+    fetch → chunk → qa → index → query
+    Layout: data/knowledge_base/  (raw/, chunks.jsonl, qa.jsonl, chroma/)
 """
 from __future__ import annotations
 
@@ -34,6 +47,12 @@ from .critique import critique_report, fetch_db_snapshot  # noqa: F401
 from .chat import SymbolChatSession  # noqa: F401
 # PG 2026-05-27: DuckDuckGo discovery + auto-ingest of broker PDFs
 from .research import research_symbol, search_research_reports  # noqa: F401
+# PG 2026-08-25: Tools/skills/commands BM25 index + token tracking
+from .skills_registry import SkillsRegistry, get_registry       # noqa: F401
+from .token_tracker import TokenTracker, get_tracker, count_tokens  # noqa: F401
+from .kb_tools_query import query_tools, get_context, get_json   # noqa: F401
+# PG 2026-08-25: Layer 3 — live web search augmentation (DuckDuckGo)
+from .web_search import web_search, format_web_block             # noqa: F401
 
 __all__ = [
     "load_registry", "iter_sources",
@@ -46,4 +65,8 @@ __all__ = [
     "critique_report", "fetch_db_snapshot",
     "SymbolChatSession",
     "research_symbol", "search_research_reports",
+    # tools/skills layer
+    "SkillsRegistry", "get_registry",
+    "TokenTracker", "get_tracker", "count_tokens",
+    "query_tools", "get_context", "get_json",
 ]

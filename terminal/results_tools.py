@@ -37,6 +37,32 @@ def _status_from(result: Any) -> str:
     return str(result.get("status") or "ok")
 
 
+def _invalid_symbol_error(symbol: str) -> dict[str, Any] | None:
+    sym = str(symbol or "").strip().upper()
+    normalized = re.sub(r"[^A-Z0-9]+", "_", sym).strip("_")
+    if (
+        not sym
+        or "<" in sym
+        or ">" in sym
+        or normalized in {"SYMBOL", "NSE_SYMBOL", "RESOLVED_SYMBOL", "RESOLVED_NSE_SYMBOL", "TICKER"}
+    ):
+        return {
+            "status": "error",
+            "symbol": sym,
+            "error": (
+                "Invalid unresolved symbol placeholder. Resolve the company "
+                "name to a concrete NSE ticker before fetching latest results."
+            ),
+            "candidates": [],
+            "selected_filing": None,
+            "facts": {},
+            "missing_facts": ["revenue", "pat", "eps"],
+            "source_trail": {"symbol_validation": "ERROR: unresolved placeholder"},
+            "summary": "Latest results unavailable because the symbol was not resolved.",
+        }
+    return None
+
+
 def _candidate_score(title: str, source: str) -> int:
     text = title.lower()
     score = 0
@@ -150,6 +176,9 @@ def _resolve_screener_data(sym: str) -> tuple[dict, str]:
 def discover_financial_filings(symbol: str, max_results: int = 10) -> dict:
     """Discover likely financial-result filings from NSE, BSE, and Screener."""
     sym = str(symbol or "").strip().upper()
+    invalid = _invalid_symbol_error(sym)
+    if invalid:
+        return invalid
     source_trail: dict[str, str] = {}
     candidates: list[dict] = []
     screener_data: dict[str, Any] = {}
@@ -337,6 +366,10 @@ def reconcile_filing_facts(parsed_filing: dict | None = None, screener_data: dic
 def get_latest_results(symbol: str, period: str = "latest", ingest: bool = True) -> dict:
     """Build the latest-results evidence pack for one symbol."""
     sym = str(symbol or "").strip().upper()
+    invalid = _invalid_symbol_error(sym)
+    if invalid:
+        invalid["period"] = period
+        return invalid
     source_trail: dict[str, str] = {}
     discovery = discover_financial_filings(sym)
     source_trail["discover_financial_filings"] = _status_from(discovery)

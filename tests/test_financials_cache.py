@@ -85,8 +85,9 @@ def test_build_cash_flow_rows():
             "_headers": ["Mar 2025", "Mar 2026"],
             "Cash from Operating Activity+": ["150,000", "192,113"],
             "Cash from Investing Activity+": ["-180,000", "-200,000"],
-            "Cash from Financing Activity+": ["20,000", "47,362"],
-            "Net Cash Flow": ["-10,000", "39,475"],
+        "Cash from Financing Activity+": ["20,000", "47,362"],
+        "Net Cash Flow": ["-10,000", "39,475"],
+        "Free Cash Flow": ["-30,000", "-7,887"],
         },
     }
     rows = fc.build_cash_flow_rows("FOO", payload)
@@ -95,6 +96,7 @@ def test_build_cash_flow_rows():
     assert rows[1]["investing_cf"] == -200000.0
     assert rows[1]["financing_cf"] == 47362.0
     assert rows[1]["net_cf"] == 39475.0
+    assert rows[1]["free_cash_flow"] == -7887.0
 
 
 def test_build_rows_skips_all_null_periods():

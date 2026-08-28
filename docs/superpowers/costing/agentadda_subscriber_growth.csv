@@ -1,0 +1,26 @@
+Fixed Cost Case,Subscribers,Revenue INR,Variable COGS INR,Fixed Cost INR,Operating Profit INR,Operating Margin %,Readout
+Lean Beta - 15k,50,16000,4980,15000,-3980,-24.9%,Below breakeven
+Lean Beta - 15k,75,24000,7470,15000,1530,6.4%,Breakeven crossed but below 20% margin
+Lean Beta - 15k,100,32000,9960,15000,7040,22.0%,20% margin target crossed
+Lean Beta - 15k,125,40000,12450,15000,12550,31.4%,Healthy early margin
+Lean Beta - 15k,150,48000,14940,15000,18060,37.6%,Strong paid beta economics
+Lean Beta - 15k,200,64000,19920,15000,29080,45.4%,Good operating leverage
+Lean Beta - 15k,300,96000,29880,15000,51120,53.2%,Scale begins to fund product investment
+Lean Beta - 15k,500,160000,49800,15000,95200,59.5%,Very healthy if support burden stays controlled
+Production Low - 25k,50,16000,4980,25000,-13980,-87.4%,Not viable
+Production Low - 25k,75,24000,7470,25000,-8470,-35.3%,Not viable
+Production Low - 25k,100,32000,9960,25000,-2960,-9.2%,Loss-making after production infra
+Production Low - 25k,125,40000,12450,25000,2550,6.4%,Breakeven crossed but below target
+Production Low - 25k,150,48000,14940,25000,8060,16.8%,Close to target but still below 20%
+Production Low - 25k,200,64000,19920,25000,19080,29.8%,20% margin target crossed
+Production Low - 25k,300,96000,29880,25000,41120,42.8%,Healthy
+Production Low - 25k,500,160000,49800,25000,85200,53.2%,Strong
+Production High - 40k,50,16000,4980,40000,-28980,-181.1%,Not viable
+Production High - 40k,75,24000,7470,40000,-23470,-97.8%,Not viable
+Production High - 40k,100,32000,9960,40000,-17960,-56.1%,Not viable
+Production High - 40k,125,40000,12450,40000,-12450,-31.1%,Not viable
+Production High - 40k,150,48000,14940,40000,-6940,-14.5%,Not viable
+Production High - 40k,200,64000,19920,40000,4080,6.4%,Breakeven crossed but below target
+Production High - 40k,300,96000,29880,40000,26120,27.2%,20% margin target crossed
+Production High - 40k,500,160000,49800,40000,70200,43.9%,Healthy
+

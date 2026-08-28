@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Agent Adda — Intraday OHLCV & Quote-Snapshot Capture LaunchAgent
+  =================================================================
+  Starts run_intraday_ohlcv_capture.py at 09:00 IST Mon–Fri.
+  The script self-exits at 15:45 IST once the NSE market window closes.
+
+  What it writes
+  ──────────────
+  intraday.ohlcv_bars       : 15-min candles (yfinance) every 15 min
+  intraday.quote_snapshots  : live NSE snapshots every 60 s
+
+  These tables drive the candlestick charts and hourly tape in the
+  nightly EOD Market Report (scripts/build_eod_market_report.py).
+
+  Install / update
+  ────────────────
+    cp com.agentadda.intraday_capture.plist ~/Library/LaunchAgents/
+    launchctl unload ~/Library/LaunchAgents/com.agentadda.intraday_capture.plist 2>/dev/null; true
+    launchctl load   ~/Library/LaunchAgents/com.agentadda.intraday_capture.plist
+
+  Check status
+  ────────────
+    launchctl list | grep agentadda
+
+  View live logs
+  ──────────────
+    tail -f ~/.agent-adda/logs/intraday_capture.log
+    tail -f ~/.agent-adda/logs/intraday_capture_err.log
+
+  Trigger manually (for testing — runs one full day until 15:45)
+  ──────────────────────────────────────────────────────────────
+    launchctl start com.agentadda.intraday_capture
+
+  Single-cycle test without launchd (from project root, venv active)
+  ───────────────────────────────────────────────────────────────────
+    python scripts/run_intraday_ohlcv_capture.py --once
+    python scripts/run_intraday_ohlcv_capture.py --dry-run
+    python scripts/run_intraday_ohlcv_capture.py --force --once   # outside hours
+
+  Uninstall
+  ─────────
+    launchctl unload ~/Library/LaunchAgents/com.agentadda.intraday_capture.plist
+    rm ~/Library/LaunchAgents/com.agentadda.intraday_capture.plist
+
+  Timezone note
+  ─────────────
+  launchd uses the Mac's local clock. The entries below assume the Mac
+  is set to IST (Asia/Kolkata, UTC+5:30). If the Mac runs UTC, change
+  Hour from 9 to 3 (03:30 UTC = 09:00 IST).
+-->
+<plist version="1.0">
+<dict>
+
+    <key>Label</key>
+    <string>com.agentadda.intraday_capture</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Users/pradeepgorai/Documents/Projects/finance/Unified-NSE-Analysis/.venv/bin/python3</string>
+        <string>/Users/pradeepgorai/Documents/Projects/finance/Unified-NSE-Analysis/scripts/run_intraday_ohlcv_capture.py</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/pradeepgorai/Documents/Projects/finance/Unified-NSE-Analysis</string>
+
+    <!--
+      09:00 IST = start of pre-open session; script self-exits at 15:45 IST.
+      launchd Weekday: 1=Monday … 5=Friday (0 and 7 = Sunday).
+    -->
+    <key>StartCalendarInterval</key>
+    <array>
+        <dict>
+            <key>Hour</key>    <integer>9</integer>
+            <key>Minute</key>  <integer>0</integer>
+            <key>Weekday</key> <integer>1</integer>
+        </dict>
+        <dict>
+            <key>Hour</key>    <integer>9</integer>
+            <key>Minute</key>  <integer>0</integer>
+            <key>Weekday</key> <integer>2</integer>
+        </dict>
+        <dict>
+            <key>Hour</key>    <integer>9</integer>
+            <key>Minute</key>  <integer>0</integer>
+            <key>Weekday</key> <integer>3</integer>
+        </dict>
+        <dict>
+            <key>Hour</key>    <integer>9</integer>
+            <key>Minute</key>  <integer>0</integer>
+            <key>Weekday</key> <integer>4</integer>
+        </dict>
+        <dict>
+            <key>Hour</key>    <integer>9</integer>
+            <key>Minute</key>  <integer>0</integer>
+            <key>Weekday</key> <integer>5</integer>
+        </dict>
+    </array>
+
+    <!-- Prevent launchd from restarting if the process exits non-zero -->
+    <key>KeepAlive</key>
+    <false/>
+
+    <!-- Stdout + stderr to persistent log files -->
+    <key>StandardOutPath</key>
+    <string>/Users/pradeepgorai/.agent-adda/logs/intraday_capture.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>/Users/pradeepgorai/.agent-adda/logs/intraday_capture_err.log</string>
+
+    <key>ProcessType</key>
+    <string>Background</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/Users/pradeepgorai/Documents/Projects/finance/Unified-NSE-Analysis/.venv/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+
+        <key>PYTHONPATH</key>
+        <string>/Users/pradeepgorai/Documents/Projects/finance/Unified-NSE-Analysis</string>
+
+        <key>PYTHONUNBUFFERED</key>
+        <string>1</string>
+
+        <!-- ── OHLCV loader tuning (all optional) ── -->
+
+        <!-- Fetch interval in seconds (default 900 = 15 min) -->
+        <!-- <key>AGENT_ADDA_OHLCV_INTERVAL_SEC</key><string>900</string> -->
+
+        <!-- Number of top-stage symbols to include alongside indices (default 50) -->
+        <!-- <key>AGENT_ADDA_OHLCV_TOP_N</key><string>50</string> -->
+
+        <!-- Candle timeframes, comma-separated (default "15m") -->
+        <!-- <key>AGENT_ADDA_OHLCV_TIMEFRAMES</key><string>15m</string> -->
+
+        <!-- Override symbol list entirely (default: indices + top-N from DB) -->
+        <!-- <key>AGENT_ADDA_OHLCV_SYMBOLS</key><string>NIFTY,BANKNIFTY,RELIANCE,HDFCBANK</string> -->
+
+        <!-- PostgreSQL DSN (default uses Unix socket) -->
+        <!-- <key>AGENT_ADDA_PG_DSN</key><string>dbname=nse_market user=nse_admin host=/tmp</string> -->
+    </dict>
+
+</dict>
+</plist>

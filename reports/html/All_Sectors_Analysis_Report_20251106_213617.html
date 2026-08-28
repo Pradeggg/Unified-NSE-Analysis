@@ -1,0 +1,1873 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>All NSE Sectors Analysis Report</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: "Roboto", "Google Sans", "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #212121;
+            font-weight: 400;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 100%;
+            margin: 0 auto;
+            padding: 20px;
+            width: 100%;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 3rem;
+            font-weight: 300;
+            margin-bottom: 16px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            letter-spacing: -0.5px;
+        }
+
+        .header p {
+            font-size: 1.25rem;
+            font-weight: 400;
+            opacity: 0.9;
+        }
+
+        .sector-section {
+            margin: 2rem 0;
+            padding: 2rem;
+            background: #f8f9fa;
+            border-radius: 12px;
+        }
+
+        .section-header {
+            margin-bottom: 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .section-header h2 {
+            font-size: 2rem;
+            font-weight: 400;
+            color: #2c3e50;
+            margin-bottom: 0.5rem;
+        }
+
+        .strength-badge {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-size: 1.2rem;
+            font-weight: 500;
+            margin-left: 1rem;
+        }
+
+        .sector-stats {
+            display: flex;
+            gap: 1rem;
+            margin-top: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .stat-badge {
+            background: white;
+            padding: 0.35rem 0.75rem;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            color: #667eea;
+            font-weight: 500;
+        }
+
+        .section-header p {
+            color: #7f8c8d;
+            font-size: 1rem;
+            margin-top: 0.5rem;
+        }
+
+        .screeners-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+        }
+
+        .screener-card {
+            background: white;
+            border-radius: 8px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .screener-header h3 {
+            color: #2c3e50;
+            margin-bottom: 0.5rem;
+            font-size: 1.2rem;
+            font-weight: 500;
+        }
+
+        .screener-header p {
+            color: #7f8c8d;
+            font-size: 0.9rem;
+        }
+
+        .screener-list {
+            margin-top: 1rem;
+        }
+
+        .screener-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid #ecf0f1;
+            transition: background-color 0.2s;
+        }
+
+        .screener-item:hover {
+            background-color: #f8f9fa;
+            padding-left: 0.5rem;
+            padding-right: 0.5rem;
+            margin-left: -0.5rem;
+            margin-right: -0.5rem;
+            border-radius: 4px;
+        }
+
+        .screener-item:last-child {
+            border-bottom: none;
+        }
+
+        .stock-info {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+        }
+
+        .stock-symbol {
+            font-weight: 600;
+            color: #2c3e50;
+            font-size: 1rem;
+        }
+
+        .stock-price {
+            font-size: 0.85rem;
+            color: #7f8c8d;
+            margin-top: 0.25rem;
+        }
+
+        .metric-value {
+            font-weight: 600;
+            padding: 0.35rem 0.75rem;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            margin-left: 0.5rem;
+        }
+
+        .metric-value.score {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+
+        .no-data {
+            text-align: center;
+            color: #7f8c8d;
+            font-style: italic;
+            padding: 2rem;
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .summary-card {
+            background: white;
+            border-radius: 8px;
+            padding: 1rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .summary-card .number {
+            font-size: 2rem;
+            font-weight: 300;
+            color: #764ba2;
+            margin: 0.5rem 0;
+        }
+
+        .summary-card p {
+            color: #7f8c8d;
+            font-size: 0.9rem;
+        }
+
+        /* Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 16px;
+            padding: 32px;
+            max-width: 800px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 24px 80px rgba(0, 0, 0, 0.25);
+            transform: scale(0.7);
+            opacity: 0;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+        }
+
+        .modal-overlay.active .modal-content {
+            transform: scale(1);
+            opacity: 1;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .modal-title {
+            font-size: 1.75rem;
+            font-weight: 500;
+            color: #667eea;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #666;
+            padding: 8px;
+            border-radius: 50%;
+            transition: all 0.2s ease;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-close:hover {
+            background: #f0f0f0;
+            color: #333;
+        }
+
+        .detail-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            padding: 20px;
+            background: rgba(102, 126, 234, 0.04);
+            border-radius: 12px;
+            border-left: 4px solid #667eea;
+            margin-bottom: 16px;
+        }
+
+        .detail-item {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .detail-label {
+            font-size: 0.75rem;
+            color: rgba(0,0,0,0.6);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 500;
+        }
+
+        .detail-value {
+            font-size: 1.125rem;
+            font-weight: 500;
+            color: #2c3e50;
+        }
+
+        .detail-value.positive { color: #4caf50; }
+        .detail-value.negative { color: #f44336; }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 16px;
+            margin-top: 20px;
+        }
+
+        .metric-card {
+            background: rgba(102, 126, 234, 0.1);
+            padding: 16px;
+            border-radius: 12px;
+            text-align: center;
+            border: 1px solid rgba(102, 126, 234, 0.2);
+        }
+
+        .metric-card-value {
+            font-size: 1.25rem;
+            font-weight: 500;
+            color: #667eea;
+            margin-bottom: 4px;
+        }
+
+        .metric-card-label {
+            font-size: 0.75rem;
+            color: rgba(0,0,0,0.6);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .insight-box {
+            background: rgba(76, 175, 80, 0.05);
+            padding: 20px;
+            border-radius: 12px;
+            border-left: 4px solid #4caf50;
+            margin-top: 20px;
+        }
+
+        .insight-title {
+            font-size: 1.125rem;
+            color: #4caf50;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+
+        .insight-text {
+            color: rgba(0,0,0,0.7);
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+
+        @media (max-width: 768px) {
+            .screeners-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .summary-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .section-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .strength-badge {
+                margin-left: 0;
+                margin-top: 0.5rem;
+            }
+
+            .detail-row {
+                grid-template-columns: 1fr;
+            }
+
+            .modal-content {
+                width: 95%;
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎯 All NSE Sectors Analysis</h1>
+            <p>Top 5 Stocks by Each Sector, Ordered by Sector Strength</p>
+            <p style="margin-top: 10px; font-size: 1rem; opacity: 0.8;">Analysis Date: November 06, 2025</p>
+        </div>
+
+        <div class="summary-grid">
+            <div class="summary-card">
+                <div class="number">22</div>
+                <p>Sectors Analyzed</p>
+            </div>
+            <div class="summary-card">
+                <div class="number">297</div>
+                <p>Total Stocks</p>
+            </div>
+            <div class="summary-card">
+                <div class="number">58.9</div>
+                <p>Strongest Sector Score</p>
+            </div>
+        </div>
+        <div class="sector-section">
+            <div class="section-header">
+                <div>
+                    <h2>📊 Auto & Auto Ancillaries</h2>
+                    <p>Top 5 stocks by Technical Score</p>
+                    <div class="sector-stats">
+                        <span class="stat-badge">Total Stocks: 13</span>
+                    </div>
+                </div>
+                <div class="strength-badge">Strength: 58.9</div>
+            </div>
+            <div class="screeners-grid">
+                <div class="screener-card">
+                    <div class="screener-header">
+                        <h3>💪 Top 5 Stocks</h3>
+                        <p>Ranked by Technical Score</p>
+                    </div>
+                    <div class="screener-list"><div class="screener-item" onclick="showStockDetails('BHARATFORG', 0)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">BHARATFORG</span>
+            <span class="stock-price">₹1319.70 | SMALL_CAP</span>
+        </div>
+        <div class="metric-value score">66.0</div>
+        <div class="metric-value" style="background: #5cb85c; color: white;">BUY</div>
+      </div><div class="screener-item" onclick="showStockDetails('ASHOKLEY', 1)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">ASHOKLEY</span>
+            <span class="stock-price">₹141.23 | MID_CAP</span>
+        </div>
+        <div class="metric-value score">62.0</div>
+        <div class="metric-value" style="background: #ffc107; color: white;">HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('M&M', 2)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">M&M</span>
+            <span class="stock-price">₹3618.50 | LARGE_CAP</span>
+        </div>
+        <div class="metric-value score">57.3</div>
+        <div class="metric-value" style="background: #ffc107; color: white;">HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('APOLLOTYRE', 3)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">APOLLOTYRE</span>
+            <span class="stock-price">₹505.80 | MICRO_CAP</span>
+        </div>
+        <div class="metric-value score">54.7</div>
+        <div class="metric-value" style="background: #ffc107; color: white;">HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('SANDHAR', 4)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">SANDHAR</span>
+            <span class="stock-price">₹525.60 | MICRO_CAP</span>
+        </div>
+        <div class="metric-value score">54.7</div>
+        <div class="metric-value" style="background: #ffc107; color: white;">HOLD</div>
+      </div></div>
+                </div>
+            </div>
+        </div>
+        <div class="sector-section">
+            <div class="section-header">
+                <div>
+                    <h2>📊 Defence & Aerospace</h2>
+                    <p>Top 5 stocks by Technical Score</p>
+                    <div class="sector-stats">
+                        <span class="stat-badge">Total Stocks: 16</span>
+                    </div>
+                </div>
+                <div class="strength-badge">Strength: 56.9</div>
+            </div>
+            <div class="screeners-grid">
+                <div class="screener-card">
+                    <div class="screener-header">
+                        <h3>💪 Top 5 Stocks</h3>
+                        <p>Ranked by Technical Score</p>
+                    </div>
+                    <div class="screener-list"><div class="screener-item" onclick="showStockDetails('ASTRAL', 0)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">ASTRAL</span>
+            <span class="stock-price">₹1566.10 | LARGE_CAP</span>
+        </div>
+        <div class="metric-value score">76.0</div>
+        <div class="metric-value" style="background: #5cb85c; color: white;">BUY</div>
+      </div><div class="screener-item" onclick="showStockDetails('BHARATFORG', 1)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">BHARATFORG</span>
+            <span class="stock-price">₹1319.70 | SMALL_CAP</span>
+        </div>
+        <div class="metric-value score">66.0</div>
+        <div class="metric-value" style="background: #5cb85c; color: white;">BUY</div>
+      </div><div class="screener-item" onclick="showStockDetails('SHALBY', 2)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">SHALBY</span>
+            <span class="stock-price">₹232.53 | MICRO_CAP</span>
+        </div>
+        <div class="metric-value score">48.7</div>
+        <div class="metric-value" style="background: #ff9800; color: white;">WEAK_HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('BEL', 3)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">BEL</span>
+            <span class="stock-price">₹408.80 | LARGE_CAP</span>
+        </div>
+        <div class="metric-value score">47.3</div>
+        <div class="metric-value" style="background: #ff9800; color: white;">WEAK_HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('QGOLDHALF', 4)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">QGOLDHALF</span>
+            <span class="stock-price">₹100.05 | MICRO_CAP</span>
+        </div>
+        <div class="metric-value score">46.7</div>
+        <div class="metric-value" style="background: #ff9800; color: white;">WEAK_HOLD</div>
+      </div></div>
+                </div>
+            </div>
+        </div>
+        <div class="sector-section">
+            <div class="section-header">
+                <div>
+                    <h2>📊 Metals & Mining</h2>
+                    <p>Top 5 stocks by Technical Score</p>
+                    <div class="sector-stats">
+                        <span class="stat-badge">Total Stocks: 23</span>
+                    </div>
+                </div>
+                <div class="strength-badge">Strength: 56.1</div>
+            </div>
+            <div class="screeners-grid">
+                <div class="screener-card">
+                    <div class="screener-header">
+                        <h3>💪 Top 5 Stocks</h3>
+                        <p>Ranked by Technical Score</p>
+                    </div>
+                    <div class="screener-list"><div class="screener-item" onclick="showStockDetails('RAMCOSYS', 0)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">RAMCOSYS</span>
+            <span class="stock-price">₹639.75 | MICRO_CAP</span>
+        </div>
+        <div class="metric-value score">64.0</div>
+        <div class="metric-value" style="background: #ffc107; color: white;">HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('HINDALCO', 1)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">HINDALCO</span>
+            <span class="stock-price">₹788.40 | LARGE_CAP</span>
+        </div>
+        <div class="metric-value score">60.0</div>
+        <div class="metric-value" style="background: #ffc107; color: white;">HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('TATACONSUM', 2)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">TATACONSUM</span>
+            <span class="stock-price">₹1190.40 | MID_CAP</span>
+        </div>
+        <div class="metric-value score">57.3</div>
+        <div class="metric-value" style="background: #ffc107; color: white;">HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('VEDL', 3)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">VEDL</span>
+            <span class="stock-price">₹504.95 | MID_CAP</span>
+        </div>
+        <div class="metric-value score">50.0</div>
+        <div class="metric-value" style="background: #ffc107; color: white;">HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('NATIONALUM', 4)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">NATIONALUM</span>
+            <span class="stock-price">₹230.59 | SMALL_CAP</span>
+        </div>
+        <div class="metric-value score">49.3</div>
+        <div class="metric-value" style="background: #ff9800; color: white;">WEAK_HOLD</div>
+      </div></div>
+                </div>
+            </div>
+        </div>
+        <div class="sector-section">
+            <div class="section-header">
+                <div>
+                    <h2>📊 Banking - PSU</h2>
+                    <p>Top 5 stocks by Technical Score</p>
+                    <div class="sector-stats">
+                        <span class="stat-badge">Total Stocks: 7</span>
+                    </div>
+                </div>
+                <div class="strength-badge">Strength: 55.8</div>
+            </div>
+            <div class="screeners-grid">
+                <div class="screener-card">
+                    <div class="screener-header">
+                        <h3>💪 Top 5 Stocks</h3>
+                        <p>Ranked by Technical Score</p>
+                    </div>
+                    <div class="screener-list"><div class="screener-item" onclick="showStockDetails('SBIN', 0)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">SBIN</span>
+            <span class="stock-price">₹960.75 | LARGE_CAP</span>
+        </div>
+        <div class="metric-value score">63.3</div>
+        <div class="metric-value" style="background: #ffc107; color: white;">HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('BANKBARODA', 1)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">BANKBARODA</span>
+            <span class="stock-price">₹286.35 | MID_CAP</span>
+        </div>
+        <div class="metric-value score">57.3</div>
+        <div class="metric-value" style="background: #ffc107; color: white;">HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('CANBK', 2)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">CANBK</span>
+            <span class="stock-price">₹139.24 | MID_CAP</span>
+        </div>
+        <div class="metric-value score">55.3</div>
+        <div class="metric-value" style="background: #ffc107; color: white;">HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('PNB', 3)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">PNB</span>
+            <span class="stock-price">₹120.46 | MID_CAP</span>
+        </div>
+        <div class="metric-value score">54.0</div>
+        <div class="metric-value" style="background: #ffc107; color: white;">HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('INDIANB', 4)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">INDIANB</span>
+            <span class="stock-price">₹865.80 | SMALL_CAP</span>
+        </div>
+        <div class="metric-value score">49.3</div>
+        <div class="metric-value" style="background: #ff9800; color: white;">WEAK_HOLD</div>
+      </div></div>
+                </div>
+            </div>
+        </div>
+        <div class="sector-section">
+            <div class="section-header">
+                <div>
+                    <h2>📊 Pharma & Healthcare</h2>
+                    <p>Top 5 stocks by Technical Score</p>
+                    <div class="sector-stats">
+                        <span class="stat-badge">Total Stocks: 15</span>
+                    </div>
+                </div>
+                <div class="strength-badge">Strength: 55.4</div>
+            </div>
+            <div class="screeners-grid">
+                <div class="screener-card">
+                    <div class="screener-header">
+                        <h3>💪 Top 5 Stocks</h3>
+                        <p>Ranked by Technical Score</p>
+                    </div>
+                    <div class="screener-list"><div class="screener-item" onclick="showStockDetails('BIOCON', 0)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">BIOCON</span>
+            <span class="stock-price">₹385.20 | SMALL_CAP</span>
+        </div>
+        <div class="metric-value score">61.3</div>
+        <div class="metric-value" style="background: #ffc107; color: white;">HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('DIVISLAB', 1)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">DIVISLAB</span>
+            <span class="stock-price">₹6883.50 | LARGE_CAP</span>
+        </div>
+        <div class="metric-value score">56.0</div>
+        <div class="metric-value" style="background: #ffc107; color: white;">HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('AUROPHARMA', 2)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">AUROPHARMA</span>
+            <span class="stock-price">₹1140.60 | MID_CAP</span>
+        </div>
+        <div class="metric-value score">55.3</div>
+        <div class="metric-value" style="background: #ffc107; color: white;">HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('ALKEM', 3)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">ALKEM</span>
+            <span class="stock-price">₹5643.50 | SMALL_CAP</span>
+        </div>
+        <div class="metric-value score">53.3</div>
+        <div class="metric-value" style="background: #ffc107; color: white;">HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('LAURUSLABS', 4)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">LAURUSLABS</span>
+            <span class="stock-price">₹979.80 | MID_CAP</span>
+        </div>
+        <div class="metric-value score">51.3</div>
+        <div class="metric-value" style="background: #ffc107; color: white;">HOLD</div>
+      </div></div>
+                </div>
+            </div>
+        </div>
+        <div class="sector-section">
+            <div class="section-header">
+                <div>
+                    <h2>📊 Energy - Oil & Gas</h2>
+                    <p>Top 5 stocks by Technical Score</p>
+                    <div class="sector-stats">
+                        <span class="stat-badge">Total Stocks: 17</span>
+                    </div>
+                </div>
+                <div class="strength-badge">Strength: 54.9</div>
+            </div>
+            <div class="screeners-grid">
+                <div class="screener-card">
+                    <div class="screener-header">
+                        <h3>💪 Top 5 Stocks</h3>
+                        <p>Ranked by Technical Score</p>
+                    </div>
+                    <div class="screener-list"><div class="screener-item" onclick="showStockDetails('BPCL', 0)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">BPCL</span>
+            <span class="stock-price">₹367.95 | LARGE_CAP</span>
+        </div>
+        <div class="metric-value score">66.0</div>
+        <div class="metric-value" style="background: #5cb85c; color: white;">BUY</div>
+      </div><div class="screener-item" onclick="showStockDetails('BIOCON', 1)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">BIOCON</span>
+            <span class="stock-price">₹385.20 | SMALL_CAP</span>
+        </div>
+        <div class="metric-value score">61.3</div>
+        <div class="metric-value" style="background: #ffc107; color: white;">HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('RELIANCE', 2)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">RELIANCE</span>
+            <span class="stock-price">₹1496.10 | LARGE_CAP</span>
+        </div>
+        <div class="metric-value score">50.0</div>
+        <div class="metric-value" style="background: #ffc107; color: white;">HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('MRPL', 3)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">MRPL</span>
+            <span class="stock-price">₹169.86 | MID_CAP</span>
+        </div>
+        <div class="metric-value score">49.3</div>
+        <div class="metric-value" style="background: #ff9800; color: white;">WEAK_HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('IOC', 4)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">IOC</span>
+            <span class="stock-price">₹168.37 | MID_CAP</span>
+        </div>
+        <div class="metric-value score">48.0</div>
+        <div class="metric-value" style="background: #ff9800; color: white;">WEAK_HOLD</div>
+      </div></div>
+                </div>
+            </div>
+        </div>
+        <div class="sector-section">
+            <div class="section-header">
+                <div>
+                    <h2>📊 Finance & NBFC</h2>
+                    <p>Top 5 stocks by Technical Score</p>
+                    <div class="sector-stats">
+                        <span class="stat-badge">Total Stocks: 20</span>
+                    </div>
+                </div>
+                <div class="strength-badge">Strength: 54.4</div>
+            </div>
+            <div class="screeners-grid">
+                <div class="screener-card">
+                    <div class="screener-header">
+                        <h3>💪 Top 5 Stocks</h3>
+                        <p>Ranked by Technical Score</p>
+                    </div>
+                    <div class="screener-list"><div class="screener-item" onclick="showStockDetails('CHOLAFIN', 0)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">CHOLAFIN</span>
+            <span class="stock-price">₹1683.40 | MID_CAP</span>
+        </div>
+        <div class="metric-value score">64.7</div>
+        <div class="metric-value" style="background: #ffc107; color: white;">HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('BAJAJFINSV', 1)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">BAJAJFINSV</span>
+            <span class="stock-price">₹2063.20 | MID_CAP</span>
+        </div>
+        <div class="metric-value score">58.0</div>
+        <div class="metric-value" style="background: #ffc107; color: white;">HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('BAJFINANCE', 2)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">BAJFINANCE</span>
+            <span class="stock-price">₹1041.90 | LARGE_CAP</span>
+        </div>
+        <div class="metric-value score">55.3</div>
+        <div class="metric-value" style="background: #ffc107; color: white;">HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('PRECWIRE', 3)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">PRECWIRE</span>
+            <span class="stock-price">₹227.12 | MICRO_CAP</span>
+        </div>
+        <div class="metric-value score">47.3</div>
+        <div class="metric-value" style="background: #ff9800; color: white;">WEAK_HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('HDFCGOLD', 4)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">HDFCGOLD</span>
+            <span class="stock-price">₹103.34 | MICRO_CAP</span>
+        </div>
+        <div class="metric-value score">46.7</div>
+        <div class="metric-value" style="background: #ff9800; color: white;">WEAK_HOLD</div>
+      </div></div>
+                </div>
+            </div>
+        </div>
+        <div class="sector-section">
+            <div class="section-header">
+                <div>
+                    <h2>📊 Telecom</h2>
+                    <p>Top 5 stocks by Technical Score</p>
+                    <div class="sector-stats">
+                        <span class="stat-badge">Total Stocks: 11</span>
+                    </div>
+                </div>
+                <div class="strength-badge">Strength: 53.7</div>
+            </div>
+            <div class="screeners-grid">
+                <div class="screener-card">
+                    <div class="screener-header">
+                        <h3>💪 Top 5 Stocks</h3>
+                        <p>Ranked by Technical Score</p>
+                    </div>
+                    <div class="screener-list"><div class="screener-item" onclick="showStockDetails('BHARTIARTL', 0)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">BHARTIARTL</span>
+            <span class="stock-price">₹2094.90 | LARGE_CAP</span>
+        </div>
+        <div class="metric-value score">65.3</div>
+        <div class="metric-value" style="background: #5cb85c; color: white;">BUY</div>
+      </div><div class="screener-item" onclick="showStockDetails('TATACONSUM', 1)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">TATACONSUM</span>
+            <span class="stock-price">₹1190.40 | MID_CAP</span>
+        </div>
+        <div class="metric-value score">57.3</div>
+        <div class="metric-value" style="background: #ffc107; color: white;">HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('RELIANCE', 2)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">RELIANCE</span>
+            <span class="stock-price">₹1496.10 | LARGE_CAP</span>
+        </div>
+        <div class="metric-value score">50.0</div>
+        <div class="metric-value" style="background: #ffc107; color: white;">HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('TATACOMM', 3)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">TATACOMM</span>
+            <span class="stock-price">₹1842.00 | MICRO_CAP</span>
+        </div>
+        <div class="metric-value score">49.3</div>
+        <div class="metric-value" style="background: #ff9800; color: white;">WEAK_HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('TATASTEEL', 4)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">TATASTEEL</span>
+            <span class="stock-price">₹177.27 | LARGE_CAP</span>
+        </div>
+        <div class="metric-value score">46.7</div>
+        <div class="metric-value" style="background: #ff9800; color: white;">WEAK_HOLD</div>
+      </div></div>
+                </div>
+            </div>
+        </div>
+        <div class="sector-section">
+            <div class="section-header">
+                <div>
+                    <h2>📊 FMCG & Consumer Goods</h2>
+                    <p>Top 5 stocks by Technical Score</p>
+                    <div class="sector-stats">
+                        <span class="stat-badge">Total Stocks: 18</span>
+                    </div>
+                </div>
+                <div class="strength-badge">Strength: 53.2</div>
+            </div>
+            <div class="screeners-grid">
+                <div class="screener-card">
+                    <div class="screener-header">
+                        <h3>💪 Top 5 Stocks</h3>
+                        <p>Ranked by Technical Score</p>
+                    </div>
+                    <div class="screener-list"><div class="screener-item" onclick="showStockDetails('BRITANNIA', 0)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">BRITANNIA</span>
+            <span class="stock-price">₹6013.50 | LARGE_CAP</span>
+        </div>
+        <div class="metric-value score">62.7</div>
+        <div class="metric-value" style="background: #ffc107; color: white;">HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('TATACONSUM', 1)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">TATACONSUM</span>
+            <span class="stock-price">₹1190.40 | MID_CAP</span>
+        </div>
+        <div class="metric-value score">57.3</div>
+        <div class="metric-value" style="background: #ffc107; color: white;">HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('RADICO', 2)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">RADICO</span>
+            <span class="stock-price">₹3185.90 | SMALL_CAP</span>
+        </div>
+        <div class="metric-value score">54.0</div>
+        <div class="metric-value" style="background: #ffc107; color: white;">HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('DABUR', 3)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">DABUR</span>
+            <span class="stock-price">₹523.70 | MID_CAP</span>
+        </div>
+        <div class="metric-value score">46.7</div>
+        <div class="metric-value" style="background: #ff9800; color: white;">WEAK_HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('NESTLEIND', 4)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">NESTLEIND</span>
+            <span class="stock-price">₹1266.10 | SMALL_CAP</span>
+        </div>
+        <div class="metric-value score">45.3</div>
+        <div class="metric-value" style="background: #ff9800; color: white;">WEAK_HOLD</div>
+      </div></div>
+                </div>
+            </div>
+        </div>
+        <div class="sector-section">
+            <div class="section-header">
+                <div>
+                    <h2>📊 Infrastructure</h2>
+                    <p>Top 5 stocks by Technical Score</p>
+                    <div class="sector-stats">
+                        <span class="stat-badge">Total Stocks: 20</span>
+                    </div>
+                </div>
+                <div class="strength-badge">Strength: 51.6</div>
+            </div>
+            <div class="screeners-grid">
+                <div class="screener-card">
+                    <div class="screener-header">
+                        <h3>💪 Top 5 Stocks</h3>
+                        <p>Ranked by Technical Score</p>
+                    </div>
+                    <div class="screener-list"><div class="screener-item" onclick="showStockDetails('ARISINFRA', 0)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">ARISINFRA</span>
+            <span class="stock-price">₹169.49 | MICRO_CAP</span>
+        </div>
+        <div class="metric-value score">58.7</div>
+        <div class="metric-value" style="background: #ffc107; color: white;">HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('ABB', 1)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">ABB</span>
+            <span class="stock-price">₹5228.00 | SMALL_CAP</span>
+        </div>
+        <div class="metric-value score">54.0</div>
+        <div class="metric-value" style="background: #ffc107; color: white;">HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('BHEL', 2)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">BHEL</span>
+            <span class="stock-price">₹260.05 | SMALL_CAP</span>
+        </div>
+        <div class="metric-value score">53.3</div>
+        <div class="metric-value" style="background: #ffc107; color: white;">HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('ADANIENSOL', 3)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">ADANIENSOL</span>
+            <span class="stock-price">₹968.15 | SMALL_CAP</span>
+        </div>
+        <div class="metric-value score">48.7</div>
+        <div class="metric-value" style="background: #ff9800; color: white;">WEAK_HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('ADANIPORTS', 4)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">ADANIPORTS</span>
+            <span class="stock-price">₹1436.80 | MID_CAP</span>
+        </div>
+        <div class="metric-value score">43.3</div>
+        <div class="metric-value" style="background: #ff9800; color: white;">WEAK_HOLD</div>
+      </div></div>
+                </div>
+            </div>
+        </div>
+        <div class="sector-section">
+            <div class="section-header">
+                <div>
+                    <h2>📊 Energy - Power</h2>
+                    <p>Top 5 stocks by Technical Score</p>
+                    <div class="sector-stats">
+                        <span class="stat-badge">Total Stocks: 18</span>
+                    </div>
+                </div>
+                <div class="strength-badge">Strength: 51.0</div>
+            </div>
+            <div class="screeners-grid">
+                <div class="screener-card">
+                    <div class="screener-header">
+                        <h3>💪 Top 5 Stocks</h3>
+                        <p>Ranked by Technical Score</p>
+                    </div>
+                    <div class="screener-list"><div class="screener-item" onclick="showStockDetails('BORORENEW', 0)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">BORORENEW</span>
+            <span class="stock-price">₹664.85 | MICRO_CAP</span>
+        </div>
+        <div class="metric-value score">73.3</div>
+        <div class="metric-value" style="background: #5cb85c; color: white;">BUY</div>
+      </div><div class="screener-item" onclick="showStockDetails('CGPOWER', 1)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">CGPOWER</span>
+            <span class="stock-price">₹732.70 | MID_CAP</span>
+        </div>
+        <div class="metric-value score">47.3</div>
+        <div class="metric-value" style="background: #ff9800; color: white;">WEAK_HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('QPOWER', 2)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">QPOWER</span>
+            <span class="stock-price">₹934.20 | MICRO_CAP</span>
+        </div>
+        <div class="metric-value score">46.0</div>
+        <div class="metric-value" style="background: #ff9800; color: white;">WEAK_HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('TDPOWERSYS', 3)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">TDPOWERSYS</span>
+            <span class="stock-price">₹797.85 | SMALL_CAP</span>
+        </div>
+        <div class="metric-value score">45.3</div>
+        <div class="metric-value" style="background: #ff9800; color: white;">WEAK_HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('INOXGREEN', 4)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">INOXGREEN</span>
+            <span class="stock-price">₹258.45 | MICRO_CAP</span>
+        </div>
+        <div class="metric-value score">43.3</div>
+        <div class="metric-value" style="background: #ff9800; color: white;">WEAK_HOLD</div>
+      </div></div>
+                </div>
+            </div>
+        </div>
+        <div class="sector-section">
+            <div class="section-header">
+                <div>
+                    <h2>📊 Chemicals</h2>
+                    <p>Top 5 stocks by Technical Score</p>
+                    <div class="sector-stats">
+                        <span class="stat-badge">Total Stocks: 18</span>
+                    </div>
+                </div>
+                <div class="strength-badge">Strength: 50.9</div>
+            </div>
+            <div class="screeners-grid">
+                <div class="screener-card">
+                    <div class="screener-header">
+                        <h3>💪 Top 5 Stocks</h3>
+                        <p>Ranked by Technical Score</p>
+                    </div>
+                    <div class="screener-list"><div class="screener-item" onclick="showStockDetails('BALAJITELE', 0)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">BALAJITELE</span>
+            <span class="stock-price">₹127.59 | MICRO_CAP</span>
+        </div>
+        <div class="metric-value score">69.3</div>
+        <div class="metric-value" style="background: #5cb85c; color: white;">BUY</div>
+      </div><div class="screener-item" onclick="showStockDetails('UPL', 1)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">UPL</span>
+            <span class="stock-price">₹733.35 | LARGE_CAP</span>
+        </div>
+        <div class="metric-value score">48.7</div>
+        <div class="metric-value" style="background: #ff9800; color: white;">WEAK_HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('DEEPAKFERT', 2)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">DEEPAKFERT</span>
+            <span class="stock-price">₹1429.10 | SMALL_CAP</span>
+        </div>
+        <div class="metric-value score">48.7</div>
+        <div class="metric-value" style="background: #ff9800; color: white;">WEAK_HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('CHEMCON', 3)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">CHEMCON</span>
+            <span class="stock-price">₹232.41 | MICRO_CAP</span>
+        </div>
+        <div class="metric-value score">44.7</div>
+        <div class="metric-value" style="background: #ff9800; color: white;">WEAK_HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('AARTIPHARM', 4)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">AARTIPHARM</span>
+            <span class="stock-price">₹843.90 | MICRO_CAP</span>
+        </div>
+        <div class="metric-value score">43.3</div>
+        <div class="metric-value" style="background: #ff9800; color: white;">WEAK_HOLD</div>
+      </div></div>
+                </div>
+            </div>
+        </div>
+        <div class="sector-section">
+            <div class="section-header">
+                <div>
+                    <h2>📊 IT & Software</h2>
+                    <p>Top 5 stocks by Technical Score</p>
+                    <div class="sector-stats">
+                        <span class="stat-badge">Total Stocks: 16</span>
+                    </div>
+                </div>
+                <div class="strength-badge">Strength: 50.1</div>
+            </div>
+            <div class="screeners-grid">
+                <div class="screener-card">
+                    <div class="screener-header">
+                        <h3>💪 Top 5 Stocks</h3>
+                        <p>Ranked by Technical Score</p>
+                    </div>
+                    <div class="screener-list"><div class="screener-item" onclick="showStockDetails('REDINGTON', 0)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">REDINGTON</span>
+            <span class="stock-price">₹289.95 | LARGE_CAP</span>
+        </div>
+        <div class="metric-value score">61.3</div>
+        <div class="metric-value" style="background: #ffc107; color: white;">HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('LTIM', 1)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">LTIM</span>
+            <span class="stock-price">₹5652.00 | MID_CAP</span>
+        </div>
+        <div class="metric-value score">56.0</div>
+        <div class="metric-value" style="background: #ffc107; color: white;">HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('PERSISTENT', 2)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">PERSISTENT</span>
+            <span class="stock-price">₹5842.00 | MID_CAP</span>
+        </div>
+        <div class="metric-value score">46.7</div>
+        <div class="metric-value" style="background: #ff9800; color: white;">WEAK_HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('INTELLECT', 3)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">INTELLECT</span>
+            <span class="stock-price">₹1133.20 | SMALL_CAP</span>
+        </div>
+        <div class="metric-value score">44.7</div>
+        <div class="metric-value" style="background: #ff9800; color: white;">WEAK_HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('COFORGE', 4)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">COFORGE</span>
+            <span class="stock-price">₹1763.90 | MID_CAP</span>
+        </div>
+        <div class="metric-value score">42.0</div>
+        <div class="metric-value" style="background: #ff9800; color: white;">WEAK_HOLD</div>
+      </div></div>
+                </div>
+            </div>
+        </div>
+        <div class="sector-section">
+            <div class="section-header">
+                <div>
+                    <h2>📊 Consumer Durables</h2>
+                    <p>Top 5 stocks by Technical Score</p>
+                    <div class="sector-stats">
+                        <span class="stat-badge">Total Stocks: 12</span>
+                    </div>
+                </div>
+                <div class="strength-badge">Strength: 49.2</div>
+            </div>
+            <div class="screeners-grid">
+                <div class="screener-card">
+                    <div class="screener-header">
+                        <h3>💪 Top 5 Stocks</h3>
+                        <p>Ranked by Technical Score</p>
+                    </div>
+                    <div class="screener-list"><div class="screener-item" onclick="showStockDetails('BUTTERFLY', 0)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">BUTTERFLY</span>
+            <span class="stock-price">₹775.60 | MICRO_CAP</span>
+        </div>
+        <div class="metric-value score">66.0</div>
+        <div class="metric-value" style="background: #5cb85c; color: white;">BUY</div>
+      </div><div class="screener-item" onclick="showStockDetails('TITAN', 1)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">TITAN</span>
+            <span class="stock-price">₹3774.40 | MID_CAP</span>
+        </div>
+        <div class="metric-value score">46.0</div>
+        <div class="metric-value" style="background: #ff9800; color: white;">WEAK_HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('BLUESTARCO', 2)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">BLUESTARCO</span>
+            <span class="stock-price">₹1785.50 | LARGE_CAP</span>
+        </div>
+        <div class="metric-value score">45.3</div>
+        <div class="metric-value" style="background: #ff9800; color: white;">WEAK_HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('ORIENTTECH', 3)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">ORIENTTECH</span>
+            <span class="stock-price">₹429.60 | MICRO_CAP</span>
+        </div>
+        <div class="metric-value score">45.3</div>
+        <div class="metric-value" style="background: #ff9800; color: white;">WEAK_HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('WHIRLPOOL', 4)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">WHIRLPOOL</span>
+            <span class="stock-price">₹1350.20 | SMALL_CAP</span>
+        </div>
+        <div class="metric-value score">43.3</div>
+        <div class="metric-value" style="background: #ff9800; color: white;">WEAK_HOLD</div>
+      </div></div>
+                </div>
+            </div>
+        </div>
+        <div class="sector-section">
+            <div class="section-header">
+                <div>
+                    <h2>📊 Realty</h2>
+                    <p>Top 5 stocks by Technical Score</p>
+                    <div class="sector-stats">
+                        <span class="stat-badge">Total Stocks: 8</span>
+                    </div>
+                </div>
+                <div class="strength-badge">Strength: 48.4</div>
+            </div>
+            <div class="screeners-grid">
+                <div class="screener-card">
+                    <div class="screener-header">
+                        <h3>💪 Top 5 Stocks</h3>
+                        <p>Ranked by Technical Score</p>
+                    </div>
+                    <div class="screener-list"><div class="screener-item" onclick="showStockDetails('SOBHA', 0)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">SOBHA</span>
+            <span class="stock-price">₹1654.40 | SMALL_CAP</span>
+        </div>
+        <div class="metric-value score">58.0</div>
+        <div class="metric-value" style="background: #ffc107; color: white;">HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('GODREJPROP', 1)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">GODREJPROP</span>
+            <span class="stock-price">₹2193.70 | MID_CAP</span>
+        </div>
+        <div class="metric-value score">51.3</div>
+        <div class="metric-value" style="background: #ffc107; color: white;">HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('SUNTECK', 2)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">SUNTECK</span>
+            <span class="stock-price">₹447.60 | MICRO_CAP</span>
+        </div>
+        <div class="metric-value score">47.3</div>
+        <div class="metric-value" style="background: #ff9800; color: white;">WEAK_HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('BRIGADE', 3)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">BRIGADE</span>
+            <span class="stock-price">₹993.00 | MICRO_CAP</span>
+        </div>
+        <div class="metric-value score">43.3</div>
+        <div class="metric-value" style="background: #ff9800; color: white;">WEAK_HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('PRESTIGE', 4)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">PRESTIGE</span>
+            <span class="stock-price">₹1725.20 | SMALL_CAP</span>
+        </div>
+        <div class="metric-value score">42.0</div>
+        <div class="metric-value" style="background: #ff9800; color: white;">WEAK_HOLD</div>
+      </div></div>
+                </div>
+            </div>
+        </div>
+        <div class="sector-section">
+            <div class="section-header">
+                <div>
+                    <h2>📊 Banking - Private</h2>
+                    <p>Top 5 stocks by Technical Score</p>
+                    <div class="sector-stats">
+                        <span class="stat-badge">Total Stocks: 8</span>
+                    </div>
+                </div>
+                <div class="strength-badge">Strength: 45.6</div>
+            </div>
+            <div class="screeners-grid">
+                <div class="screener-card">
+                    <div class="screener-header">
+                        <h3>💪 Top 5 Stocks</h3>
+                        <p>Ranked by Technical Score</p>
+                    </div>
+                    <div class="screener-list"><div class="screener-item" onclick="showStockDetails('AXISBANK', 0)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">AXISBANK</span>
+            <span class="stock-price">₹1228.50 | LARGE_CAP</span>
+        </div>
+        <div class="metric-value score">61.3</div>
+        <div class="metric-value" style="background: #ffc107; color: white;">HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('RBLBANK', 1)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">RBLBANK</span>
+            <span class="stock-price">₹325.60 | MID_CAP</span>
+        </div>
+        <div class="metric-value score">61.3</div>
+        <div class="metric-value" style="background: #ffc107; color: white;">HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('FEDERALBNK', 2)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">FEDERALBNK</span>
+            <span class="stock-price">₹235.83 | SMALL_CAP</span>
+        </div>
+        <div class="metric-value score">45.3</div>
+        <div class="metric-value" style="background: #ff9800; color: white;">WEAK_HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('KOTAKBANK', 3)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">KOTAKBANK</span>
+            <span class="stock-price">₹2083.20 | LARGE_CAP</span>
+        </div>
+        <div class="metric-value score">30.0</div>
+        <div class="metric-value" style="background: #dc3545; color: white;">SELL</div>
+      </div><div class="screener-item" onclick="showStockDetails('BANDHANBNK', 4)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">BANDHANBNK</span>
+            <span class="stock-price">₹152.93 | MID_CAP</span>
+        </div>
+        <div class="metric-value score">30.0</div>
+        <div class="metric-value" style="background: #dc3545; color: white;">SELL</div>
+      </div></div>
+                </div>
+            </div>
+        </div>
+        <div class="sector-section">
+            <div class="section-header">
+                <div>
+                    <h2>📊 Media & Entertainment</h2>
+                    <p>Top 5 stocks by Technical Score</p>
+                    <div class="sector-stats">
+                        <span class="stat-badge">Total Stocks: 14</span>
+                    </div>
+                </div>
+                <div class="strength-badge">Strength: 44.8</div>
+            </div>
+            <div class="screeners-grid">
+                <div class="screener-card">
+                    <div class="screener-header">
+                        <h3>💪 Top 5 Stocks</h3>
+                        <p>Ranked by Technical Score</p>
+                    </div>
+                    <div class="screener-list"><div class="screener-item" onclick="showStockDetails('SUNPHARMA', 0)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">SUNPHARMA</span>
+            <span class="stock-price">₹1685.90 | LARGE_CAP</span>
+        </div>
+        <div class="metric-value score">47.3</div>
+        <div class="metric-value" style="background: #ff9800; color: white;">WEAK_HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('SUNTECK', 1)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">SUNTECK</span>
+            <span class="stock-price">₹447.60 | MICRO_CAP</span>
+        </div>
+        <div class="metric-value score">47.3</div>
+        <div class="metric-value" style="background: #ff9800; color: white;">WEAK_HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('GOLDBEES', 2)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">GOLDBEES</span>
+            <span class="stock-price">₹100.07 | MID_CAP</span>
+        </div>
+        <div class="metric-value score">46.7</div>
+        <div class="metric-value" style="background: #ff9800; color: white;">WEAK_HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('HATSUN', 3)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">HATSUN</span>
+            <span class="stock-price">₹1020.10 | MICRO_CAP</span>
+        </div>
+        <div class="metric-value score">45.3</div>
+        <div class="metric-value" style="background: #ff9800; color: white;">WEAK_HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('LIQUIDBETF', 4)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">LIQUIDBETF</span>
+            <span class="stock-price">₹1055.40 | MICRO_CAP</span>
+        </div>
+        <div class="metric-value score">37.3</div>
+        <div class="metric-value" style="background: #ff9800; color: white;">WEAK_HOLD</div>
+      </div></div>
+                </div>
+            </div>
+        </div>
+        <div class="sector-section">
+            <div class="section-header">
+                <div>
+                    <h2>📊 Paper & Packaging</h2>
+                    <p>Top 5 stocks by Technical Score</p>
+                    <div class="sector-stats">
+                        <span class="stat-badge">Total Stocks: 11</span>
+                    </div>
+                </div>
+                <div class="strength-badge">Strength: 39.5</div>
+            </div>
+            <div class="screeners-grid">
+                <div class="screener-card">
+                    <div class="screener-header">
+                        <h3>💪 Top 5 Stocks</h3>
+                        <p>Ranked by Technical Score</p>
+                    </div>
+                    <div class="screener-list"><div class="screener-item" onclick="showStockDetails('JKTYRE', 0)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">JKTYRE</span>
+            <span class="stock-price">₹447.90 | SMALL_CAP</span>
+        </div>
+        <div class="metric-value score">49.3</div>
+        <div class="metric-value" style="background: #ff9800; color: white;">WEAK_HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('JKIL', 1)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">JKIL</span>
+            <span class="stock-price">₹655.15 | MICRO_CAP</span>
+        </div>
+        <div class="metric-value score">42.0</div>
+        <div class="metric-value" style="background: #ff9800; color: white;">WEAK_HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('SOUTHWEST', 2)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">SOUTHWEST</span>
+            <span class="stock-price">₹177.04 | MICRO_CAP</span>
+        </div>
+        <div class="metric-value score">40.0</div>
+        <div class="metric-value" style="background: #ff9800; color: white;">WEAK_HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('JKPAPER', 3)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">JKPAPER</span>
+            <span class="stock-price">₹384.35 | MICRO_CAP</span>
+        </div>
+        <div class="metric-value score">36.0</div>
+        <div class="metric-value" style="background: #ff9800; color: white;">WEAK_HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('JKLAKSHMI', 4)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">JKLAKSHMI</span>
+            <span class="stock-price">₹870.95 | MICRO_CAP</span>
+        </div>
+        <div class="metric-value score">30.0</div>
+        <div class="metric-value" style="background: #dc3545; color: white;">SELL</div>
+      </div></div>
+                </div>
+            </div>
+        </div>
+        <div class="sector-section">
+            <div class="section-header">
+                <div>
+                    <h2>📊 Textiles</h2>
+                    <p>Top 5 stocks by Technical Score</p>
+                    <div class="sector-stats">
+                        <span class="stat-badge">Total Stocks: 8</span>
+                    </div>
+                </div>
+                <div class="strength-badge">Strength: 35.6</div>
+            </div>
+            <div class="screeners-grid">
+                <div class="screener-card">
+                    <div class="screener-header">
+                        <h3>💪 Top 5 Stocks</h3>
+                        <p>Ranked by Technical Score</p>
+                    </div>
+                    <div class="screener-list"><div class="screener-item" onclick="showStockDetails('WELSPUNLIV', 0)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">WELSPUNLIV</span>
+            <span class="stock-price">₹127.22 | MICRO_CAP</span>
+        </div>
+        <div class="metric-value score">38.7</div>
+        <div class="metric-value" style="background: #ff9800; color: white;">WEAK_HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('ARVIND', 1)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">ARVIND</span>
+            <span class="stock-price">₹309.95 | MICRO_CAP</span>
+        </div>
+        <div class="metric-value score">38.0</div>
+        <div class="metric-value" style="background: #ff9800; color: white;">WEAK_HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('KPRMILL', 2)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">KPRMILL</span>
+            <span class="stock-price">₹1080.60 | MICRO_CAP</span>
+        </div>
+        <div class="metric-value score">38.0</div>
+        <div class="metric-value" style="background: #ff9800; color: white;">WEAK_HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('ARVINDFASN', 3)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">ARVINDFASN</span>
+            <span class="stock-price">₹525.05 | MICRO_CAP</span>
+        </div>
+        <div class="metric-value score">36.0</div>
+        <div class="metric-value" style="background: #ff9800; color: white;">WEAK_HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('RELAXO', 4)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">RELAXO</span>
+            <span class="stock-price">₹437.40 | MICRO_CAP</span>
+        </div>
+        <div class="metric-value score">27.3</div>
+        <div class="metric-value" style="background: #dc3545; color: white;">SELL</div>
+      </div></div>
+                </div>
+            </div>
+        </div>
+        <div class="sector-section">
+            <div class="section-header">
+                <div>
+                    <h2>📊 Agriculture & Fertilizers</h2>
+                    <p>Top 5 stocks by Technical Score</p>
+                    <div class="sector-stats">
+                        <span class="stat-badge">Total Stocks: 8</span>
+                    </div>
+                </div>
+                <div class="strength-badge">Strength: 33.6</div>
+            </div>
+            <div class="screeners-grid">
+                <div class="screener-card">
+                    <div class="screener-header">
+                        <h3>💪 Top 5 Stocks</h3>
+                        <p>Ranked by Technical Score</p>
+                    </div>
+                    <div class="screener-list"><div class="screener-item" onclick="showStockDetails('UPL', 0)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">UPL</span>
+            <span class="stock-price">₹733.35 | LARGE_CAP</span>
+        </div>
+        <div class="metric-value score">48.7</div>
+        <div class="metric-value" style="background: #ff9800; color: white;">WEAK_HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('NAVINFLUOR', 1)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">NAVINFLUOR</span>
+            <span class="stock-price">₹6081.00 | MID_CAP</span>
+        </div>
+        <div class="metric-value score">44.0</div>
+        <div class="metric-value" style="background: #ff9800; color: white;">WEAK_HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('DCMSRIND', 2)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">DCMSRIND</span>
+            <span class="stock-price">₹156.18 | MICRO_CAP</span>
+        </div>
+        <div class="metric-value score">34.0</div>
+        <div class="metric-value" style="background: #dc3545; color: white;">SELL</div>
+      </div><div class="screener-item" onclick="showStockDetails('COROMANDEL', 3)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">COROMANDEL</span>
+            <span class="stock-price">₹2150.10 | SMALL_CAP</span>
+        </div>
+        <div class="metric-value score">20.7</div>
+        <div class="metric-value" style="background: #dc3545; color: white;">SELL</div>
+      </div><div class="screener-item" onclick="showStockDetails('GSFC', 4)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">GSFC</span>
+            <span class="stock-price">₹186.98 | MICRO_CAP</span>
+        </div>
+        <div class="metric-value score">20.7</div>
+        <div class="metric-value" style="background: #dc3545; color: white;">SELL</div>
+      </div></div>
+                </div>
+            </div>
+        </div>
+        <div class="sector-section">
+            <div class="section-header">
+                <div>
+                    <h2>📊 Logistics & Shipping</h2>
+                    <p>Top 5 stocks by Technical Score</p>
+                    <div class="sector-stats">
+                        <span class="stat-badge">Total Stocks: 3</span>
+                    </div>
+                </div>
+                <div class="strength-badge">Strength: 33.5</div>
+            </div>
+            <div class="screeners-grid">
+                <div class="screener-card">
+                    <div class="screener-header">
+                        <h3>💪 Top 5 Stocks</h3>
+                        <p>Ranked by Technical Score</p>
+                    </div>
+                    <div class="screener-list"><div class="screener-item" onclick="showStockDetails('ADANIPORTS', 0)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">ADANIPORTS</span>
+            <span class="stock-price">₹1436.80 | MID_CAP</span>
+        </div>
+        <div class="metric-value score">43.3</div>
+        <div class="metric-value" style="background: #ff9800; color: white;">WEAK_HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('CONCOR', 1)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">CONCOR</span>
+            <span class="stock-price">₹519.35 | MID_CAP</span>
+        </div>
+        <div class="metric-value score">34.0</div>
+        <div class="metric-value" style="background: #dc3545; color: white;">SELL</div>
+      </div><div class="screener-item" onclick="showStockDetails('VRLLOG', 2)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">VRLLOG</span>
+            <span class="stock-price">₹269.00 | MICRO_CAP</span>
+        </div>
+        <div class="metric-value score">23.3</div>
+        <div class="metric-value" style="background: #dc3545; color: white;">SELL</div>
+      </div></div>
+                </div>
+            </div>
+        </div>
+        <div class="sector-section">
+            <div class="section-header">
+                <div>
+                    <h2>📊 Cement & Construction</h2>
+                    <p>Top 5 stocks by Technical Score</p>
+                    <div class="sector-stats">
+                        <span class="stat-badge">Total Stocks: 13</span>
+                    </div>
+                </div>
+                <div class="strength-badge">Strength: 33.2</div>
+            </div>
+            <div class="screeners-grid">
+                <div class="screener-card">
+                    <div class="screener-header">
+                        <h3>💪 Top 5 Stocks</h3>
+                        <p>Ranked by Technical Score</p>
+                    </div>
+                    <div class="screener-list"><div class="screener-item" onclick="showStockDetails('ORIENTTECH', 0)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">ORIENTTECH</span>
+            <span class="stock-price">₹429.60 | MICRO_CAP</span>
+        </div>
+        <div class="metric-value score">45.3</div>
+        <div class="metric-value" style="background: #ff9800; color: white;">WEAK_HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('RAMCOCEM', 1)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">RAMCOCEM</span>
+            <span class="stock-price">₹1033.20 | MICRO_CAP</span>
+        </div>
+        <div class="metric-value score">34.0</div>
+        <div class="metric-value" style="background: #dc3545; color: white;">SELL</div>
+      </div><div class="screener-item" onclick="showStockDetails('CREDITACC', 2)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">CREDITACC</span>
+            <span class="stock-price">₹1337.50 | MICRO_CAP</span>
+        </div>
+        <div class="metric-value score">34.0</div>
+        <div class="metric-value" style="background: #dc3545; color: white;">SELL</div>
+      </div><div class="screener-item" onclick="showStockDetails('JKLAKSHMI', 3)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">JKLAKSHMI</span>
+            <span class="stock-price">₹870.95 | MICRO_CAP</span>
+        </div>
+        <div class="metric-value score">30.0</div>
+        <div class="metric-value" style="background: #dc3545; color: white;">SELL</div>
+      </div><div class="screener-item" onclick="showStockDetails('STARCEMENT', 4)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">STARCEMENT</span>
+            <span class="stock-price">₹245.75 | MICRO_CAP</span>
+        </div>
+        <div class="metric-value score">22.7</div>
+        <div class="metric-value" style="background: #dc3545; color: white;">SELL</div>
+      </div></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Stock Details Modal -->
+    <div class="modal-overlay" id="stockModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title" id="modalStockSymbol">Stock Details</div>
+                <button class="modal-close" onclick="closeModal()">×</button>
+            </div>
+            <div id="modalStockDetails">
+                <!-- Stock details will be populated here -->
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // All stocks data
+        const allStocksData = [{"symbol":"BHARATFORG","company_name":"BHARAT FORGE LTD","sector":"Auto & Auto Ancillaries","market_cap":"SMALL_CAP","current_price":1319.7,"change_1d":-0.39,"change_1w":0.19,"change_1m":8.46,"technical_score":66,"rsi":63.1,"relative_strength":12.28,"can_slim_score":12,"minervini_score":12,"fundamental_score":15,"enhanced_fund_score":54.83,"earnings_quality":55.22,"sales_growth":53,"financial_strength":56.82,"institutional_backing":54.17,"trading_value":1460802435.8,"trading_signal":"BUY","trend_signal":"BULLISH","rank":165},{"symbol":"ASHOKLEY","company_name":"ASHOK LEYLAND LTD","sector":"Auto & Auto Ancillaries","market_cap":"MID_CAP","current_price":141.23,"change_1d":0.56,"change_1w":0.33,"change_1m":1,"technical_score":62,"rsi":56.8,"relative_strength":4.51,"can_slim_score":6,"minervini_score":13,"fundamental_score":25,"enhanced_fund_score":71.08,"earnings_quality":74.57,"sales_growth":82,"financial_strength":59.41,"institutional_backing":59.17,"trading_value":2478878823.03,"trading_signal":"HOLD","trend_signal":"BULLISH","rank":104},{"symbol":"M&M","company_name":"MAHINDRA & MAHINDRA LTD","sector":"Auto & Auto Ancillaries","market_cap":"LARGE_CAP","current_price":3618.5,"change_1d":1.04,"change_1w":3.32,"change_1m":3.6,"technical_score":57.3,"rsi":58.8,"relative_strength":4.97,"can_slim_score":8,"minervini_score":17,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":16478792759.1,"trading_signal":"HOLD","trend_signal":"STRONG_BULLISH","rank":9},{"symbol":"APOLLOTYRE","company_name":"APOLLO TYRES LTD","sector":"Auto & Auto Ancillaries","market_cap":"MICRO_CAP","current_price":505.8,"change_1d":-3.17,"change_1w":0.56,"change_1m":5.71,"technical_score":54.7,"rsi":55.5,"relative_strength":6.64,"can_slim_score":7,"minervini_score":12,"fundamental_score":15,"enhanced_fund_score":53.44,"earnings_quality":54.57,"sales_growth":51,"financial_strength":53.68,"institutional_backing":54.17,"trading_value":287789276.9,"trading_signal":"HOLD","trend_signal":"STRONG_BULLISH","rank":467},{"symbol":"SANDHAR","company_name":"SANDHAR TECHNOLOGIES LTD","sector":"Auto & Auto Ancillaries","market_cap":"MICRO_CAP","current_price":525.6,"change_1d":-3.42,"change_1w":-0.18,"change_1m":11.05,"technical_score":54.7,"rsi":54.9,"relative_strength":14.58,"can_slim_score":13,"minervini_score":10,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":94163439.85,"trading_signal":"HOLD","trend_signal":"BULLISH","rank":699},{"symbol":"ASTRAL","company_name":"ASTRAL LIMITED","sector":"Defence & Aerospace","market_cap":"LARGE_CAP","current_price":1566.1,"change_1d":6.74,"change_1w":6.91,"change_1m":10.34,"technical_score":76,"rsi":73.5,"relative_strength":10.76,"can_slim_score":18,"minervini_score":14,"fundamental_score":20,"enhanced_fund_score":62.97,"earnings_quality":68.04,"sales_growth":60,"financial_strength":59.41,"institutional_backing":59.17,"trading_value":9031130832.4,"trading_signal":"BUY","trend_signal":"BULLISH","rank":22},{"symbol":"BHARATFORG","company_name":"BHARAT FORGE LTD","sector":"Defence & Aerospace","market_cap":"SMALL_CAP","current_price":1319.7,"change_1d":-0.39,"change_1w":0.19,"change_1m":8.46,"technical_score":66,"rsi":63.1,"relative_strength":12.28,"can_slim_score":12,"minervini_score":12,"fundamental_score":15,"enhanced_fund_score":54.83,"earnings_quality":55.22,"sales_growth":53,"financial_strength":56.82,"institutional_backing":54.17,"trading_value":1460802435.8,"trading_signal":"BUY","trend_signal":"BULLISH","rank":165},{"symbol":"SHALBY","company_name":"SHALBY LIMITED","sector":"Defence & Aerospace","market_cap":"MICRO_CAP","current_price":232.53,"change_1d":-4.22,"change_1w":-3.97,"change_1m":-10.91,"technical_score":48.7,"rsi":40,"relative_strength":16,"can_slim_score":8,"minervini_score":10,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":35065463.89,"trading_signal":"WEAK_HOLD","trend_signal":"BULLISH","rank":862},{"symbol":"BEL","company_name":"BHARAT ELECTRONICS LTD","sector":"Defence & Aerospace","market_cap":"LARGE_CAP","current_price":408.8,"change_1d":-1.53,"change_1w":-0.27,"change_1m":-0.37,"technical_score":47.3,"rsi":48.7,"relative_strength":8.34,"can_slim_score":4,"minervini_score":8,"fundamental_score":15,"enhanced_fund_score":54.37,"earnings_quality":52.39,"sales_growth":47,"financial_strength":56.59,"institutional_backing":69,"trading_value":5249985979.2,"trading_signal":"WEAK_HOLD","trend_signal":"BULLISH","rank":38},{"symbol":"QGOLDHALF","company_name":"QUANTUM GOLD FUND","sector":"Defence & Aerospace","market_cap":"MICRO_CAP","current_price":100.05,"change_1d":0.24,"change_1w":0.37,"change_1m":0.32,"technical_score":46.7,"rsi":52.6,"relative_strength":20.65,"can_slim_score":11,"minervini_score":10,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":14158145.59,"trading_signal":"WEAK_HOLD","trend_signal":"BULLISH","rank":919},{"symbol":"RAMCOSYS","company_name":"RAMCO SYSTEMS LTD","sector":"Metals & Mining","market_cap":"MICRO_CAP","current_price":639.75,"change_1d":5.61,"change_1w":3.42,"change_1m":26.85,"technical_score":64,"rsi":65.5,"relative_strength":47.61,"can_slim_score":20,"minervini_score":14,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":462285275.55,"trading_signal":"HOLD","trend_signal":"BULLISH","rank":341},{"symbol":"HINDALCO","company_name":"HINDALCO  INDUSTRIES  LTD","sector":"Metals & Mining","market_cap":"LARGE_CAP","current_price":788.4,"change_1d":-5.17,"change_1w":-8.47,"change_1m":2.68,"technical_score":60,"rsi":46.5,"relative_strength":10.89,"can_slim_score":14,"minervini_score":10,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":27201452543.05,"trading_signal":"HOLD","trend_signal":"STRONG_BULLISH","rank":2},{"symbol":"TATACONSUM","company_name":"TATA CONSUMER PRODUCT LTD","sector":"Metals & Mining","market_cap":"MID_CAP","current_price":1190.4,"change_1d":0.94,"change_1w":1.17,"change_1m":6.29,"technical_score":57.3,"rsi":62.6,"relative_strength":6.1,"can_slim_score":10,"minervini_score":12,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":2844617394.9,"trading_signal":"HOLD","trend_signal":"STRONG_BULLISH","rank":84},{"symbol":"VEDL","company_name":"VEDANTA LIMITED","sector":"Metals & Mining","market_cap":"MID_CAP","current_price":504.95,"change_1d":-0.63,"change_1w":-0.39,"change_1m":7.01,"technical_score":50,"rsi":60.7,"relative_strength":11.75,"can_slim_score":11,"minervini_score":10,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":3669936285.05,"trading_signal":"HOLD","trend_signal":"STRONG_BULLISH","rank":58},{"symbol":"NATIONALUM","company_name":"NATIONAL ALUMINIUM CO LTD","sector":"Metals & Mining","market_cap":"SMALL_CAP","current_price":230.59,"change_1d":-1.15,"change_1w":-3.15,"change_1m":6.23,"technical_score":49.3,"rsi":55.1,"relative_strength":18.36,"can_slim_score":11,"minervini_score":10,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":1394106678.78,"trading_signal":"WEAK_HOLD","trend_signal":"STRONG_BULLISH","rank":170},{"symbol":"SBIN","company_name":"STATE BANK OF INDIA","sector":"Banking - PSU","market_cap":"LARGE_CAP","current_price":960.75,"change_1d":0.33,"change_1w":2.83,"change_1m":11.11,"technical_score":63.3,"rsi":80.9,"relative_strength":14.3,"can_slim_score":18,"minervini_score":15,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":22216670805.6,"trading_signal":"HOLD","trend_signal":"STRONG_BULLISH","rank":5},{"symbol":"BANKBARODA","company_name":"BANK OF BARODA","sector":"Banking - PSU","market_cap":"MID_CAP","current_price":286.35,"change_1d":-0.61,"change_1w":4.99,"change_1m":9.36,"technical_score":57.3,"rsi":68.5,"relative_strength":15.34,"can_slim_score":11,"minervini_score":6,"fundamental_score":15,"enhanced_fund_score":53.65,"earnings_quality":55.48,"sales_growth":47,"financial_strength":57.94,"institutional_backing":54.17,"trading_value":2208473659.35,"trading_signal":"HOLD","trend_signal":"STRONG_BULLISH","rank":122},{"symbol":"CANBK","company_name":"CANARA BANK","sector":"Banking - PSU","market_cap":"MID_CAP","current_price":139.24,"change_1d":-0.26,"change_1w":4.78,"change_1m":8.73,"technical_score":55.3,"rsi":75.2,"relative_strength":22.41,"can_slim_score":13,"minervini_score":4,"fundamental_score":15,"enhanced_fund_score":54.62,"earnings_quality":54.05,"sales_growth":47,"financial_strength":56.76,"institutional_backing":66,"trading_value":3114696538,"trading_signal":"HOLD","trend_signal":"STRONG_BULLISH","rank":75},{"symbol":"PNB","company_name":"PUNJAB NATIONAL BANK","sector":"Banking - PSU","market_cap":"MID_CAP","current_price":120.46,"change_1d":-2.26,"change_1w":0.31,"change_1m":5.51,"technical_score":54,"rsi":58.8,"relative_strength":10.87,"can_slim_score":11,"minervini_score":12,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":2297655998.17,"trading_signal":"HOLD","trend_signal":"STRONG_BULLISH","rank":114},{"symbol":"INDIANB","company_name":"INDIAN BANK","sector":"Banking - PSU","market_cap":"SMALL_CAP","current_price":865.8,"change_1d":-0.76,"change_1w":1.28,"change_1m":14.27,"technical_score":49.3,"rsi":75.4,"relative_strength":27.62,"can_slim_score":15,"minervini_score":8,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":1562048612.25,"trading_signal":"WEAK_HOLD","trend_signal":"STRONG_BULLISH","rank":154},{"symbol":"BIOCON","company_name":"BIOCON LIMITED.","sector":"Pharma & Healthcare","market_cap":"SMALL_CAP","current_price":385.2,"change_1d":1.24,"change_1w":2.28,"change_1m":10.75,"technical_score":61.3,"rsi":69.1,"relative_strength":5.56,"can_slim_score":12,"minervini_score":10,"fundamental_score":15,"enhanced_fund_score":58.99,"earnings_quality":60.43,"sales_growth":56,"financial_strength":56.82,"institutional_backing":63,"trading_value":1551399168.65,"trading_signal":"HOLD","trend_signal":"BULLISH","rank":156},{"symbol":"DIVISLAB","company_name":"DIVI S LABORATORIES LTD","sector":"Pharma & Healthcare","market_cap":"LARGE_CAP","current_price":6883.5,"change_1d":1.16,"change_1w":3.43,"change_1m":12.76,"technical_score":56,"rsi":73.4,"relative_strength":13.03,"can_slim_score":14,"minervini_score":8,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":4939160684.5,"trading_signal":"HOLD","trend_signal":"BULLISH","rank":41},{"symbol":"AUROPHARMA","company_name":"AUROBINDO PHARMA LTD","sector":"Pharma & Healthcare","market_cap":"MID_CAP","current_price":1140.6,"change_1d":-0.74,"change_1w":3.46,"change_1m":4.63,"technical_score":55.3,"rsi":59.7,"relative_strength":7.4,"can_slim_score":5,"minervini_score":6,"fundamental_score":20,"enhanced_fund_score":67.41,"earnings_quality":70.43,"sales_growth":70,"financial_strength":59.18,"institutional_backing":66,"trading_value":1646782040.6,"trading_signal":"HOLD","trend_signal":"BULLISH","rank":148},{"symbol":"ALKEM","company_name":"ALKEM LABORATORIES LTD.","sector":"Pharma & Healthcare","market_cap":"SMALL_CAP","current_price":5643.5,"change_1d":-0.36,"change_1w":2.14,"change_1m":2.76,"technical_score":53.3,"rsi":62,"relative_strength":3.05,"can_slim_score":3,"minervini_score":6,"fundamental_score":15,"enhanced_fund_score":56.97,"earnings_quality":60.22,"sales_growth":47,"financial_strength":58.41,"institutional_backing":63,"trading_value":861846122,"trading_signal":"HOLD","trend_signal":"STRONG_BULLISH","rank":227},{"symbol":"LAURUSLABS","company_name":"LAURUS LABS LIMITED","sector":"Pharma & Healthcare","market_cap":"MID_CAP","current_price":979.8,"change_1d":-0.34,"change_1w":0.97,"change_1m":13.48,"technical_score":51.3,"rsi":69.8,"relative_strength":10.24,"can_slim_score":13,"minervini_score":10,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":1643392980.7,"trading_signal":"HOLD","trend_signal":"STRONG_BULLISH","rank":149},{"symbol":"BPCL","company_name":"BHARAT PETROLEUM CORP  LT","sector":"Energy - Oil & Gas","market_cap":"LARGE_CAP","current_price":367.95,"change_1d":-1.34,"change_1w":2.89,"change_1m":7.62,"technical_score":66,"rsi":70.1,"relative_strength":13.4,"can_slim_score":12,"minervini_score":6,"fundamental_score":20,"enhanced_fund_score":62.6,"earnings_quality":70,"sales_growth":56,"financial_strength":58.64,"institutional_backing":59.17,"trading_value":4383652002.35,"trading_signal":"BUY","trend_signal":"STRONG_BULLISH","rank":46},{"symbol":"BIOCON","company_name":"BIOCON LIMITED.","sector":"Energy - Oil & Gas","market_cap":"SMALL_CAP","current_price":385.2,"change_1d":1.24,"change_1w":2.28,"change_1m":10.75,"technical_score":61.3,"rsi":69.1,"relative_strength":5.56,"can_slim_score":12,"minervini_score":10,"fundamental_score":15,"enhanced_fund_score":58.99,"earnings_quality":60.43,"sales_growth":56,"financial_strength":56.82,"institutional_backing":63,"trading_value":1551399168.65,"trading_signal":"HOLD","trend_signal":"BULLISH","rank":156},{"symbol":"RELIANCE","company_name":"RELIANCE INDUSTRIES LTD","sector":"Energy - Oil & Gas","market_cap":"LARGE_CAP","current_price":1496.1,"change_1d":1.56,"change_1w":0.51,"change_1m":8.04,"technical_score":50,"rsi":67.3,"relative_strength":4.28,"can_slim_score":6,"minervini_score":17,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":25059656533.3,"trading_signal":"HOLD","trend_signal":"BULLISH","rank":3},{"symbol":"MRPL","company_name":"MRPL","sector":"Energy - Oil & Gas","market_cap":"MID_CAP","current_price":169.86,"change_1d":-3.44,"change_1w":4.48,"change_1m":13.79,"technical_score":49.3,"rsi":70.7,"relative_strength":34.2,"can_slim_score":16,"minervini_score":2,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":2727446481.21,"trading_signal":"WEAK_HOLD","trend_signal":"STRONG_BULLISH","rank":90},{"symbol":"IOC","company_name":"INDIAN OIL CORP LTD","sector":"Energy - Oil & Gas","market_cap":"MID_CAP","current_price":168.37,"change_1d":-0.52,"change_1w":2.97,"change_1m":9.07,"technical_score":48,"rsi":75.7,"relative_strength":17.44,"can_slim_score":12,"minervini_score":4,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":3321974233.2,"trading_signal":"WEAK_HOLD","trend_signal":"STRONG_BULLISH","rank":69},{"symbol":"CHOLAFIN","company_name":"CHOLAMANDALAM IN & FIN CO","sector":"Finance & NBFC","market_cap":"MID_CAP","current_price":1683.4,"change_1d":-3.58,"change_1w":-1.66,"change_1m":3.17,"technical_score":64.7,"rsi":53.3,"relative_strength":8.94,"can_slim_score":10,"minervini_score":12,"fundamental_score":15,"enhanced_fund_score":54.41,"earnings_quality":50.65,"sales_growth":51,"financial_strength":57.47,"institutional_backing":66,"trading_value":3907211755.2,"trading_signal":"HOLD","trend_signal":"STRONG_BULLISH","rank":53},{"symbol":"BAJAJFINSV","company_name":"BAJAJ FINSERV LTD.","sector":"Finance & NBFC","market_cap":"MID_CAP","current_price":2063.2,"change_1d":-0.48,"change_1w":-2.43,"change_1m":1.51,"technical_score":58,"rsi":45.4,"relative_strength":3.75,"can_slim_score":4,"minervini_score":10,"fundamental_score":15,"enhanced_fund_score":52.46,"earnings_quality":50.71,"sales_growth":47,"financial_strength":54.86,"institutional_backing":63,"trading_value":2426916625.1,"trading_signal":"HOLD","trend_signal":"STRONG_BULLISH","rank":106},{"symbol":"BAJFINANCE","company_name":"BAJAJ FINANCE LIMITED","sector":"Finance & NBFC","market_cap":"LARGE_CAP","current_price":1041.9,"change_1d":-1.43,"change_1w":-0.99,"change_1m":2.49,"technical_score":55.3,"rsi":48.7,"relative_strength":15.76,"can_slim_score":9,"minervini_score":10,"fundamental_score":15,"enhanced_fund_score":51.99,"earnings_quality":50.65,"sales_growth":47,"financial_strength":55.53,"institutional_backing":59.17,"trading_value":6034125415.4,"trading_signal":"HOLD","trend_signal":"BULLISH","rank":32},{"symbol":"PRECWIRE","company_name":"PRECISION WIRES INDIA LTD","sector":"Finance & NBFC","market_cap":"MICRO_CAP","current_price":227.12,"change_1d":-0.88,"change_1w":-0.18,"change_1m":8.66,"technical_score":47.3,"rsi":68,"relative_strength":27.22,"can_slim_score":13,"minervini_score":4,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":203733857.13,"trading_signal":"WEAK_HOLD","trend_signal":"STRONG_BULLISH","rank":542},{"symbol":"HDFCGOLD","company_name":"HDFC GOLD ETF","sector":"Finance & NBFC","market_cap":"MICRO_CAP","current_price":103.34,"change_1d":0.37,"change_1w":0.59,"change_1m":0.42,"technical_score":46.7,"rsi":52.9,"relative_strength":20.35,"can_slim_score":11,"minervini_score":10,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":373566390.04,"trading_signal":"WEAK_HOLD","trend_signal":"BULLISH","rank":388},{"symbol":"BHARTIARTL","company_name":"BHARTI AIRTEL LIMITED","sector":"Telecom","market_cap":"LARGE_CAP","current_price":2094.9,"change_1d":-0.87,"change_1w":1.38,"change_1m":8.6,"technical_score":65.3,"rsi":64.8,"relative_strength":7.04,"can_slim_score":10,"minervini_score":12,"fundamental_score":15,"enhanced_fund_score":52.75,"earnings_quality":50.65,"sales_growth":51,"financial_strength":54.32,"institutional_backing":59.17,"trading_value":20076041845.4,"trading_signal":"BUY","trend_signal":"STRONG_BULLISH","rank":7},{"symbol":"TATACONSUM","company_name":"TATA CONSUMER PRODUCT LTD","sector":"Telecom","market_cap":"MID_CAP","current_price":1190.4,"change_1d":0.94,"change_1w":1.17,"change_1m":6.29,"technical_score":57.3,"rsi":62.6,"relative_strength":6.1,"can_slim_score":10,"minervini_score":12,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":2844617394.9,"trading_signal":"HOLD","trend_signal":"STRONG_BULLISH","rank":84},{"symbol":"RELIANCE","company_name":"RELIANCE INDUSTRIES LTD","sector":"Telecom","market_cap":"LARGE_CAP","current_price":1496.1,"change_1d":1.56,"change_1w":0.51,"change_1m":8.04,"technical_score":50,"rsi":67.3,"relative_strength":4.28,"can_slim_score":6,"minervini_score":17,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":25059656533.3,"trading_signal":"HOLD","trend_signal":"BULLISH","rank":3},{"symbol":"TATACOMM","company_name":"TATA COMMUNICATIONS LTD","sector":"Telecom","market_cap":"MICRO_CAP","current_price":1842,"change_1d":-3.33,"change_1w":-3.75,"change_1m":10.8,"technical_score":49.3,"rsi":51.4,"relative_strength":10.36,"can_slim_score":13,"minervini_score":10,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":455811448.6,"trading_signal":"WEAK_HOLD","trend_signal":"STRONG_BULLISH","rank":344},{"symbol":"TATASTEEL","company_name":"TATA STEEL LIMITED","sector":"Telecom","market_cap":"LARGE_CAP","current_price":177.27,"change_1d":-1.13,"change_1w":-3.84,"change_1m":3.41,"technical_score":46.7,"rsi":53.4,"relative_strength":7.88,"can_slim_score":5,"minervini_score":10,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":4208479735.84,"trading_signal":"WEAK_HOLD","trend_signal":"STRONG_BULLISH","rank":50},{"symbol":"BRITANNIA","company_name":"BRITANNIA INDUSTRIES LTD","sector":"FMCG & Consumer Goods","market_cap":"LARGE_CAP","current_price":6013.5,"change_1d":2.05,"change_1w":2.63,"change_1m":2.15,"technical_score":62.7,"rsi":56.2,"relative_strength":3.88,"can_slim_score":8,"minervini_score":16,"fundamental_score":15,"enhanced_fund_score":52.36,"earnings_quality":51.96,"sales_growth":47,"financial_strength":54.77,"institutional_backing":59.17,"trading_value":6297834246.5,"trading_signal":"HOLD","trend_signal":"BEARISH","rank":31},{"symbol":"TATACONSUM","company_name":"TATA CONSUMER PRODUCT LTD","sector":"FMCG & Consumer Goods","market_cap":"MID_CAP","current_price":1190.4,"change_1d":0.94,"change_1w":1.17,"change_1m":6.29,"technical_score":57.3,"rsi":62.6,"relative_strength":6.1,"can_slim_score":10,"minervini_score":12,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":2844617394.9,"trading_signal":"HOLD","trend_signal":"STRONG_BULLISH","rank":84},{"symbol":"RADICO","company_name":"RADICO KHAITAN LTD","sector":"FMCG & Consumer Goods","market_cap":"SMALL_CAP","current_price":3185.9,"change_1d":-0.43,"change_1w":1.31,"change_1m":6.29,"technical_score":54,"rsi":59.9,"relative_strength":10.84,"can_slim_score":11,"minervini_score":12,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":1022657753.9,"trading_signal":"HOLD","trend_signal":"STRONG_BULLISH","rank":212},{"symbol":"DABUR","company_name":"DABUR INDIA LTD","sector":"FMCG & Consumer Goods","market_cap":"MID_CAP","current_price":523.7,"change_1d":1.29,"change_1w":4.42,"change_1m":6.39,"technical_score":46.7,"rsi":59.8,"relative_strength":-3.71,"can_slim_score":4,"minervini_score":10,"fundamental_score":15,"enhanced_fund_score":51.29,"earnings_quality":50.22,"sales_growth":47,"financial_strength":54.77,"institutional_backing":56.67,"trading_value":2035533040.4,"trading_signal":"WEAK_HOLD","trend_signal":"BULLISH","rank":129},{"symbol":"NESTLEIND","company_name":"NESTLE INDIA LIMITED","sector":"FMCG & Consumer Goods","market_cap":"SMALL_CAP","current_price":1266.1,"change_1d":0.09,"change_1w":-1.08,"change_1m":7.59,"technical_score":45.3,"rsi":52.7,"relative_strength":4.77,"can_slim_score":5,"minervini_score":15,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":1487625717.8,"trading_signal":"WEAK_HOLD","trend_signal":"BULLISH","rank":162},{"symbol":"ARISINFRA","company_name":"ARISINFRA SOLUTIONS LTD","sector":"Infrastructure","market_cap":"MICRO_CAP","current_price":169.49,"change_1d":2.47,"change_1w":3.3,"change_1m":7.95,"technical_score":58.7,"rsi":56.6,"relative_strength":18.53,"can_slim_score":13,"minervini_score":11,"fundamental_score":15,"enhanced_fund_score":56.91,"earnings_quality":51.96,"sales_growth":67,"financial_strength":56.36,"institutional_backing":54,"trading_value":130482713.71,"trading_signal":"HOLD","trend_signal":"NEUTRAL","rank":639},{"symbol":"ABB","company_name":"ABB INDIA LIMITED","sector":"Infrastructure","market_cap":"SMALL_CAP","current_price":5228,"change_1d":-0.31,"change_1w":-0.97,"change_1m":0.16,"technical_score":54,"rsi":50.5,"relative_strength":0.48,"can_slim_score":3,"minervini_score":10,"fundamental_score":20,"enhanced_fund_score":61.29,"earnings_quality":55.43,"sales_growth":73,"financial_strength":59.32,"institutional_backing":60,"trading_value":1588966647,"trading_signal":"HOLD","trend_signal":"BULLISH","rank":152},{"symbol":"BHEL","company_name":"BHEL","sector":"Infrastructure","market_cap":"SMALL_CAP","current_price":260.05,"change_1d":-2.69,"change_1w":-0.47,"change_1m":6.2,"technical_score":53.3,"rsi":66.5,"relative_strength":16.25,"can_slim_score":11,"minervini_score":4,"fundamental_score":15,"enhanced_fund_score":53.94,"earnings_quality":54.13,"sales_growth":47,"financial_strength":55.45,"institutional_backing":63,"trading_value":1527999628.7,"trading_signal":"HOLD","trend_signal":"BULLISH","rank":159},{"symbol":"ADANIENSOL","company_name":"ADANI ENERGY SOLUTION LTD","sector":"Infrastructure","market_cap":"SMALL_CAP","current_price":968.15,"change_1d":-1.8,"change_1w":0.26,"change_1m":5.35,"technical_score":48.7,"rsi":59.7,"relative_strength":15.87,"can_slim_score":11,"minervini_score":8,"fundamental_score":0,"enhanced_fund_score":10,"earnings_quality":10,"sales_growth":10,"financial_strength":10,"institutional_backing":10,"trading_value":1036816536.1,"trading_signal":"WEAK_HOLD","trend_signal":"STRONG_BULLISH","rank":210},{"symbol":"ADANIPORTS","company_name":"ADANI PORT & SEZ LTD","sector":"Infrastructure","market_cap":"MID_CAP","current_price":1436.8,"change_1d":-0.53,"change_1w":-1.45,"change_1m":2.67,"technical_score":43.3,"rsi":51.5,"relative_strength":3.23,"can_slim_score":3,"minervini_score":12,"fundamental_score":0,"enhanced_fund_score":10,"earnings_quality":10,"sales_growth":10,"financial_strength":10,"institutional_backing":10,"trading_value":3982168706.1,"trading_signal":"WEAK_HOLD","trend_signal":"BULLISH","rank":52},{"symbol":"BORORENEW","company_name":"BOROSIL RENEWABLES LTD","sector":"Energy - Power","market_cap":"MICRO_CAP","current_price":664.85,"change_1d":0.29,"change_1w":1.78,"change_1m":10.08,"technical_score":73.3,"rsi":58.3,"relative_strength":15.9,"can_slim_score":13,"minervini_score":13,"fundamental_score":20,"enhanced_fund_score":63.2,"earnings_quality":57.38,"sales_growth":81,"financial_strength":59.5,"institutional_backing":54,"trading_value":389640314.75,"trading_signal":"BUY","trend_signal":"STRONG_BULLISH","rank":383},{"symbol":"CGPOWER","company_name":"CG POWER AND IND SOL LTD","sector":"Energy - Power","market_cap":"MID_CAP","current_price":732.7,"change_1d":-1.99,"change_1w":-0.27,"change_1m":-2.05,"technical_score":47.3,"rsi":45.9,"relative_strength":7.07,"can_slim_score":4,"minervini_score":10,"fundamental_score":15,"enhanced_fund_score":55.37,"earnings_quality":53.04,"sales_growth":51,"financial_strength":57.5,"institutional_backing":66,"trading_value":1639298542.05,"trading_signal":"WEAK_HOLD","trend_signal":"BULLISH","rank":150},{"symbol":"QPOWER","company_name":"QUALITY POWER ELEC EQUP L","sector":"Energy - Power","market_cap":"MICRO_CAP","current_price":934.2,"change_1d":-3.11,"change_1w":-5.87,"change_1m":-9.74,"technical_score":46,"rsi":41.7,"relative_strength":17.64,"can_slim_score":8,"minervini_score":6,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":310740112.5,"trading_signal":"WEAK_HOLD","trend_signal":"BULLISH","rank":443},{"symbol":"TDPOWERSYS","company_name":"TD POWER SYSTEMS LTD.","sector":"Energy - Power","market_cap":"SMALL_CAP","current_price":797.85,"change_1d":-2.71,"change_1w":16.68,"change_1m":26.13,"technical_score":45.3,"rsi":78.7,"relative_strength":54.26,"can_slim_score":15,"minervini_score":2,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":1078178013.05,"trading_signal":"WEAK_HOLD","trend_signal":"STRONG_BULLISH","rank":198},{"symbol":"INOXGREEN","company_name":"INOX GREEN ENERGY SER LTD","sector":"Energy - Power","market_cap":"MICRO_CAP","current_price":258.45,"change_1d":-4.3,"change_1w":-3.47,"change_1m":14.78,"technical_score":43.3,"rsi":59.6,"relative_strength":40.12,"can_slim_score":15,"minervini_score":4,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":341635155.25,"trading_signal":"WEAK_HOLD","trend_signal":"BULLISH","rank":410},{"symbol":"BALAJITELE","company_name":"BALAJI TELEFILMS LTD.","sector":"Chemicals","market_cap":"MICRO_CAP","current_price":127.59,"change_1d":4.93,"change_1w":12.57,"change_1m":4.73,"technical_score":69.3,"rsi":62.9,"relative_strength":69.5,"can_slim_score":16,"minervini_score":14,"fundamental_score":15,"enhanced_fund_score":53.41,"earnings_quality":54.13,"sales_growth":51,"financial_strength":58.18,"institutional_backing":49.17,"trading_value":128727482.15,"trading_signal":"BUY","trend_signal":"NEUTRAL","rank":641},{"symbol":"UPL","company_name":"UPL LIMITED","sector":"Chemicals","market_cap":"LARGE_CAP","current_price":733.35,"change_1d":0.27,"change_1w":1.66,"change_1m":7.87,"technical_score":48.7,"rsi":71.3,"relative_strength":1.19,"can_slim_score":9,"minervini_score":11,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":6781975371.75,"trading_signal":"WEAK_HOLD","trend_signal":"BULLISH","rank":29},{"symbol":"DEEPAKFERT","company_name":"DEEPAK FERTILIZERS & PETR","sector":"Chemicals","market_cap":"SMALL_CAP","current_price":1429.1,"change_1d":-5.01,"change_1w":-3.84,"change_1m":-7.42,"technical_score":48.7,"rsi":42.5,"relative_strength":-5.8,"can_slim_score":5,"minervini_score":10,"fundamental_score":25,"enhanced_fund_score":70.76,"earnings_quality":75.43,"sales_growth":76,"financial_strength":62.95,"institutional_backing":60,"trading_value":976893894.3,"trading_signal":"WEAK_HOLD","trend_signal":"BULLISH","rank":215},{"symbol":"CHEMCON","company_name":"CHEMCON SPECIAL CHEM LTD","sector":"Chemicals","market_cap":"MICRO_CAP","current_price":232.41,"change_1d":-4.69,"change_1w":-6.63,"change_1m":-15.66,"technical_score":44.7,"rsi":36.1,"relative_strength":-0.09,"can_slim_score":0,"minervini_score":10,"fundamental_score":25,"enhanced_fund_score":71.15,"earnings_quality":74.35,"sales_growth":86,"financial_strength":56.82,"institutional_backing":57,"trading_value":24337100.01,"trading_signal":"WEAK_HOLD","trend_signal":"BULLISH","rank":895},{"symbol":"AARTIPHARM","company_name":"AARTI PHARMALABS LIMITED","sector":"Chemicals","market_cap":"MICRO_CAP","current_price":843.9,"change_1d":-0.08,"change_1w":1.11,"change_1m":1.71,"technical_score":43.3,"rsi":49.1,"relative_strength":-1.22,"can_slim_score":4,"minervini_score":8,"fundamental_score":15,"enhanced_fund_score":55.42,"earnings_quality":55.53,"sales_growth":57,"financial_strength":59.77,"institutional_backing":46.67,"trading_value":173143251.5,"trading_signal":"WEAK_HOLD","trend_signal":"BEARISH","rank":580},{"symbol":"REDINGTON","company_name":"REDINGTON LIMITED","sector":"IT & Software","market_cap":"LARGE_CAP","current_price":289.95,"change_1d":15.86,"change_1w":12.12,"change_1m":5.53,"technical_score":61.3,"rsi":63.2,"relative_strength":16.05,"can_slim_score":16,"minervini_score":14,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":24953065406.6,"trading_signal":"HOLD","trend_signal":"BEARISH","rank":4},{"symbol":"LTIM","company_name":"LTIMINDTREE LIMITED","sector":"IT & Software","market_cap":"MID_CAP","current_price":5652,"change_1d":0.57,"change_1w":-0.82,"change_1m":7.27,"technical_score":56,"rsi":59.8,"relative_strength":7.5,"can_slim_score":8,"minervini_score":15,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":1780373304,"trading_signal":"HOLD","trend_signal":"STRONG_BULLISH","rank":144},{"symbol":"PERSISTENT","company_name":"PERSISTENT SYSTEMS LTD","sector":"IT & Software","market_cap":"MID_CAP","current_price":5842,"change_1d":-0.28,"change_1w":-2.01,"change_1m":10.83,"technical_score":46.7,"rsi":60.1,"relative_strength":7.7,"can_slim_score":9,"minervini_score":10,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":1995469926,"trading_signal":"WEAK_HOLD","trend_signal":"BULLISH","rank":132},{"symbol":"INTELLECT","company_name":"INTELLECT DESIGN ARENA","sector":"IT & Software","market_cap":"SMALL_CAP","current_price":1133.2,"change_1d":-5.38,"change_1w":8.26,"change_1m":15.38,"technical_score":44.7,"rsi":62.6,"relative_strength":13.13,"can_slim_score":13,"minervini_score":4,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":1059902185,"trading_signal":"WEAK_HOLD","trend_signal":"BULLISH","rank":203},{"symbol":"COFORGE","company_name":"COFORGE LIMITED","sector":"IT & Software","market_cap":"MID_CAP","current_price":1763.9,"change_1d":-0.18,"change_1w":-2.42,"change_1m":4.59,"technical_score":42,"rsi":51.6,"relative_strength":1.65,"can_slim_score":2,"minervini_score":10,"fundamental_score":15,"enhanced_fund_score":54.71,"earnings_quality":51.3,"sales_growth":53,"financial_strength":58.18,"institutional_backing":62,"trading_value":2566457830.5,"trading_signal":"WEAK_HOLD","trend_signal":"BULLISH","rank":96},{"symbol":"BUTTERFLY","company_name":"BTRFLY GANDHI APPL LTD","sector":"Consumer Durables","market_cap":"MICRO_CAP","current_price":775.6,"change_1d":3.34,"change_1w":1.11,"change_1m":10.75,"technical_score":66,"rsi":69.8,"relative_strength":3.35,"can_slim_score":11,"minervini_score":16,"fundamental_score":15,"enhanced_fund_score":51.8,"earnings_quality":50.22,"sales_growth":47,"financial_strength":57.05,"institutional_backing":57,"trading_value":172988412.8,"trading_signal":"BUY","trend_signal":"BULLISH","rank":581},{"symbol":"TITAN","company_name":"TITAN COMPANY LIMITED","sector":"Consumer Durables","market_cap":"MID_CAP","current_price":3774.4,"change_1d":-1.03,"change_1w":0.63,"change_1m":10.42,"technical_score":46,"rsi":63.2,"relative_strength":3.39,"can_slim_score":6,"minervini_score":12,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":3516664336,"trading_signal":"WEAK_HOLD","trend_signal":"STRONG_BULLISH","rank":65},{"symbol":"BLUESTARCO","company_name":"BLUE STAR LIMITED","sector":"Consumer Durables","market_cap":"LARGE_CAP","current_price":1785.5,"change_1d":-6.89,"change_1w":-8.99,"change_1m":-6.63,"technical_score":45.3,"rsi":30.2,"relative_strength":-8.96,"can_slim_score":5,"minervini_score":6,"fundamental_score":25,"enhanced_fund_score":72.84,"earnings_quality":74.35,"sales_growth":86,"financial_strength":58.5,"institutional_backing":66,"trading_value":5350303525.3,"trading_signal":"WEAK_HOLD","trend_signal":"STRONG_BULLISH","rank":37},{"symbol":"ORIENTTECH","company_name":"ORIENT TECHNOLOGIES LTD","sector":"Consumer Durables","market_cap":"MICRO_CAP","current_price":429.6,"change_1d":-8.76,"change_1w":-7.33,"change_1m":-9.07,"technical_score":45.3,"rsi":46.9,"relative_strength":37.52,"can_slim_score":10,"minervini_score":0,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":371807882.6,"trading_signal":"WEAK_HOLD","trend_signal":"BULLISH","rank":390},{"symbol":"WHIRLPOOL","company_name":"WHIRLPOOL OF INDIA LTD","sector":"Consumer Durables","market_cap":"SMALL_CAP","current_price":1350.2,"change_1d":-1.76,"change_1w":-4.98,"change_1m":13.14,"technical_score":43.3,"rsi":53.5,"relative_strength":2.41,"can_slim_score":6,"minervini_score":10,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":702156594.3,"trading_signal":"WEAK_HOLD","trend_signal":"BULLISH","rank":261},{"symbol":"SOBHA","company_name":"SOBHA LIMITED","sector":"Realty","market_cap":"SMALL_CAP","current_price":1654.4,"change_1d":2.17,"change_1w":4.92,"change_1m":12.54,"technical_score":58,"rsi":65.4,"relative_strength":8.28,"can_slim_score":10,"minervini_score":15,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":592109576.5,"trading_signal":"HOLD","trend_signal":"BULLISH","rank":290},{"symbol":"GODREJPROP","company_name":"GODREJ PROPERTIES LTD","sector":"Realty","market_cap":"MID_CAP","current_price":2193.7,"change_1d":-4.34,"change_1w":-4.58,"change_1m":5.81,"technical_score":51.3,"rsi":49.2,"relative_strength":5.84,"can_slim_score":10,"minervini_score":10,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":2800335429.3,"trading_signal":"HOLD","trend_signal":"BULLISH","rank":86},{"symbol":"SUNTECK","company_name":"SUNTECK REALTY LIMITED","sector":"Realty","market_cap":"MICRO_CAP","current_price":447.6,"change_1d":-2.72,"change_1w":-1.5,"change_1m":1.23,"technical_score":47.3,"rsi":53.8,"relative_strength":12.29,"can_slim_score":9,"minervini_score":8,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":126830674.15,"trading_signal":"WEAK_HOLD","trend_signal":"STRONG_BULLISH","rank":646},{"symbol":"BRIGADE","company_name":"BRIGADE ENTER. LTD","sector":"Realty","market_cap":"MICRO_CAP","current_price":993,"change_1d":-2.46,"change_1w":-4.42,"change_1m":7.18,"technical_score":43.3,"rsi":52.5,"relative_strength":2.24,"can_slim_score":4,"minervini_score":10,"fundamental_score":15,"enhanced_fund_score":56.82,"earnings_quality":55.43,"sales_growth":51,"financial_strength":60,"institutional_backing":66,"trading_value":265773093.7,"trading_signal":"WEAK_HOLD","trend_signal":"BULLISH","rank":488},{"symbol":"PRESTIGE","company_name":"PRESTIGE ESTATE LTD","sector":"Realty","market_cap":"SMALL_CAP","current_price":1725.2,"change_1d":-1.22,"change_1w":-1.71,"change_1m":12.71,"technical_score":42,"rsi":56.5,"relative_strength":4.46,"can_slim_score":7,"minervini_score":10,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":901528798.9,"trading_signal":"WEAK_HOLD","trend_signal":"BULLISH","rank":220},{"symbol":"AXISBANK","company_name":"AXIS BANK LIMITED","sector":"Banking - Private","market_cap":"LARGE_CAP","current_price":1228.5,"change_1d":0.15,"change_1w":-0.82,"change_1m":3.51,"technical_score":61.3,"rsi":59.2,"relative_strength":12.13,"can_slim_score":9,"minervini_score":15,"fundamental_score":15,"enhanced_fund_score":52.47,"earnings_quality":51.19,"sales_growth":47,"financial_strength":54.71,"institutional_backing":62,"trading_value":4595094516.2,"trading_signal":"HOLD","trend_signal":"STRONG_BULLISH","rank":44},{"symbol":"RBLBANK","company_name":"RBL BANK LIMITED","sector":"Banking - Private","market_cap":"MID_CAP","current_price":325.6,"change_1d":0.54,"change_1w":0.2,"change_1m":19.03,"technical_score":61.3,"rsi":68,"relative_strength":25.29,"can_slim_score":15,"minervini_score":13,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":3530184140.4,"trading_signal":"HOLD","trend_signal":"STRONG_BULLISH","rank":64},{"symbol":"FEDERALBNK","company_name":"FEDERAL BANK LTD","sector":"Banking - Private","market_cap":"SMALL_CAP","current_price":235.83,"change_1d":-0.85,"change_1w":0.43,"change_1m":18.41,"technical_score":45.3,"rsi":76.5,"relative_strength":16.49,"can_slim_score":13,"minervini_score":8,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":1156385654.71,"trading_signal":"WEAK_HOLD","trend_signal":"BULLISH","rank":190},{"symbol":"KOTAKBANK","company_name":"KOTAK MAHINDRA BANK LTD","sector":"Banking - Private","market_cap":"LARGE_CAP","current_price":2083.2,"change_1d":-0.64,"change_1w":-2.53,"change_1m":-2.05,"technical_score":30,"rsi":42.6,"relative_strength":1.66,"can_slim_score":1,"minervini_score":8,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":4965600522.6,"trading_signal":"SELL","trend_signal":"BEARISH","rank":40},{"symbol":"BANDHANBNK","company_name":"BANDHAN BANK LIMITED","sector":"Banking - Private","market_cap":"MID_CAP","current_price":152.93,"change_1d":-2.07,"change_1w":-10.35,"change_1m":-7.02,"technical_score":30,"rsi":35.7,"relative_strength":-13.85,"can_slim_score":1,"minervini_score":6,"fundamental_score":20,"enhanced_fund_score":65.58,"earnings_quality":70.71,"sales_growth":70,"financial_strength":56.47,"institutional_backing":56.67,"trading_value":1982786877.56,"trading_signal":"SELL","trend_signal":"BULLISH","rank":135},{"symbol":"SUNPHARMA","company_name":"SUN PHARMACEUTICAL IND L","sector":"Media & Entertainment","market_cap":"LARGE_CAP","current_price":1685.9,"change_1d":-0.24,"change_1w":-1.03,"change_1m":1.98,"technical_score":47.3,"rsi":54.2,"relative_strength":1.63,"can_slim_score":5,"minervini_score":12,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":5736074739.2,"trading_signal":"WEAK_HOLD","trend_signal":"BULLISH","rank":34},{"symbol":"SUNTECK","company_name":"SUNTECK REALTY LIMITED","sector":"Media & Entertainment","market_cap":"MICRO_CAP","current_price":447.6,"change_1d":-2.72,"change_1w":-1.5,"change_1m":1.23,"technical_score":47.3,"rsi":53.8,"relative_strength":12.29,"can_slim_score":9,"minervini_score":8,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":126830674.15,"trading_signal":"WEAK_HOLD","trend_signal":"STRONG_BULLISH","rank":646},{"symbol":"GOLDBEES","company_name":"NIP IND ETF GOLD BEES","sector":"Media & Entertainment","market_cap":"MID_CAP","current_price":100.07,"change_1d":0.27,"change_1w":0.39,"change_1m":0.41,"technical_score":46.7,"rsi":52.6,"relative_strength":20.32,"can_slim_score":11,"minervini_score":10,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":2027607730.77,"trading_signal":"WEAK_HOLD","trend_signal":"BULLISH","rank":130},{"symbol":"HATSUN","company_name":"HATSUN AGRO PRODUCT LTD.","sector":"Media & Entertainment","market_cap":"MICRO_CAP","current_price":1020.1,"change_1d":-1.89,"change_1w":-10.64,"change_1m":12.62,"technical_score":45.3,"rsi":55.9,"relative_strength":10.2,"can_slim_score":13,"minervini_score":6,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":105954995.7,"trading_signal":"WEAK_HOLD","trend_signal":"BULLISH","rank":684},{"symbol":"LIQUIDBETF","company_name":"BFAM - LIQUIDBETF","sector":"Media & Entertainment","market_cap":"MICRO_CAP","current_price":1055.4,"change_1d":0.01,"change_1w":0.1,"change_1m":0.41,"technical_score":37.3,"rsi":100,"relative_strength":-0.53,"can_slim_score":2,"minervini_score":12,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":467084017.97,"trading_signal":"WEAK_HOLD","trend_signal":"STRONG_BULLISH","rank":339},{"symbol":"JKTYRE","company_name":"JK TYRE & INDUSTRIES LTD","sector":"Paper & Packaging","market_cap":"SMALL_CAP","current_price":447.9,"change_1d":-1.19,"change_1w":2.71,"change_1m":19.04,"technical_score":49.3,"rsi":73.9,"relative_strength":34.19,"can_slim_score":15,"minervini_score":8,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":718823553.7,"trading_signal":"WEAK_HOLD","trend_signal":"STRONG_BULLISH","rank":255},{"symbol":"JKIL","company_name":"JKUMAR INFR.LTD.","sector":"Paper & Packaging","market_cap":"MICRO_CAP","current_price":655.15,"change_1d":2.9,"change_1w":0.34,"change_1m":1.61,"technical_score":42,"rsi":57.5,"relative_strength":-2.72,"can_slim_score":6,"minervini_score":16,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":225055117.8,"trading_signal":"WEAK_HOLD","trend_signal":"BEARISH","rank":516},{"symbol":"SOUTHWEST","company_name":"SOUTH WEST PINNACLE LTD","sector":"Paper & Packaging","market_cap":"MICRO_CAP","current_price":177.04,"change_1d":-1.44,"change_1w":8.06,"change_1m":38.28,"technical_score":40,"rsi":74.1,"relative_strength":25.57,"can_slim_score":15,"minervini_score":4,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":57008111.43,"trading_signal":"WEAK_HOLD","trend_signal":"NEUTRAL","rank":782},{"symbol":"JKPAPER","company_name":"JK PAPER LIMITED","sector":"Paper & Packaging","market_cap":"MICRO_CAP","current_price":384.35,"change_1d":-0.52,"change_1w":-3.88,"change_1m":-7.16,"technical_score":36,"rsi":42.1,"relative_strength":6.9,"can_slim_score":4,"minervini_score":10,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":116130139.5,"trading_signal":"WEAK_HOLD","trend_signal":"BULLISH","rank":666},{"symbol":"JKLAKSHMI","company_name":"JK LAKSHMI CEMENT LTD","sector":"Paper & Packaging","market_cap":"MICRO_CAP","current_price":870.95,"change_1d":2.24,"change_1w":-0.09,"change_1m":2.19,"technical_score":30,"rsi":53.5,"relative_strength":-8.9,"can_slim_score":6,"minervini_score":8,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":322156956.8,"trading_signal":"SELL","trend_signal":"BEARISH","rank":430},{"symbol":"WELSPUNLIV","company_name":"WELSPUN LIVING LIMITED","sector":"Textiles","market_cap":"MICRO_CAP","current_price":127.22,"change_1d":-1.47,"change_1w":-3.89,"change_1m":10.09,"technical_score":38.7,"rsi":53,"relative_strength":3.65,"can_slim_score":7,"minervini_score":10,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":154525432.21,"trading_signal":"WEAK_HOLD","trend_signal":"BULLISH","rank":612},{"symbol":"ARVIND","company_name":"ARVIND LIMITED","sector":"Textiles","market_cap":"MICRO_CAP","current_price":309.95,"change_1d":-2.05,"change_1w":-3.91,"change_1m":4.33,"technical_score":38,"rsi":48.7,"relative_strength":-0.09,"can_slim_score":1,"minervini_score":10,"fundamental_score":15,"enhanced_fund_score":57.39,"earnings_quality":51.96,"sales_growth":61,"financial_strength":57.27,"institutional_backing":66,"trading_value":81405488.35,"trading_signal":"WEAK_HOLD","trend_signal":"BULLISH","rank":725},{"symbol":"KPRMILL","company_name":"KPR MILL LTD.","sector":"Textiles","market_cap":"MICRO_CAP","current_price":1080.6,"change_1d":2.31,"change_1w":-0.6,"change_1m":4.1,"technical_score":38,"rsi":55.6,"relative_strength":4.16,"can_slim_score":3,"minervini_score":12,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":142240460.3,"trading_signal":"WEAK_HOLD","trend_signal":"BULLISH","rank":621},{"symbol":"ARVINDFASN","company_name":"ARVIND FASHIONS LIMITED","sector":"Textiles","market_cap":"MICRO_CAP","current_price":525.05,"change_1d":-4.23,"change_1w":2.32,"change_1m":-0.36,"technical_score":36,"rsi":50.6,"relative_strength":-0.17,"can_slim_score":0,"minervini_score":6,"fundamental_score":15,"enhanced_fund_score":50.43,"earnings_quality":47.61,"sales_growth":47,"financial_strength":55.45,"institutional_backing":57,"trading_value":134298613.2,"trading_signal":"WEAK_HOLD","trend_signal":"BULLISH","rank":630},{"symbol":"RELAXO","company_name":"RELAXO FOOT LTD.","sector":"Textiles","market_cap":"MICRO_CAP","current_price":437.4,"change_1d":0.97,"change_1w":-0.87,"change_1m":0.36,"technical_score":27.3,"rsi":44.8,"relative_strength":-9.84,"can_slim_score":1,"minervini_score":13,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":49113420.45,"trading_signal":"SELL","trend_signal":"BULLISH","rank":812},{"symbol":"UPL","company_name":"UPL LIMITED","sector":"Agriculture & Fertilizers","market_cap":"LARGE_CAP","current_price":733.35,"change_1d":0.27,"change_1w":1.66,"change_1m":7.87,"technical_score":48.7,"rsi":71.3,"relative_strength":1.19,"can_slim_score":9,"minervini_score":11,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":6781975371.75,"trading_signal":"WEAK_HOLD","trend_signal":"BULLISH","rank":29},{"symbol":"NAVINFLUOR","company_name":"NAVIN FLUORINE INT. LTD","sector":"Agriculture & Fertilizers","market_cap":"MID_CAP","current_price":6081,"change_1d":0.43,"change_1w":22.19,"change_1m":33,"technical_score":44,"rsi":83.3,"relative_strength":19.77,"can_slim_score":15,"minervini_score":4,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":2767199839.5,"trading_signal":"WEAK_HOLD","trend_signal":"STRONG_BULLISH","rank":88},{"symbol":"DCMSRIND","company_name":"DCM SHRIRAM IND LTD","sector":"Agriculture & Fertilizers","market_cap":"MICRO_CAP","current_price":156.18,"change_1d":-8.55,"change_1w":-9.08,"change_1m":-9.84,"technical_score":34,"rsi":31.4,"relative_strength":-7.84,"can_slim_score":5,"minervini_score":6,"fundamental_score":15,"enhanced_fund_score":53.41,"earnings_quality":51.09,"sales_growth":51,"financial_strength":56.14,"institutional_backing":60,"trading_value":56486584.43,"trading_signal":"SELL","trend_signal":"BEARISH","rank":783},{"symbol":"COROMANDEL","company_name":"COROMANDEL INTERNTL. LTD","sector":"Agriculture & Fertilizers","market_cap":"SMALL_CAP","current_price":2150.1,"change_1d":-0.86,"change_1w":-1.11,"change_1m":-6.04,"technical_score":20.7,"rsi":42.5,"relative_strength":-12.72,"can_slim_score":0,"minervini_score":6,"fundamental_score":15,"enhanced_fund_score":54.33,"earnings_quality":51.3,"sales_growth":51,"financial_strength":55.77,"institutional_backing":66,"trading_value":748260104.2,"trading_signal":"SELL","trend_signal":"STRONG_BEARISH","rank":249},{"symbol":"GSFC","company_name":"GUJ STATE FERT & CHEM LTD","sector":"Agriculture & Fertilizers","market_cap":"MICRO_CAP","current_price":186.98,"change_1d":-2.36,"change_1w":-3.16,"change_1m":-4.61,"technical_score":20.7,"rsi":36,"relative_strength":-14.6,"can_slim_score":3,"minervini_score":8,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":171052793.58,"trading_signal":"SELL","trend_signal":"BEARISH","rank":590},{"symbol":"ADANIPORTS","company_name":"ADANI PORT & SEZ LTD","sector":"Logistics & Shipping","market_cap":"MID_CAP","current_price":1436.8,"change_1d":-0.53,"change_1w":-1.45,"change_1m":2.67,"technical_score":43.3,"rsi":51.5,"relative_strength":3.23,"can_slim_score":3,"minervini_score":12,"fundamental_score":0,"enhanced_fund_score":10,"earnings_quality":10,"sales_growth":10,"financial_strength":10,"institutional_backing":10,"trading_value":3982168706.1,"trading_signal":"WEAK_HOLD","trend_signal":"BULLISH","rank":52},{"symbol":"CONCOR","company_name":"CONTAINER CORP OF IND LTD","sector":"Logistics & Shipping","market_cap":"MID_CAP","current_price":519.35,"change_1d":-4.27,"change_1w":-5.5,"change_1m":-2.46,"technical_score":34,"rsi":36.9,"relative_strength":-8.44,"can_slim_score":5,"minervini_score":6,"fundamental_score":15,"enhanced_fund_score":54,"earnings_quality":53.7,"sales_growth":51,"financial_strength":56.36,"institutional_backing":56.67,"trading_value":2378323447.35,"trading_signal":"SELL","trend_signal":"BEARISH","rank":110},{"symbol":"VRLLOG","company_name":"VRL LOGISTICS LIMITED","sector":"Logistics & Shipping","market_cap":"MICRO_CAP","current_price":269,"change_1d":-0.57,"change_1w":-0.33,"change_1m":0.56,"technical_score":23.3,"rsi":40.7,"relative_strength":-6.23,"can_slim_score":4,"minervini_score":6,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":138079600.2,"trading_signal":"SELL","trend_signal":"BEARISH","rank":626},{"symbol":"ORIENTTECH","company_name":"ORIENT TECHNOLOGIES LTD","sector":"Cement & Construction","market_cap":"MICRO_CAP","current_price":429.6,"change_1d":-8.76,"change_1w":-7.33,"change_1m":-9.07,"technical_score":45.3,"rsi":46.9,"relative_strength":37.52,"can_slim_score":10,"minervini_score":0,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":371807882.6,"trading_signal":"WEAK_HOLD","trend_signal":"BULLISH","rank":390},{"symbol":"RAMCOCEM","company_name":"THE RAMCO CEMENTS LIMITED","sector":"Cement & Construction","market_cap":"MICRO_CAP","current_price":1033.2,"change_1d":0.6,"change_1w":-2.1,"change_1m":2.73,"technical_score":34,"rsi":48.6,"relative_strength":-8.9,"can_slim_score":6,"minervini_score":15,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":539451467.2,"trading_signal":"SELL","trend_signal":"BEARISH","rank":313},{"symbol":"CREDITACC","company_name":"CREDITACCESS GRAMEEN LTD","sector":"Cement & Construction","market_cap":"MICRO_CAP","current_price":1337.5,"change_1d":-2.93,"change_1w":-9.14,"change_1m":-3.92,"technical_score":34,"rsi":44.8,"relative_strength":-3.5,"can_slim_score":0,"minervini_score":8,"fundamental_score":15,"enhanced_fund_score":53.16,"earnings_quality":50.22,"sales_growth":47,"financial_strength":57.11,"institutional_backing":66,"trading_value":160421033.1,"trading_signal":"SELL","trend_signal":"STRONG_BULLISH","rank":607},{"symbol":"JKLAKSHMI","company_name":"JK LAKSHMI CEMENT LTD","sector":"Cement & Construction","market_cap":"MICRO_CAP","current_price":870.95,"change_1d":2.24,"change_1w":-0.09,"change_1m":2.19,"technical_score":30,"rsi":53.5,"relative_strength":-8.9,"can_slim_score":6,"minervini_score":8,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":322156956.8,"trading_signal":"SELL","trend_signal":"BEARISH","rank":430},{"symbol":"STARCEMENT","company_name":"STAR CEMENT LIMITED","sector":"Cement & Construction","market_cap":"MICRO_CAP","current_price":245.75,"change_1d":-2.21,"change_1w":-4.17,"change_1m":-5.84,"technical_score":22.7,"rsi":35.7,"relative_strength":-16.49,"can_slim_score":1,"minervini_score":12,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":119932591.85,"trading_signal":"SELL","trend_signal":"BEARISH","rank":655}];
+        
+        // Function to find stock by symbol
+        function findStockBySymbol(symbol) {
+            return allStocksData.find(s => s.symbol === symbol);
+        }
+        
+        // Function to show stock details
+        function showStockDetails(symbol, index) {
+            const stock = findStockBySymbol(symbol);
+            if (!stock) return;
+            
+            const modal = document.getElementById("stockModal");
+            const modalSymbol = document.getElementById("modalStockSymbol");
+            const modalDetails = document.getElementById("modalStockDetails");
+            
+            modalSymbol.textContent = `${stock.symbol} - ${stock.company_name}`;
+            
+            // Determine performance category
+            let performanceCategory = "Moderate";
+            let performanceColor = "#ffc107";
+            if (stock.technical_score >= 70) {
+                performanceCategory = "Excellent";
+                performanceColor = "#4caf50";
+            } else if (stock.technical_score >= 50) {
+                performanceCategory = "Good";
+                performanceColor = "#8bc34a";
+            } else if (stock.technical_score < 30) {
+                performanceCategory = "Poor";
+                performanceColor = "#f44336";
+            }
+            
+            // Determine signal color
+            let signalColor = "#6c757d";
+            switch(stock.trading_signal) {
+                case "STRONG_BUY": signalColor = "#28a745"; break;
+                case "BUY": signalColor = "#5cb85c"; break;
+                case "HOLD": signalColor = "#ffc107"; break;
+                case "WEAK_HOLD": signalColor = "#ff9800"; break;
+                case "SELL": signalColor = "#dc3545"; break;
+            }
+            
+            // Determine trend color
+            let trendColor = "#6c757d";
+            switch(stock.trend_signal) {
+                case "STRONG_BULLISH": trendColor = "#4caf50"; break;
+                case "BULLISH": trendColor = "#8bc34a"; break;
+                case "NEUTRAL": trendColor = "#ffc107"; break;
+                case "BEARISH": trendColor = "#ff9800"; break;
+                case "STRONG_BEARISH": trendColor = "#f44336"; break;
+            }
+            
+            const detailsHTML = `
+                <div class="detail-row">
+                    <div class="detail-item">
+                        <div class="detail-label">Sector</div>
+                        <div class="detail-value">${stock.sector}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Market Cap</div>
+                        <div class="detail-value">${stock.market_cap.replace("_", " ")}</div>
+                    </div>
+                </div>
+                
+                <div class="detail-row">
+                    <div class="detail-item">
+                        <div class="detail-label">Current Price</div>
+                        <div class="detail-value">₹${stock.current_price.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Rank</div>
+                        <div class="detail-value">#${stock.rank || "N/A"}</div>
+                    </div>
+                </div>
+                
+                <div class="detail-row">
+                    <div class="detail-item">
+                        <div class="detail-label">1 Day Change</div>
+                        <div class="detail-value ${stock.change_1d >= 0 ? "positive" : "negative"}">${stock.change_1d >= 0 ? "+" : ""}${stock.change_1d.toFixed(2)}%</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">1 Week Change</div>
+                        <div class="detail-value ${stock.change_1w >= 0 ? "positive" : "negative"}">${stock.change_1w >= 0 ? "+" : ""}${stock.change_1w.toFixed(2)}%</div>
+                    </div>
+                </div>
+                
+                <div class="detail-row">
+                    <div class="detail-item">
+                        <div class="detail-label">1 Month Change</div>
+                        <div class="detail-value ${stock.change_1m >= 0 ? "positive" : "negative"}">${stock.change_1m >= 0 ? "+" : ""}${stock.change_1m.toFixed(2)}%</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">RSI</div>
+                        <div class="detail-value">${stock.rsi.toFixed(1)}</div>
+                    </div>
+                </div>
+                
+                <div class="detail-row">
+                    <div class="detail-item">
+                        <div class="detail-label">Technical Score</div>
+                        <div class="detail-value">${stock.technical_score.toFixed(1)}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Relative Strength</div>
+                        <div class="detail-value ${stock.relative_strength >= 0 ? "positive" : "negative"}">${stock.relative_strength >= 0 ? "+" : ""}${stock.relative_strength.toFixed(2)}%</div>
+                    </div>
+                </div>
+                
+                <div class="detail-row">
+                    <div class="detail-item">
+                        <div class="detail-label">CAN SLIM Score</div>
+                        <div class="detail-value">${stock.can_slim_score}/20</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Minervini Score</div>
+                        <div class="detail-value">${stock.minervini_score}/20</div>
+                    </div>
+                </div>
+                
+                <div class="detail-row">
+                    <div class="detail-item">
+                        <div class="detail-label">Fundamental Score</div>
+                        <div class="detail-value">${stock.fundamental_score.toFixed(1)}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Enhanced Fund Score</div>
+                        <div class="detail-value">${stock.enhanced_fund_score.toFixed(1)}</div>
+                    </div>
+                </div>
+                
+                <div class="detail-row">
+                    <div class="detail-item">
+                        <div class="detail-label">Trading Signal</div>
+                        <div class="detail-value" style="background: ${signalColor}; color: white; padding: 8px 16px; border-radius: 8px; display: inline-block;">${stock.trading_signal.replace("_", " ")}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Trend Signal</div>
+                        <div class="detail-value" style="background: ${trendColor}; color: white; padding: 8px 16px; border-radius: 8px; display: inline-block;">${stock.trend_signal.replace("_", " ")}</div>
+                    </div>
+                </div>
+                
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-card-value">${stock.earnings_quality.toFixed(1)}</div>
+                        <div class="metric-card-label">Earnings Quality</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-card-value ${stock.sales_growth >= 0 ? "positive" : "negative"}">${stock.sales_growth >= 0 ? "+" : ""}${stock.sales_growth.toFixed(1)}%</div>
+                        <div class="metric-card-label">Sales Growth</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-card-value">${stock.financial_strength.toFixed(1)}</div>
+                        <div class="metric-card-label">Financial Strength</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-card-value">${stock.institutional_backing.toFixed(1)}</div>
+                        <div class="metric-card-label">Institutional Backing</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-card-value">₹${(stock.trading_value / 1000000).toFixed(2)}M</div>
+                        <div class="metric-card-label">Trading Value</div>
+                    </div>
+                    <div class="metric-card" style="background: ${performanceColor === "#4caf50" ? "rgba(76, 175, 80, 0.1)" : performanceColor === "#8bc34a" ? "rgba(139, 195, 74, 0.1)" : performanceColor === "#ffc107" ? "rgba(255, 193, 7, 0.1)" : "rgba(244, 67, 54, 0.1)"}; border-color: ${performanceColor};">
+                        <div class="metric-card-value" style="color: ${performanceColor};">${performanceCategory}</div>
+                        <div class="metric-card-label">Performance</div>
+                    </div>
+                </div>
+                
+                <div class="insight-box">
+                    <div class="insight-title">💡 Investment Insight</div>
+                    <div class="insight-text">
+                        ${stock.technical_score >= 70 ? 
+                            `This stock shows strong technical strength (${stock.technical_score.toFixed(1)}/100) with ${stock.trading_signal.replace("_", " ")} signal. The CAN SLIM score of ${stock.can_slim_score}/20 and Minervini score of ${stock.minervini_score}/20 indicate ${stock.can_slim_score >= 12 && stock.minervini_score >= 12 ? "strong" : "moderate"} fundamental alignment. Consider for ${stock.market_cap === "LARGE_CAP" ? "core" : "growth"} portfolio allocation.` :
+                            stock.technical_score >= 50 ?
+                            `This stock shows moderate technical strength (${stock.technical_score.toFixed(1)}/100) with ${stock.trading_signal.replace("_", " ")} signal. Monitor for improvement or consider smaller position sizes.` :
+                            `This stock shows weak technical strength (${stock.technical_score.toFixed(1)}/100) with ${stock.trading_signal.replace("_", " ")} signal. High risk - consider avoiding or very small position sizes.`
+                        }
+                    </div>
+                </div>
+            `;
+            
+            modalDetails.innerHTML = detailsHTML;
+            modal.classList.add("active");
+            
+            modal.addEventListener("click", function(e) {
+                if (e.target === modal) {
+                    closeModal();
+                }
+            });
+            
+            document.addEventListener("keydown", function(e) {
+                if (e.key === "Escape" && modal.classList.contains("active")) {
+                    closeModal();
+                }
+            });
+        }
+        
+        function closeModal() {
+            const modal = document.getElementById("stockModal");
+            modal.classList.remove("active");
+        }
+    </script>
+</body>
+</html>

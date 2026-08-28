@@ -1,5 +1,7 @@
 # NSE Agent Adda — Complete Command & Feature Reference
 
+Consolidated skill inventory: [Agent Adda Skill Catalog](agent_adda_skill_catalog.md)
+
 ## OVERVIEW
 **Agent Adda** is an interactive NSE market research terminal with 150+ slash commands across market research, screening, search, portfolio, voice, company intelligence, and EOD strategy backtesting modules. It supports 3 operating modes and features background monitoring, deep search, forensic analysis, options chains, RIC investigations, report generation, company website indexing, PostgreSQL-backed Strategy Lab persistence, and more.
 

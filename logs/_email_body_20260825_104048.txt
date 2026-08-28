@@ -1,0 +1,141 @@
+Agent Adda Intraday Live Commentary
+
+                  2026-08-25 10:40:12 IST | 15-minute scheduled update
+
+                  Market: NIFTY 24,131 -0.36%, BANKNIFTY 57,427 -0.17%, VIX 11.36 -1.45%, breadth 213A/537D
+
+                Cycle
+1211
+Tracked
+2
+Candidates
+1
+Changed
+0
+
+            Trading Stance
+
+        Trading Stance
+
+          WAIT
+           - Wait for retest/confirmation; no trade-now signal.
+
+          Monitor qualified watches, but wait for trigger hold and cleaner timing.
+
+          Reasons: Fresh alerts: 1; Alert candidates: 1; late_morning / NO_TRADE_WINDOW; volume confirmation missing
+
+            Sharp Movers
+
+            No tracked name crossed the sharp-move threshold.
+
+            Current Read From The Tracker
+
+        Symbol
+        Gate
+        Read
+
+      INDUSINDBK
+1,007 / -0.6%WAIT FOR RETEST / Option Buy OKS-ACTIVE - Trig 1,007 | Stop 1,008 | T1 997.00/14.4R - MTF breakdown levels
+NHPC
+76.31 / -0.4%AVOID / No TradeS-WATCH - Trig 76.20 | Stop 76.65 | T1 75.55/1.4R - MTF breakdown levels
+
+            Options Execution
+
+        Symbol
+        Verdict
+        Contract
+        Risk Notes
+
+      INDUSINDBKUSE SPREAD
+Avoid stock option near expiry (NO OPTIONS STRATEGY)PE ATM 1,000
+Prem 1.40 | BE 998.60 | 2026-08-25 / 0D | IV 18.0✅ IV 18.0% is low — reasonable cost for buyers; ✅ IV rank 7% — historically cheap
+NHPCNO OPTIONS TRADE
+No options structure (NO OPTIONS STRATEGY)CE
+Prem n/a | BE n/a | n/a | IV n/arow is not LONG or SHORT
+
+            Cycle Changes
+
+            Newnone
+ActiveINDUSINDBK
+Changednone
+
+            Narrative / Commentary
+
+                  State-Machine Commentary
+
+                  Current read from the tracker
+•Tape: NIFTY 24,131 -0.36%, BANKNIFTY 57,427 -0.17%, VIX 11.36 -1.45%, breadth 213A/537D. Regime = weak_tape: Prefer selective shorts; longs need stronger confirmation.
+
+•Tracked names (2):
+
+•INDUSINDBK — SHORT active. Last 1006.8. Trigger 1007.1, invalidation 1007.8, T1 997.0 (RR strong). MTF S/R: PW 997/1020; PD 997/1007.8; SOD 1006.4/1016.0; L30m 1006.4/1012.4. Final action: WAIT FOR RETEST. Options suitability: Option Buy OK.
+
+•NHPC — near trigger / watch (SHORT). Last 76.31. Trigger 76.20, invalidation 76.65, T1 75.55 (R:R weak). MTF S/R: PW 75.55/77.10; PD 75.55/76.65; SOD 76.20/76.74; L30m 76.20/76.40. Final action: AVOID. Options suitability: No Trade.
+
+ 
+Cycle changes
+•New added: none
+
+•Removed: none
+
+•Forming: none
+
+•Confirmed: NHPC (SHORT) near trigger / watch — Trigger 76.20, Invalidation 76.65, T1 75.55; F&O bias bearish (PCR 0.71, basis -0.71, spot < max pain 80). Final action: AVOID. Options: No Trade.
+
+•Active: INDUSINDBK (SHORT) — Trigger 1007.1, Invalidation 1007.8, T1 997.0; F&O bias bearish (PCR 0.55, basis -8.98, spot < max pain 1050, CE wall 1020, PE wall 1000). Final action: WAIT FOR RETEST. Options: Option Buy OK.
+
+•Status changes: none (note intracycle flips below)
+
+ 
+... commentary truncated for email readability; see the cycle log for full detail.
+
+            Source Health
+
+            get_live_market_overview ok | get_top_gainers_losers ok | get_nse_quotes ok: yfinance (NSE batch) | scan_symbols_intraday ok | strategy_time_gate ok: supertrend_breakout,near_breakout_volume,vcp,volume,darvas | fno_context ok | edge_memory ok: 0 | options_execution ok
+
+            Alert Candidates
+
+                      Priority: INDUSINDBK. Confirm trigger hold and invalidation before acting.
+
+            Priority Queue
+
+        Symbol
+        LTP
+        Levels
+        Gate / Read
+
+      INDUSINDBK
+SHORT1,007
+-0.6%Trig 1,007 | Stop 1,008 | T1 997.00 | RR 14.4WAIT FOR RETEST / Option Buy OK / score 79
+short active - MTF breakdown levels - Previous week S/R 997.00/1,020; Previous 3 days S/R 997.00/1,017; Previous day S/R 997.00/1,008; Start of day...
+
+            Active Trades
+
+        Symbol
+        LTP
+        Levels
+        Gate / Read
+
+      INDUSINDBK
+SHORT1,007
+-0.6%Trig 1,007 | Stop 1,008 | T1 997.00 | RR 14.4WAIT FOR RETEST / Option Buy OK / score 79
+short active - MTF breakdown levels - Previous week S/R 997.00/1,020; Previous 3 days S/R 997.00/1,017; Previous day S/R 997.00/1,008; Start of day...
+
+            Near Trigger / Watch
+
+        Symbol
+        LTP
+        Levels
+        Gate / Read
+
+      No near-trigger watches passed the alert filter.
+
+            Risk Rules
+
+                  - Active means the state machine sees the trigger already engaged; near-trigger means wait for confirmation.
+
+                  - Stops are invalidation references, not guaranteed execution prices.
+
+                  - Skip names where spread, liquidity, option premium, or volatility makes execution poor.
+
+                Research only. Not investment advice. Validate liquidity, spread, option premium, and execution risk before acting.

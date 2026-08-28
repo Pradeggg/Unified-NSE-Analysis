@@ -2,7 +2,7 @@ import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from company_intelligence_report import (
+from company_intelligence.company_intelligence_report import (
     render_company_xray_html,
     render_company_xray_markdown,
     write_company_xray_report,

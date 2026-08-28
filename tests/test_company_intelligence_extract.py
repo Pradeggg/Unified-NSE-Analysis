@@ -3,8 +3,8 @@ import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from company_intelligence_db import init_company_intelligence_db
-from company_intelligence_extract import (
+from company_intelligence.company_intelligence_db import init_company_intelligence_db
+from company_intelligence.company_intelligence_extract import (
     classify_evidence_text,
     list_evidence_by_symbol,
     store_evidence_chunk,

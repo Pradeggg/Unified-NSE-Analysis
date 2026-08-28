@@ -3,7 +3,7 @@ import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from company_intelligence import run_company_xray
+from company_intelligence.company_intelligence import run_company_xray
 
 
 class CompanyXrayDmartRegressionTests(unittest.TestCase):

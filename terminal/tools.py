@@ -2722,53 +2722,116 @@ def _relative_strength_distribution(values: list[float]) -> tuple[dict[str, floa
 
 
 def get_global_market_assessment() -> dict:
-    """Assess global market cues from cached global index and correlation files."""
-    if not GLOBAL_INDEX_CSV.exists():
-        return {"error": f"Global indices file not found: {GLOBAL_INDEX_CSV}"}
+    """Assess global market cues from live quotes when possible, else cached files."""
 
-    df = pd.read_csv(GLOBAL_INDEX_CSV)
-    if "Date" not in df.columns or df.empty:
-        return {"error": "Global indices CSV is empty or missing Date column"}
+    def _live_moves_yfinance() -> tuple[dict[str, dict[str, Any]], str | None]:
+        try:
+            import yfinance as yf
 
-    df["Date"] = pd.to_datetime(df["Date"], errors="coerce")
-    df = df.dropna(subset=["Date"]).sort_values("Date")
-    if len(df) < 2:
-        return {"error": "Global indices CSV needs at least two dated rows"}
+            tickers = {
+                "S&P 500": "^GSPC",
+                "Nasdaq": "^IXIC",
+                "Hang Seng": "^HSI",
+                "Nikkei 225": "^N225",
+                "Gold": "GC=F",
+                "Crude Oil": "CL=F",
+                "Copper": "HG=F",
+                "DXY": "DX-Y.NYB",
+                "USDINR": "USDINR=X",
+            }
+            symbols = list(tickers.values())
+            raw = yf.download(
+                tickers=" ".join(symbols),
+                period="10d",
+                interval="1d",
+                group_by="ticker",
+                auto_adjust=False,
+                progress=False,
+                threads=True,
+            )
+            moves: dict[str, dict[str, Any]] = {}
+            for name, ticker in tickers.items():
+                if raw is None or getattr(raw, "empty", True):
+                    continue
+                try:
+                    if isinstance(raw.columns, pd.MultiIndex):
+                        close = pd.to_numeric(raw[(ticker, "Close")], errors="coerce").dropna()
+                    else:
+                        close = pd.to_numeric(raw["Close"], errors="coerce").dropna()
+                    if len(close) < 2:
+                        continue
+                    latest_val = float(close.iloc[-1])
+                    prev_val = float(close.iloc[-2])
+                    if prev_val == 0:
+                        continue
+                    pct_change = round((latest_val / prev_val - 1) * 100, 2)
+                    as_of = str(pd.to_datetime(close.index[-1]).date())
+                    moves[name] = {"price": round(latest_val, 2), "pct_change": pct_change, "as_of": as_of}
+                except Exception:
+                    continue
+            if not moves:
+                return {}, "yfinance returned no usable quotes"
+            return moves, None
+        except Exception as exc:
+            return {}, f"yfinance live quotes unavailable: {exc}"
 
-    asset_cols = [c for c in df.columns if c != "Date"]
-    # Convert all asset columns to numeric once for efficiency
-    num_df = df[asset_cols].apply(pd.to_numeric, errors="coerce")
+    # Prefer live quotes (report wants the latest); fall back to cached CSVs.
+    df = None
+    live_moves, live_err = _live_moves_yfinance()
+    if live_moves:
+        moves = live_moves
+        source = "Live yfinance quotes"
+        if live_err:
+            source += f" (partial: {live_err})"
+    else:
+        if not GLOBAL_INDEX_CSV.exists():
+            return {"error": f"Global indices file not found: {GLOBAL_INDEX_CSV}"}
 
-    moves: dict[str, dict[str, Any]] = {}
-    for asset in asset_cols:
-        col = num_df[asset].dropna()
-        if len(col) < 2:
-            continue
-        # Use the most-recent valid row for this asset (not necessarily df.iloc[-1])
-        latest_idx = col.index[-1]
-        prev_idx   = col.index[-2]
-        latest_val = col.iloc[-1]
-        prev_val   = col.iloc[-2]
-        if prev_val == 0:
-            continue
+        df = pd.read_csv(GLOBAL_INDEX_CSV)
+        if "Date" not in df.columns or df.empty:
+            return {"error": "Global indices CSV is empty or missing Date column"}
 
-        pct_change = round((latest_val / prev_val - 1) * 100, 2)
-        moves[asset] = {
-            "price":      round(float(latest_val), 2),
-            "pct_change": pct_change,
-            "as_of":      str(df.loc[latest_idx, "Date"].date()),
-        }
+        df["Date"] = pd.to_datetime(df["Date"], errors="coerce")
+        df = df.dropna(subset=["Date"]).sort_values("Date")
+        if len(df) < 2:
+            return {"error": "Global indices CSV needs at least two dated rows"}
+
+        asset_cols = [c for c in df.columns if c != "Date"]
+        num_df = df[asset_cols].apply(pd.to_numeric, errors="coerce")
+
+        moves = {}
+        for asset in asset_cols:
+            col = num_df[asset].dropna()
+            if len(col) < 2:
+                continue
+            latest_idx = col.index[-1]
+            latest_val = col.iloc[-1]
+            prev_val = col.iloc[-2]
+            if prev_val == 0:
+                continue
+            pct_change = round((latest_val / prev_val - 1) * 100, 2)
+            moves[asset] = {
+                "price": round(float(latest_val), 2),
+                "pct_change": pct_change,
+                "as_of": str(df.loc[latest_idx, "Date"].date()),
+            }
+        source = "Cached global market CSVs"
 
     def _avg(names: list[str]) -> float | None:
         vals = [moves[n]["pct_change"] for n in names if n in moves]
         return round(sum(vals) / len(vals), 2) if vals else None
 
-    def _bias(avg: float | None) -> str:
+    def _bias(names: list[str], avg: float | None) -> str:
         if avg is None:
             return "unknown"
-        if avg > 0.35:
+        vals = [moves[n]["pct_change"] for n in names if n in moves and moves[n].get("pct_change") is not None]
+        if not vals:
+            return "unknown"
+        has_pos = any(v > 0.05 for v in vals)
+        has_neg = any(v < -0.05 for v in vals)
+        if has_pos and not has_neg:
             return "positive"
-        if avg < -0.35:
+        if has_neg and not has_pos:
             return "negative"
         return "mixed"
 
@@ -2778,10 +2841,10 @@ def get_global_market_assessment() -> dict:
     fx_avg = _avg(["DXY", "USDINR"])
 
     regions = {
-        "US": {"avg_pct_change": us_avg, "bias": _bias(us_avg)},
-        "Asia": {"avg_pct_change": asia_avg, "bias": _bias(asia_avg)},
-        "Commodities": {"avg_pct_change": commodity_avg, "bias": _bias(commodity_avg)},
-        "FX": {"avg_pct_change": fx_avg, "bias": _bias(fx_avg)},
+        "US": {"avg_pct_change": us_avg, "bias": _bias(["S&P 500", "Nasdaq"], us_avg)},
+        "Asia": {"avg_pct_change": asia_avg, "bias": _bias(["Hang Seng", "Nikkei 225"], asia_avg)},
+        "Commodities": {"avg_pct_change": commodity_avg, "bias": _bias(["Gold", "Crude Oil", "Copper"], commodity_avg)},
+        "FX": {"avg_pct_change": fx_avg, "bias": _bias(["DXY", "USDINR"], fx_avg)},
     }
 
     risk_points = 0
@@ -2851,7 +2914,12 @@ def get_global_market_assessment() -> dict:
 
     # Determine the "as_of" date: latest date that has any data
     last_dates = {asset: m["as_of"] for asset, m in moves.items()}
-    as_of = max(last_dates.values()) if last_dates else str(df.iloc[-1]["Date"].date())
+    if last_dates:
+        as_of = max(last_dates.values())
+    elif df is not None:
+        as_of = str(df.iloc[-1]["Date"].date())
+    else:
+        as_of = datetime.now().strftime("%Y-%m-%d")
 
     return {
         "risk_regime": risk_regime,
@@ -2862,7 +2930,7 @@ def get_global_market_assessment() -> dict:
         "india_readthrough": india_readthrough,
         "watch_items": watch_items,
         "correlations": correlations,
-        "source": "Cached global market CSVs",
+        "source": source,
         "source_files": {
             "global_indices": str(GLOBAL_INDEX_CSV.relative_to(ROOT)) if GLOBAL_INDEX_CSV.is_relative_to(ROOT) else str(GLOBAL_INDEX_CSV),
             "global_correlations": str(GLOBAL_CORR_CSV.relative_to(ROOT)) if GLOBAL_CORR_CSV.is_relative_to(ROOT) else str(GLOBAL_CORR_CSV),
@@ -5792,6 +5860,95 @@ def _fmt_variation_row(x: dict) -> dict:
     }
 
 
+def _get_yfinance_index_movers(index: str, top_n: int, direction: str) -> dict:
+    """Fetch current daily candles for an index universe and rank movers."""
+    try:
+        import yfinance as yf
+
+        symbols = _fetch_nse_index_constituents(index)
+        if not symbols:
+            return {"error": f"No constituents available for {index}", "index": index}
+        tickers = [f"{symbol}.NS" for symbol in symbols]
+        data = _quiet_yf_download(
+            yf,
+            tickers,
+            period="2d",
+            interval="1d",
+            auto_adjust=False,
+            progress=False,
+            group_by="ticker",
+            threads=True,
+        )
+        rows: list[dict] = []
+        for symbol, ticker in zip(symbols, tickers):
+            try:
+                frame = data[ticker].dropna(subset=["Close"])
+                if len(frame) < 2:
+                    continue
+                current = frame.iloc[-1]
+                previous = frame.iloc[-2]
+                last_price = float(current["Close"])
+                prev_price = float(previous["Close"])
+                if not prev_price:
+                    continue
+                pct_change = (last_price / prev_price - 1) * 100
+                rows.append({
+                    "symbol": symbol,
+                    "last_price": round(last_price, 2),
+                    "change": round(last_price - prev_price, 2),
+                    "pct_change": round(pct_change, 2),
+                    "volume": int(current.get("Volume", 0) or 0),
+                    "day_high": float(current.get("High", last_price)),
+                    "day_low": float(current.get("Low", last_price)),
+                    "open_price": float(current.get("Open", last_price)),
+                    "prev_price": round(prev_price, 2),
+                })
+            except (KeyError, TypeError, ValueError, IndexError):
+                continue
+        if rows:
+            try:
+                score_rows = _pg_fetchall(
+                    """
+                    SELECT UPPER(symbol), company_name, sector, stage,
+                           relative_strength, rsi, trading_signal
+                    FROM scores.stage_snapshots
+                    WHERE snapshot_date=(SELECT MAX(snapshot_date) FROM scores.stage_snapshots)
+                      AND UPPER(symbol)=ANY(%s)
+                    """,
+                    ([row["symbol"] for row in rows],),
+                )
+                scores = {
+                    str(row[0]).upper(): {
+                        "company_name": row[1],
+                        "sector": row[2],
+                        "stage": row[3],
+                        "relative_strength": row[4],
+                        "rsi": row[5],
+                        "trading_signal": row[6],
+                    }
+                    for row in score_rows
+                }
+                for row in rows:
+                    row.update(scores.get(row["symbol"], {}))
+            except Exception:
+                pass
+        result = {
+            "index": index,
+            "canonical_index": _normalize_index_name(index),
+            "as_of": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "source": "yfinance current daily candles (NSE tickers)",
+            "constituent_count": len(symbols),
+            "returned_count": len(rows),
+        }
+        if direction in ("gainers", "both"):
+            result["gainers"] = sorted(rows, key=lambda row: row["pct_change"], reverse=True)[:top_n]
+        if direction in ("losers", "both"):
+            result["losers"] = sorted(rows, key=lambda row: row["pct_change"])[:top_n]
+        return result
+    except Exception as exc:
+        return {"error": str(exc), "index": index}
+
+
 def _filter_variation_rows_to_index(rows: list[dict], index: str) -> tuple[list[dict], int | None]:
     symbols = _fetch_nse_index_constituents(index)
     if not symbols:
@@ -5825,8 +5982,10 @@ def get_top_gainers_losers(
         direction: 'gainers', 'losers', or 'both' (default 'both').
     """
     try:
-        bucket = _variations_bucket_key(index)
         canonical_index = _normalize_index_name(index)
+        if canonical_index == "NIFTY 500":
+            return _get_yfinance_index_movers(index, top_n, direction)
+        bucket = _variations_bucket_key(index)
         result: dict = {
             "index":  index,
             "canonical_index": canonical_index,
@@ -5868,22 +6027,6 @@ def get_top_gainers_losers(
         if constituent_count:
             result["constituent_count"] = constituent_count
             result["source"] = result["source"] + " + index constituent filter"
-            needs_fallback = (
-                (direction in ("gainers", "both") and not result.get("gainers"))
-                or (direction in ("losers", "both") and not result.get("losers"))
-            )
-            if needs_fallback:
-                fallback = get_eod_top_movers(
-                    index=canonical_index,
-                    top_n=top_n,
-                    direction=direction,
-                )
-                if not fallback.get("error"):
-                    for key in ("gainers", "losers"):
-                        if direction in (key, "both") and not result.get(key) and fallback.get(key):
-                            result[key] = fallback[key]
-                    result["fallback_source"] = fallback.get("source")
-                    result["source"] = result["source"] + " + scoped EOD fallback"
         return result
     except Exception as e:
         return {"error": str(e), "index": index}
@@ -9423,7 +9566,100 @@ def scan_options_buys(direction: str = "bullish",
 
 
 def get_fno_analytics(symbol: str | None = None, top_n: int = 20) -> dict:
-    """Return PostgreSQL-backed F&O analytics: PCR, max pain, buildup, signal."""
+    """Return F&O analytics, using the live NSE chain for index symbols."""
+    if symbol and symbol.upper() in {"NIFTY", "BANKNIFTY"}:
+        live = analyze_option_chain(symbol.upper(), use_live=True)
+        if not live.get("error"):
+            pcr = live.get("pcr") or {}
+            top_call = (live.get("top_ce_oi_strikes") or [{}])[0]
+            top_put = (live.get("top_pe_oi_strikes") or [{}])[0]
+            signal = str(pcr.get("signal") or "Neutral")
+            fno_signal = "BULL" if "Bullish" in signal else "BEAR" if "Bearish" in signal else "NEUTRAL"
+            row = {
+                "trade_date": live.get("as_of"),
+                "symbol": symbol.upper(),
+                "options_expiry": live.get("expiry"),
+                "futures_expiry": live.get("expiry"),
+                "underlying_price": live.get("underlying"),
+                "futures_close": None,
+                "futures_price_change_pct": None,
+                "futures_oi_change_pct": None,
+                "pcr_oi": pcr.get("oi"),
+                "pcr_volume": pcr.get("volume"),
+                "max_call_oi_strike": top_call.get("strike"),
+                "max_put_oi_strike": top_put.get("strike"),
+                "max_pain": live.get("max_pain"),
+                "distance_from_max_pain_pct": (
+                    round((live["max_pain"] - live["underlying"]) / live["underlying"] * 100, 4)
+                    if live.get("max_pain") and live.get("underlying") else None
+                ),
+                "buildup": "LIVE_CHAIN" if live.get("source") == "live-nse-api" else "EOD_FALLBACK",
+                "fno_signal": fno_signal,
+            }
+            return {
+                "status": "ok",
+                "source": live.get("source", "live-nse-api"),
+                "as_of": live.get("as_of"),
+                "symbol": symbol.upper(),
+                "count": 1,
+                "rows": [row],
+            }
+    if symbol is None:
+        try:
+            from terminal.fno_data import _fetch_stock_futures_bulk, fetch_live_futures
+
+            contracts = _fetch_stock_futures_bulk() or []
+            symbols = []
+            for contract in sorted(contracts, key=lambda item: float(item.get("volume") or 0), reverse=True):
+                if contract.get("instrument") != "Stock Futures":
+                    continue
+                stock = str(contract.get("underlying") or "").upper().strip()
+                if stock and stock not in symbols:
+                    symbols.append(stock)
+                if len(symbols) >= max(int(top_n), 1):
+                    break
+            live_rows = []
+            for stock in symbols:
+                chain = analyze_option_chain(stock, use_live=True)
+                if chain.get("error") or chain.get("source") != "live-nse-api":
+                    continue
+                futures = fetch_live_futures(stock)
+                future = (futures.get("futures") or [{}])[0]
+                pcr = chain.get("pcr") or {}
+                signal = str(pcr.get("signal") or "Neutral")
+                live_rows.append({
+                    "trade_date": chain.get("as_of"),
+                    "symbol": stock,
+                    "options_expiry": chain.get("expiry"),
+                    "futures_expiry": future.get("expiry"),
+                    "underlying_price": chain.get("underlying"),
+                    "futures_close": future.get("last_price"),
+                    "futures_price_change_pct": future.get("change_pct"),
+                    "futures_oi": future.get("oi"),
+                    "futures_oi_change_pct": None,
+                    "pcr_oi": pcr.get("oi"),
+                    "pcr_volume": pcr.get("volume"),
+                    "max_call_oi_strike": ((chain.get("top_ce_oi_strikes") or [{}])[0]).get("strike"),
+                    "max_put_oi_strike": ((chain.get("top_pe_oi_strikes") or [{}])[0]).get("strike"),
+                    "max_pain": chain.get("max_pain"),
+                    "distance_from_max_pain_pct": (
+                        round((chain["max_pain"] - chain["underlying"]) / chain["underlying"] * 100, 4)
+                        if chain.get("max_pain") and chain.get("underlying") else None
+                    ),
+                    "buildup": "LIVE_CHAIN",
+                    "fno_signal": "BULL" if "Bullish" in signal else "BEAR" if "Bearish" in signal else "NEUTRAL",
+                })
+            if live_rows:
+                return {
+                    "status": "ok",
+                    "source": "live-nse-api option chains + live stock futures",
+                    "as_of": datetime.now().strftime("%H:%M:%S"),
+                    "symbol": None,
+                    "count": len(live_rows),
+                    "rows": live_rows,
+                }
+        except Exception:
+            pass
     try:
         import psycopg2
         conn = psycopg2.connect(

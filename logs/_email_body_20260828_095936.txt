@@ -1,0 +1,163 @@
+Agent Adda Intraday Live Commentary
+
+                  2026-08-28 09:59:34 IST | 15-minute scheduled update
+
+                  Market: NIFTY 24,158 +0.28%, BANKNIFTY 57,461 -0.08%, VIX 10.89 -1.62%, breadth 390A/357D
+
+                Cycle
+15
+Tracked
+15
+Candidates
+1
+Changed
+2
+
+            Trading Stance
+
+        Trading Stance
+
+          WAIT
+           - Wait for retest/confirmation; no trade-now signal.
+
+          Monitor qualified watches, but wait for trigger hold and cleaner timing.
+
+          Reasons: Fresh alerts: 1; Alert candidates: 1; opening_drive / NO_TRADE_WINDOW; volume confirmation missing
+
+            Sharp Movers
+
+            No tracked name crossed the sharp-move threshold.
+
+            Current Read From The Tracker
+
+        Symbol
+        Gate
+        Read
+
+      SUPREMEIND
+3,705 / n/aWATCH ONLY / Option Buy OKL-WATCH - Trig 3,706 | Stop 3,679 | T1 3,743/1.3R - Volume Spike
+BAJAJ-AUTO
+11,916 / n/aWATCH ONLY / Option Buy OKL-ACTIVE - Trig 11,916 | Stop 11,880 | T1 11,993/2.1R - Near Breakout + Volume
+LODHA
+n/a / n/aAVOID / No TradeL-WATCH - Trig 1,270 | Stop 1,262 | T1 1,282/1.6R - Near Breakout + Volume
+OIL
+n/a / n/aAVOID / No TradeL-WATCH - Trig 476.28 | Stop 474.19 | T1 480.29/1.9R - Near Breakout + Volume
+360ONE
+n/a / n/aAVOID / No TradeW-WATCH - Trig n/a | Stop n/a | T1 n/a - MTF breakout levels
+ABB
+n/a / n/aAVOID / No TradeW-WATCH - Trig n/a | Stop n/a | T1 n/a - MTF breakout levels
+ABCAPITAL
+n/a / n/aAVOID / No TradeW-WATCH - Trig n/a | Stop n/a | T1 n/a - MTF breakout levels
+
+            Options Execution
+
+        Symbol
+        Verdict
+        Contract
+        Risk Notes
+
+      SUPREMEINDNO OPTIONS TRADE
+No options structure (NO OPTIONS STRATEGY)CE
+Prem n/a | BE n/a | n/a | IV n/aoption_chain; futures
+BAJAJ-AUTONO OPTIONS TRADE
+No options structure (NO OPTIONS STRATEGY)CE
+Prem n/a | BE n/a | n/a | IV n/aoption_chain; futures
+LODHANO OPTIONS TRADE
+No options structure (NO OPTIONS STRATEGY)CE
+Prem n/a | BE n/a | n/a | IV n/arow is not LONG or SHORT
+OILNO OPTIONS TRADE
+No options structure (NO OPTIONS STRATEGY)CE
+Prem n/a | BE n/a | n/a | IV n/arow is not LONG or SHORT
+360ONENO OPTIONS TRADE
+No options structure (NO OPTIONS STRATEGY)CE
+Prem n/a | BE n/a | n/a | IV n/arow is not LONG or SHORT
+ABBNO OPTIONS TRADE
+No options structure (NO OPTIONS STRATEGY)CE
+Prem n/a | BE n/a | n/a | IV n/arow is not LONG or SHORT
+
+            Cycle Changes
+
+            Newnone
+ActiveBAJAJ-AUTO
+ChangedLODHA long active -> watch; OIL near trigger / watch -> watch
+
+            Narrative / Commentary
+
+                  State-Machine Commentary
+
+                  Current read from the tracker:
+ 
+•SUPREMEIND: near trigger / watch; Locked setup: Above 3,706.40; T1 3,743.31, stop 3,678.72; F&O sideways (PCR n/a, basis n/a, max pain n/a); Decision WATCH ONLY (Option Buy OK, score 57)
+
+•BAJAJ-AUTO: long active; Locked setup: Above 11,915.90; T1 11,992.77, stop 11,879.88; F&O sideways (PCR n/a, basis n/a, max pain n/a); Decision WATCH ONLY (Option Buy OK, score 57)
+
+•LODHA: watch; Locked setup: Above 1,269.77; T1 1,281.95, stop 1,262.19; F&O sideways (PCR n/a, basis n/a, max pain n/a); Decision AVOID (No Trade, score 3)
+
+•OIL: watch; Locked setup: Above 476.28; T1 480.29, stop 474.19; F&O sideways (PCR n/a, basis n/a, max pain n/a); Decision AVOID (No Trade, score 3)
+
+•360ONE: watch; Watch price n/a; no active setup; F&O sideways (PCR n/a, basis n/a, max pain n/a); Decision AVOID (No Trade, score 3)
+
+•ABB: watch; Watch price n/a; no active setup; F&O sideways (PCR n/a, basis n/a, max pain n/a); Decision AVOID (No Trade, score 3)
+
+•ABCAPITAL: watch; Watch price n/a; no active setup; F&O sideways (PCR n/a, basis n/a, max pain n/a); Decision AVOID (No Trade, score 3)
+
+•ADANIENSOL: watch; Watch price n/a; no active setup; F&O sideways (PCR n/a, basis n/a, max pain n/a); Decision AVOID (No Trade, score 3)
+
+•ADANIENT: watch; Watch price n/a; no active setup; F&O sideways (PCR n/a, basis n/a, max pain n/a); Decision AVOID (No Trade, score 3)
+
+•ADANIGREEN: watch; Breakout above 1,308.30; support n/a; T1 n/a; F&O sideways (PCR n/a, basis n/a, max pain n/a); Decision AVOID (No Trade, score 3)
+
+ 
+Cycle changes:
+... commentary truncated for email readability; see the cycle log for full detail.
+
+            Source Health
+
+            get_live_market_overview ok | get_top_gainers_losers ok | get_nse_quotes ok: yfinance (NSE batch) | scan_symbols_intraday ok | fno_context ok | edge_memory ok: 0 | options_execution ok
+
+            Alert Candidates
+
+                      Priority: BAJAJ-AUTO. Confirm trigger hold and invalidation before acting.
+
+            Priority Queue
+
+        Symbol
+        LTP
+        Levels
+        Gate / Read
+
+      BAJAJ-AUTO
+LONG11,916
+n/aTrig 11,916 | Stop 11,880 | T1 11,993 | RR 2.1WATCH ONLY / Option Buy OK / score 57
+long active - Near Breakout + Volume - Near pivot 11904.0; distance -0.18%; volume 1.2x; ATR 0.32%; needs next candle hold above trigger
+
+            Active Trades
+
+        Symbol
+        LTP
+        Levels
+        Gate / Read
+
+      BAJAJ-AUTO
+LONG11,916
+n/aTrig 11,916 | Stop 11,880 | T1 11,993 | RR 2.1WATCH ONLY / Option Buy OK / score 57
+long active - Near Breakout + Volume - Near pivot 11904.0; distance -0.18%; volume 1.2x; ATR 0.32%; needs next candle hold above trigger
+
+            Near Trigger / Watch
+
+        Symbol
+        LTP
+        Levels
+        Gate / Read
+
+      No near-trigger watches passed the alert filter.
+
+            Risk Rules
+
+                  - Active means the state machine sees the trigger already engaged; near-trigger means wait for confirmation.
+
+                  - Stops are invalidation references, not guaranteed execution prices.
+
+                  - Skip names where spread, liquidity, option premium, or volatility makes execution poor.
+
+                Research only. Not investment advice. Validate liquidity, spread, option premium, and execution risk before acting.

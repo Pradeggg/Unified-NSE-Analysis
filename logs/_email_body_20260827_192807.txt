@@ -1,0 +1,56 @@
+Agent Adda
+      Thu, 27 Aug 2026 · 19:28 IST
+
+        Report · swing_playbook.html · mode: both
+
+    Breadth supportive (20 candidates, 0 watchlist); balanced risk profile; Stage 2 leaders in focus.
+
+  Swing Trading Playbook — 27 Aug 2026
+
+  The latest playbook is published on Agent Adda Market Intelligence. This note provides a concise, research-only summary of the setups and portfolio actions. Attached: swing_playbook.html (full details). Not investment advice.
+
+  Key takeaways
+
+    Leader: LAURUSLABS (score 87.2) — trigger Rs 1,948.69; stop Rs 1,807.85; T1/T2: Rs 2,159.96 / Rs 2,230.39; evidence: high Technical/RS/VCP; Stage_2.
+
+    Next: RRKABEL and BLSE (scores 86.6) — triggers Rs 2,858.40 and Rs 317.19; stops Rs 2,651.80 and Rs 294.26; both Stage_2 with strong Technical/RS.
+
+    Risk profile: Balanced; size to max 1.0% account risk/trade; target 8–12 open positions. Tactical stop distance ~7.2%; Position stop distance ~9.3%.
+
+    Execution guardrails: buy only above trigger; respect initial stop; reduce size when stops are wide; recheck live liquidity before orders.
+
+    Portfolio actions: ADD_OK in multiple holdings (e.g., LAURUSLABS, RRKABEL, SYRMA, CUPID, BLSE, ATHERENERG); TIGHTEN_STOP on COFORGE, ENDURANCE, RATEGAIN; STOP_LOSS_BREACH on MINDACORP and RPTECH (exit at open).
+
+  What to watch
+
+    Intraday confirmation near triggers on leaders: LAURUSLABS, RRKABEL, BLSE, SYRMA, ATHERENERG.
+
+    Liquidity checks on mid/small-cap candidates: CUPID, IOLCP, RATNAVEER.
+
+    Follow-through after tightened stops in COFORGE, ENDURANCE, RATEGAIN.
+
+    Timely execution of exits for MINDACORP and RPTECH given stop-loss breaches.
+
+    Exposure discipline versus breadth: maintain 8–12 open positions.
+
+  How to use this playbook
+
+    Treat entries as confirmation triggers, not blind buy levels.
+
+    Risk per trade capped at 1.0% of account equity; align position size with stop distance.
+
+    Prefer candidates over watchlist rows; today’s frame shows 20 candidates and 0 watchlist rows.
+
+    Plan exits around T1/T2 (1.5R / 2.0R) and adjust trailing stops only after progress.
+
+    Re-validate live price, spreads, and depth before placing orders.
+
+    Research only. Not investment advice or a trading recommendation. Confirm live price, liquidity, and risk before action.
+
+  Regards,
+
+  Agent Adda
+
+  ShunyaAI · NSE Market Intelligence
+
+Not investment advice. For research and learning only. NSE EOD + live snapshot data.

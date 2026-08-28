@@ -134,6 +134,11 @@ skill_store/generated_swing_review_heal_smoke/
 # Large files that exceed GitHub's 100MB limit
 # These files are too large for GitHub without Git LFS
 data/nse_sec_full_data.csv
+data/raw/nse_sec_full_data.csv
+data/raw/nse_sec_full_data_eq.csv
+core/NSE-index/nse_sec_full_data.csv
+python/data/nse_sec_full_data.csv
+python/core/data/nse_sec_full_data.csv
 data/*.RData
 organized/core_scripts/organized/backtesting_results/real_backtesting_signals_20250901_030457.csv
 

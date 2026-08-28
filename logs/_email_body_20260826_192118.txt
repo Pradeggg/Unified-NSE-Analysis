@@ -1,0 +1,35 @@
+Agent Adda
+      Wed, 26 Aug 2026 · 19:21 IST
+
+        Report · swing_playbook.html · mode: both
+
+Market read: Swing risk allowed; breadth cautious; Stage-2 leadership with high RS; size max 1.0% risk per trade and target 8–12 open positions.
+Swing Trade Playbook — 26 Aug 2026
+Attached: Swing Trade Playbook — 26 Aug 2026 (Agent Adda Market Intelligence). This cover note highlights the highest-probability setups and immediate portfolio actions. Research-only; not investment advice.
+Key takeaways
+  Swing risk: YES (Balanced profile). Position sizing capped at 1.0% account risk per trade; portfolio breadth target 8–12 positions.
+  Coverage quality: 20 candidates (10 Tactical, 10 Position). Tactical stops ~7.2%; Position stops ~9.3%. All setups require INTRADAY_CONFIRM above trigger.
+  Leader: IOLCP tops Tactical (score 88.8; Stage_2; RS 99.2). Trigger Rs 187.87; stop Rs 174.29; T1 Rs 208.24; T2 Rs 215.03.
+  High-RS Stage_2 cohort with VCP evidence includes QUESS (Trigger Rs 374.41; Stop Rs 347.35), LAURUSLABS (Rs 1,905.87; Rs 1,768.12), INDSWFTLAB (Rs 371.15; Rs 344.33), BLSE (Rs 322.90; Rs 299.56), RRKABEL (Rs 2,838.71; Rs 2,633.53).
+  Portfolio actions: ADD_OK for ATHERENERG, NYKAA, QUESS, LAURUSLABS, SYRMA, BLSE, SKYGOLD, SAILIFE. Multiple HOLD signals maintained. RPTECH: STOP_LOSS_BREACH — price Rs 778.95 closed below stop Rs 794.56; exit at open.
+  Execution guardrails: Buy only above trigger; respect initial stops; reduce size when stop distance is wide; recheck live liquidity before orders.
+What to watch
+  Intraday confirmation above triggers for top-scoring names: IOLCP, QUESS, LAURUSLABS; confirm sustained volume and acceptable bid–ask spreads.
+  Stage_2 continuation among high RS (≥95) names with VCP evidence: IOLCP, LAURUSLABS, ATHERENERG, INDSWFTLAB.
+  Portfolio discipline: adhere to updated stops; action required on RPTECH at next open.
+  Breadth tone: treat watchlist cautiously; prioritize confirmed candidates.
+  Action items
+      Set price alerts at triggers for the top Tactical names; execute only on confirmation above trigger.
+    Constrain position risk to ≤1.0% of account equity; target 8–12 concurrent positions.
+    Update portfolio stops to the sheet levels; implement ADD_OK only where evidence and liquidity remain intact; exit RPTECH per stop-loss breach.
+    Revalidate live price, volume, and liquidity before placing orders.
+
+Disclaimer: Research-only. Not investment advice or a trading recommendation. Confirm live price, liquidity, and risk before action.
+
+  Regards,
+
+  Agent Adda
+
+  ShunyaAI · NSE Market Intelligence
+
+Not investment advice. For research and learning only. NSE EOD + live snapshot data.

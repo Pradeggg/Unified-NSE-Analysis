@@ -1,0 +1,54 @@
+Agent Adda
+      Fri, 28 Aug 2026 · 22:36 IST
+
+        Report · stage2_tracker.html · mode: both
+
+    Market read: NSE Stage 2 breadth eased to 402 (-88 d/d) amid elevated churn; Pharma and Industrials led candidates, with many screens overbought (RSI > 70).
+
+  Stage 2 Breakout Tracker — EOD Friday, 28 Aug 2026
+
+  Attached: Stage 2 Breakout Tracker — 28 Aug 2026 (HTML). Summary highlights below. Also available on Agent Adda Market Intelligence.
+
+  Key takeaways
+
+    Breadth snapshot: Stage 2 = 402; Stage 1 = 725; Stage 3 = 1023; Stage 4 = 481 (total universe ≈ 2,631).
+
+    Day-over-day: Stage 2 Δ = -88 vs 27 Aug; 60 daily stage changes with S1 → S2 = 15 and S2 → S1 = 15.
+
+    Weekly flows: 70 new entrants vs 45 exits over the week; breadth remains volatile following the mid-month surge.
+
+    Fund-ready candidates: 15 names cleared the gate (≥65 fundamental composite, earnings and financial-strength checks required). Highlights include CUPID, ANTHEM, RUBICON, CGCL, YATHARTH, VADILALIND, RADICO, TBZ, SOLARINDS, SJS, NAM-INDIA.
+
+    Momentum leaders: Multiple STRONG_BUY screens with high RS and extended RSI — e.g., SETL (RSI ~87), QUESS (~75), KMEW (~79), SHILPAMED (~79), CYIENTDLM (~72). Several are flagged "NO CHASE" due to overbought conditions.
+
+  What to watch
+
+    Whether Stage 2 count stabilizes near ~400 after Friday’s pullback, or if downgrades to Stage 1 accelerate.
+
+    RSI cooling below 70 on "NO CHASE" names to set up lower-risk entries.
+
+    Balance of S1 ↔ S2 transitions as a near-term breadth gauge; watch for any tilt toward S2 → S1.
+
+    Fundamental confirmation (earnings quality, financial strength) for the 15 fund-ready candidates, with focus on Pharma/Biotech and Capital Goods/Industrials.
+
+  Action items
+
+    Review the Fund-Ready Stage 2 list; prioritize names tagged "CANDIDATE" and de-prioritize "REVIEW/AVOID" pending further checks.
+
+    Avoid chasing extended setups; stalk pullbacks or constructive consolidations (e.g., VCP) before entries.
+
+    Use the report’s columns and CSV export to replicate screens internally and monitor daily stage transitions.
+
+    Document thesis and risk parameters; this is research-only and not investment advice.
+
+    Methodology: stage2-fund-ready-v2 | Sources: PostgreSQL/scores.stage_snapshots + market.equity_eod; SQLite stage_changes | Generated: 2026-08-28 22:29
+
+  Disclaimer: For research purposes only. This is not investment advice.
+
+  Regards,
+
+  Agent Adda
+
+  ShunyaAI · NSE Market Intelligence
+
+Not investment advice. For research and learning only. NSE EOD + live snapshot data.

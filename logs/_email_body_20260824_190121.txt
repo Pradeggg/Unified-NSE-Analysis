@@ -1,0 +1,52 @@
+Agent Adda
+      Mon, 24 Aug 2026 · 19:01 IST
+
+        Report · eod_market_report.html · mode: both
+
+    Market read: Risk-off close — NIFTY -0.44% to 24,178; BANKNIFTY -0.77% to 57,384; breadth faded from 49.1% (09:00) to 27.5% (15:00).
+
+  EOD Market Report — 24 Aug 2026 (NSE Market Intelligence). Full report attached. This email provides a concise, research-only summary.
+
+  Generated 2026-08-24 18:50 IST using 15m intraday bars.
+
+  Key takeaways
+
+    Early strength reversed: NIFTY 24,178 (-0.44%), BANKNIFTY 57,383.75 (-0.77%); session drifted lower after post-open highs.
+
+    Participation deteriorated: advancers fell from 49.1% at 09:00 to 27.5% by 15:00 (11 adv / 29 decl at the trough).
+
+    Flow context: opening-hour volume peaked at ~15.77M shares in the stored universe, consistent with possible distribution.
+
+    Sector dynamics: leadership in Minerals & Mining (+3.61%) and Chemicals & Petrochemicals (+2.31%); pressure led by Gas (-5.82%).
+
+    Notable movers: AEGISLOG -5.82% (Gas), AMAGI -3.93% (IT Services); AARTIIND +2.65% and 20MICRONS +3.61% outperformed.
+
+  What to watch
+
+    Opening-hour tape and volume for signs of continued distribution vs. shift to accumulation.
+
+    Recovery (or further stress) in pressured groups: Gas and Industrial Products; confirmation from Pharma breadth.
+
+    Index levels: NIFTY intraday range 24,144–24,313; BANKNIFTY midday low near 57,249.
+
+    Whether breadth stabilizes materially above mid-day readings ahead of the close.
+
+  How to use this
+
+    Reassess near-term exposure in Gas and Industrial Products; note relative strength in Chemicals and Minerals & Mining.
+
+    Track into the open: AEGISLOG, AMAGI, AARTIIND, 20MICRONS, ACMESOLAR for follow-through or mean reversion.
+
+    Use today’s ranges and breadth pivots to calibrate alerts, risk markers, and intraday bias for the next session.
+
+  Coverage note: metrics reflect a stored intraday universe (57 stocks) from 15m bars; not a complete NSE-wide breadth measure.
+
+  For research and learning only; this is not investment advice.
+
+  Regards,
+
+  Agent Adda
+
+  ShunyaAI · NSE Market Intelligence
+
+Not investment advice. For research and learning only. NSE EOD + live snapshot data.

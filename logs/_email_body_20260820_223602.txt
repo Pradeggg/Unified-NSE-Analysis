@@ -1,0 +1,52 @@
+Agent Adda
+      Thu, 20 Aug 2026 · 22:36 IST
+
+        Report · market_breadth_rrg.html · mode: both
+
+  Team,
+
+  Please find the attached NSE Market Breadth & RRG report (market_breadth_rrg.html) for 20 Aug 2026. Below is a concise executive summary to guide review and discussion.
+
+    Market read: Mid- and small-cap indices are leading on relative strength and momentum, while large-cap benchmarks (Nifty 50, Bank Nifty) remain in the lagging quadrant.
+
+  Key takeaways
+
+    Broad market rotation: LEADING is dominated by NEXT 50, TOTAL MKT, LARGEMID 250, MIDSML 400, and most mid/small-cap indices; LAGGING includes NIFTY 50/100/200 and BANK NIFTY; no indices in IMPROVING or WEAKENING.
+
+    Relative strength: SMALLCAP 50 (RS +1.78%) and MICROCAP 250 (RS +1.68%) are outperforming; NIFTY 50 (RS -0.38%) and BANK NIFTY (RS -0.56%) are underperforming.
+
+    Sectors: AUTO (RS +2.88%, Mom +0.51%) and DEFENCE (RS +1.45%, Mom +1.95%) lead alongside PSU BANK, METAL, and CHEMICALS; laggards include BANK, PVT BANK, FIN SERVICES, CEMENT, and FMCG. IT has shifted to WEAKENING (RS +2.41%, Mom -0.57%).
+
+    Thematics: EV, INTERNET, and DIGITAL lead (INTERNET RS +3.59%, Mom +0.91%); CPSE and RAILWAYS PSU are in IMPROVING but still underperforming; CONSUMPTION is WEAKENING (RS +0.73%).
+
+    Trend health: Breadth remains constructive outside mega-caps—e.g., Bank Nifty has 75% of constituents above 50D and 58% above 200D MAs, while Stage 2 counts are NIFTY 500 193/495, MIDCAP 50 22/50, MICROCAP 250 98/242, NIFTY 50 17/50.
+
+  What to watch
+
+    Sustainability of small/mid-cap leadership; any moves into WEAKENING would signal rotation risk.
+
+    Confirmation of sector momentum: AUTO/DEFENCE staying in LEADING; monitor IT, CONS DURABLE, REALTY, and PHARMA for further loss of momentum.
+
+    IMPROVING groups: CAPITAL MARKET, ENERGY, COMMODITIES, INFRA; THEMATIC CPSE and RAILWAYS PSU—watch for RS turning positive.
+
+    Breadth trends in >50D/>200D and Stage 2 counts as risk-on/risk-off gauges across cap tiers.
+
+  How to use this
+
+    Use the LEADING quadrants to prioritize screening in SMALLCAP 50 and MICROCAP 250, and sector screens in AUTO and DEFENCE.
+
+    De-emphasize these groups in your screening and coverage for BANK, FMCG, CEMENT, and other LAGGING sectors until RS/momentum improves.
+
+    Track IMPROVING sectors/themes weekly for RS crossover and breadth expansion before adding to focus lists.
+
+    Combine RRG signals with price/volume and fundamental reviews; validate all data independently.
+
+  Source: NSE Market Breadth & RRG (as of 20 Aug 2026). Not investment advice; for educational and research workflow only.
+
+  Regards,
+
+  Agent Adda
+
+  ShunyaAI · NSE Market Intelligence
+
+Not investment advice. For research and learning only. NSE EOD + live snapshot data.

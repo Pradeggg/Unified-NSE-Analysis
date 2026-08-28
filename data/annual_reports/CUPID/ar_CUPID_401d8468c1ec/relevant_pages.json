@@ -1,0 +1,347 @@
+{
+  "symbol": "CUPID",
+  "report_id": "ar_CUPID_401d8468c1ec",
+  "as_of_utc": "2026-08-25T21:56:53+00:00",
+  "min_score": 4,
+  "max_relevant_pages": 40,
+  "relevant_pages": [
+    3,
+    20,
+    21,
+    22,
+    27,
+    29,
+    30,
+    31,
+    37,
+    56,
+    58,
+    59,
+    60,
+    61,
+    65,
+    69,
+    70,
+    71,
+    75,
+    78,
+    81,
+    82,
+    83,
+    85,
+    97,
+    98,
+    101,
+    106,
+    107,
+    108,
+    110,
+    115,
+    118,
+    119,
+    120,
+    121,
+    122,
+    134,
+    135,
+    138
+  ],
+  "top_pages": [
+    {
+      "page": 20,
+      "extraction_method": "pypdf",
+      "score": 29,
+      "hits": {
+        "auditor": [
+          "internal financial control"
+        ],
+        "mgmt": [
+          "management discussion",
+          "strategy",
+          "risks",
+          "risk"
+        ],
+        "financials": [
+          "cash flow",
+          "notes to"
+        ],
+        "governance": [
+          "board of directors",
+          "remuneration",
+          "nomination",
+          "audit committee",
+          "vigil mechanism",
+          "whistle",
+          "related party"
+        ]
+      },
+      "text_preview": "Annual Report\n2024-25\nCupid LimitedDriven by Growth. Defined by Purpose\n34 35\nCorporate Overview Statutory Reports Financial Statements\nTo,\nThe Members,\nThe Board of Directors is pleased to present herewith the 32 nd Annual Report of your Company together with the \nAudited financial statements (including Consolidated Financial Statements) for the year ended 31 st March, 2025. \nThe Management Discussion and Analysis has been annexed to the Directors Report. \nFINANCIAL RESULTS\nThe highlights of financial results of the company are as follows: - \n (₹ In lacs)\nParticulars For the financial year 2025 \n(FY25)\nFor the financial \nyear 2024 \n(FY24)\nStandalone Consolidated Standalone\nOperating Revenues 18,352.13 18,352.13 17,108.87\nProfit before Depreciation & Amortization, Finance charges 6,143.02 6,138.73 5,731.74\nDepreciation & Amortization 447.58 447.58 292.54\nFinance Charg [truncated]"
+    },
+    {
+      "page": 122,
+      "extraction_method": "pypdf",
+      "score": 23,
+      "hits": {
+        "mgmt": [
+          "strategy",
+          "risk"
+        ],
+        "financials": [
+          "profit and loss",
+          "statement of profit",
+          "balance sheet",
+          "cash flow",
+          "other income",
+          "pat",
+          "segment"
+        ],
+        "governance": [
+          "contingent",
+          "litigation"
+        ]
+      },
+      "text_preview": "Annual Report\n2024-25\nCupid LimitedDriven by Growth. Defined by Purpose\n238 239\nCorporate Overview Statutory Reports Financial Statements\nhedged item and is also recognised in the statement \nof profit and loss as finance costs. \nFor fair value hedges relating to items carried at \namortised cost, any adjustment to carrying value is \namortised through profit or loss over the remaining \nterm of the hedge using the EIR method. EIR \namortisation may begin as soon as an adjustment \nexists and no later than when the hedged item \nceases to be adjusted for changes in its fair value \nattributable to the risk being hedged.\n If the hedged item is derecognised, the \nunamortised fair value is recognised immediately \nin profit or loss. When an unrecognised firm \ncommitment is designated as a hedged item, the \nsubsequent cumulative change in the fair value of \nthe firm commitment att [truncated]"
+    },
+    {
+      "page": 22,
+      "extraction_method": "pypdf",
+      "score": 23,
+      "hits": {
+        "auditor": [
+          "internal financial control"
+        ],
+        "mgmt": [
+          "risk"
+        ],
+        "financials": [
+          "pat",
+          "eps"
+        ],
+        "governance": [
+          "corporate governance",
+          "board of directors",
+          "independent director",
+          "remuneration",
+          "nomination",
+          "audit committee",
+          "related party"
+        ]
+      },
+      "text_preview": "Annual Report\n2024-25\nCupid LimitedDriven by Growth. Defined by Purpose\n38 39\nCorporate Overview Statutory Reports Financial Statements\nENVIRONMENT AND SAFETY\nThe Company is conscious of the importance of \nenvironmentally clean and safe operations. The \nCompany’s policy requires conduct of operations in \nsuch a manner, so as to ensure safety of all concerned, \ncompliances, environmental regulations and \npreservation of natural resources.\nDISCLOSURE IN TERMS OF THE SEXUAL HARASSMENT \nOF WOMEN AT WORKPLACE (PREVENTION, \nPROHIBITION AND REDRESSAL) ACT, 2013\nIn compliance with the provisions of the Sexual \nHarassment of Women at Workplace (Prevention, \nProhibition and Redressal) Act, 2013 (“POSH Act”) and \nRules framed thereunder, the Company has formulated \nand implemented a policy on prevention, prohibition and \nredressal of complaints related to sexual harassment \nof w [truncated]"
+    },
+    {
+      "page": 59,
+      "extraction_method": "pypdf",
+      "score": 21,
+      "hits": {
+        "auditor": [
+          "internal financial control"
+        ],
+        "mgmt": [
+          "risk"
+        ],
+        "financials": [
+          "eps"
+        ],
+        "governance": [
+          "corporate governance",
+          "board of directors",
+          "remuneration",
+          "nomination",
+          "audit committee",
+          "whistle",
+          "related party"
+        ]
+      },
+      "text_preview": "Annual Report\n2024-25\nCupid LimitedDriven by Growth. Defined by Purpose\n112 113\nCorporate Overview Statutory Reports Financial Statements\nDisclosure Requirements) Regulations, 2015 on gaps \nbetween any two Audit Committee meetings. The \nCommittee met on 8 th April, 2024; 5 th August, 2024; \n12th November, 2024 and 14th February, 2025 \nThe Attendance of the Audit Committee Members as per \nbelow: -\nName of Committee Member No. of Meetings for \nyear \n2024 – 2025\nHeld Attended\nMr. Thallapaka \nVenkateswara Rao \n4 4\nMr. Rajinder Singh Loona \n(Cessation w.e.f. 13.01.2025)\n3 3\nMrs. Rajni Mishra 4 4\nMs. Smeeta Bhatkal \n(Appointed w.e.f. 13.01.2025)\n1 1\nMr. Thallapaka Venkateswara Rao, then Chairman of the \nAudit Committee was present at the 31st Annual General \nMeeting of the Company held on 28th September, 2024 to \nanswer the shareholders queries. \nThe Committee is empowered [truncated]"
+    },
+    {
+      "page": 31,
+      "extraction_method": "pypdf",
+      "score": 21,
+      "hits": {
+        "auditor": [
+          "internal financial control"
+        ],
+        "mgmt": [
+          "management discussion",
+          "strategy",
+          "risks",
+          "risk",
+          "opportunity"
+        ],
+        "financials": [
+          "pat",
+          "eps",
+          "segment"
+        ],
+        "governance": [
+          "contingent"
+        ]
+      },
+      "text_preview": "Annual Report\n2024-25\nCupid LimitedDriven by Growth. Defined by Purpose\n56 57\nCorporate Overview Statutory Reports Financial Statements\n480\n52\n1250\n125\nMale Condoms Female Condoms\nManufacturing Capacity\nCurrent Annual Capacity\nPlanned Annual Capacity\nOur Regulatory Roadmap as an Offensive Strategy\nAt Cupid, every certification isn’t just compliance \nit’s a strategic gateway to high-value global \nmarkets, reinforcing our leadership in regulated \nhealthcare ecosystems.\nAt Cupid Limited, regulatory compliance is not \nmerely a box to tick, it is a deliberate offensive \nstrategy to build formidable entry barriers \nand expand into high-value, tightly regulated \nmarkets. Our pioneering track record, including \nbeing the first globally to achieve WHO/UNFPA \nprequalification for both male and female condoms, \nreflects our deep regulatory expertise and global \ncredibility.\nWe a [truncated]"
+    },
+    {
+      "page": 108,
+      "extraction_method": "pypdf",
+      "score": 19,
+      "hits": {
+        "auditor": [
+          "independent auditor",
+          "internal financial control"
+        ],
+        "financials": [
+          "profit and loss",
+          "statement of profit",
+          "balance sheet",
+          "cash flow"
+        ],
+        "governance": [
+          "board of directors",
+          "remuneration",
+          "litigation"
+        ]
+      },
+      "text_preview": "Annual Report\n2024-25\nCupid LimitedDriven by Growth. Defined by Purpose\n210 211\nCorporate Overview Statutory Reports Financial Statements\nCompany’s management. Our conclusion in so far as \nit relates to the balances and affairs of the subsidiary \nlocated outside India is based on the management \ncertified information and the conversion adjustments \nprepared by the management of the Holding Company \nand reviewed by us.\nReport on Other Legal and Regulatory Requirements\n1. As required by Section 143(3) of the Act, based on \nour audit and as mentioned in the ‘Other matters’ \nparagraph, we report that:\na) We have sought and obtained all the \ninformation and explanations which to the best \nof our knowledge and belief were necessary \nfor the purposes of our audit. \nb) In our opinion, proper books of account as \nrequired by law have been kept so far as it \nappears from our ex [truncated]"
+    },
+    {
+      "page": 107,
+      "extraction_method": "pypdf",
+      "score": 19,
+      "hits": {
+        "auditor": [
+          "independent auditor",
+          "key audit matter",
+          "internal financial control"
+        ],
+        "mgmt": [
+          "management discussion",
+          "risks",
+          "risk"
+        ],
+        "financials": [
+          "cash flow"
+        ],
+        "governance": [
+          "corporate governance",
+          "board of directors"
+        ]
+      },
+      "text_preview": "Annual Report\n2024-25\nCupid LimitedDriven by Growth. Defined by Purpose\n208 209\nCorporate Overview Statutory Reports Financial Statements\nThe Key Audit Matter How the matter was addressed in our report\nThe holding Company recognizes revenue from sale of \ngoods when control of the goods has been transferred \nand when there are no longer any unfulfilled obligations \nto the customer and the amount of revenue can be \nmeasured reliably and recovery of the consideration is \nprobable.\nTested the design, implementation and operating \neffectiveness of the Company’s general IT controls and \nkey IT/manual controls. These are in respect of the \nCompany’s controls which govern timing of recognition \nof revenue including creation of new customers in \nsystem. \nFor revenue from sale of products, we selected samples \n(including year-end testing of cut-off transactions) and \ntested the [truncated]"
+    },
+    {
+      "page": 71,
+      "extraction_method": "pypdf",
+      "score": 19,
+      "hits": {
+        "auditor": [
+          "independent auditor",
+          "internal financial control"
+        ],
+        "financials": [
+          "profit and loss",
+          "statement of profit",
+          "balance sheet",
+          "cash flow"
+        ],
+        "governance": [
+          "board of directors",
+          "remuneration",
+          "litigation"
+        ]
+      },
+      "text_preview": "Annual Report\n2024-25\nCupid LimitedDriven by Growth. Defined by Purpose\n136 137\nCorporate Overview Statutory Reports Financial Statements\nexamination of those books.\nc) The Balance Sheet, the Statement of Profit \nand Loss including Other Comprehensive \nIncome, the Cash Flow Statement and \nStatement of Changes in Equity dealt with \nby this Report are in agreement with the \nbooks of account.\nd) In our opinion, the aforesaid financial \nstatements comply with the Ind AS \nspecified under Section 133 of the Act.\ne) On the basis of the written representations \nreceived from the directors as on March \n31,2025 taken on record by the Board \nof Directors, none of the directors is \ndisqualified as on March 31, 2025 from \nbeing appointed as a director in terms of \nSection 164(2) of the Act.\nf) With respect to the adequacy of \nthe internal financial controls over \nfinancial reporti [truncated]"
+    },
+    {
+      "page": 70,
+      "extraction_method": "pypdf",
+      "score": 19,
+      "hits": {
+        "auditor": [
+          "independent auditor",
+          "key audit matter",
+          "internal financial control"
+        ],
+        "mgmt": [
+          "management discussion",
+          "risks",
+          "risk"
+        ],
+        "financials": [
+          "cash flow"
+        ],
+        "governance": [
+          "corporate governance",
+          "board of directors"
+        ]
+      },
+      "text_preview": "Annual Report\n2024-25\nCupid LimitedDriven by Growth. Defined by Purpose\n134 135\nCorporate Overview Statutory Reports Financial Statements\nThe Key Audit Matter How the matter was addressed in our report\nThe Company recognizes revenue from sale of goods \nwhen control of the goods has been transferred and \nwhen there are no longer any unfulfilled obligations \nto the customer and the amount of revenue can be \nmeasured reliably and recovery of the consideration is \nprobable.\nTested the design, implementation and operating \neffectiveness of the Company’s general IT controls and \nkey IT/manual controls. These are in respect of the \nCompany’s controls which govern timing of recognition \nof revenue including creation of new customers in \nsystem. \nFor revenue from sale of products, we selected samples \n(including year-end testing of cut-off transactions) and \ntested the underly [truncated]"
+    },
+    {
+      "page": 27,
+      "extraction_method": "pypdf",
+      "score": 19,
+      "hits": {
+        "mgmt": [
+          "management discussion",
+          "strategy",
+          "outlook",
+          "risks",
+          "risk"
+        ],
+        "financials": [
+          "cash flow",
+          "pat",
+          "segment"
+        ],
+        "governance": [
+          "remuneration"
+        ]
+      },
+      "text_preview": "Annual Report\n2024-25\nCupid LimitedDriven by Growth. Defined by Purpose\n48 49\nCorporate Overview Statutory Reports Financial Statements\nDISCLOSURE IN DIRECTORS REPORT PURSUANT TO SECTION 197(12) OF THE COMPANIES ACT, 2013 READ WITH \nCOMPANIES (APPOINTMENT AND REMUNERATION OF MANAGERIAL PERSONNEL) RULES, 2014 \nSr. \nNo. \nRequirements Disclosure\nName of the Director Ratio\n1 The ratio of the remuneration of each \ndirector to the median remuneration \nof the employees of the company for \nthe financial year.\nMr. Aditya Kumar Halwasiya 17.78X\nMr. Ajay Kumar Halwasiya Nil\n1. The median remuneration of employees of the Company was \n₹ 6.16 lacs.\n2. For this purpose, Sitting Fees and Profit Related Commission \npaid to the Directors have not been considered as remunera-\ntion.\n3. Figures have been rounded off wherever necessary.\n2 The percentage increase in remuner-\nation of each d [truncated]"
+    },
+    {
+      "page": 21,
+      "extraction_method": "pypdf",
+      "score": 19,
+      "hits": {
+        "mgmt": [
+          "management discussion",
+          "risks",
+          "risk"
+        ],
+        "governance": [
+          "corporate governance",
+          "board of directors",
+          "independent director",
+          "remuneration",
+          "nomination",
+          "audit committee"
+        ]
+      },
+      "text_preview": "Annual Report\n2024-25\nCupid LimitedDriven by Growth. Defined by Purpose\n36 37\nCorporate Overview Statutory Reports Financial Statements\nby the Members during the Annual General Meeting \n(“AGM”).\nRISK MANAGEMENT\nThe Company endeavours to continually sharpen its \nrisk management systems and processes in line with a \nrapidly changing business environment. During the year \nunder review, there were no risks which in the opinion \nof the Board threaten the existence of the Company. \nHowever, some of the risks which may pose challenges \nare set out in the Management Discussion and Analysis \nwhich forms part of this Annual Report.\nPERFORMANCE EVALUATION OF BOARD\nPursuant to the provisions of the Companies Act, 2013 \nand Securities and Exchange Board of India (Listing \nObligations and Disclosure Requirements) Regulations, \n2015, the Board has carried out an annual performance [truncated]"
+    },
+    {
+      "page": 120,
+      "extraction_method": "pypdf",
+      "score": 17,
+      "hits": {
+        "mgmt": [
+          "risks",
+          "risk"
+        ],
+        "financials": [
+          "profit and loss",
+          "statement of profit",
+          "balance sheet",
+          "cash flow",
+          "other income"
+        ],
+        "governance": [
+          "contingent"
+        ]
+      },
+      "text_preview": "Annual Report\n2024-25\nCupid LimitedDriven by Growth. Defined by Purpose\n234 235\nCorporate Overview Statutory Reports Financial Statements\ngive rise on specific dates to cash flows \nthat are solely payments of principal and \ninterest on principal amount outstanding.\n This category is most relevant to the Group. \nAfter initial measurement, such financial \nassets are subsequently measured at \namortized cost using the effective interest rate \n(EIR) method. Amortised cost is calculated by \ntaking into account any discount or premium \non acquisition and fees or costs that are an \nintegral part of EIR. EIR is the rate that exactly \ndiscounts the estimated future cash receipts \nover the expected life of the financial instrument \nor a shorter period, where appropriate, to the \ngross carrying amount of the financial asset. \nWhen calculating the effective interest rate, \nthe Gro [truncated]"
+    }
+  ]
+}

@@ -3,7 +3,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
-from voice_synth import play_audio
+from voice.voice_synth import play_audio
 
 
 class VoiceSynthTests(unittest.TestCase):

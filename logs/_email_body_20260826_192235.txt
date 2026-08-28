@@ -1,0 +1,52 @@
+Agent Adda
+      Wed, 26 Aug 2026 · 19:22 IST
+
+        Report · eod_market_report.html · mode: both
+
+  NSE EOD Market Report — 26 Aug 2026
+
+  The latest EOD Market Report has been published to Agent Adda Market Intelligence. This note provides a concise summary of the session; the full pack is available via your dashboard.
+
+    Market read: Mixed tape — NIFTY 24,207.75 (-0.52%), BANKNIFTY 57,783.75 (+0.47%); breadth troughed at 29.3% (12:00); Minerals & Mining led (+6.16%).
+
+  Key takeaways
+
+    NIFTY closed 24,207.75 (-0.52%) within a 24,207.75–24,378.60 range; BANKNIFTY closed 57,783.75 (+0.47%) within 57,611.85–57,996.05.
+
+    Breadth swung from +58.5% (09:00) to a trough of +29.3% (12:00); the session ended with 20 advances vs 18 declines.
+
+    Participation peaked at the open: 14,973,355 shares (149.7L) at 09:00, inviting accumulation vs distribution scrutiny amid fading momentum.
+
+    Sector leadership: Minerals & Mining +6.16% (20MICRONS +6.16%); Healthcare +3.00%. Pressure: Beverages -3.12%; IT -1.65% (INFY -2.10%); Telecom -2.31% (BHARTIARTL -2.31%).
+
+    Most active liquidity clustered in large-cap banks and IT/Telecom: HDFCBANK 50.7L (-0.04%), INFY 27.3L (-2.10%), BHARTIARTL 20.9L (-2.31%).
+
+  What to watch
+
+    Whether BANKNIFTY’s relative resilience carries into the next session to anchor broader risk appetite.
+
+    Follow-through or relief in pressured IT and Telecom cohorts; track INFY, TCS, and BHARTIARTL.
+
+    Breadth stabilization above ~55% with sustained volume — especially open vs midday — to clarify accumulation/distribution.
+
+    Persistence of rotation into Minerals & Mining and Healthcare.
+
+  How to use this
+
+    Use Sector Rotation and Stage 2 Tracker to validate leadership themes and spot developing trends.
+
+    Cross-check Most Active names to align liquidity considerations with risk management and execution planning.
+
+    Compare opening-hour participation with intraday breadth shifts to frame momentum vs mean-reversion setups.
+
+    Refer to Report Pack modules (Stage 2 Tracker, Swing Playbook, Portfolio Lab) for deeper, data-grounded screening.
+
+  Research and learning only; this is not investment advice. Coverage note: this report uses a stored intraday 15m universe and is not a complete NSE-wide breadth measure unless the capture universe is complete.
+
+  Regards,
+
+  Agent Adda
+
+  ShunyaAI · NSE Market Intelligence
+
+Not investment advice. For research and learning only. NSE EOD + live snapshot data.

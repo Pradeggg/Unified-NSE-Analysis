@@ -1,0 +1,86 @@
+{
+  "symbol": "LEGACY_UJJIVAN_FIN_SERVICES",
+  "portfolio": {
+    "symbol": "LEGACY_UJJIVAN_FIN_SERVICES",
+    "inputs": "UJJFIN",
+    "company_name": "UJJIVAN FINANCIAL SERVICES LTD",
+    "isin": "INE334L01012",
+    "qty": "75",
+    "avg_cost": "540.00",
+    "broker_price": "589.50",
+    "cost_value": "40500.00",
+    "market_value": "44212.50",
+    "realized_pnl": "35832.69",
+    "unrealized_pnl": "3712.50",
+    "unrealized_pct": "9.17",
+    "mapping_status": "LEGACY_OR_UNMAPPED"
+  },
+  "collected_at": "2026-08-18T08:56:49",
+  "source_trail": [
+    "get_symbol_snapshot",
+    "get_technical_setup",
+    "scrape_screener_in",
+    "explain_intraday_setup"
+  ],
+  "errors": [],
+  "snapshot": {
+    "symbol": "LEGACY_UJJIVAN_FIN_SERVICES",
+    "data_source": "PostgreSQL scores.stage_snapshots",
+    "error": "LEGACY_UJJIVAN_FIN_SERVICES not found in DB snapshot",
+    "missing_evidence": [
+      "stage_snapshot"
+    ],
+    "evidence_coverage": "missing",
+    "snapshot_date": "2026-08-17"
+  },
+  "technical": {
+    "symbol": "LEGACY_UJJIVAN_FIN_SERVICES",
+    "error": "No price history available; on-demand fetch returned no usable EOD bars",
+    "missing_evidence": [
+      "price_history"
+    ],
+    "data_source": "missing"
+  },
+  "fundamentals": {
+    "symbol": "LEGACY_UJJIVAN_FIN_SERVICES",
+    "error": "404 Client Error: Not Found for url: https://www.screener.in/company/LEGACY_UJJIVAN_FIN_SERVICES/",
+    "source_url": "https://www.screener.in/company/LEGACY_UJJIVAN_FIN_SERVICES/"
+  },
+  "cached_financials": {
+    "symbol": "LEGACY_UJJIVAN_FIN_SERVICES",
+    "data_source": "PostgreSQL financial statement cache",
+    "pg_sources": [
+      "scores.quarterly_results",
+      "scores.annual_results",
+      "scores.balance_sheet",
+      "scores.cash_flow"
+    ],
+    "quarterly": [],
+    "annual": [],
+    "balance_sheet": [],
+    "cash_flow": [],
+    "section_counts": {
+      "quarterly": 0,
+      "annual": 0,
+      "balance_sheet": 0,
+      "cash_flow": 0
+    },
+    "error": "No cached PostgreSQL financial statement rows found for LEGACY_UJJIVAN_FIN_SERVICES",
+    "missing_evidence": [
+      "cached_financials"
+    ]
+  },
+  "trade_setup": {
+    "symbol": "LEGACY_UJJIVAN_FIN_SERVICES",
+    "timeframe": "15m",
+    "data_mode": "intraday",
+    "source": "PostgreSQL intraday.ohlcv_bars",
+    "error": "No PostgreSQL intraday.ohlcv_bars for LEGACY_UJJIVAN_FIN_SERVICES at 15m; No yfinance candles available to seed PostgreSQL intraday.ohlcv_bars"
+  },
+  "verdict": "Cautious / Review",
+  "chart_history": {
+    "symbol": "LEGACY_UJJIVAN_FIN_SERVICES",
+    "error": "no EOD price history available",
+    "bars": []
+  }
+}

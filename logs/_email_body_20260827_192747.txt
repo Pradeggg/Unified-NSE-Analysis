@@ -1,0 +1,52 @@
+Agent Adda
+      Thu, 27 Aug 2026 · 19:27 IST
+
+        Report · eod_market_report.html · mode: both
+
+  Market read: Mixed, consolidative session; NIFTY and BANKNIFTY ~-0.5% with a midday breadth trough; confirmation needed next session.
+
+  EOD Market Report — NSE | 27 Aug 2026
+
+  Cover note and summary. Full report attached. Research-only; not investment advice.
+
+  NIFTY closed at 24,090.85 (-0.48%) within 24,090.85–24,297.45. BANKNIFTY closed at 57,509.95 (-0.47%) within 57,509.95–58,012.40. Coverage reflects the stored intraday 15-minute universe (54 stocks).
+
+  Key takeaways
+
+    Intraday breadth swung from 61.5% advancers at 11:00 to 16.3% at 13:00; session ended at 19/26 (42.2% advancing).
+
+    Participation peaked at 09:00 with 33,768,045 shares (337.7L), the day’s highest volume, signaling early institutional activity.
+
+    Sector dispersion: Metals & Minerals Trading +1.83% and Power +1.56% led; Minerals & Mining -3.25% and IT - Software lagged; Banks -0.53%.
+
+    Leadership: Adani Power +3.76% (most active, 681.0L); Adani Green +1.94%; ICICI Bank +0.91%.
+
+    Pressure points: HDFC Bank -2.23% weighed on BANKNIFTY; 63MOONS -4.13%; 20MICRONS -3.25%; AEROFLEX -2.66%.
+
+  What to watch
+
+    Whether breadth can sustain above 50% early next session, validating the 11:00 recovery window.
+
+    Banking heavyweights’ response after HDFC Bank’s -2.23% drop and implications for BANKNIFTY momentum.
+
+    Opening-hour participation versus today’s 09:00 peak to infer distribution vs accumulation.
+
+    Follow-through in Power leadership versus mean reversion in IT - Software and Minerals & Mining.
+
+  How to use this
+
+    Use intraday breadth and participation levels to frame market conditions (e.g., sustained >55% advancers as improving tone; <25% as risk-off) for research tracking.
+
+    Refresh sector dashboards and watchlists around leaders (Power; Metals & Minerals Trading) and laggards (IT - Software; Minerals & Mining).
+
+    Monitor highlighted tickers: ADANIPOWER, ADANIENSOL, ICICIBANK for strength; HDFCBANK, 63MOONS for stabilization signals.
+
+  Notes: Based on stored intraday 15-minute bars (PostgreSQL) for a defined universe and may not represent NSE-wide breadth. For research and learning only; not investment advice.
+
+  Regards,
+
+  Agent Adda
+
+  ShunyaAI · NSE Market Intelligence
+
+Not investment advice. For research and learning only. NSE EOD + live snapshot data.

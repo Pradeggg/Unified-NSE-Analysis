@@ -165,7 +165,7 @@ class TestCommandRegistry:
     EXPECTED_HANDLERS = [
         "help", "commands", "dashboard", "intraday-alerts", "interaction", "copilot-workflows", "scan", "quality-breakouts", "strategy-council", "council",
         "backtest", "data-coverage", "investment-checklist", "governance", "audit-report", "financial-rigor", "valuation-check", "broker-research", "open-last-report", "visual-scan",
-        "doctor", "mtf", "strength", "skills", "email", "my-portfolio",
+        "doctor", "mtf", "strength", "skills", "email", "agent-adda-fund", "my-portfolio",
         "swing-playbook", "diagnose", "report-sector", "report-diagnosis",
     ]
 
@@ -217,6 +217,7 @@ class TestCommandRegistry:
             "mtf":              "/mtf reliance",
             "strength":         "/strength maninds thermax",
             "email":            "/email sector --to a@b.com",
+            "agent-adda-fund":   "/agent-adda-small-cap-fund --skip-run",
             "my-portfolio":     "/my-portfolio",
             "swing-playbook":    "/swing-playbook --portfolio",
             "diagnose":          "/diagnose DMART eps",

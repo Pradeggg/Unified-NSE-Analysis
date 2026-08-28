@@ -1,0 +1,56 @@
+Agent Adda
+      Thu, 27 Aug 2026 · 19:24 IST
+
+        Report · sector_rotation.html · mode: both
+
+NSE Sector Rotation — 27 Aug 2026
+
+  Market read: Rotation regime (60% confidence) in a slowdown; Nifty 24091 (-0.5%), VIX 11.1 rising; breadth weak.
+
+Sector Rotation Report — 27 Aug 2026 has been published to Agent Adda Market Intelligence. Full report attached: sector_rotation.html. Summary below.
+
+Key takeaways
+
+  Regime & cycle: ROTATION (60% confidence; 1 day) with economic cycle in Slowdown (67% confidence); maintain a cautious/defensive stance.
+
+  Tape & breadth: Nifty 50 at 24091 (-0.5% d/d); India VIX 11.1 (+5.1% d/d). A/D 867/1,756 (Net A/D -889); McClellan -29.9 (bearish cross); TRIN 0.98 (neutral).
+
+  Flows: 5D FII +₹2,437 Cr (today -₹298 Cr); 5D DII +₹16,250 Cr (today +₹4,977 Cr) — domestic support remains firm.
+
+  Sector leadership: Pharma & Healthcare (Score 6.4; 1M +3.3%; 3M +8.6%; 60% >50DMA) leads; Capital Goods & Industrials (5.9; 1M +3.9%) and Capital Markets (5.8; 1M +4.2%; 47% >50DMA) are constructive; Defence & Aerospace (3.7; 1M +6.4%; 82% >50DMA) shows strong breadth.
+
+  Positioning bias: Favours FMCG, Pharma, IT; avoid Metals, Auto, Real Estate. IT shows mixed signals (1M -0.6%; RS -2.2%) but breadth is healthy (89% >50DMA).
+
+  Signals & candidates: 29 BUY signals (of 33). Examples: CUPID, LAURUSLABS, MEDANTA, NEULANDLAB, CYIENTDLM, DIVISLAB, HAPPYFORGE.
+
+What to watch
+
+  Breadth confirmation: McClellan turning up from -29.9 and A/D improvement; TRIN shifting from neutral to positive.
+
+  Volatility: Easing VIX from 11.1 would support risk-on rotation.
+
+  Flows: Sustained concurrent FII and DII net buying days strengthening the tape.
+
+  Sector RS thresholds: Capital Markets RS holding >1.6% on consolidation; IT RS improving above -1.3% with breadth >80% retained; Pharma breadth expanding beyond 60%.
+
+  Global correlations: Gold decoupling signal and other cross-asset shifts that could alter sector leadership.
+
+How to use this
+
+  Portfolio stance: Keep a defensive tilt; prioritize earnings-visible leaders in Pharma & Healthcare and quality names in Capital Goods; be selective in IT; de-emphasize Metals, Auto, and Real Estate.
+
+  Tactical execution: Use listed candidates as a research screen; add on confirmed breakouts with clear risk controls (e.g., Supertrend/stop levels); avoid chasing names with weak follow-through.
+
+  Risk controls: Size positions modestly while breadth is weak and VIX is rising; reassess exposure on breadth/VIX improvement or if RS deteriorates in leaders.
+
+  Validation: Independently verify prices, liquidity, corporate events, and risk before any action.
+
+  Disclaimer: This email summarizes a rules-based research report for educational purposes and is not investment advice or a trading recommendation. Use at your own risk and validate all data independently.
+
+  Regards,
+
+  Agent Adda
+
+  ShunyaAI · NSE Market Intelligence
+
+Not investment advice. For research and learning only. NSE EOD + live snapshot data.

@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Dashboard</title>
+</head>
+<body>
+    <h1>Test Dashboard</h1>
+    <table>
+        <thead>
+            <tr>
+                <th>Rank</th>
+                <th>Symbol</th>
+                <th>Company</th>
+                <th>Price</th>
+            </tr>
+        </thead>
+        <tbody id="stocksTableBody">
+        </tbody>
+    </table>
+
+    <script>
+        const stocksData = [
+            {
+                rank: 1,
+                symbol: "APEX",
+                companyName: "APEX FROZEN FOODS LIMITED",
+                marketCap: "LARGE_CAP",
+                currentPrice: 331.75,
+                change1D: 19.81,
+                change1W: 14.61,
+                change1M: 43.45,
+                technicalScore: 75.3,
+                rsi: 77.9,
+                relativeStrength: 47.75,
+                canSlim: 20,
+                minervini: 12,
+                fundamental: 57.85,
+                trendSignal: "STRONG_BULLISH",
+                tradingSignal: "BUY"
+            },
+            {
+                rank: 2,
+                symbol: "AVANTIFEED",
+                companyName: "AVANTI FEEDS LIMITED",
+                marketCap: "MID_CAP",
+                currentPrice: 861.20,
+                change1D: 1.56,
+                change1W: 14.51,
+                change1M: 24.60,
+                technicalScore: 70.7,
+                rsi: 80.6,
+                relativeStrength: 28.82,
+                canSlim: 20,
+                minervini: 9,
+                fundamental: 0,
+                trendSignal: "STRONG_BULLISH",
+                tradingSignal: "BUY"
+            }
+        ];
+
+        function populateStocksTable(data) {
+            console.log("populateStocksTable called with", data ? data.length : 0, "items");
+            const tbody = document.getElementById("stocksTableBody");
+            if (!tbody) {
+                console.error("stocksTableBody element not found!");
+                return;
+            }
+            console.log("Table body found, clearing...");
+            tbody.innerHTML = "";
+
+            data.forEach((stock, index) => {
+                const row = document.createElement("tr");
+                row.innerHTML = 
+                    "<td>" + (index + 1) + "</td>" +
+                    "<td><strong>" + stock.symbol + "</strong></td>" +
+                    "<td>" + stock.companyName + "</td>" +
+                    "<td>₹" + stock.currentPrice.toLocaleString() + "</td>";
+                
+                tbody.appendChild(row);
+            });
+            console.log("Table populated with", data.length, "rows");
+        }
+
+        document.addEventListener("DOMContentLoaded", () => {
+            console.log("DOM loaded");
+            console.log("Stocks data:", stocksData);
+            console.log("Stocks data length:", stocksData ? stocksData.length : 0);
+            populateStocksTable(stocksData);
+        });
+    </script>
+</body>
+</html>
+
+

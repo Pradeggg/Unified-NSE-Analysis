@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import sys
 import types
+import os
 
 import pytest
 from fastapi.testclient import TestClient
@@ -12,6 +13,7 @@ from agent_adda.web_api.routes.talk import (
     _fallback_answer,
     _is_local_symbol,
     _llm_synthesis,
+    _normalise_bridge_intent,
     _resolve_query_symbols,
     _resolve_query_symbols_with_gaps,
 )
@@ -31,8 +33,14 @@ def test_talk_defaults_route():
     assert body["brand"] == "Agent Adda"
     assert body["product"] == "Talk 2 Stocks"
     assert body["router_model"] == "gpt-5-nano"
-    assert body["default_model"] == "gpt-4o-mini"
+    assert body["default_model"] == os.getenv("LLM_DEFAULT_MODEL", "gpt-5-nano")
     assert body["synthesis_policy"] == "llm_preferred"
+
+
+def test_talk_normalises_bridge_intents_to_web_contract():
+    assert _normalise_bridge_intent("stock_comparison", "Compare TCS vs INFY") == "compare"
+    assert _normalise_bridge_intent("index_status", "Analyze BANKNIFTY") == "index_context"
+    assert _normalise_bridge_intent("stock_results", "latest financial results for LTFOODS") == "financials_review"
 
 
 def test_talk_market_context_route_returns_evidence(monkeypatch):
@@ -202,6 +210,53 @@ def test_talk_stock_response_exposes_fundamental_and_technical_assessments(monke
     )
 
 
+def test_talk_resolves_ltfoods_financial_prompt_without_command_word_gaps():
+    symbols, gaps = _resolve_query_symbols_with_gaps(
+        "Can you pull the latest financial results and technical analysis of LTFoods",
+        [],
+    )
+
+    assert symbols == ["LTFOODS"]
+    assert not any("YOU" in gap or "PULL" in gap for gap in gaps)
+
+
+def test_talk_bridge_falls_back_when_mixed_financial_technical_answer_lacks_technicals(monkeypatch):
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.setenv("T2S_USE_AGENT_BRIDGE", "1")
+    monkeypatch.setenv("TALK2STOCKS_LLM_SYNTHESIS", "0")
+
+    async def fake_agent_query(session_id: str, question: str):
+        return {
+            "answer": "Latest results evidence for LTFOODS (latest).",
+            "backend": "fake",
+            "intent": "stock_results",
+            "trace": [
+                {
+                    "tool": "get_latest_results",
+                    "args": {"symbol": "LTFOODS"},
+                    "result": {"status": "ok", "symbol": "LTFOODS"},
+                }
+            ],
+        }
+
+    monkeypatch.setattr("agent_adda.web_api.bridge.agent_query", fake_agent_query)
+    client = TestClient(app)
+    res = client.post(
+        "/api/talk/chat",
+        json={
+            "question": "Can you pull the latest financial results and technical analysis of LTFoods",
+            "mode": "permissive",
+        },
+    )
+
+    assert res.status_code == 200
+    body = res.json()
+    assert body["intent"] == "financials_review"
+    assert body["symbols"] == ["LTFOODS"]
+    assert body["response_template"] == "financial_results_table"
+    assert "**Technical Analysis" in body["answer"]
+
+
 def test_talk_financial_fallback_formats_results_as_tables():
     answer = _fallback_answer(
         "financials_review",
@@ -221,6 +276,16 @@ def test_talk_financial_fallback_formats_results_as_tables():
                 "latest_annual": {"period_label": "Mar 2026", "revenue": 20074, "pat": 1721, "eps": 32.25, "opm_pct": 19.0},
                 "latest_balance_sheet": {"period_label": "Mar 2026", "net_debt": 1176, "borrowings": 2561, "reserves": 6949},
                 "latest_cash_flow": {"period_label": "Mar 2026", "operating_cf": 2668, "net_cf": -57},
+                "as_of": "2026-08-21",
+                "price": 5775.0,
+                "stage": "STAGE_2",
+                "rsi": 58.4,
+                "technical_score": 72.1,
+                "trend_signal": "BULLISH",
+                "trading_signal": "BUY",
+                "supertrend": "BULLISH",
+                "support": 5500,
+                "resistance": 5900,
             }
         ],
         [],
@@ -234,6 +299,9 @@ def test_talk_financial_fallback_formats_results_as_tables():
     assert "| Metric | Value (INR crore) |" in answer
     assert "| Operating cash flow | 2,668 |" in answer
     assert "| Net cash flow | -57 |" in answer
+    assert "**Technical Analysis (2026-08-21)**" in answer
+    assert "| Price | Stage | RSI | Technical Score | Trend | Signal | Supertrend | Support | Resistance |" in answer
+    assert "| 5,775 | STAGE_2 | 58.4 | 72.1 | BULLISH | BUY | BULLISH | 5,500 | 5,900 |" in answer
     assert "[Screener](https://www.screener.in/company/TRENT/consolidated/)" in answer
 
 

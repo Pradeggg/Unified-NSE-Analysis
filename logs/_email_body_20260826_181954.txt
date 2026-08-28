@@ -1,0 +1,52 @@
+Agent Adda
+      Wed, 26 Aug 2026 · 18:19 IST
+
+        Report · stage2_tracker.html · mode: both
+
+  NSE Stage 2 Breakout Tracker — 26 Aug 2026
+
+  EOD Wednesday | Generated 2026-08-26 18:08 | Attachment: stage2_tracker.html
+
+  Published to Agent Adda Market Intelligence. Live report URL: https://agentadda.in/stocks/reports/stage2-tracker-2026-08-26
+
+    Market read: Stage 2 at 380 (-2 d/d); upgrades S1→S2 6, S3→S2 12; downgrades S2→S3 19; S3→S4 14; 19 new, 21 exits.
+
+  Key takeaways
+
+    Stage mix: S1 767 (-6), S2 380 (-2), S3 1019 (-7), S4 466 (+14) — 2,632 names tracked.
+
+    Post mid‑Aug expansion, breadth cooled: +358 S2 on 14 Aug and +79 on 24 Aug, followed by -74 on 25 Aug and -2 today.
+
+    Fund‑Ready Stage 2 list at 15 (fundamental gate ≥65); examples: QPOWER, CUPID, CGCL, NAM‑INDIA, TBZ, RADICO.
+
+    Momentum extended in several leaders (RSI >70) — 'NO CHASE' flags across SETL, RUBICON, SHILPAMED, QUESS, COMSYN, RATNAVEER, SKYGOLD.
+
+    Quality triage: 'WATCH' (SIGMAADV, INDSWFTLAB, CYIENTDLM, CALSOFT, TFCILTD, MSTCLTD), 'RESEARCH REQUIRED' (MOREPENLAB, PREMIERPOL), 'AVOID' (KABRAEXTRU).
+
+  What to watch
+
+    S2 breadth holding above ~380 vs drifting toward 375; track S1→S2 and S3→S2 upgrades versus S2→S3 downgrades.
+
+    Pullback opportunities in 'NO CHASE' names as RSIs normalize; avoid chasing extended moves.
+
+    Fundamental evidence for 'RESEARCH REQUIRED' names and improvement toward ≥65 for 'WATCH' names; monitor S3→S4 prints for distribution risk.
+
+  How to use this
+
+    Start with the Fund‑Ready list; prioritize 'ADD'/'ACCUMULATE' tags with defined risk controls.
+
+    Maintain a watchlist for 'WATCH' names pending fundamental thresholds; exclude 'AVOID' until quality improves.
+
+    Refer to the attached HTML for full tables, VCP setups, and daily transition details; document day‑over‑day changes.
+
+    Methodology & sources: stage2‑fund‑ready‑v2; PostgreSQL/scores.stage_snapshots + market.equity_eod; SQLite stage_changes for transition diffs.
+
+    This email is for research purposes only and is not investment advice.
+
+  Regards,
+
+  Agent Adda
+
+  ShunyaAI · NSE Market Intelligence
+
+Not investment advice. For research and learning only. NSE EOD + live snapshot data.

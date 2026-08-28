@@ -1,0 +1,68 @@
+Agent Adda
+      Thu, 27 Aug 2026 · 19:29 IST
+
+        Report · eod_market_report.html · mode: both
+
+  Market read: Mixed tape; NIFTY -0.48% to 24,090.85 and BANKNIFTY -0.47% to 57,509.95. Breadth peaked at 11:00 (+61.5%) and troughed at 13:00 (+16.3%).
+
+  EOD Market Report — 27 Aug 2026
+
+  Published to Agent Adda Market Intelligence. This email is a concise, evidence-led summary; see the attached eod_market_report.html for the full pack. Live report URL (text): https://agentadda.in/stocks/reports/eod-market-report-2026-08-27
+
+  Generated 19:20 IST · Stored intraday universe: 54 stocks · 15m bars from PostgreSQL.
+
+  Index snapshot
+
+      NIFTY
+      24,090.85 (-0.48%)
+      Range: 24,090.85 – 24,297.45
+
+      BANKNIFTY
+      57,509.95 (-0.47%)
+      Range: 57,509.95 – 58,012.40
+
+  Key takeaways
+
+    Consolidative session with tight index ranges; declines into midday outweighed a brief 11:00 recovery.
+
+    Participation spiked at 09:00 (337.7L shares captured), suggesting potential distribution; breadth trough at 13:00 (+16.3%).
+
+    Leadership in Metals & Minerals Trading (+1.83%) and Power; ADANIPOWER +3.76% (681.0L), ADANIGREEN +1.94%.
+
+    Pressure in IT - Software and Minerals & Mining; 63MOONS -4.13%, 20MICRONS -3.25%.
+
+    Banking mixed: HDFCBANK -2.23% weighed on BANKNIFTY; ICICIBANK +0.91%, AXISBANK +0.08%.
+
+    Late hour breadth 19 advances vs 26 declines (advancers ~42.2%); indices failed to regain session highs.
+
+  What to watch (next session)
+
+    Confirmation of breadth: can +55–60% advancers sustain beyond a single hour?
+
+    Banking follow-through after HDFCBANK -2.23%; impact on BANKNIFTY leadership.
+
+    Opening volume signature vs 09:00 peak (337.7L): distribution vs accumulation cues.
+
+    Power and Metals leadership durability vs mean reversion in IT/Minerals & Mining.
+
+  How to use this
+
+    Use the 11:00 breadth expansion window and 13:00 trough as time-of-day risk markers.
+
+    Review Stage 2/Top Picks for names aligning with sector leadership (e.g., Power, Metals & Minerals Trading).
+
+    Stress-test exposure to banking and IT given pressure points; monitor heavyweight reactions at the open.
+
+    Track most-active flows (e.g., ADANIPOWER) for leadership confirmation or fade.
+
+    Coverage note: This report uses the stored intraday 15m universe available in PostgreSQL. It is not a complete NSE-wide breadth measure unless the intraday capture universe is complete.
+
+    Research and learning only; not investment advice.
+
+  Regards,
+
+  Agent Adda
+
+  ShunyaAI · NSE Market Intelligence
+
+Not investment advice. For research and learning only. NSE EOD + live snapshot data.

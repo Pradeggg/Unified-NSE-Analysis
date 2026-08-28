@@ -1,0 +1,58 @@
+Agent Adda
+      Thu, 27 Aug 2026 · 10:47 IST
+
+        Report · morning_market.html · mode: both
+
+Risk-off open: Headline and sector participation are weak; Bank Nifty is not confirming yet — reassess breadth after the first 15–30 minutes.
+
+Agent Adda Morning Market — 27 Aug 2026
+
+Educational market intelligence — not investment advice. As of 10:42 IST.
+
+The latest Morning Market has been published to Agent Adda Market Intelligence. The full report is attached; a concise, evidence-led summary is below.
+
+Key takeaways
+
+  Indices and volatility: NIFTY 50 24,182 (-0.11%), Bank Nifty 57,780 (-0.01%), Smallcap 250 18,454 (-0.01%); India VIX 10.87 (+2.83%).
+
+  Breadth check: Headline and sector participation remain soft; Bank Nifty lagging. Use the first 15–30 minutes to judge whether breadth improves versus a gap-and-rotate tape.
+
+  Sectors: Leaders — NIFTY Private Bank (+0.46%), India Defence (+0.43%), Pharma (+0.42%), Realty (+0.38%). Weak — Waves (-0.91%), Capital Markets (-0.90%), Dividend Opps 50 (-0.70%), Cement (-0.64%).
+
+  Movers: Strength — BHEL (+3.77%), WELCORP (+3.58%), HFCL (+3.05%), JINDALSAW (+2.98%). Weakness — MANAPPURAM (-4.49%), TATAPOWER (-4.07%), ICICIAMC (-3.38%), PFC (-3.08%).
+
+  F&O context (neutral): NIFTY PCR OI 0.62 (Max Pain 24,250; 24,300C/24,200P). BANKNIFTY PCR OI 1.14 (Max Pain 57,800; 57,500C/57,500P). Treat as context; await price, OI buildup, and VWAP/opening-range alignment.
+
+  Global/FX/Commodities: Backdrop mixed. U.S. marginally lower; Asia softer. Gold +1.59%, Copper +1.70%, Crude 81.85 (-0.46%), USDINR +2.01%.
+
+What to watch
+
+  Confirmation: NIFTY holds above opening-range high after 15–30 minutes; Bank Nifty stops lagging or Financial Services absorbs weakness; small/microcap strength sustains without VIX rising.
+
+  Leadership rotation: Capital markets, IT, metals, realty, and broad-market quality momentum; also track consumer durables, PSU banks, pharma, defence, and auto if weakness persists.
+
+  Derivatives alignment: Price, PCR, OI buildup, and VWAP/opening-range should agree before inferring direction; re-check quickly around weekly/near expiries.
+
+  Flows and macros: Crude, USDINR, DXY, and confirmation from FII/DII flows.
+
+Action items
+
+  Prioritise observation over action in the first 15–30 minutes; treat early strength as provisional until breadth and price acceptance confirm.
+
+  Refine watchlist using momentum context (e.g., INDSWFTLAB, AVADHSUGAR, KABRAEXTRU, RBA, STYLEBAAZA); require price holding above opening range with volume confirmation.
+
+  Avoid chasing sharp movers with elevated RSI (near/above 80) or large one-day gaps; size positions prudently.
+
+  Prefer sectors showing both index-level strength and stock-level breadth; treat F&O cues as secondary until PCR/OI/price align.
+
+  On expiry-sensitive sessions, revisit OI/PCR after 30–60 minutes to account for rolls/unwinds.
+
+This email is for education and general market research only. It is not personalised advice, not a SEBI-registered research report, and not a recommendation or solicitation to buy, sell, or trade. Markets involve risk, including capital loss. Verify independently and consider consulting a SEBI-registered investment adviser.
+
+  Regards,
+
+  Agent Adda
+
+  ShunyaAI · NSE Market Intelligence
+
+Not investment advice. For research and learning only. NSE EOD + live snapshot data.

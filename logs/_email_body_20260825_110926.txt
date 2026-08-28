@@ -1,0 +1,28 @@
+Agent Adda
+      Tue, 25 Aug 2026 · 11:09 IST
+
+        Report · morning_market.html · mode: both
+
+    Agent Adda Morning Market - 2026-08-25 10:55 IST
+
+    Sent: Tue, 25 Aug 2026 · 11:09 IST · As of: 2026-08-25 10:55 IST
+
+    Attachment: morning_market.html
+
+    Published URLs: https://agentadda.in/stocks/reports/morning-market-2026-08-25 and https://agentadda.in/reports/morning-market-2026-08-25.html. Evidence-first opening dashboard (NIFTY/BankNifty/breadth/movers/momentum/F&O). Global & commodity cues refreshed from live quotes where available; F&O section includes expiry awareness. Research-only; not investment advice.
+
+    Links
+https://agentadda.in/stocks/reports/morning-market-2026-08-25
+https://agentadda.in/reports/morning-market-2026-08-25.html
+
+    Composer note: no LLM backend
+
+      Research-only market intelligence; not investment advice.
+
+  Regards,
+
+  Agent Adda
+
+  ShunyaAI · NSE Market Intelligence
+
+Not investment advice. For research and learning only. NSE EOD + live snapshot data.
