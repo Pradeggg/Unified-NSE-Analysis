@@ -74,6 +74,134 @@ def test_discover_financial_filings_flattens_bse_categories_and_prefers_results(
     assert result["candidates"][0]["category"] == "board_meeting"
 
 
+def test_discover_financial_filings_keeps_order_and_rating_filings(monkeypatch):
+    monkeypatch.setattr(
+        results_tools,
+        "search_nse_announcements",
+        lambda symbol, max_results=15: {
+            "symbol": symbol,
+            "nse_filings": [
+                {"subject": "Receipt of order from Indian Railways", "url": "https://nse.example/order.pdf"},
+                {"subject": "Credit rating upgraded by CRISIL", "url": "https://nse.example/rating.pdf"},
+            ],
+            "bse_filings": [],
+        },
+    )
+    monkeypatch.setattr(results_tools, "search_bse_filings", lambda symbol, max_results=10: {"symbol": symbol, "results": {}})
+    monkeypatch.setattr(results_tools, "scrape_screener_in", lambda symbol: {"symbol": symbol, "announcements": []})
+
+    result = results_tools.discover_financial_filings("LT")
+
+    assert {item["url"] for item in result["candidates"]} == {
+        "https://nse.example/order.pdf",
+        "https://nse.example/rating.pdf",
+    }
+
+
+def test_discover_financial_filings_deduplicates_same_url_across_sources(monkeypatch):
+    shared_url = "https://exchange.example/filing.pdf"
+    monkeypatch.setattr(
+        results_tools,
+        "search_nse_announcements",
+        lambda symbol, max_results=15: {
+            "symbol": symbol,
+            "nse_filings": [{"subject": "Financial Results Q1", "url": shared_url}],
+            "bse_filings": [{"subject": "Unaudited Financial Results Q1", "url": shared_url}],
+        },
+    )
+    monkeypatch.setattr(results_tools, "search_bse_filings", lambda symbol, max_results=10: {"symbol": symbol, "results": {}})
+    monkeypatch.setattr(results_tools, "scrape_screener_in", lambda symbol: {"symbol": symbol, "announcements": []})
+
+    result = results_tools.discover_financial_filings("LT")
+
+    assert [item["url"] for item in result["candidates"]] == [shared_url]
+
+
+def test_discover_financial_filings_prefers_newer_candidate_when_scores_tie(monkeypatch):
+    monkeypatch.setattr(
+        results_tools,
+        "search_nse_announcements",
+        lambda symbol, max_results=15: {
+            "symbol": symbol,
+            "nse_filings": [
+                {"date": "2026-04-20", "subject": "Financial Results", "url": "https://nse.example/older.pdf"},
+                {"date": "2026-07-20", "subject": "Financial Results", "url": "https://nse.example/newer.pdf"},
+            ],
+            "bse_filings": [],
+        },
+    )
+    monkeypatch.setattr(results_tools, "search_bse_filings", lambda symbol, max_results=10: {"symbol": symbol, "results": {}})
+    monkeypatch.setattr(results_tools, "scrape_screener_in", lambda symbol: {"symbol": symbol, "announcements": []})
+
+    result = results_tools.discover_financial_filings("LT")
+
+    assert result["candidates"][0]["url"] == "https://nse.example/newer.pdf"
+
+
+def test_discover_financial_filings_keeps_rating_reaffirmation_and_rejects_vote_results(monkeypatch):
+    monkeypatch.setattr(
+        results_tools,
+        "search_nse_announcements",
+        lambda symbol, max_results=15: {
+            "symbol": symbol,
+            "nse_filings": [
+                {"subject": "Intimation of reaffirmation of rating", "url": "https://nse.example/rating.pdf"},
+                {"subject": "Postal Ballot Results", "url": "https://nse.example/postal.pdf"},
+                {"subject": "Newspaper publication of Financial Results", "url": "https://nse.example/newspaper.pdf"},
+            ],
+            "bse_filings": [],
+        },
+    )
+    monkeypatch.setattr(results_tools, "search_bse_filings", lambda symbol, max_results=10: {"symbol": symbol, "results": {}})
+    monkeypatch.setattr(results_tools, "_resolve_screener_data", lambda symbol: ({}, "ok"))
+
+    result = results_tools.discover_financial_filings("LT")
+
+    assert [item["url"] for item in result["candidates"]] == ["https://nse.example/rating.pdf"]
+
+
+def test_discover_financial_filings_does_not_merge_case_sensitive_urls(monkeypatch):
+    monkeypatch.setattr(
+        results_tools,
+        "search_nse_announcements",
+        lambda symbol, max_results=15: {
+            "symbol": symbol,
+            "nse_filings": [
+                {"subject": "Financial Results Q1", "url": "https://EXAMPLE.com/File.pdf?token=ABC"},
+                {"subject": "Financial Results Q1", "url": "https://example.com/file.pdf?token=abc"},
+            ],
+            "bse_filings": [],
+        },
+    )
+    monkeypatch.setattr(results_tools, "search_bse_filings", lambda symbol, max_results=10: {"symbol": symbol, "results": {}})
+    monkeypatch.setattr(results_tools, "_resolve_screener_data", lambda symbol: ({}, "ok"))
+
+    result = results_tools.discover_financial_filings("LT")
+
+    assert len(result["candidates"]) == 2
+
+
+def test_discover_financial_filings_ignores_url_fragment_when_deduplicating(monkeypatch):
+    monkeypatch.setattr(
+        results_tools,
+        "search_nse_announcements",
+        lambda symbol, max_results=15: {
+            "symbol": symbol,
+            "nse_filings": [
+                {"subject": "Financial Results Q1", "url": "https://example.com/file.pdf#page=1"},
+                {"subject": "Financial Results Q1", "url": "https://example.com/file.pdf#page=2"},
+            ],
+            "bse_filings": [],
+        },
+    )
+    monkeypatch.setattr(results_tools, "search_bse_filings", lambda symbol, max_results=10: {"symbol": symbol, "results": {}})
+    monkeypatch.setattr(results_tools, "_resolve_screener_data", lambda symbol: ({}, "ok"))
+
+    result = results_tools.discover_financial_filings("LT")
+
+    assert len(result["candidates"]) == 1
+
+
 def test_ingest_financial_filing_wraps_existing_ingestor(monkeypatch, tmp_path):
     def fake_ingest(url, symbol=None, period=None, root_dir=None, force=False):
         return {

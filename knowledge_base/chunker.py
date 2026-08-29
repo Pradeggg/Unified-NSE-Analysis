@@ -100,6 +100,15 @@ def chunk_document(manifest_row: dict) -> Iterator[dict]:
     if not path.exists():
         return
     kind = manifest_row.get("kind", "")
+    try:
+        with path.open("rb") as artefact:
+            signature = artefact.read(1024).lower()
+        if signature.startswith(b"\xef\xbb\xbf"):
+            signature = signature[3:]
+        if signature.lstrip(b"\x00\t\r\n ").startswith(b"%pdf-"):
+            kind = "pdf"
+    except OSError:
+        return
     base_meta = {
         "source_id":    manifest_row.get("source_id"),
         "source_name":  manifest_row.get("source_name"),

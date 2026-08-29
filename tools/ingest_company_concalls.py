@@ -22,6 +22,8 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from tools.evidence_ingestion_utils import clean_pg_value as _clean_pg_value
+
 
 def _pg_conn():
     import psycopg2
@@ -67,6 +69,10 @@ def _chunk_local(path: Path, *, source_id: str, source_name: str, category: str,
     return list(chunk_document(manifest_row))
 
 
+def _clean_pg_text(text: str) -> str:
+    return _clean_pg_value(text or "").strip()
+
+
 def ingest_company_concalls(
     *,
     symbol: str,
@@ -78,7 +84,7 @@ def ingest_company_concalls(
     from terminal.web_research import scrape_screener_in
     from financial_filing_agent import ingest_filing_url
 
-    sym = (symbol or "").strip().upper()
+    sym = _clean_pg_text(str(symbol or "")).upper()
     if not sym:
         return {"error": "symbol is required"}
 
@@ -121,8 +127,8 @@ def ingest_company_concalls(
 
     try:
         for item in picked:
-            period = str(item.get("period") or "").strip()
-            url = str(item.get("url") or "").strip()
+            period = _clean_pg_text(str(item.get("period") or ""))
+            url = _clean_pg_text(str(item.get("url") or ""))
             if not url:
                 continue
 
@@ -138,14 +144,14 @@ def ingest_company_concalls(
                 continue
 
             document_id = _doc_id("concall", sha256)
-            meta = {
+            meta = _clean_pg_value({
                 "period": period,
                 "concalls_link": concalls_link,
                 "discovered_at": discovered_at,
                 "manifest_path": str(manifest.get("manifest_path") or ""),
                 "fetched_at": str(manifest.get("fetched_at") or ""),
                 "source": "screener_in",
-            }
+            })
 
             inserted = False
             try:
@@ -210,7 +216,7 @@ def ingest_company_concalls(
 
                 with conn.cursor() as cur:
                     for ch in chunks:
-                        text = str(ch.get("text") or "").strip()
+                        text = _clean_pg_text(str(ch.get("text") or ""))
                         if not text:
                             continue
                         p1 = ch.get("page_start")
@@ -271,4 +277,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

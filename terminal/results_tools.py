@@ -8,9 +8,10 @@ never fabricate financial facts when a filing cannot be parsed.
 from __future__ import annotations
 
 import re
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit, urlunsplit
 
 from financial_filing_agent import ingest_filing_url, parse_pdf_filing as _parse_pdf_filing, parse_registered_filing
 from terminal.search_engine import search_bse_filings, search_nse_announcements
@@ -65,9 +66,25 @@ def _invalid_symbol_error(symbol: str) -> dict[str, Any] | None:
 
 def _candidate_score(title: str, source: str) -> int:
     text = title.lower()
+    if any(
+        term in text
+        for term in (
+            "analyst / investor meet",
+            "investor meet",
+            "audio recording",
+            "conference call",
+            "transcript",
+            "newspaper publication",
+            "loss of share certificate",
+            "issue of duplicate certificate",
+            "postal ballot",
+            "e-voting",
+            "voting results",
+            "scrutinizer report",
+        )
+    ):
+        return -1000
     score = 0
-    if any(term in text for term in ("analyst / investor meet", "investor meet", "audio recording", "conference call", "transcript")):
-        score -= 80
     if any(term in text for term in ("change in management", "change in directorate", "press release", "media release", "board comments", "fine levied")):
         score -= 40
     if "board meeting" in text and "financial result" not in text and "financial results" not in text:
@@ -78,13 +95,31 @@ def _candidate_score(title: str, source: str) -> int:
         score += 30
     if "quarter" in text or re.search(r"\bq[1-4]\b", text):
         score += 20
-    if "result" in text:
-        score += 15
-    if source == "nse_announcements":
-        score += 5
-    if source == "bse_filings":
-        score += 3
+    if any(term in text for term in ("award of order", "receipt of order", "award_of_order", "receipt_of_order", "contract")):
+        score += 70
+    if "letter of award" in text or "l1 bidder" in text or re.search(r"\bloa\b", text):
+        score += 30
+    if re.search(r"\bratings?\b", text) or any(term in text for term in ("crisil", "icra", "india ratings")):
+        score += 55
+    if any(term in text for term in ("dividend", "buyback", "stock split", "bonus issue", "rights issue", "qip", "preferential issue")):
+        score += 35
+    if "regulation 39" in text or "reg 39" in text:
+        score -= 40
+    if score > 0:
+        if source == "nse_announcements":
+            score += 5
+        if source == "bse_filings":
+            score += 3
     return score
+
+
+def _url_dedupe_key(url: str) -> str:
+    value = str(url or "").strip()
+    try:
+        parts = urlsplit(value)
+    except ValueError:
+        return value
+    return urlunsplit((parts.scheme.lower(), parts.netloc.lower(), parts.path, parts.query, ""))
 
 
 def _flatten_rows(rows: Any) -> list[dict]:
@@ -119,6 +154,26 @@ def _rows_to_candidates(rows: Any, source: str) -> list[dict]:
             }
         )
     return candidates
+
+
+def _candidate_date_key(candidate: dict) -> str:
+    raw = candidate.get("raw") or {}
+    value = str(raw.get("date") or raw.get("published") or raw.get("an_dt") or "").strip()
+    if not value:
+        return ""
+    for fmt in ("%Y-%m-%d", "%d-%b-%Y", "%d %b %Y", "%d-%m-%Y", "%d/%m/%Y"):
+        try:
+            return datetime.strptime(value[:11].strip(), fmt).date().isoformat()
+        except ValueError:
+            continue
+    match = re.search(r"\b(20\d{2})[-/](\d{1,2})[-/](\d{1,2})\b", value)
+    if match:
+        year, month, day = (int(part) for part in match.groups())
+        try:
+            return date(year, month, day).isoformat()
+        except ValueError:
+            return ""
+    return ""
 
 
 def _resolve_screener_data(sym: str) -> tuple[dict, str]:
@@ -184,7 +239,7 @@ def discover_financial_filings(symbol: str, max_results: int = 10) -> dict:
     screener_data: dict[str, Any] = {}
 
     try:
-        nse = search_nse_announcements(sym, max_results=15)
+        nse = search_nse_announcements(sym, max_results=max(15, int(max_results) * 6))
         source_trail["search_nse_announcements"] = _status_from(nse)
         candidates.extend(_rows_to_candidates(nse.get("results") or [], "nse_announcements"))
         candidates.extend(_rows_to_candidates(nse.get("nse_filings") or [], "nse_announcements"))
@@ -193,7 +248,7 @@ def discover_financial_filings(symbol: str, max_results: int = 10) -> dict:
         source_trail["search_nse_announcements"] = f"ERROR: {exc}"
 
     try:
-        bse = search_bse_filings(sym, max_results=10)
+        bse = search_bse_filings(sym, max_results=max(10, int(max_results) * 3))
         source_trail["search_bse_filings"] = _status_from(bse)
         candidates.extend(_rows_to_candidates(bse.get("results") or [], "bse_filings"))
     except Exception as exc:
@@ -206,8 +261,20 @@ def discover_financial_filings(symbol: str, max_results: int = 10) -> dict:
     except Exception as exc:
         source_trail["scrape_screener_in"] = f"ERROR: {exc}"
 
-    candidates = [candidate for candidate in candidates if candidate.get("score", 0) > 0]
-    candidates.sort(key=lambda item: (item.get("score", 0), item.get("title", "")), reverse=True)
+    candidates = [candidate for candidate in candidates if candidate.get("score", 0) > 0 and candidate.get("url")]
+    candidates.sort(
+        key=lambda item: (item.get("score", 0), _candidate_date_key(item), item.get("title", "")),
+        reverse=True,
+    )
+    unique_candidates: list[dict] = []
+    seen_urls: set[str] = set()
+    for candidate in candidates:
+        url_key = _url_dedupe_key(str(candidate.get("url") or ""))
+        if not url_key or url_key in seen_urls:
+            continue
+        seen_urls.add(url_key)
+        unique_candidates.append(candidate)
+    candidates = unique_candidates
     for idx, candidate in enumerate(candidates, start=1):
         candidate["rank"] = idx
     return {

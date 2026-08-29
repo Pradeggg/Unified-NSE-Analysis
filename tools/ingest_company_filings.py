@@ -11,6 +11,7 @@ Pipeline:
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import sys
@@ -22,6 +23,8 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
+
+from tools.evidence_ingestion_utils import clean_pg_value as _clean_pg_value
 
 
 def _pg_conn():
@@ -68,6 +71,11 @@ def _chunk_local(path: Path, *, source_id: str, source_name: str, category: str,
     return list(chunk_document(manifest_row))
 
 
+def _clean_pg_text(text: str) -> str:
+    # PostgreSQL/psycopg2 cannot accept NUL bytes in text fields.
+    return _clean_pg_value(text or "").strip()
+
+
 def ingest_company_filings(
     *,
     symbol: str,
@@ -77,22 +85,36 @@ def ingest_company_filings(
     dry_run: bool = False,
     root_dir: str | Path = "data/filings_evidence",
 ) -> dict[str, Any]:
-    from terminal.results_tools import discover_financial_filings
+    from terminal.results_tools import _url_dedupe_key, discover_financial_filings
     from financial_filing_agent import ingest_filing_url
 
-    sym = (symbol or "").strip().upper()
+    sym = _clean_pg_text(str(symbol or "")).upper()
     if not sym:
         return {"error": "symbol is required"}
 
     discovered_at = _now_iso()
-    discovery = discover_financial_filings(sym, max_results=max(10, int(max_docs) * 5))
-    candidates = list(discovery.get("candidates") or [])
-
+    results_discovery = discover_financial_filings(sym, max_results=max(50, int(max_docs) * 30))
+    results_candidates = list(results_discovery.get("candidates") or [])
+    filing_candidates = [
+        candidate
+        for candidate in results_candidates
+        if str(candidate.get("url") or "").strip() and int(candidate.get("score") or 0) >= 20
+    ]
+    filing_candidates.sort(
+        key=lambda item: (
+            int(item.get("score") or 0),
+            -int(item.get("rank") or 0),
+            str(item.get("title") or ""),
+        ),
+        reverse=True,
+    )
     picked: list[dict[str, Any]] = []
-    for c in candidates:
-        url = str(c.get("url") or "").strip()
-        if not url:
+    seen_urls: set[str] = set()
+    for c in filing_candidates:
+        url_key = _url_dedupe_key(str(c.get("url") or ""))
+        if url_key in seen_urls:
             continue
+        seen_urls.add(url_key)
         picked.append(c)
         if len(picked) >= max(1, int(max_docs)):
             break
@@ -102,8 +124,8 @@ def ingest_company_filings(
             "status": "dry_run",
             "symbol": sym,
             "picked": [{"title": p.get("title"), "url": p.get("url"), "source": p.get("source"), "score": p.get("score")} for p in picked],
-            "discovery_status": discovery.get("status"),
-            "source_trail": discovery.get("source_trail"),
+            "discovery_status": results_discovery.get("status"),
+            "source_trail": results_discovery.get("source_trail"),
             "discovered_at": discovered_at,
         }
 
@@ -116,19 +138,22 @@ def ingest_company_filings(
         "documents_skipped": 0,
         "chunks_inserted": 0,
         "errors": [],
-        "discovery_status": discovery.get("status"),
-        "source_trail": discovery.get("source_trail"),
+        "discovery_status": results_discovery.get("status"),
+        "source_trail": results_discovery.get("source_trail"),
         "discovered_at": discovered_at,
     }
 
     try:
         for c in picked:
-            title = str(c.get("title") or "").strip()
-            url = str(c.get("url") or "").strip()
-            source = str(c.get("source") or "").strip()
+            title = _clean_pg_text(str(c.get("title") or ""))
+            url = _clean_pg_text(str(c.get("url") or ""))
+            source = _clean_pg_text(str(c.get("source") or ""))
             score = int(c.get("score") or 0)
 
-            manifest = ingest_filing_url(url, symbol=sym, period=period, root_dir=Path(root_dir), force=bool(force_download))
+            artifact_key = _url_dedupe_key(url)
+            artifact_hash = hashlib.sha1(artifact_key.encode("utf-8")).hexdigest()[:10]
+            artifact_period = f"{period}_{artifact_hash}"
+            manifest = ingest_filing_url(url, symbol=sym, period=artifact_period, root_dir=Path(root_dir), force=bool(force_download))
             if manifest.get("status") != "ok":
                 stats["errors"].append({"url": url, "title": title, "error": manifest.get("error")})
                 continue
@@ -140,17 +165,19 @@ def ingest_company_filings(
                 continue
 
             document_id = _doc_id("filing", sha256)
-            document_date = str((c.get("raw") or {}).get("date") or (c.get("raw") or {}).get("published") or "").strip()
-            meta = {
+            document_date = _clean_pg_text(str((c.get("raw") or {}).get("date") or (c.get("raw") or {}).get("published") or ""))
+            meta = _clean_pg_value({
                 "title": title,
                 "source": source,
                 "score": score,
                 "rank": c.get("rank"),
+                "period": period,
+                "artifact_period": artifact_period,
                 "discovered_at": discovered_at,
                 "manifest_path": str(manifest.get("manifest_path") or ""),
                 "fetched_at": str(manifest.get("fetched_at") or ""),
                 "candidate": c,
-            }
+            })
 
             inserted = False
             try:
@@ -215,7 +242,7 @@ def ingest_company_filings(
 
                 with conn.cursor() as cur:
                     for ch in chunks:
-                        text = str(ch.get("text") or "").strip()
+                        text = _clean_pg_text(str(ch.get("text") or ""))
                         if not text:
                             continue
                         p1 = ch.get("page_start")
@@ -278,4 +305,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
