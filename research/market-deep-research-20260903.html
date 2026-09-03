@@ -1,0 +1,509 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Market Deep Research — Sep 2026 | Agent Adda</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap">
+<style>
+/* ── Agent Adda Site Nav ── */
+.aa-nav{background:#0d1829;border-bottom:1px solid #1e2d45;padding:0 28px;display:flex;align-items:center;gap:0;height:48px;position:sticky;top:0;z-index:200;}
+.aa-logo{font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:600;color:#e8a44a;letter-spacing:.04em;text-decoration:none;margin-right:32px;}
+.aa-logo span{color:#4eccd4;}
+.aa-nav a{font-family:'IBM Plex Sans',sans-serif;font-size:12px;color:#8899aa;text-decoration:none;padding:0 12px;height:48px;display:flex;align-items:center;border-bottom:2px solid transparent;transition:color .15s;}
+.aa-nav a:hover{color:#d4dce8;border-bottom-color:#e8a44a;}
+.aa-nav a.active{color:#e8a44a;border-bottom-color:#e8a44a;}
+.aa-nav .spacer{flex:1;}
+.aa-nav .aa-date{font-family:'IBM Plex Mono',monospace;font-size:10px;color:#566878;letter-spacing:.06em;}
+.aa-disc-bar{background:#2a1010;border-bottom:1px solid #3a1515;padding:6px 28px;font-family:'IBM Plex Sans',sans-serif;font-size:11px;color:#e05c5c;text-align:center;}
+
+/* ── Page body resets ── */
+*{box-sizing:border-box;margin:0;padding:0;}
+</style>
+</head>
+<body>
+
+<nav class="aa-nav">
+  <a href="../index.html" class="aa-logo">Agent<span>Adda</span></a>
+  <a href="../index.html">Reports</a>
+  <a href="../daily/eod-market/eod_market_report.html">EOD Market</a>
+  <a href="../daily/top-picks/top_picks.html">Top Picks</a>
+  <a href="../daily/stage2/stage2_tracker.html">Stage 2</a>
+  <a href="../daily/sector-rotation/sector_rotation.html">Sector Rotation</a>
+  <a href="#" class="active">Deep Research</a>
+  <div class="spacer"></div>
+  <div class="aa-date">NSE · EDUCATIONAL RESEARCH · 2026-09-03</div>
+</nav>
+<div class="aa-disc-bar">Educational research only — not investment advice. Not SEBI registered.</div>
+
+<title>Market Deep Research — Sep 2026</title>
+<style>
+  :root {
+    --bg: #0b0f17;
+    --bg2: #111825;
+    --bg3: #182030;
+    --border: #1e2d45;
+    --border2: #26384f;
+    --text: #d4dce8;
+    --text2: #8899aa;
+    --text3: #566878;
+    --red: #e05c5c;
+    --red-bg: #2a1010;
+    --green: #4ec994;
+    --green-bg: #0b2018;
+    --amber: #e8a44a;
+    --amber-bg: #271a06;
+    --blue: #5ba3e8;
+    --blue-bg: #0a1a2e;
+    --purple: #9b8ce8;
+    --cyan: #4eccd4;
+    --accent: #e8a44a;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'IBM Plex Sans', sans-serif; font-size: 14px; line-height: 1.6; }
+  
+  .topbar { background: var(--bg2); border-bottom: 1px solid var(--border); padding: 14px 28px; display: flex; align-items: center; gap: 16px; position: sticky; top: 0; z-index: 100; }
+  .topbar .kicker { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--accent); letter-spacing: .16em; text-transform: uppercase; }
+  .topbar h1 { font-size: 18px; font-weight: 700; color: #e8edf4; }
+  .topbar .ts { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--text3); margin-left: auto; }
+  
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 28px 28px 60px; }
+  
+  /* ── VERDICT BANNER ── */
+  .verdict { border: 1px solid var(--border2); border-left: 4px solid var(--red); background: linear-gradient(135deg, var(--red-bg) 0%, var(--bg2) 100%); border-radius: 0 8px 8px 0; padding: 20px 24px; margin-bottom: 28px; }
+  .verdict .label { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--red); letter-spacing: .14em; text-transform: uppercase; margin-bottom: 6px; }
+  .verdict h2 { font-size: 22px; font-weight: 700; color: #f0d0d0; margin-bottom: 10px; }
+  .verdict p { font-size: 14px; color: var(--text); line-height: 1.72; }
+  
+  /* ── SECTION ── */
+  h3.sec { font-size: 12px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: var(--accent); border-bottom: 1px solid var(--border); padding-bottom: 8px; margin: 32px 0 16px; }
+  
+  /* ── GRID ── */
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+  @media (max-width: 800px) { .grid2, .grid3 { grid-template-columns: 1fr; } }
+  
+  /* ── CARD ── */
+  .card { background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 16px 18px; }
+  .card .card-title { font-size: 11px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--text3); margin-bottom: 8px; }
+  .card .big { font-family: 'IBM Plex Mono', monospace; font-size: 28px; font-weight: 600; line-height: 1; }
+  .card .sub { font-size: 12px; color: var(--text2); margin-top: 4px; }
+  .red-card { border-color: var(--red); background: linear-gradient(135deg, var(--red-bg), var(--bg2)); }
+  .green-card { border-color: var(--green); background: linear-gradient(135deg, var(--green-bg), var(--bg2)); }
+  .amber-card { border-color: var(--amber); background: linear-gradient(135deg, var(--amber-bg), var(--bg2)); }
+  .blue-card { border-color: var(--blue); background: linear-gradient(135deg, var(--blue-bg), var(--bg2)); }
+  
+  .red { color: var(--red); }
+  .green { color: var(--green); }
+  .amber { color: var(--amber); }
+  .blue { color: var(--blue); }
+  .dim { color: var(--text2); }
+  
+  /* ── CAUSE STACK ── */
+  .cause { display: flex; gap: 14px; align-items: flex-start; border: 1px solid var(--border); border-radius: 8px; padding: 16px 18px; margin-bottom: 10px; background: var(--bg2); }
+  .cause .num { font-family: 'IBM Plex Mono', monospace; font-size: 28px; font-weight: 600; color: var(--border2); min-width: 40px; line-height: 1.1; }
+  .cause.primary .num { color: var(--red); }
+  .cause.major .num { color: var(--amber); }
+  .cause.secondary .num { color: var(--text3); }
+  .cause-body h4 { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+  .cause-body p { font-size: 13px; color: var(--text2); line-height: 1.65; }
+  .cause-body .impact { display: inline-block; font-family: 'IBM Plex Mono', monospace; font-size: 10px; padding: 2px 7px; border-radius: 3px; margin-top: 6px; font-weight: 600; letter-spacing: .06em; }
+  .impact.high { background: var(--red-bg); color: var(--red); border: 1px solid var(--red); }
+  .impact.med { background: var(--amber-bg); color: var(--amber); border: 1px solid var(--amber); }
+  .impact.low { background: var(--bg3); color: var(--text3); border: 1px solid var(--border); }
+  
+  /* ── TABLE ── */
+  .tbl-wrap { overflow-x: auto; border-radius: 8px; border: 1px solid var(--border); }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { background: var(--bg3); color: var(--text3); font-size: 10px; font-weight: 600; letter-spacing: .09em; text-transform: uppercase; padding: 9px 12px; text-align: left; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  td { padding: 9px 12px; border-bottom: 1px solid var(--border); color: var(--text); }
+  tr:last-child td { border-bottom: 0; }
+  tr:hover td { background: var(--bg3); }
+  .mono { font-family: 'IBM Plex Mono', monospace; }
+  .right { text-align: right; }
+  
+  /* ── BREADTH BAR ── */
+  .bbar-wrap { display: flex; flex-direction: column; gap: 6px; }
+  .bbar-row { display: flex; align-items: center; gap: 10px; font-size: 12px; }
+  .bbar-label { width: 100px; color: var(--text2); font-size: 11px; }
+  .bbar-track { flex: 1; background: var(--bg3); border-radius: 4px; height: 8px; overflow: hidden; }
+  .bbar-fill { height: 100%; border-radius: 4px; }
+  .bbar-val { width: 50px; text-align: right; font-family: 'IBM Plex Mono', monospace; font-size: 11px; }
+  
+  /* ── SPARKLINE ── */
+  .spark-row { display: flex; align-items: center; gap: 10px; }
+  
+  /* ── TIMELINE ── */
+  .timeline { position: relative; padding-left: 20px; }
+  .timeline::before { content: ''; position: absolute; left: 6px; top: 0; bottom: 0; width: 2px; background: var(--border); }
+  .tl-item { position: relative; padding: 10px 0 10px 18px; }
+  .tl-item::before { content: ''; position: absolute; left: -14px; top: 14px; width: 10px; height: 10px; border-radius: 50%; background: var(--border2); border: 2px solid var(--border); }
+  .tl-item.red::before { background: var(--red); border-color: var(--red); }
+  .tl-item.amber::before { background: var(--amber); border-color: var(--amber); }
+  .tl-item.green::before { background: var(--green); border-color: var(--green); }
+  .tl-date { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--text3); margin-bottom: 3px; }
+  .tl-text { font-size: 13px; line-height: 1.6; }
+  
+  /* ── SIGNAL BOX ── */
+  .signals { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+  .sig { border: 1px solid var(--border); border-radius: 6px; padding: 12px 14px; background: var(--bg2); }
+  .sig .sig-icon { font-size: 18px; margin-bottom: 6px; }
+  .sig .sig-title { font-size: 12px; font-weight: 600; margin-bottom: 4px; }
+  .sig .sig-body { font-size: 12px; color: var(--text2); line-height: 1.55; }
+  
+  /* ── WATCHLIST ── */
+  .watchlist { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .wl { border: 1px solid var(--border); border-radius: 6px; padding: 12px 14px; }
+  .wl .wl-sym { font-family: 'IBM Plex Mono', monospace; font-weight: 600; font-size: 15px; margin-bottom: 2px; }
+  .wl .wl-sub { font-size: 11px; color: var(--text2); }
+  
+  /* ── CONCLUSION ── */
+  .conclusion { background: var(--bg3); border: 1px solid var(--border2); border-radius: 8px; padding: 20px 24px; margin-top: 32px; }
+  .conclusion h4 { font-size: 14px; font-weight: 700; margin-bottom: 12px; color: var(--amber); }
+  .conclusion ul { padding-left: 20px; }
+  .conclusion li { font-size: 13px; line-height: 1.75; color: var(--text); }
+  
+  .disc { font-size: 11px; color: var(--text3); margin-top: 32px; padding-top: 16px; border-top: 1px solid var(--border); line-height: 1.7; }
+</style>
+
+<div class="topbar">
+  <div>
+    <div class="kicker">Agent Adda · Deep Research</div>
+    <h1>Why Is The Market Falling?</h1>
+  </div>
+  <div class="ts">Sep 3, 2026 · Data as of Sep 2 EOD</div>
+</div>
+
+<div class="wrap">
+
+  <!-- VERDICT -->
+  <div class="verdict">
+    <div class="label">Research Verdict</div>
+    <h2>A five-factor squeeze — rising US yields + crude shock + earnings fatigue + broad distribution + ROTATION regime</h2>
+    <p>Nifty has shed <strong>−2.9%</strong> over 4 weeks (24,636 → 23,914), marking a grinding, orderly distribution — not a panic. The primary drivers are macro-global (US 10Y at 4.80%, Brent crude up +8.5% in 5 days) layered on top of a market that was already breadth-deteriorated, with 63% of stocks already in Stage 3/4. DII buying (₹41,643 Cr in 30 days) is the only structural floor.</p>
+  </div>
+
+  <!-- PULSE: TOP KPIs -->
+  <h3 class="sec">Market Pulse — Sep 2, 2026</h3>
+  <div class="grid3">
+    <div class="card red-card">
+      <div class="card-title">Nifty 50</div>
+      <div class="big red">23,914</div>
+      <div class="sub">▼ 0.59% today · −2.9% from 4W high (24,636)</div>
+    </div>
+    <div class="card red-card">
+      <div class="card-title">Market Breadth (Sep 1)</div>
+      <div class="big red">33%</div>
+      <div class="sub">889 Adv / 1,755 Dec · AD Osc = −71.3 · TRIN 1.16</div>
+    </div>
+    <div class="card red-card">
+      <div class="card-title">Stage 3+4 Stocks</div>
+      <div class="big red">63%</div>
+      <div class="sub">42.8% Stage 3 (topping) · 20.6% Stage 4 (decline)</div>
+    </div>
+    <div class="card amber-card">
+      <div class="card-title">India VIX</div>
+      <div class="big amber">11.58</div>
+      <div class="sub">+2.39% today · Rising trend · Not panic (still sub-15)</div>
+    </div>
+    <div class="card amber-card">
+      <div class="card-title">Brent Crude (5D)</div>
+      <div class="big amber">$95.28</div>
+      <div class="sub">+8.5% in 5 days · WTI at $90.70 · Key India headwind</div>
+    </div>
+    <div class="card amber-card">
+      <div class="card-title">US 10Y Yield (5D)</div>
+      <div class="big amber">4.80%</div>
+      <div class="sub">+3.4% in 5 days · EM capital outflow pressure · DXY 99.56</div>
+    </div>
+  </div>
+
+  <!-- CAUSE STACK -->
+  <h3 class="sec">Root-Cause Analysis — The Five Drivers</h3>
+
+  <div class="cause primary">
+    <div class="num">01</div>
+    <div class="cause-body">
+      <h4 class="red">🌐 US 10-Year Yield at 4.80% — the primary trigger</h4>
+      <p>US 10Y has jumped <strong>+3.4% in 5 days</strong> to 4.80% — a level where EM equity outflows accelerate as risk-free return competes directly with Indian equity risk premium. DXY at 99.56 strengthens the dollar, making USD-denominated returns more attractive vs INR-denominated assets. Historically, when the US 10Y breaches 4.5%, FII net selling in India picks up within 1–2 weeks. The INR at 94.96 is a multi-year high vs USD — each rupee depreciation makes repatriated USD returns larger, incentivising FII to hold rather than add. The Nikkei's −3.0% drop today is consistent with JPY carry-trade unwinding as US rates stay high — that same carry unwind hits EM equities simultaneously.</p>
+      <span class="impact high">IMPACT: HIGH</span>
+      <span class="impact high">TRANSMISSION: 2–3 week lag</span>
+    </div>
+  </div>
+
+  <div class="cause primary">
+    <div class="num">02</div>
+    <div class="cause-body">
+      <h4 class="red">🛢️ Crude Oil Shock — Brent +8.5% in 5 days</h4>
+      <p>Brent at <strong>$95.28</strong> (+8.5% in 5 days), WTI at $90.70 (+10.3% in 5 days). India imports ~87% of crude requirements — every $10/barrel rise in oil adds ~₹1.1–1.4 Lakh Cr to the annual import bill, widens the current account deficit by ~0.4% GDP, and pushes retail fuel prices up with a typical 2–4 week lag. Direct sector casualties: <strong>Auto (−2.69% yesterday)</strong> — raw material cost hike (plastics, rubber, lubricants) + demand softness as consumers defer purchases on higher fuel costs; <strong>Airlines</strong> — ATF price spike; <strong>Paints/Chemicals</strong> — petrochemical feedstock costs. Paradoxically benefiting: <strong>Energy (+0.59% today), ONGC, Oil India, MRPL</strong> (upstream producers get higher realizations). The sector breadth data confirms Energy PSUs holding (PSE +0.37% today).</p>
+      <span class="impact high">IMPACT: HIGH</span>
+      <span class="impact high">SECTORS HIT: Auto, Airlines, Chemicals, FMCG margins</span>
+    </div>
+  </div>
+
+  <div class="cause major">
+    <div class="num">03</div>
+    <div class="cause-body">
+      <h4 class="amber">📊 Breadth Catastrophe — Most Stocks Already in Decline</h4>
+      <p>This is not a sudden crash — it is a <strong>long-running distribution</strong>. Stage 3 (topping) = 42.8% of all stocks. Stage 4 (declining) = 20.6%. Combined 63.4% of the market is already deteriorating. Only <strong>14.6% of stocks remain in Stage 2 uptrend</strong>. The AD oscillator hit −71.3 on Sep 1 — deeply negative territory. Breadth has been negative (advances &lt; declines) on 10 of the last 15 trading sessions. TRIN at 1.16 on Sep 1 confirms sell-side volume dominance. The McClellan oscillator and AD ratio are both in contraction. Sector breadth (as of Aug 21) shows Energy at just 23.7% above 50dma, FMCG at 26.7% — these are distribution-phase levels. The rally of Aug 26 (1,450 advances) was a dead-cat bounce that failed to follow through.</p>
+      <span class="impact high">IMPACT: HIGH — structural, multi-week</span>
+    </div>
+  </div>
+
+  <div class="cause major">
+    <div class="num">04</div>
+    <div class="cause-body">
+      <h4 class="amber">🔄 ROTATION Regime — HMM Confirms Phase Shift</h4>
+      <p>The Gaussian HMM regime classifier entered <strong>ROTATION</strong> on Aug 21. In this regime, the model sees money rotating <em>out of</em> momentum/growth (IT, Auto) and <em>into</em> defensives (Pharma, PSU/Energy). Evidence: Pharma was the only major index in the green yesterday (−0.05%), Energy +0.59% today, Realty +0.24% — classic late-bull-market rotation. IT at 100% of stocks above 50dma but the index itself falling −1.25% today suggests profit-booking in winners even as technicals remain intact. In a ROTATION regime, Agent Adda's signal weights shift: BUY signals require higher tech scores, STRONG_BUY thresholds tighten, and the regime overlay reduces notional position sizing by 20–30%.</p>
+      <span class="impact med">IMPACT: MEDIUM — phase signal, not panic</span>
+      <span class="impact med">DURATION: Typically 2–6 weeks before resolving to BULL or BEAR</span>
+    </div>
+  </div>
+
+  <div class="cause secondary">
+    <div class="num">05</div>
+    <div class="cause-body">
+      <h4>🗓️ Global Risk-Off — Japan, Europe Selling</h4>
+      <p>Nikkei −3.0% today, −2.32% in 5 days — consistent with JPY carry trade unwinding (higher US rates = JPY strengthens = leveraged positions unwind = EM selling). DAX −1.62% in 5 days, FTSE −0.90% — European equity weakness. When developed-market institutions sell their EM allocation to de-risk portfolios, India gets sold alongside. Gold is also −3.56% in 5 days despite being a safe haven — suggesting <em>forced liquidation</em> (institutions selling profitable gold to cover losses elsewhere) rather than genuine risk-on. The combination of oil up + gold down + DXY up = classic global tightening panic.</p>
+      <span class="impact med">IMPACT: MEDIUM — amplifier, not primary driver</span>
+    </div>
+  </div>
+
+  <!-- PRICE TAPE -->
+  <h3 class="sec">Nifty 50 — 20-Day Price Tape</h3>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr>
+        <th>Date</th><th class="right">Open</th><th class="right">High</th><th class="right">Low</th><th class="right">Close</th><th class="right">Day Chg%</th><th>Character</th>
+      </tr></thead>
+      <tbody>
+        <tr><td class="mono">02 Sep</td><td class="right mono">23,858</td><td class="right mono">23,914</td><td class="right mono">23,787</td><td class="right mono">23,914</td><td class="right red mono">▼ 0.59%</td><td class="dim">Lower high; closed near HOD — sellers moderate</td></tr>
+        <tr><td class="mono">01 Sep</td><td class="right mono">24,078</td><td class="right mono">24,143</td><td class="right mono">23,953</td><td class="right mono">24,056</td><td class="right red mono">▼ 0.10%</td><td class="dim">Inside day; indecision</td></tr>
+        <tr><td class="mono">31 Aug</td><td class="right mono">24,118</td><td class="right mono">24,129</td><td class="right mono">23,994</td><td class="right mono">24,080</td><td class="right red mono">▼ 0.39%</td><td class="dim">Month-end selling; red close</td></tr>
+        <tr><td class="mono">28 Aug</td><td class="right mono">24,123</td><td class="right mono">24,188</td><td class="right mono">24,077</td><td class="right mono">24,176</td><td class="right green mono">▲ 0.35%</td><td class="dim">Brief relief; failed to hold above 24,200</td></tr>
+        <tr><td class="mono">27 Aug</td><td class="right mono">24,278</td><td class="right mono">24,297</td><td class="right mono">24,091</td><td class="right mono">24,091</td><td class="right red mono">▼ 0.48%</td><td class="dim">Lower high; distribution day</td></tr>
+        <tr><td class="mono">26 Aug</td><td class="right mono">24,342</td><td class="right mono">24,379</td><td class="right mono">24,208</td><td class="right mono">24,208</td><td class="right red mono">▼ 0.52%</td><td class="dim">Rejection at 24,400</td></tr>
+        <tr><td class="mono">25 Aug</td><td class="right mono">24,176</td><td class="right mono">24,335</td><td class="right mono">24,115</td><td class="right mono">24,335</td><td class="right green mono">▲ 0.48%</td><td class="dim">Bounce day; breadth improved</td></tr>
+        <tr><td class="mono">24 Aug</td><td class="right mono">24,285</td><td class="right mono">24,313</td><td class="right mono">24,144</td><td class="right mono">24,219</td><td class="right red mono">▼ 0.14%</td><td class="dim">Narrow range; indecision</td></tr>
+        <tr><td class="mono">21 Aug</td><td class="right mono">24,284</td><td class="right mono">24,284</td><td class="right mono">24,207</td><td class="right mono">24,252</td><td class="right green mono">▲ 0.08%</td><td class="dim">Flat; ROTATION regime flagged</td></tr>
+        <tr><td class="mono">20 Aug</td><td class="right mono">24,225</td><td class="right mono">24,265</td><td class="right mono">24,185</td><td class="right mono">24,232</td><td class="right green mono">▲ 0.64%</td><td class="dim">Best bounce; breadth 1566A/1064D</td></tr>
+        <tr><td class="mono">19 Aug</td><td class="right mono">24,152</td><td class="right mono">24,173</td><td class="right mono">24,026</td><td class="right mono">24,078</td><td class="right red mono">▼ 0.32%</td><td class="dim">Breadth collapse: 852A/1777D</td></tr>
+        <tr><td class="mono">18 Aug</td><td class="right mono">24,224</td><td class="right mono">24,270</td><td class="right mono">24,155</td><td class="right mono">24,155</td><td class="right red mono">▼ 0.55%</td><td class="dim">Continuation sell</td></tr>
+        <tr><td class="mono">17 Aug</td><td class="right mono">24,343</td><td class="right mono">24,360</td><td class="right mono">24,227</td><td class="right mono">24,288</td><td class="right red mono">▼ 0.32%</td><td class="dim">8th consecutive lower high</td></tr>
+        <tr><td class="mono">14 Aug</td><td class="right mono">24,362</td><td class="right mono">24,405</td><td class="right mono">24,297</td><td class="right mono">24,366</td><td class="right red mono">▼ 0.12%</td><td class="dim">Pre-holiday sell</td></tr>
+        <tr><td class="mono">12 Aug</td><td class="right mono">24,472</td><td class="right mono">24,473</td><td class="right mono">24,266</td><td class="right mono">24,436</td><td class="right red mono">▼ 0.15%</td><td class="dim">Start of sustained decline</td></tr>
+        <tr><td class="mono">06 Aug</td><td class="right mono">24,641</td><td class="right mono">24,677</td><td class="right mono">24,604</td><td class="right mono"><strong>24,636</strong></td><td class="right green mono">▲ 0.05%</td><td class="red">← 4-week high; cycle peak</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p style="font-size:12px;color:var(--text3);margin-top:8px;">Pattern: Persistent lower-highs since Aug 6 peak (24,636). 12 red days out of 15 trading sessions. No sustained follow-through on any bounce day.</p>
+
+  <!-- GLOBAL vs INDIA -->
+  <h3 class="sec">Global Markets — 5-Day Returns</h3>
+  <div class="grid2">
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Market</th><th class="right">Price</th><th class="right">1D</th><th class="right">5D</th></tr></thead>
+        <tbody>
+          <tr><td>S&P 500</td><td class="right mono">7,667</td><td class="right green mono">▲ 0.46%</td><td class="right red mono">▼ 0.14%</td></tr>
+          <tr><td>Nasdaq 100</td><td class="right mono">29,143</td><td class="right green mono">▲ 0.23%</td><td class="right red mono">▼ 0.23%</td></tr>
+          <tr><td><strong>Nikkei 225</strong></td><td class="right mono">64,326</td><td class="right red mono"><strong>▼ 3.00%</strong></td><td class="right red mono">▼ 2.32%</td></tr>
+          <tr><td>Hang Seng</td><td class="right mono">25,311</td><td class="right red mono">▼ 0.07%</td><td class="right red mono">▼ 0.78%</td></tr>
+          <tr><td>Shanghai</td><td class="right mono">3,941</td><td class="right red mono">▼ 0.96%</td><td class="right green mono">▲ 1.34%</td></tr>
+          <tr><td>FTSE 100</td><td class="right mono">10,756</td><td class="right red mono">▼ 0.30%</td><td class="right red mono">▼ 0.90%</td></tr>
+          <tr><td>DAX</td><td class="right mono">25,839</td><td class="right red mono">▼ 0.50%</td><td class="right red mono">▼ 1.62%</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Asset</th><th class="right">Price</th><th class="right">1D</th><th class="right">5D</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Crude WTI</strong></td><td class="right mono">$90.70</td><td class="right green mono">▲ 0.01%</td><td class="right amber mono"><strong>▲ 10.30%</strong></td></tr>
+          <tr><td><strong>Brent</strong></td><td class="right mono">$95.28</td><td class="right red mono">▼ 0.18%</td><td class="right amber mono"><strong>▲ 8.47%</strong></td></tr>
+          <tr><td>Gold</td><td class="right mono">$4,434</td><td class="right green mono">▲ 1.97%</td><td class="right red mono">▼ 3.56%</td></tr>
+          <tr><td><strong>DXY (USD)</strong></td><td class="right mono">99.56</td><td class="right red mono">▼ 0.21%</td><td class="right amber mono">▲ 0.39%</td></tr>
+          <tr><td><strong>US 10Y Yield</strong></td><td class="right mono">4.80%</td><td class="right mono">→ flat</td><td class="right amber mono"><strong>▲ 3.38%</strong></td></tr>
+          <tr><td>USD/INR</td><td class="right mono">94.96</td><td class="right mono">flat</td><td class="right amber mono">multi-yr high</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- SECTOR BREAKDOWN -->
+  <h3 class="sec">NSE Sector Performance (Sep 2, 2026)</h3>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Sector</th><th class="right">LTP</th><th class="right">1D Chg%</th><th class="right">52W Range Position</th><th>Breadth %&gt;50dma</th><th>Read</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Nifty Auto</strong></td><td class="right mono">27,982</td><td class="right red mono">▼ 1.79%</td><td class="right mono">79%</td><td><span class="red">76.5% → fell from high</span></td><td class="red">Crude + demand fears</td></tr>
+        <tr><td><strong>Nifty IT</strong></td><td class="right mono">31,103</td><td class="right red mono">▼ 1.25%</td><td class="right mono">37%</td><td><span class="amber">100% above 50dma but falling</span></td><td class="dim">US yield compression; profit-booking</td></tr>
+        <tr><td>Nifty 50</td><td class="right mono">23,914</td><td class="right red mono">▼ 0.59%</td><td class="right mono">41%</td><td>—</td><td class="dim">Broad-based distribution</td></tr>
+        <tr><td>Nifty Bank</td><td class="right mono">57,172</td><td class="right red mono">▼ 0.41%</td><td class="right mono">61%</td><td><span class="dim">Pvt Bank 60%, PSU 41.7%</span></td><td class="dim">Rate uncertainty; NIM pressure</td></tr>
+        <tr><td>Nifty FMCG</td><td class="right mono">46,241</td><td class="right red mono">▼ 0.48%</td><td class="right mono">7%</td><td><span class="red">Only 26.7% above 50dma</span></td><td class="red">52W near lows; margin squeeze on crude</td></tr>
+        <tr><td>Nifty Metal</td><td class="right mono">13,157</td><td class="right red mono">▼ 0.24%</td><td class="right mono">82%</td><td><span class="amber">62.5%</span></td><td class="dim">China demand unclear</td></tr>
+        <tr><td>Nifty SmallCap</td><td class="right mono">19,812</td><td class="right red mono">▼ 0.36%</td><td class="right mono">88%</td><td>—</td><td class="dim">Still near 52W highs</td></tr>
+        <tr style="background:var(--green-bg)"><td><strong>Nifty Energy</strong></td><td class="right mono">38,028</td><td class="right green mono">▲ 0.59%</td><td class="right mono">57%</td><td><span class="dim">23.7%</span></td><td class="green">Crude tailwind for upstream</td></tr>
+        <tr style="background:var(--green-bg)"><td><strong>Nifty Realty</strong></td><td class="right mono">893</td><td class="right green mono">▲ 0.24%</td><td class="right mono">76%</td><td><span class="amber">70%</span></td><td class="green">Rate pause hope; defensive rotation</td></tr>
+        <tr style="background:var(--green-bg)"><td><strong>Nifty PSE</strong></td><td class="right mono">9,696</td><td class="right green mono">▲ 0.37%</td><td class="right mono">24%</td><td><span class="amber">27.3%</span></td><td class="green">Government capex narrative holding</td></tr>
+        <tr style="background:var(--green-bg)"><td><strong>Nifty Pharma</strong></td><td class="right mono">26,781</td><td class="right green mono">▲ 0.05%</td><td class="right mono">93%</td><td><span class="amber">45%</span></td><td class="green">Defensive bid; near 52W highs</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- FII/DII + BREADTH -->
+  <h3 class="sec">Institutional Flows & Breadth (30-Day)</h3>
+  <div class="grid2">
+    <div class="card">
+      <div class="card-title">FII / DII — 30-Day Cumulative</div>
+      <div style="margin-top:12px;" class="bbar-wrap">
+        <div class="bbar-row">
+          <div class="bbar-label">FII Net 30d</div>
+          <div class="bbar-track"><div class="bbar-fill" style="width:10%;background:var(--green)"></div></div>
+          <div class="bbar-val green mono">+4,678</div>
+        </div>
+        <div class="bbar-row">
+          <div class="bbar-label">FII Buys</div>
+          <div class="bbar-track"><div class="bbar-fill" style="width:33%;background:var(--blue)"></div></div>
+          <div class="bbar-val blue mono">+13,677</div>
+        </div>
+        <div class="bbar-row">
+          <div class="bbar-label">FII Sells</div>
+          <div class="bbar-track"><div class="bbar-fill" style="width:22%;background:var(--red)"></div></div>
+          <div class="bbar-val red mono">−8,999</div>
+        </div>
+        <div class="bbar-row">
+          <div class="bbar-label" style="font-weight:700;color:var(--green)">DII Net 30d</div>
+          <div class="bbar-track"><div class="bbar-fill" style="width:100%;background:var(--green)"></div></div>
+          <div class="bbar-val green mono" style="font-weight:700">+41,643</div>
+        </div>
+      </div>
+      <p style="font-size:12px;color:var(--text3);margin-top:12px;">All values in ₹ Crore. DII (domestic mutual funds + insurance) are providing massive structural support — absorbing every FII sell wave. This is the primary reason the fall is orderly and not a crash.</p>
+    </div>
+    <div class="card">
+      <div class="card-title">Breadth Trend — last 15 sessions</div>
+      <div style="margin-top:12px;" class="bbar-wrap">
+        <div class="bbar-row"><div class="bbar-label dim" style="font-size:10px;">Sep 1</div><div class="bbar-track"><div class="bbar-fill" style="width:33%;background:var(--red)"></div></div><div class="bbar-val red mono">33%</div></div>
+        <div class="bbar-row"><div class="bbar-label dim" style="font-size:10px;">Aug 31</div><div class="bbar-track"><div class="bbar-fill" style="width:34%;background:var(--red)"></div></div><div class="bbar-val red mono">34%</div></div>
+        <div class="bbar-row"><div class="bbar-label dim" style="font-size:10px;">Aug 28</div><div class="bbar-track"><div class="bbar-fill" style="width:52%;background:var(--amber)"></div></div><div class="bbar-val amber mono">52%</div></div>
+        <div class="bbar-row"><div class="bbar-label dim" style="font-size:10px;">Aug 27</div><div class="bbar-track"><div class="bbar-fill" style="width:33%;background:var(--red)"></div></div><div class="bbar-val red mono">33%</div></div>
+        <div class="bbar-row"><div class="bbar-label dim" style="font-size:10px;">Aug 26</div><div class="bbar-track"><div class="bbar-fill" style="width:55%;background:var(--green)"></div></div><div class="bbar-val green mono">55%</div></div>
+        <div class="bbar-row"><div class="bbar-label dim" style="font-size:10px;">Aug 20</div><div class="bbar-track"><div class="bbar-fill" style="width:60%;background:var(--green)"></div></div><div class="bbar-val green mono">60%</div></div>
+        <div class="bbar-row"><div class="bbar-label dim" style="font-size:10px;">Aug 19</div><div class="bbar-track"><div class="bbar-fill" style="width:32%;background:var(--red)"></div></div><div class="bbar-val red mono">32%</div></div>
+      </div>
+      <p style="font-size:12px;color:var(--text3);margin-top:12px;">Breadth oscillates: recoveries to 50–60% are sold down within 1–2 sessions. Classic distribution pattern — strong hands distributing to weak hands on every bounce.</p>
+    </div>
+  </div>
+
+  <!-- STAGE DISTRIBUTION -->
+  <h3 class="sec">Weinstein Stage Distribution — Full NSE Universe</h3>
+  <div class="card" style="padding:20px 22px;">
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:16px;margin-bottom:16px;">
+      <div>
+        <div style="font-size:11px;color:var(--text3);margin-bottom:4px;">Stage 1 — Basing</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:22px;color:var(--blue);">22.1%</div>
+        <div style="font-size:12px;color:var(--text2);">584 stocks</div>
+        <div style="background:var(--border);border-radius:4px;height:6px;margin-top:8px;overflow:hidden;"><div style="width:22.1%;height:100%;background:var(--blue);border-radius:4px;"></div></div>
+      </div>
+      <div>
+        <div style="font-size:11px;color:var(--text3);margin-bottom:4px;">Stage 2 — Uptrend</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:22px;color:var(--green);">14.6%</div>
+        <div style="font-size:12px;color:var(--text2);">387 stocks</div>
+        <div style="background:var(--border);border-radius:4px;height:6px;margin-top:8px;overflow:hidden;"><div style="width:14.6%;height:100%;background:var(--green);border-radius:4px;"></div></div>
+      </div>
+      <div>
+        <div style="font-size:11px;color:var(--text3);margin-bottom:4px;">Stage 3 — Topping</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:22px;color:var(--amber);">42.8%</div>
+        <div style="font-size:12px;color:var(--text2);">1,132 stocks</div>
+        <div style="background:var(--border);border-radius:4px;height:6px;margin-top:8px;overflow:hidden;"><div style="width:42.8%;height:100%;background:var(--amber);border-radius:4px;"></div></div>
+      </div>
+      <div>
+        <div style="font-size:11px;color:var(--text3);margin-bottom:4px;">Stage 4 — Declining</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:22px;color:var(--red);">20.6%</div>
+        <div style="font-size:12px;color:var(--text2);">544 stocks</div>
+        <div style="background:var(--border);border-radius:4px;height:6px;margin-top:8px;overflow:hidden;"><div style="width:20.6%;height:100%;background:var(--red);border-radius:4px;"></div></div>
+      </div>
+    </div>
+    <p style="font-size:13px;color:var(--text2);line-height:1.65;">The <strong style="color:var(--text);">63.4% in Stage 3+4</strong> is the structural weight pulling the market down. This is not caused by the current macro triggers — it pre-existed them. The macro triggers (crude, yields) are the catalyst that's converting Stage 3 stocks into Stage 4. Only 14.6% of stocks are still in Stage 2 uptrend — any broad-based rally attempt faces enormous supply from the 42.8% Stage 3 overhang.</p>
+  </div>
+
+  <!-- SIGNALS WATCH -->
+  <h3 class="sec">Green Shoots — What Could Reverse The Fall</h3>
+  <div class="signals">
+    <div class="sig">
+      <div class="sig-icon">🛢️</div>
+      <div class="sig-title amber">Crude stabilises below $85</div>
+      <div class="sig-body">A mean-reversion in crude (supply increase, demand drop) would instantly re-rate Auto, FMCG, Airlines, Chemicals. Would reduce CAD pressure on INR.</div>
+    </div>
+    <div class="sig">
+      <div class="sig-icon">📉</div>
+      <div class="sig-title amber">US 10Y backs off below 4.5%</div>
+      <div class="sig-body">Any dovish Fed signal or weak US jobs data could pull yields down, reducing EM outflow pressure. DXY would weaken → INR stabilises → FII buying resumes.</div>
+    </div>
+    <div class="sig">
+      <div class="sig-icon">🏦</div>
+      <div class="sig-title green">DII floor is solid</div>
+      <div class="sig-body">₹41,643 Cr DII buying in 30 days is structural. Mutual fund SIP flows (~₹20,000+ Cr/month) create a monthly price floor. This prevents a crash — but not a grind.</div>
+    </div>
+    <div class="sig">
+      <div class="sig-icon">💊</div>
+      <div class="sig-title green">Pharma near 52W high (93% range)</div>
+      <div class="sig-body">Defensive rotation visible. Pharma holding strong even as broader market falls — showing institutional preference for earnings visibility over growth risk.</div>
+    </div>
+    <div class="sig">
+      <div class="sig-icon">🏛️</div>
+      <div class="sig-title">RBI rate cut catalyst</div>
+      <div class="sig-body">If RBI signals an October rate cut (next MPC Sep 30 — Oct 2), domestic rate-sensitives (Banks, Realty, NBFCs) could rally strongly and pull indices up.</div>
+    </div>
+    <div class="sig">
+      <div class="sig-icon">📊</div>
+      <div class="sig-title">Q2 earnings (Oct–Nov)</div>
+      <div class="sig-body">Q2FY27 earnings season (Oct) is the next fundamental catalyst. If IT and Banks beat estimates, the correction could find a durable floor.</div>
+    </div>
+  </div>
+
+  <!-- KEY LEVELS -->
+  <h3 class="sec">Key Technical Levels — Nifty 50</h3>
+  <div class="card">
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;text-align:center;">
+      <div>
+        <div style="font-size:11px;color:var(--text3);margin-bottom:6px;">IMMEDIATE RESISTANCE</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:26px;color:var(--amber);">24,200</div>
+        <div style="font-size:12px;color:var(--text2);">Aug 26–28 cluster · Failed 3×</div>
+      </div>
+      <div style="border-left:1px solid var(--border);border-right:1px solid var(--border);">
+        <div style="font-size:11px;color:var(--text3);margin-bottom:6px;">CURRENT PRICE</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:26px;color:var(--text);">23,914</div>
+        <div style="font-size:12px;color:var(--text2);">Sep 2 close · −2.9% from peak</div>
+      </div>
+      <div>
+        <div style="font-size:11px;color:var(--text3);margin-bottom:6px;">KEY SUPPORT ZONES</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:18px;color:var(--red);">23,700 → 23,500</div>
+        <div style="font-size:12px;color:var(--text2);">200DMA zone · Aug lows · Critical hold</div>
+      </div>
+    </div>
+    <p style="font-size:13px;color:var(--text2);margin-top:16px;padding-top:14px;border-top:1px solid var(--border);">If 23,700 breaks on volume → next support cluster is 23,200–23,400 (prior consolidation). A hold above 23,700 with improving breadth (&gt;55% advance days) would be the first sign of distribution ending. 52W low is 22,183 — still a long way down. Watch for VIX crossing 15 as an acceleration signal.</p>
+  </div>
+
+  <!-- CONCLUSION -->
+  <div class="conclusion">
+    <h4>📋 Research Summary — What To Do</h4>
+    <ul>
+      <li><strong style="color:var(--red)">Do not fight the trend.</strong> 63% of stocks in Stage 3/4, ROTATION regime active, breadth deeply negative on 10/15 sessions. The weight of evidence is bearish.</li>
+      <li><strong style="color:var(--amber)">Primary macro triggers remain live.</strong> US 10Y at 4.80% and crude at $95 Brent are not resolved. Until at least one reverses, macro headwind persists.</li>
+      <li><strong style="color:var(--green)">DII prevents a crash.</strong> The ₹41,643 Cr DII support in 30 days means this is a grind, not a collapse. Nifty's 52W floor (22,183) is well defended by institutional buying programs.</li>
+      <li><strong>Rotate defensively.</strong> Pharma (near 52W high, relative strength), Energy/PSU (crude tailwind), Realty (rate-cut optionality) — these are the pockets working. Reduce Auto, IT exposure at bounces.</li>
+      <li><strong>STP discipline matters here.</strong> Only trade setups with R:R ≥ 2.0, hard stops, and Stage 2 confirmation. POWERGRID and COALINDIA showed the right pattern this morning — isolated pockets of strength in a weak market.</li>
+      <li><strong>Watch Sep 30 – Oct 2 RBI MPC.</strong> A rate-cut signal is the highest-probability single catalyst to reverse the correction. If crude pulls back AND RBI cuts → Nifty could snap back 2–3% in a session.</li>
+    </ul>
+  </div>
+
+  <div class="disc">
+    <strong>Educational research only — not investment advice.</strong> All data sourced from Agent Adda's PostgreSQL database (NSE EOD), yfinance (live prices), and breadth metrics as of 2026-09-02. This analysis is for educational and research purposes. Agent Adda is not a SEBI-registered research analyst. Consult a SEBI-registered intermediary before acting on any information.
+  </div>
+
+</div>
+
+
+</body>
+</html>
