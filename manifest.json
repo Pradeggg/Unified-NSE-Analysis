@@ -1,106 +1,106 @@
 {
-  "generated_at": "2026-08-26T19:01:09",
+  "generated_at": "2026-09-08T19:26:16",
   "source_repository": "/Users/pradeepgorai/Documents/Projects/finance/Unified-NSE-Analysis",
-  "source_commit": "822d5fc50df0784087eb7f31bcb6b514069f4482",
+  "source_commit": "024e0ee8fefcd88d8e472f778a7043ec0b367b96",
   "reports": [
     {
       "category": "daily/eod-market",
       "name": "EOD Market Report HTML",
       "source": "reports/latest/eod_market_report.html",
       "path": "daily/eod-market/eod_market_report.html",
-      "bytes": 90312,
-      "sha256": "692571e6cb98b9f1e2f03d0405abc07cccf423c330287b2ebf39cc494d50bdae",
-      "modified_at": "2026-08-26T18:40:33"
+      "bytes": 92038,
+      "sha256": "2504170e2341f80c6f1347e02f4cb62c23ee768fbd87053415784da3f6b9d5cb",
+      "modified_at": "2026-09-07T21:02:46"
     },
     {
       "category": "daily/eod-market",
       "name": "EOD Market Report Markdown",
       "source": "reports/latest/eod_market_report.md",
       "path": "daily/eod-market/eod_market_report.md",
-      "bytes": 3215,
-      "sha256": "362175fe5bc078c719b6aca53adf8898089701f531ec7f481dc58299d5cd04e1",
-      "modified_at": "2026-08-26T18:40:33"
+      "bytes": 5448,
+      "sha256": "1b1cf8aa4667438a6549f86c3192e8cbe05bd1c82fa79dbaa8a8e0e199e6861b",
+      "modified_at": "2026-09-07T21:02:46"
     },
     {
       "category": "daily/sector-rotation",
       "name": "Sector Rotation HTML",
       "source": "reports/latest/sector_rotation.html",
       "path": "daily/sector-rotation/sector_rotation.html",
-      "bytes": 631967,
-      "sha256": "dffb474c05baae6dca2ea43039f2d202decefe17537386f2a478c605fa258320",
-      "modified_at": "2026-08-26T18:57:22"
+      "bytes": 655072,
+      "sha256": "24d5464ee86cebeccb7135695887bf3598ec953a6edf7bf67d3200a78dc56c4f",
+      "modified_at": "2026-09-07T20:58:56"
     },
     {
       "category": "daily/sector-rotation",
       "name": "Sector Rotation Markdown",
       "source": "reports/latest/sector_rotation.md",
       "path": "daily/sector-rotation/sector_rotation.md",
-      "bytes": 23054,
-      "sha256": "0d0ce34dddc9a4acd91d9d71e1d1f651a990090ac750aca3006adf58310669dd",
-      "modified_at": "2026-08-26T18:57:22"
+      "bytes": 24049,
+      "sha256": "fc997647971b076d77f13f9bf2f9a6ec43020c7283503c6173e80c0ec7983dc9",
+      "modified_at": "2026-09-07T20:58:56"
     },
     {
       "category": "daily/sector-rotation",
       "name": "Sector Rotation PDF",
       "source": "reports/latest/sector_rotation.pdf",
       "path": "daily/sector-rotation/sector_rotation.pdf",
-      "bytes": 4380884,
-      "sha256": "99a56a9a87be80f22bf00bb8756e610d60221d53c563dc53ae829c273903f276",
-      "modified_at": "2026-08-26T18:57:27"
+      "bytes": 4396756,
+      "sha256": "398f2defbbe26f658474bede1676a98a3e6177e4640e2c252c562f7d969c41ab",
+      "modified_at": "2026-09-07T20:59:27"
     },
     {
       "category": "daily/top-picks",
       "name": "Top Investment Picks HTML",
       "source": "reports/latest/top_picks.html",
       "path": "daily/top-picks/top_picks.html",
-      "bytes": 1733061,
-      "sha256": "c93d095d515b93886c753056ebb5502e3a2152c0ee8c3c7b99d48ded210abb43",
-      "modified_at": "2026-08-26T18:11:24"
+      "bytes": 1728984,
+      "sha256": "b960288b224fa510727370511e4c84300b54503ac542e7803a2194273b0fcf3a",
+      "modified_at": "2026-09-07T21:02:15"
     },
     {
       "category": "daily/top-picks",
       "name": "Top Investment Picks Markdown",
       "source": "reports/latest/top_picks.md",
       "path": "daily/top-picks/top_picks.md",
-      "bytes": 46686,
-      "sha256": "856f1d7dbc5c31f73136fd691ad0ded4794003f19681f8e2676958af227b8c62",
-      "modified_at": "2026-08-26T18:11:24"
+      "bytes": 50406,
+      "sha256": "e12d185c8ce05432dd83cdbe3f0b6aae47f985f531b4945ff9257bc934d955cc",
+      "modified_at": "2026-09-07T21:02:15"
     },
     {
       "category": "daily/stage2",
       "name": "Stage 2 Tracker HTML",
       "source": "reports/latest/stage2_tracker.html",
       "path": "daily/stage2/stage2_tracker.html",
-      "bytes": 3023754,
-      "sha256": "c7c75c3b3acde7432bbbd6408bcc04527c51791f74133952ad20676ae01ab77a",
-      "modified_at": "2026-08-26T18:08:24"
+      "bytes": 3528976,
+      "sha256": "5d48204074b6e2284cd5b42afdb9d9f1d0a722de7a2a236f01d066aac11fc85b",
+      "modified_at": "2026-09-07T20:59:53"
     },
     {
       "category": "daily/strategy-lab",
       "name": "Portfolio Strategy Lab HTML",
       "source": "reports/latest/portfolio_strategy_lab.html",
       "path": "daily/strategy-lab/portfolio_strategy_lab.html",
-      "bytes": 2558452,
-      "sha256": "79f0424dd8e3ea3bd437f0825fb5bce243ca42564efa1b4f3db9ae68866dd95c",
-      "modified_at": "2026-08-26T18:35:55"
+      "bytes": 2597134,
+      "sha256": "5f68dea32fdf9eab9fa290d0ae6714fba2de8103f9909285b3036778a3a1efca",
+      "modified_at": "2026-09-07T19:31:55"
     },
     {
       "category": "daily/portfolio",
       "name": "Portfolio Analysis HTML",
       "source": "reports/latest/portfolio_analysis.html",
       "path": "daily/portfolio/portfolio_analysis.html",
-      "bytes": 2616574,
-      "sha256": "cb7fa3042d5fa1efeec494abfb19ac64df8e13a2768c9e3f77899d118de45e8e",
-      "modified_at": "2026-08-26T18:11:52"
+      "bytes": 2672995,
+      "sha256": "5ae750204d00a6b87bf7f5ab8237fd5dd2bdfa7af8cdc269751a69fea57bb70c",
+      "modified_at": "2026-09-07T21:03:01"
     },
     {
       "category": "daily/results",
       "name": "Results Analysis HTML",
       "source": "reports/latest/results_analysis.html",
       "path": "daily/results/results_analysis.html",
-      "bytes": 3823,
-      "sha256": "961b75de618dad52c4498b7a77903ac3a11f0b154e5078f92ee5b75dcb8fb016",
-      "modified_at": "2026-08-26T18:16:49"
+      "bytes": 3323,
+      "sha256": "ad48a680b0d421a3213ec5accf4b6419aa12a28df8065d8d029adb6afb86576b",
+      "modified_at": "2026-09-07T21:09:25"
     },
     {
       "category": "daily/global",
@@ -116,9 +116,18 @@
       "name": "Intraday F&O Alert Latest",
       "source": "logs/intraday_alerts_latest.md",
       "path": "intraday/alerts/intraday_alerts_latest.md",
-      "bytes": 2603,
-      "sha256": "f90014985d765d2d55965b704387cb9e995ac3a491a70030faab8d7b35d2ca7f",
-      "modified_at": "2026-08-26T19:00:14"
+      "bytes": 14004,
+      "sha256": "d8b14ecc2f87b07506a2e3df8dea50ad8403d8ff09b2138ab69ffa244eebaa5e",
+      "modified_at": "2026-09-08T09:38:28"
+    },
+    {
+      "category": "research/stocks",
+      "name": "MARKSANS Deep Research",
+      "source": "reports/latest/research_MARKSANS.html",
+      "path": "research/stocks/MARKSANS.html",
+      "bytes": 46338,
+      "sha256": "678eda4779070665c92833e15d3b3a0c24e4bff7d8ea231e213069f319d19800",
+      "modified_at": "2026-09-08T19:25:02"
     }
   ],
   "missing_optional": [

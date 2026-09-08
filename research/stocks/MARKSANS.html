@@ -1,0 +1,876 @@
+<title>Marksans Pharma Research</title>
+<style>
+  /* ── Token system ── */
+  :root {
+    --bg:       #F7F9FC;
+    --bg2:      #EEF2F7;
+    --panel:    #FFFFFF;
+    --border:   #D6DDE8;
+    --ink:      #0F1C2E;
+    --ink2:     #3A4D63;
+    --muted:    #6B7F96;
+    --subtle:   #96A8BC;
+    --teal:     #00B89C;
+    --teal-dim: #E0F7F3;
+    --teal-mid: #00977F;
+    --green:    #16A34A;
+    --green-bg: #DCFCE7;
+    --amber:    #B45309;
+    --amber-bg: #FEF3C7;
+    --red:      #DC2626;
+    --red-bg:   #FEE2E2;
+    --navy:     #0B1628;
+    --mono:     "JetBrains Mono", ui-monospace, "Cascadia Code", Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg:       #0B1628;
+      --bg2:      #0F1E35;
+      --panel:    #132038;
+      --border:   #1E3050;
+      --ink:      #E8F0FA;
+      --ink2:     #A8BDD6;
+      --muted:    #6B8AA8;
+      --subtle:   #4A6480;
+      --teal:     #00C9B1;
+      --teal-dim: #002E28;
+      --teal-mid: #00A090;
+      --green:    #22C55E;
+      --green-bg: #052E16;
+      --amber:    #F59E0B;
+      --amber-bg: #1C1400;
+      --red:      #F87171;
+      --red-bg:   #1F0808;
+      --navy:     #0B1628;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg:       #0B1628;
+    --bg2:      #0F1E35;
+    --panel:    #132038;
+    --border:   #1E3050;
+    --ink:      #E8F0FA;
+    --ink2:     #A8BDD6;
+    --muted:    #6B8AA8;
+    --subtle:   #4A6480;
+    --teal:     #00C9B1;
+    --teal-dim: #002E28;
+    --teal-mid: #00A090;
+    --green:    #22C55E;
+    --green-bg: #052E16;
+    --amber:    #F59E0B;
+    --amber-bg: #1C1400;
+    --red:      #F87171;
+    --red-bg:   #1F0808;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 15px/1.65 Inter, "Helvetica Neue", Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ── Fonts ── */
+  @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
+
+  /* ── Sticky header ── */
+  .topbar {
+    position: sticky; top: 0; z-index: 100;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between; gap: 16px;
+    padding: 0 32px; height: 52px;
+  }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 13px; color: var(--ink); letter-spacing: -.01em; }
+  .brand-mark { width: 28px; height: 28px; border-radius: 6px; background: var(--teal); display: grid; place-items: center; font-size: 11px; font-weight: 800; color: #fff; letter-spacing: 0; }
+  .topnav { display: flex; gap: 2px; align-items: center; flex-wrap: wrap; }
+  .topnav a { font-size: 12px; font-weight: 500; color: var(--muted); padding: 4px 10px; border-radius: 4px; text-decoration: none; transition: color .15s, background .15s; white-space: nowrap; }
+  .topnav a:hover { color: var(--ink); background: var(--bg2); }
+  .pill {
+    font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em;
+    background: var(--teal); color: #fff; border-radius: 4px; padding: 3px 8px;
+  }
+  .pill.buy { background: var(--green); }
+
+  /* ── Page wrapper ── */
+  .page { max-width: 1180px; margin: 0 auto; padding: 0 32px 80px; }
+
+  /* ── Hero ── */
+  .hero {
+    display: grid; grid-template-columns: 1fr 320px; gap: 32px;
+    padding: 48px 0 36px; border-bottom: 1px solid var(--border);
+    align-items: start;
+  }
+  .eyebrow { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .12em; color: var(--teal); margin-bottom: 12px; }
+  h1 { font-family: "DM Serif Display", Georgia, serif; font-size: clamp(44px, 6vw, 72px); line-height: 1.05; margin: 0 0 8px; color: var(--ink); font-weight: 400; }
+  h1 em { font-style: italic; color: var(--teal); }
+  .hero-sub { font-size: 16px; color: var(--ink2); line-height: 1.6; max-width: 560px; margin: 0 0 16px; }
+  .hero-meta { font-size: 11.5px; color: var(--muted); }
+
+  /* ── Price card ── */
+  .price-card {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+    padding: 22px; display: flex; flex-direction: column; gap: 14px;
+  }
+  .price-main { font-family: var(--mono); font-size: 38px; font-weight: 600; color: var(--ink); line-height: 1; letter-spacing: -.02em; }
+  .price-move { font-size: 13px; font-weight: 600; color: var(--green); }
+  .price-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+  .tag {
+    font-size: 10.5px; font-weight: 600; padding: 3px 8px; border-radius: 4px;
+    background: var(--teal-dim); color: var(--teal-mid); border: 1px solid var(--teal);
+    opacity: .9;
+  }
+  .tag.green { background: var(--green-bg); color: var(--green); border-color: var(--green); }
+  .tag.amber { background: var(--amber-bg); color: var(--amber); border-color: var(--amber); }
+  .tag.red   { background: var(--red-bg); color: var(--red); border-color: var(--red); }
+  .divider-line { border: none; border-top: 1px solid var(--border); margin: 0; }
+  .stance { font-size: 13px; color: var(--ink2); line-height: 1.5; }
+  .stance strong { color: var(--ink); }
+
+  /* ── KPI strip ── */
+  .kpi-strip {
+    display: grid; grid-template-columns: repeat(6, 1fr); gap: 0;
+    border: 1px solid var(--border); border-radius: 10px; overflow: hidden;
+    margin: 28px 0;
+  }
+  .kpi {
+    padding: 16px 18px; background: var(--panel);
+    border-right: 1px solid var(--border);
+  }
+  .kpi:last-child { border-right: none; }
+  .kpi-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-bottom: 6px; }
+  .kpi-val { font-family: var(--mono); font-size: 20px; font-weight: 600; color: var(--ink); line-height: 1; }
+  .kpi-sub { font-size: 11px; color: var(--muted); margin-top: 4px; }
+  .kpi-sub.up { color: var(--green); font-weight: 600; }
+  .kpi-sub.dn { color: var(--red); font-weight: 600; }
+
+  /* ── Sections ── */
+  section { padding: 40px 0; border-top: 1px solid var(--border); }
+  h2 { font-family: "DM Serif Display", Georgia, serif; font-size: 28px; font-weight: 400; color: var(--ink); margin: 0 0 4px; }
+  .sec-note { font-size: 13px; color: var(--muted); margin: 0 0 24px; }
+  h3 { font-size: 14px; font-weight: 700; color: var(--ink); margin: 0 0 10px; letter-spacing: -.01em; }
+
+  /* ── Cards ── */
+  .cards { display: grid; gap: 14px; }
+  .cards.c2 { grid-template-columns: repeat(2, 1fr); }
+  .cards.c3 { grid-template-columns: repeat(3, 1fr); }
+  .cards.c4 { grid-template-columns: repeat(4, 1fr); }
+  .card { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 18px; }
+  p { margin: 0 0 10px; color: var(--ink2); font-size: 14px; }
+  p:last-child { margin-bottom: 0; }
+  ul { margin: 0; padding-left: 16px; color: var(--ink2); font-size: 14px; }
+  li { margin: 6px 0; }
+  a { color: var(--teal-mid); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  /* ── Tables ── */
+  .tbl-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 14px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); background: var(--bg2); padding: 9px 12px; text-align: right; white-space: nowrap; }
+  th:first-child { text-align: left; }
+  td { padding: 9px 12px; border-top: 1px solid var(--border); color: var(--ink2); text-align: right; font-variant-numeric: tabular-nums; vertical-align: top; }
+  td:first-child { text-align: left; color: var(--ink); font-weight: 500; }
+  tr:hover td { background: var(--bg2); }
+  .up { color: var(--green); font-weight: 600; }
+  .dn { color: var(--red); font-weight: 600; }
+  .hi { background: color-mix(in srgb, var(--teal) 8%, transparent); }
+
+  /* ── Scores ── */
+  .score-row { display: grid; grid-template-columns: 180px 1fr 52px; gap: 12px; align-items: center; margin: 10px 0; }
+  .score-label { font-size: 12px; color: var(--muted); font-weight: 500; }
+  .score-track { height: 8px; background: var(--bg2); border-radius: 99px; overflow: hidden; border: 1px solid var(--border); }
+  .score-fill { height: 100%; border-radius: 99px; }
+  .score-num { font-family: var(--mono); font-size: 12px; font-weight: 600; color: var(--ink); text-align: right; }
+
+  /* ── Callout ── */
+  .callout { border-left: 3px solid var(--teal); background: var(--teal-dim); border-radius: 0 6px 6px 0; padding: 12px 16px; margin: 14px 0; font-size: 13px; color: var(--ink2); }
+  .callout.warn { border-color: var(--amber); background: var(--amber-bg); }
+  .callout.danger { border-color: var(--red); background: var(--red-bg); }
+  .pullquote { font-family: "DM Serif Display", Georgia, serif; font-size: 22px; font-style: italic; line-height: 1.4; color: var(--ink); border-left: 3px solid var(--teal); padding-left: 18px; margin: 0 0 16px; }
+
+  /* ── Risk table ── */
+  .risk-item { display: grid; grid-template-columns: 160px 1fr 80px; gap: 12px; align-items: start; padding: 12px 0; border-top: 1px solid var(--border); }
+  .risk-item:first-child { border-top: none; }
+  .risk-name { font-size: 13px; font-weight: 600; color: var(--ink); }
+  .risk-detail { font-size: 13px; color: var(--ink2); }
+  .sev { font-size: 10px; font-weight: 700; text-transform: uppercase; padding: 3px 8px; border-radius: 4px; text-align: center; white-space: nowrap; }
+  .sev.high { background: var(--red-bg); color: var(--red); }
+  .sev.med  { background: var(--amber-bg); color: var(--amber); }
+  .sev.low  { background: var(--green-bg); color: var(--green); }
+
+  /* ── Concall cards ── */
+  .concall-grid { display: grid; gap: 12px; }
+  .concall-card { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 16px 18px; }
+  .concall-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .concall-qtr { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--teal); }
+  .concall-date { font-size: 11px; color: var(--muted); }
+
+  /* ── Geo bar chart ── */
+  .geo-bars { display: flex; flex-direction: column; gap: 10px; }
+  .geo-row { display: grid; grid-template-columns: 140px 1fr 60px 70px; gap: 12px; align-items: center; }
+  .geo-name { font-size: 13px; color: var(--ink); font-weight: 500; }
+  .geo-track { height: 10px; background: var(--bg2); border-radius: 99px; overflow: hidden; }
+  .geo-fill { height: 100%; border-radius: 99px; background: var(--teal); }
+  .geo-rev { font-family: var(--mono); font-size: 12px; color: var(--ink); text-align: right; }
+  .geo-yoy { font-size: 12px; font-weight: 600; }
+
+  /* ── Deal list ── */
+  .deal { display: grid; grid-template-columns: 220px 1fr; gap: 14px; padding: 14px 0; border-top: 1px solid var(--border); align-items: start; }
+  .deal:first-child { border-top: none; }
+  .deal-name { font-size: 13px; font-weight: 700; color: var(--ink); }
+  .deal-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .deal-detail { font-size: 13px; color: var(--ink2); }
+
+  /* ── SWOT ── */
+  .swot { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .swot-card { border-radius: 8px; padding: 16px 18px; }
+  .swot-s { background: var(--green-bg); border: 1px solid var(--green); }
+  .swot-w { background: var(--amber-bg); border: 1px solid var(--amber); }
+  .swot-o { background: var(--teal-dim); border: 1px solid var(--teal); }
+  .swot-t { background: var(--red-bg); border: 1px solid var(--red); }
+  .swot-label { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .1em; margin-bottom: 10px; }
+  .swot-s .swot-label { color: var(--green); }
+  .swot-w .swot-label { color: var(--amber); }
+  .swot-o .swot-label { color: var(--teal-mid); }
+  .swot-t .swot-label { color: var(--red); }
+
+  /* ── Trading levels ── */
+  .levels { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  .level { padding: 14px 16px; border-right: 1px solid var(--border); background: var(--panel); }
+  .level:last-child { border-right: none; }
+  .level-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); margin-bottom: 6px; }
+  .level-val { font-family: var(--mono); font-size: 18px; font-weight: 600; color: var(--ink); }
+  .level-note { font-size: 11px; color: var(--muted); margin-top: 4px; }
+  .level.entry .level-val { color: var(--teal-mid); }
+  .level.stop .level-val  { color: var(--red); }
+  .level.t1 .level-val    { color: var(--green); }
+  .level.t2 .level-val    { color: var(--green); }
+
+  /* ── Footer ── */
+  .footer { margin-top: 32px; padding: 18px 20px; border: 1px solid var(--border); border-radius: 8px; font-size: 12px; color: var(--muted); background: var(--bg2); line-height: 1.7; }
+  .footer strong { color: var(--ink2); }
+
+  /* ── Responsive ── */
+  @media (max-width: 960px) {
+    .hero { grid-template-columns: 1fr; }
+    .kpi-strip { grid-template-columns: repeat(3, 1fr); }
+    .kpi:nth-child(3) { border-right: none; }
+    .kpi:nth-child(4), .kpi:nth-child(5), .kpi:nth-child(6) { border-top: 1px solid var(--border); }
+    .cards.c3, .cards.c4 { grid-template-columns: repeat(2, 1fr); }
+    .swot { grid-template-columns: 1fr; }
+    .levels { grid-template-columns: repeat(3, 1fr); }
+    .level:nth-child(3) { border-right: none; }
+    .level:nth-child(4), .level:nth-child(5) { border-top: 1px solid var(--border); }
+    .geo-row { grid-template-columns: 120px 1fr 55px 60px; }
+    .score-row { grid-template-columns: 140px 1fr 48px; }
+  }
+  @media (max-width: 620px) {
+    .topbar { padding: 0 16px; }
+    .page { padding: 0 16px 60px; }
+    .topnav { display: none; }
+    .hero { padding: 28px 0 24px; }
+    .kpi-strip { grid-template-columns: repeat(2, 1fr); }
+    .kpi:nth-child(2) { border-right: none; }
+    .kpi:nth-child(3n) { border-right: 1px solid var(--border); }
+    .cards.c2, .cards.c3, .cards.c4 { grid-template-columns: 1fr; }
+    .deal { grid-template-columns: 1fr; }
+    .risk-item { grid-template-columns: 1fr 1fr; }
+    .risk-name { grid-column: 1 / -1; }
+    .levels { grid-template-columns: 1fr 1fr; }
+    .level:nth-child(2n) { border-right: none; }
+    .level { border-top: 1px solid var(--border); }
+    .level:first-child { border-top: none; }
+  }
+</style>
+
+<!-- Sticky top bar -->
+<header class="topbar">
+  <div class="brand">
+    <div class="brand-mark">AA</div>
+    Agent Adda Research
+  </div>
+  <nav class="topnav" aria-label="Report sections">
+    <span class="pill buy">Strong Buy</span>
+    <a href="#snapshot">Snapshot</a>
+    <a href="#financials">Financials</a>
+    <a href="#geography">Geography</a>
+    <a href="#deals">Deals &amp; Products</a>
+    <a href="#swot">SWOT</a>
+    <a href="#concalls">Concalls</a>
+    <a href="#technicals">Technicals</a>
+    <a href="#risks">Risks</a>
+    <a href="#levels">Levels</a>
+  </nav>
+</header>
+
+<div class="page">
+
+  <!-- Hero -->
+  <div class="hero">
+    <div>
+      <div class="eyebrow">NSE: MARKSANS &nbsp;·&nbsp; Pharma &nbsp;·&nbsp; Sep 8, 2026</div>
+      <h1>Marksans<br><em>Pharma</em></h1>
+      <p class="hero-sub">OTC &amp; Rx formulations across UK, US and Australia. Europe inflection underway — serial acquisitions funded from a ₹1,031 cr net-cash balance sheet.</p>
+      <p class="hero-meta">Data as of EOD 8 Sep 2026 &nbsp;·&nbsp; Financials in INR crore &nbsp;·&nbsp; Research only, not investment advice</p>
+    </div>
+    <div class="price-card">
+      <div>
+        <div class="kpi-label">Latest price (EOD)</div>
+        <div class="price-main">₹335.90</div>
+        <div class="price-move">▲ +0.25% vs prior close</div>
+      </div>
+      <hr class="divider-line">
+      <div class="price-tags">
+        <span class="tag green">Stage 2</span>
+        <span class="tag green">Strong Buy</span>
+        <span class="tag">RSI 56.18</span>
+        <span class="tag">ADX 39.8</span>
+        <span class="tag">20/40 screens</span>
+        <span class="tag">52-wk High</span>
+      </div>
+      <hr class="divider-line">
+      <div class="stance">
+        <strong>Research stance:</strong> Serial EU acquisitions + earnings acceleration + ₹1,031 cr war chest. Wait for SMA20 pullback (₹315–325) for best R:R.
+      </div>
+    </div>
+  </div>
+
+  <!-- KPI Strip -->
+  <div id="snapshot" class="kpi-strip">
+    <div class="kpi">
+      <div class="kpi-label">FY26 Revenue</div>
+      <div class="kpi-val">₹3,033cr</div>
+      <div class="kpi-sub up">+12.8% YoY</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">FY26 PAT</div>
+      <div class="kpi-val">₹420cr</div>
+      <div class="kpi-sub up">Record high</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Q1 FY27 PAT</div>
+      <div class="kpi-val">₹159cr</div>
+      <div class="kpi-sub up">+174% YoY</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">EBITDA margin</div>
+      <div class="kpi-val">25.3%</div>
+      <div class="kpi-sub up">Q1 FY27 all-time high</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Net cash</div>
+      <div class="kpi-val">₹1,031cr</div>
+      <div class="kpi-sub">Jun 2026</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Trailing P/E</div>
+      <div class="kpi-val">29.4×</div>
+      <div class="kpi-sub">TTM EPS ₹11.41</div>
+    </div>
+  </div>
+
+  <!-- Financials -->
+  <section id="financials">
+    <h2>Financial Performance</h2>
+    <p class="sec-note">5-year P&amp;L trend + 6-quarter acceleration. All figures INR crore (consolidated, exchange-filing sourced).</p>
+
+    <h3>Annual P&amp;L — FY22 to FY26</h3>
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Period</th><th>Revenue</th><th>Gross Profit</th><th>GPM%</th><th>EBITDA</th><th>OPM%</th><th>PAT</th><th>EPS</th><th>CFO</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>FY22</td><td>1,491</td><td>—</td><td>—</td><td>259</td><td>17%</td><td>187</td><td>4.51</td><td>—</td></tr>
+          <tr><td>FY23</td><td>1,852</td><td>—</td><td>—</td><td>340</td><td>18%</td><td>265</td><td>5.88</td><td>—</td></tr>
+          <tr><td>FY24</td><td>2,177</td><td>—</td><td>—</td><td>459</td><td>21%</td><td>315</td><td>6.92</td><td>230</td></tr>
+          <tr><td>FY25</td><td>2,623</td><td>—</td><td>—</td><td>533</td><td>20%</td><td>383</td><td>8.40</td><td>207</td></tr>
+          <tr class="hi"><td><strong>FY26</strong></td><td><strong>3,033</strong></td><td>1,674</td><td>56.7%</td><td><strong>601</strong></td><td>20.4%</td><td><strong>420</strong></td><td>9.22</td><td><strong>458</strong></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout">Revenue CAGR FY22–FY26: <strong>18.6%</strong> &nbsp;·&nbsp; PAT CAGR: <strong>22.4%</strong> &nbsp;·&nbsp; FY26 CFO/PAT = 1.09× — earnings are real and cash-backed.</div>
+
+    <h3 style="margin-top:24px">Quarterly Acceleration — Q1 FY26 → Q1 FY27</h3>
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr><th>Quarter</th><th>Revenue</th><th>EBITDA</th><th>OPM%</th><th>PAT</th><th>EPS</th><th>PAT YoY</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Q1 FY26</td><td>620</td><td>100</td><td>16.1%</td><td>58</td><td>1.29</td><td>—</td></tr>
+          <tr><td>Q2 FY26</td><td>720</td><td>144</td><td>20.0%</td><td>99</td><td>2.17</td><td>—</td></tr>
+          <tr><td>Q3 FY26</td><td>754</td><td>161</td><td>21.0%</td><td>114</td><td>2.50</td><td>—</td></tr>
+          <tr><td>Q4 FY26</td><td>856</td><td>195</td><td>22.8%</td><td>149</td><td>3.27</td><td class="up">+64%</td></tr>
+          <tr class="hi"><td><strong>Q1 FY27</strong></td><td>841</td><td><strong>213</strong></td><td><strong>25.3%</strong></td><td><strong>159</strong></td><td><strong>3.47</strong></td><td class="up"><strong>+174%</strong></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Five consecutive quarters of margin expansion. Q1 FY27 EBITDA of ₹213 cr is an all-time quarterly high. Working capital cycle improved from 159 days (Q1 FY26) to 132 days (Q1 FY27).</p>
+
+    <h3 style="margin-top:24px">Balance Sheet &amp; Cash Flow</h3>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Item</th><th>FY24</th><th>FY25</th><th>FY26</th></tr></thead>
+        <tbody>
+          <tr><td>Borrowings</td><td>244</td><td>322</td><td>343</td></tr>
+          <tr><td>Cash &amp; equivalents</td><td>—</td><td>—</td><td>634</td></tr>
+          <tr><td>Net Debt / (Cash)</td><td>217</td><td>321</td><td>343</td></tr>
+          <tr><td>CFO</td><td>230</td><td>207</td><td class="up">458</td></tr>
+          <tr><td>CFI</td><td>-141</td><td>-49</td><td class="dn">-249</td></tr>
+          <tr><td>CFO / PAT</td><td>0.73×</td><td>0.54×</td><td class="up">1.09×</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout warn">CFI jumped from -₹49 cr (FY25) to -₹249 cr (FY26) — European acquisitions (QliniQ, ABCnow). Funded entirely from internal accruals, no equity dilution.</div>
+  </section>
+
+  <!-- Geography -->
+  <section id="geography">
+    <h2>Geographic Breakdown</h2>
+    <p class="sec-note">Q1 FY27 (Apr–Jun 2026). North America remains largest by revenue; Europe is fastest-growing.</p>
+
+    <div class="geo-bars">
+      <div class="geo-row">
+        <div class="geo-name">US &amp; North America</div>
+        <div class="geo-track"><div class="geo-fill" style="width:45%"></div></div>
+        <div class="geo-rev">₹377 cr</div>
+        <div class="geo-yoy up">+15.1%</div>
+      </div>
+      <div class="geo-row">
+        <div class="geo-name">UK &amp; Europe</div>
+        <div class="geo-track"><div class="geo-fill" style="width:42%;background:var(--teal-mid)"></div></div>
+        <div class="geo-rev">₹356 cr</div>
+        <div class="geo-yoy up">+74.7%</div>
+      </div>
+      <div class="geo-row">
+        <div class="geo-name">Australia &amp; NZ</div>
+        <div class="geo-track"><div class="geo-fill" style="width:10%;background:#6B8AA8"></div></div>
+        <div class="geo-rev">₹88 cr</div>
+        <div class="geo-yoy up">+53.7%</div>
+      </div>
+      <div class="geo-row">
+        <div class="geo-name">Rest of World</div>
+        <div class="geo-track"><div class="geo-fill" style="width:3%;background:#4A6480"></div></div>
+        <div class="geo-rev">₹20 cr</div>
+        <div class="geo-yoy" style="color:var(--muted)">~3%</div>
+      </div>
+    </div>
+    <div class="callout" style="margin-top:16px">UK + Europe now 42% of revenue and accelerating. QliniQ contributed ₹44 cr in Q1; ABCnow (Germany) begins consolidation Q2 FY27. Europe is structurally catching the US.</div>
+
+    <h3 style="margin-top:24px">FY26 Full-Year Geography</h3>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Region</th><th>FY26 Revenue</th><th>Share</th><th>YoY</th></tr></thead>
+        <tbody>
+          <tr><td>US &amp; North America</td><td>1,533</td><td>52%</td><td class="up">+24%</td></tr>
+          <tr><td>UK &amp; Europe</td><td>1,015</td><td>34%</td><td class="dn">-1.4%</td></tr>
+          <tr><td>Australia &amp; NZ</td><td>303</td><td>10%</td><td class="up">+20%</td></tr>
+          <tr><td>Rest of World</td><td>99</td><td>3%</td><td class="dn">-4%</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>UK was -1.4% in FY26 (full year) before recovering sharply in Q4 FY26 and Q1 FY27 — acquisition + seasonal recovery. Q1 FY27 Europe at +74.7% is the biggest single-quarter acceleration in the company's history.</p>
+  </section>
+
+  <!-- Deals & Products -->
+  <section id="deals">
+    <h2>Key Contracts &amp; New Products</h2>
+    <p class="sec-note">Confirmed deals and product launches from company filings, concalls, and annual report.</p>
+
+    <h3>Strategic Deals</h3>
+    <div>
+      <div class="deal">
+        <div>
+          <div class="deal-name">QliniQ B.V. Acquisition</div>
+          <div class="deal-sub">Netherlands &nbsp;·&nbsp; FY26 close</div>
+        </div>
+        <div class="deal-detail">Netherlands OTC/pharma distributor. Contributed ₹44 cr in Q1 FY27 alone; also drove 53.1% organic EU growth. Opens Belgium, Netherlands, Luxembourg corridor. Funded from internal cash.</div>
+      </div>
+      <div class="deal">
+        <div>
+          <div class="deal-name">ABCnow GmbH Acquisition</div>
+          <div class="deal-sub">Germany &nbsp;·&nbsp; Q1 FY27</div>
+        </div>
+        <div class="deal-detail">Germany market entry vehicle. Consolidation begins Q2 FY27. Germany is one of Europe's largest OTC markets. Extends the EU acquisition platform alongside QliniQ.</div>
+      </div>
+      <div class="deal">
+        <div>
+          <div class="deal-name">Time-Cap FDA EIR</div>
+          <div class="deal-sub">US subsidiary &nbsp;·&nbsp; Oct 2023</div>
+        </div>
+        <div class="deal-detail">FDA Establishment Inspection Report with zero 483 observations. Protects US generics + OTC revenue floor; enables new ANDA filings without regulatory overhang.</div>
+      </div>
+      <div class="deal">
+        <div>
+          <div class="deal-name">Relonchem MHRA Auth</div>
+          <div class="deal-sub">UK &nbsp;·&nbsp; FY25–26</div>
+        </div>
+        <div class="deal-detail">Marketing authorisation for Cyanocobalamin 50mg tablets from UK MHRA. Expands Relonchem's UK product shelf in the vitamins/supplements category.</div>
+      </div>
+    </div>
+
+    <h3 style="margin-top:24px">New Products / Pipeline</h3>
+    <div class="cards c3">
+      <div class="card">
+        <h3>US — 112 new SKUs</h3>
+        <p>Launched 112 SKUs in FY26 across generics + OTC (pain, respiratory, digestive). Shelf expansion still being monetised — revenue contribution builds over 12–18 months post-launch.</p>
+      </div>
+      <div class="card">
+        <h3>Australia — 11 Rx Brands</h3>
+        <p>Nova Pharma launched 11 branded prescription products in FY26. Australia revenue +53.7% YoY in Q1 FY27. Branded Rx = structurally higher margins than generic supply.</p>
+      </div>
+      <div class="card">
+        <h3>Pipeline — 51 Products</h3>
+        <p>51 products in development across OTC + Rx. Target: ~15 new products annually. API backward integration supports cost advantage on each launch.</p>
+      </div>
+      <div class="card">
+        <h3>Goa Unit 2 Ramp</h3>
+        <p>₹50+ cr revenue at 60–65% capacity. Significant operating leverage as utilisation moves toward 85%+. Major capex cycle nearing completion — FCF inflection expected FY27–28.</p>
+      </div>
+      <div class="card">
+        <h3>API Backward Integration</h3>
+        <p>DMF → formulation → manufacturing pipeline. Management targets ~500 bps EBITDA margin expansion over the medium term as integration completes.</p>
+      </div>
+      <div class="card">
+        <h3>New Geographies</h3>
+        <p>Germany, Canada, Ireland entered in FY26. Revenue contributions still small but lay distribution infrastructure for FY27–28 scaling.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- SWOT -->
+  <section id="swot">
+    <h2>SWOT Analysis</h2>
+    <p class="sec-note">Synthesised from FY26 annual report (414 pages, GPT-4o extracted), Q1 FY27 concall, and website research.</p>
+    <div class="swot">
+      <div class="swot-card swot-s">
+        <div class="swot-label">Strengths</div>
+        <ul>
+          <li>Regulated-market OTC moat — genuine branded distribution in UK (Boots, Lloyds); extremely high entry barrier</li>
+          <li>Revenue scaled 2.4× in 4 years (FY22–FY26) — sustained compounding</li>
+          <li>Net cash ₹1,031 cr — debt-free, M&A self-funded, zero dilution risk</li>
+          <li>Gross margin ~57% — premium for OTC brand + product mix</li>
+          <li>Clean regulatory record — FDA EIR (no 483), multiple MHRA approvals</li>
+          <li>API backward integration reduces input cost volatility</li>
+          <li>Goa Unit 2 ramp — operating leverage still ahead</li>
+          <li>CFO/PAT = 1.09× — cash-backed earnings, not accounting artefact</li>
+        </ul>
+      </div>
+      <div class="swot-card swot-w">
+        <div class="swot-label">Weaknesses</div>
+        <ul>
+          <li>UK organic was -1.4% in FY26 (full year) — needed acquisition to recover growth</li>
+          <li>US + UK = ~86% of revenue — high geographic concentration</li>
+          <li>R&amp;D at 3% of revenue — low for an aspirational Rx pipeline builder</li>
+          <li>No specific forward revenue guidance given publicly</li>
+          <li>Customer concentration in UK (NHS pharmacy chains) — not disclosed quantitatively</li>
+          <li>Working capital cycle still 132 days — long vs. peers</li>
+        </ul>
+      </div>
+      <div class="swot-card swot-o">
+        <div class="swot-label">Opportunities</div>
+        <ul>
+          <li>European M&amp;A platform — ₹1,031 cr war chest, QliniQ + ABCnow as foundation</li>
+          <li>US OTC market — 112 SKUs launched, shelf placement monetising over 12–18 months</li>
+          <li>Australia branded Rx — 11 products launched, still early stage, high margin potential</li>
+          <li>API integration — ~500 bps EBITDA margin expansion potential</li>
+          <li>Canada + Ireland — new FY26 markets, multi-year scaling ahead</li>
+          <li>51-product pipeline — future revenue diversification</li>
+          <li>Goa Unit 2 — volume headroom at 60–65% utilisation</li>
+        </ul>
+      </div>
+      <div class="swot-card swot-t">
+        <div class="swot-label">Threats</div>
+        <ul>
+          <li>GBP/EUR currency risk — UK/EU revenue in foreign currency; unhedged exposure</li>
+          <li>US generic Rx pricing erosion — structural, though OTC more insulated</li>
+          <li>FDA / MHRA regulatory — any 483 or import alert = immediate 15–25% derating</li>
+          <li>Acquisition integration — QliniQ + ABCnow back-to-back; execution risk</li>
+          <li>Input cost inflation — API/excipient costs rising; not fully quantified</li>
+          <li>Seasonal demand — UK OTC winter-driven; Q1 FY28 base will be demanding</li>
+          <li>Environmental/ESG — EU supply-chain regulations (CSRD, deforestation) add compliance burden</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- Concalls -->
+  <section id="concalls">
+    <h2>Concall Insights</h2>
+    <p class="sec-note">Key management commentary from Q1 FY27 (Aug 13, 2026) and Q4 FY26 (May 27, 2026). Hosted by DAM Capital. Management: Mark Saldanha (CMD) + Jitendra Sharma (CFO).</p>
+
+    <div class="pullquote">"Q1 FY27 has been a very strong start to the year — all-time high quarterly EBITDA of ₹213 crore. Europe is emerging as a significant new growth engine."</div>
+
+    <div class="concall-grid">
+      <div class="concall-card">
+        <div class="concall-head">
+          <span class="concall-qtr">Q1 FY27 &nbsp;·&nbsp; Aug 13, 2026</span>
+          <span class="concall-date">Revenue ₹841 cr &nbsp;·&nbsp; PAT ₹159 cr &nbsp;·&nbsp; EBITDA 25.3%</span>
+        </div>
+        <div class="cards c2" style="gap:10px">
+          <div>
+            <h3>Europe is the strategy</h3>
+            <p>QliniQ (Netherlands) closed; ABCnow (Germany) consolidates Q2 FY27. Building a multi-country EU platform. Organic EU growth was 53.1% before QliniQ contribution — not acquisition-dependent.</p>
+          </div>
+          <div>
+            <h3>Margin durability</h3>
+            <p>EBITDA at 25.3% driven by operating leverage on fixed European base + gross margin improvement. Management characterises this as structural, not seasonal or one-time.</p>
+          </div>
+          <div>
+            <h3>Cash deployment</h3>
+            <p>₹1,058 cr crossed ₹1,000 cr milestone. "Actively exploring further acquisitions in Europe." Entire M&amp;A funded from accruals — no equity issuance planned.</p>
+          </div>
+          <div>
+            <h3>Goa Unit 2</h3>
+            <p>₹50+ cr revenue at 60–65% capacity utilisation. Operating leverage ahead as volume scales. Capex cycle "nearing completion" — FCF inflection signal for FY27–28.</p>
+          </div>
+          <div>
+            <h3>US business</h3>
+            <p>North America ₹377 cr (+15.1%) — solid but not the primary growth engine anymore. Pricing pressure on Rx "moderate." OTC business holding pricing well.</p>
+          </div>
+          <div>
+            <h3>Forward focus</h3>
+            <p>"Scale across geographies, accelerate new product launches, build out the European market, and continue improving profitability and cash-generating ability." — management's stated FY27 priorities.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="concall-card">
+        <div class="concall-head">
+          <span class="concall-qtr">Q4 FY26 &nbsp;·&nbsp; May 27, 2026</span>
+          <span class="concall-date">Revenue ₹856 cr &nbsp;·&nbsp; PAT ₹149 cr &nbsp;·&nbsp; EBITDA 22.8%</span>
+        </div>
+        <div class="cards c2" style="gap:10px">
+          <div>
+            <h3>"Historic Triple"</h3>
+            <p>Highest-ever revenue, EBITDA, and PAT simultaneously in FY26. Management described this as the beginning of a new structural growth phase, not a cyclical peak.</p>
+          </div>
+          <div>
+            <h3>UK recovery</h3>
+            <p>Q4 FY26 was UK's highest-ever quarterly revenue after a soft first half. New product launches + seasonal demand recovery. Entry into Germany, Canada, Ireland in FY26.</p>
+          </div>
+          <div>
+            <h3>Dividend + pipeline</h3>
+            <p>₹0.90/share final dividend — modest payout, retaining cash for M&amp;A. 51 products in development, ~15 per year launch target. API integration progressing.</p>
+          </div>
+          <div>
+            <h3>Competitive tone</h3>
+            <p>US Rx pricing pressure "moderate and stabilising." OTC market more insulated. UK OTC position with major pharmacy chains remains strong. Management unambiguously bullish on outlook.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout" style="margin-top:14px">
+      <strong>Links to source materials:</strong>
+      <a href="https://www.marksanspharma.com/earnings-call-transcripts.html" target="_blank">All transcripts (Q1 FY27 → FY21)</a> &nbsp;·&nbsp;
+      <a href="https://www.marksanspharma.com/audio/marksans-pharma-q1fy-27-conference-call.mp3" target="_blank">Q1 FY27 audio</a>
+    </div>
+  </section>
+
+  <!-- Technicals -->
+  <section id="technicals">
+    <h2>Technical Setup</h2>
+    <p class="sec-note">EOD Sep 8, 2026. Stage snapshot: Sep 7, 2026. Source: Agent Adda PostgreSQL (scores.stage_snapshots, market.equity_eod).</p>
+
+    <div class="cards c2">
+      <div class="card">
+        <h3>Stage &amp; Trend</h3>
+        <div class="score-row">
+          <div class="score-label">Weinstein Stage</div>
+          <div class="score-track"><div class="score-fill" style="width:100%;background:var(--green)"></div></div>
+          <div class="score-num" style="color:var(--green)">Stage 2</div>
+        </div>
+        <div class="score-row">
+          <div class="score-label">Technical Score</div>
+          <div class="score-track"><div class="score-fill" style="width:96%;background:var(--teal)"></div></div>
+          <div class="score-num">96.15</div>
+        </div>
+        <div class="score-row">
+          <div class="score-label">Investment Score</div>
+          <div class="score-track"><div class="score-fill" style="width:95%;background:var(--teal-mid)"></div></div>
+          <div class="score-num">94.73</div>
+        </div>
+        <div class="score-row">
+          <div class="score-label">EFS (Fundamental)</div>
+          <div class="score-track"><div class="score-fill" style="width:75%;background:var(--green)"></div></div>
+          <div class="score-num">75.48</div>
+        </div>
+        <div class="score-row">
+          <div class="score-label">Relative Strength</div>
+          <div class="score-track"><div class="score-fill" style="width:91%;background:var(--amber)"></div></div>
+          <div class="score-num">91.4</div>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Moving Averages &amp; Momentum</h3>
+        <div class="tbl-wrap" style="border:none;border-radius:0;margin:0">
+          <table>
+            <thead><tr><th>Indicator</th><th>Value</th><th>Signal</th></tr></thead>
+            <tbody>
+              <tr><td>RSI (14d)</td><td>56.18</td><td class="up">Constructive</td></tr>
+              <tr><td>ADX</td><td>39.8</td><td class="up">Strong trend</td></tr>
+              <tr><td>Supertrend (10,3)</td><td>₹298.05</td><td class="up">Bullish</td></tr>
+              <tr><td>SMA 20</td><td>₹325.59</td><td class="up">Above</td></tr>
+              <tr><td>SMA 50</td><td>₹289.14</td><td class="up">+16.3%</td></tr>
+              <tr><td>SMA 150</td><td>₹227.41</td><td class="up">+47.7%</td></tr>
+              <tr><td>SMA 200</td><td>₹217.35</td><td class="up">+54.5%</td></tr>
+              <tr><td>52-week high</td><td>₹349.95</td><td class="up">New high</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout" style="margin-top:14px">
+      <strong>20/40 screeners firing simultaneously</strong> — the highest breadth in the Agent Adda NIFTY 500 universe on Sep 7, 2026. Includes: Stage 2 Breakout, Minervini VCP, CANSLIM Elite, FII Buying Stage 2, Global Outperformers, Earnings Momentum, Quality Growth, Strong Balance Sheet, Institutional Favourites, Sales Growth Leaders, Momentum Beast, High Conviction, and 8 more.
+    </div>
+
+    <h3 style="margin-top:24px">6-Month Returns</h3>
+    <div class="cards c4">
+      <div class="card" style="text-align:center">
+        <div class="kpi-label">5-day</div>
+        <div class="kpi-val up">+4.2%</div>
+      </div>
+      <div class="card" style="text-align:center">
+        <div class="kpi-label">1-month</div>
+        <div class="kpi-val up">+20.4%</div>
+      </div>
+      <div class="card" style="text-align:center">
+        <div class="kpi-label">3-month</div>
+        <div class="kpi-val up">+34.5%</div>
+      </div>
+      <div class="card" style="text-align:center">
+        <div class="kpi-label">6-month</div>
+        <div class="kpi-val up">+93.0%</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Risks -->
+  <section id="risks">
+    <h2>Key Risks</h2>
+    <p class="sec-note">Sourced from FY26 annual report, Q1 FY27 concall, and website research. Severity reflects potential stock price impact, not probability.</p>
+
+    <div class="risk-item">
+      <div class="risk-name">FDA / MHRA Regulatory</div>
+      <div class="risk-detail">US + UK = 86% of revenue. Any facility 483 observation or import alert results in immediate 15–25% stock derating. Time-Cap currently has clean EIR; must be maintained.</div>
+      <span class="sev high">High</span>
+    </div>
+    <div class="risk-item">
+      <div class="risk-name">GBP / EUR Currency</div>
+      <div class="risk-detail">UK and Europe revenue in GBP/EUR. INR strengthening compresses consolidated margins without any operational change. Hedging policy not disclosed in public filings.</div>
+      <span class="sev high">High</span>
+    </div>
+    <div class="risk-item">
+      <div class="risk-name">Acquisition Integration</div>
+      <div class="risk-detail">QliniQ and ABCnow acquired back-to-back. Systems, culture, and margin integration carry execution risk. CFI jumped to -₹249 cr in FY26 vs -₹49 cr prior year.</div>
+      <span class="sev med">Medium-High</span>
+    </div>
+    <div class="risk-item">
+      <div class="risk-name">Valuation / Re-rating Risk</div>
+      <div class="risk-detail">At ₹336 (+93% in 6 months), stock is at 52-week high. Any Q2 FY27 revenue miss or guidance moderation could compress the 29× trailing P/E sharply. RSI at 56 is constructive but stock is extended.</div>
+      <span class="sev med">Medium</span>
+    </div>
+    <div class="risk-item">
+      <div class="risk-name">US Generic Pricing</div>
+      <div class="risk-detail">Structural pricing erosion in US Rx generics. Management says pressure is "moderate and stabilising" but the trend is systemic. OTC segment more insulated due to consumer brand loyalty.</div>
+      <span class="sev med">Medium</span>
+    </div>
+    <div class="risk-item">
+      <div class="risk-name">Seasonal Demand Pattern</div>
+      <div class="risk-detail">UK OTC cold/flu season drives Q3/Q4 revenue. Q1 FY27's ₹841 cr sets a demanding base for Q1 FY28 comparison. Q1 is structurally the softest quarter.</div>
+      <span class="sev med">Medium</span>
+    </div>
+    <div class="risk-item">
+      <div class="risk-name">Input Cost Inflation</div>
+      <div class="risk-detail">API and excipient costs rising. Management flagged as "ongoing concern" but has not quantified magnitude or pass-through ability. API integration partially mitigates this.</div>
+      <span class="sev med">Medium</span>
+    </div>
+    <div class="risk-item">
+      <div class="risk-name">Environmental / ESG</div>
+      <div class="risk-detail">FY26 BRSR filed; 100% export focus means full EU supply chain compliance (CSRD, deforestation regulation). Adds reporting and compliance cost over FY27–28.</div>
+      <span class="sev low">Low</span>
+    </div>
+  </section>
+
+  <!-- Trading Levels -->
+  <section id="levels">
+    <h2>Trading Levels</h2>
+    <p class="sec-note">Reference levels only. Not investment advice. Based on Agent Adda technical signals (EOD Sep 8, 2026) and fundamental valuation (FY27E EPS ₹13.1–13.9).</p>
+
+    <div class="levels">
+      <div class="level entry">
+        <div class="level-label">Ideal Entry</div>
+        <div class="level-val">₹315–325</div>
+        <div class="level-note">SMA20 pullback zone. R:R ~3.4:1</div>
+      </div>
+      <div class="level entry">
+        <div class="level-label">Aggressive Entry</div>
+        <div class="level-val">₹336</div>
+        <div class="level-note">Current levels. R:R ~1.5:1</div>
+      </div>
+      <div class="level stop">
+        <div class="level-label">Stop Loss</div>
+        <div class="level-val">₹298</div>
+        <div class="level-note">Supertrend floor. Stage 2 intact above.</div>
+      </div>
+      <div class="level t1">
+        <div class="level-label">Target 1</div>
+        <div class="level-val">₹378</div>
+        <div class="level-note">High broker consensus</div>
+      </div>
+      <div class="level t2">
+        <div class="level-label">Target 2</div>
+        <div class="level-val">₹395–420</div>
+        <div class="level-note">29–32× FY27E EPS ₹13.5</div>
+      </div>
+    </div>
+
+    <div class="cards c3" style="margin-top:14px">
+      <div class="card">
+        <h3>Valuation Scenarios</h3>
+        <div class="tbl-wrap" style="border:none;border-radius:0;margin:0">
+          <table>
+            <thead><tr><th>Scenario</th><th>EPS</th><th>P/E</th><th>Value</th></tr></thead>
+            <tbody>
+              <tr><td>Bear (compression)</td><td>11.41</td><td>21×</td><td class="dn">₹240</td></tr>
+              <tr><td>Base (holds 29×)</td><td>11.41</td><td>29×</td><td>₹331</td></tr>
+              <tr><td>Bull (re-rating)</td><td>13.5</td><td>31×</td><td class="up">₹419</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Analyst Consensus</h3>
+        <p>3 analysts, avg rating <strong>Strong Buy</strong>. Targets range ₹266–₹397. Most targets set before Q1 FY27 results — upgrades expected Sep–Oct 2026. High target: ₹397.</p>
+        <p>FY27E Revenue CAGR (3yr): <strong>16%</strong> &nbsp;·&nbsp; Net Income CAGR: <strong>23%</strong></p>
+      </div>
+      <div class="card">
+        <h3>Regime Context</h3>
+        <p>Market regime: <strong>ROTATION</strong> (60% confidence, since Aug 21). In rotation regimes: be selective, don't chase. Prefer pullback entries. Size 50–60% of full position at current levels.</p>
+        <p>ANTELOPUS (energy, already in SC portfolio) benefits from WTI at $92. MARKSANS is pharma — crude-neutral.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <div class="footer">
+    <strong>Research disclaimer:</strong> This report is produced by Agent Adda for independent research and educational purposes only. It is not personalized investment advice and does not constitute a buy or sell recommendation. Agent Adda is not a SEBI-registered investment adviser, research analyst, broker, or portfolio manager. All prices are EOD/delayed (₹335.90 as of 8 Sep 2026). Financials are sourced from Agent Adda PostgreSQL (exchange-filing sourced via Screener.in) and company filings on BSE/NSE. Verify all figures against company filings before acting. Markets involve risk, including loss of capital.<br><br>
+    <strong>Sources:</strong>
+    <a href="https://www.marksanspharma.com/pdf/marksans-annual-report-2025-26.pdf" target="_blank">FY26 Annual Report</a> &nbsp;·&nbsp;
+    <a href="https://www.marksanspharma.com/earnings-call-transcripts.html" target="_blank">Concall Transcripts</a> &nbsp;·&nbsp;
+    <a href="https://www.kotakneo.com/news/market-news/marksans-pharma-q4-fy26-results-pat-64-percent-149-crore/" target="_blank">Q4 FY26 Results</a> &nbsp;·&nbsp;
+    <a href="https://medicaldialogues.in/news/industry/pharma/marksans-pharma-q1-profit-soars-174-to-rs-159-crore-ebitda-doubles-cash-crosses-rs-1000-crore-177070" target="_blank">Q1 FY27 Results</a> &nbsp;·&nbsp;
+    <a href="https://www.investywise.com/marksans-pharma-ltd-q1-fy27-earnings-call-transcript-released/" target="_blank">Q1 FY27 Concall</a> &nbsp;·&nbsp;
+    <a href="https://www.alphaspread.com/security/nse/marksans/analyst-estimates" target="_blank">Analyst Estimates</a>
+  </div>
+
+</div>
