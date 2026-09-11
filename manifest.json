@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-08T19:27:35",
+  "generated_at": "2026-09-11T10:51:16",
   "source_repository": "/Users/pradeepgorai/Documents/Projects/finance/Unified-NSE-Analysis",
   "source_commit": "024e0ee8fefcd88d8e472f778a7043ec0b367b96",
   "reports": [
@@ -8,99 +8,99 @@
       "name": "EOD Market Report HTML",
       "source": "reports/latest/eod_market_report.html",
       "path": "daily/eod-market/eod_market_report.html",
-      "bytes": 92038,
-      "sha256": "2504170e2341f80c6f1347e02f4cb62c23ee768fbd87053415784da3f6b9d5cb",
-      "modified_at": "2026-09-07T21:02:46"
+      "bytes": 89637,
+      "sha256": "4535eee49bfce52a6ed65265f7c6161a4ba431ea819d324cb483859b70ef9cfe",
+      "modified_at": "2026-09-11T10:09:35"
     },
     {
       "category": "daily/eod-market",
       "name": "EOD Market Report Markdown",
       "source": "reports/latest/eod_market_report.md",
       "path": "daily/eod-market/eod_market_report.md",
-      "bytes": 5448,
-      "sha256": "1b1cf8aa4667438a6549f86c3192e8cbe05bd1c82fa79dbaa8a8e0e199e6861b",
-      "modified_at": "2026-09-07T21:02:46"
+      "bytes": 3232,
+      "sha256": "157c2b0173c39c616fb393ebd3033202c706fb5c330f4a8d8291b0289e2c9084",
+      "modified_at": "2026-09-11T10:09:35"
     },
     {
       "category": "daily/sector-rotation",
       "name": "Sector Rotation HTML",
       "source": "reports/latest/sector_rotation.html",
       "path": "daily/sector-rotation/sector_rotation.html",
-      "bytes": 655072,
-      "sha256": "24d5464ee86cebeccb7135695887bf3598ec953a6edf7bf67d3200a78dc56c4f",
-      "modified_at": "2026-09-07T20:58:56"
+      "bytes": 641449,
+      "sha256": "5f1ee991cc76cecae506a0b753156aaedb973bb53e1cbff98bd123115d18d38c",
+      "modified_at": "2026-09-11T10:06:51"
     },
     {
       "category": "daily/sector-rotation",
       "name": "Sector Rotation Markdown",
       "source": "reports/latest/sector_rotation.md",
       "path": "daily/sector-rotation/sector_rotation.md",
-      "bytes": 24049,
-      "sha256": "fc997647971b076d77f13f9bf2f9a6ec43020c7283503c6173e80c0ec7983dc9",
-      "modified_at": "2026-09-07T20:58:56"
+      "bytes": 23083,
+      "sha256": "690d23e5a6aaeea6350da585b993a96fe5933095611ac6da5a65be1da481c7fa",
+      "modified_at": "2026-09-11T10:06:51"
     },
     {
       "category": "daily/sector-rotation",
       "name": "Sector Rotation PDF",
       "source": "reports/latest/sector_rotation.pdf",
       "path": "daily/sector-rotation/sector_rotation.pdf",
-      "bytes": 4396756,
-      "sha256": "398f2defbbe26f658474bede1676a98a3e6177e4640e2c252c562f7d969c41ab",
-      "modified_at": "2026-09-07T20:59:27"
+      "bytes": 4338771,
+      "sha256": "e3bfd643dd5fecaacf59df721a3f385a11cd49d1ebc5b91b8e3653a76d2992c1",
+      "modified_at": "2026-09-11T10:07:01"
     },
     {
       "category": "daily/top-picks",
       "name": "Top Investment Picks HTML",
       "source": "reports/latest/top_picks.html",
       "path": "daily/top-picks/top_picks.html",
-      "bytes": 1728984,
-      "sha256": "b960288b224fa510727370511e4c84300b54503ac542e7803a2194273b0fcf3a",
-      "modified_at": "2026-09-07T21:02:15"
+      "bytes": 1749551,
+      "sha256": "264f523ad87bdc70f50245394cecbe02605d55f0425fcadc48156cb078a543a5",
+      "modified_at": "2026-09-11T10:09:14"
     },
     {
       "category": "daily/top-picks",
       "name": "Top Investment Picks Markdown",
       "source": "reports/latest/top_picks.md",
       "path": "daily/top-picks/top_picks.md",
-      "bytes": 50406,
-      "sha256": "e12d185c8ce05432dd83cdbe3f0b6aae47f985f531b4945ff9257bc934d955cc",
-      "modified_at": "2026-09-07T21:02:15"
+      "bytes": 49917,
+      "sha256": "08ad7172bd3307060a8356f2a937ccb2597c09b60ca1d21aa574cf3f31ac35e2",
+      "modified_at": "2026-09-11T10:09:14"
     },
     {
       "category": "daily/stage2",
       "name": "Stage 2 Tracker HTML",
       "source": "reports/latest/stage2_tracker.html",
       "path": "daily/stage2/stage2_tracker.html",
-      "bytes": 3528976,
-      "sha256": "5d48204074b6e2284cd5b42afdb9d9f1d0a722de7a2a236f01d066aac11fc85b",
-      "modified_at": "2026-09-07T20:59:53"
+      "bytes": 4737455,
+      "sha256": "24319040362bb15ba96d6ac5ab1f0cf09b37afe9917ef4fc8d4b872f1757b0eb",
+      "modified_at": "2026-09-11T10:07:12"
     },
     {
       "category": "daily/strategy-lab",
       "name": "Portfolio Strategy Lab HTML",
       "source": "reports/latest/portfolio_strategy_lab.html",
       "path": "daily/strategy-lab/portfolio_strategy_lab.html",
-      "bytes": 2597134,
-      "sha256": "5f68dea32fdf9eab9fa290d0ae6714fba2de8103f9909285b3036778a3a1efca",
-      "modified_at": "2026-09-07T19:31:55"
+      "bytes": 2607008,
+      "sha256": "c23c1e7e89183b6acee3b3fad49cb0a189b648dd3da27b90c2eb8d62c8995cbc",
+      "modified_at": "2026-09-11T10:06:24"
     },
     {
       "category": "daily/portfolio",
       "name": "Portfolio Analysis HTML",
       "source": "reports/latest/portfolio_analysis.html",
       "path": "daily/portfolio/portfolio_analysis.html",
-      "bytes": 2672995,
-      "sha256": "5ae750204d00a6b87bf7f5ab8237fd5dd2bdfa7af8cdc269751a69fea57bb70c",
-      "modified_at": "2026-09-07T21:03:01"
+      "bytes": 2655975,
+      "sha256": "9c3bd8901fbe3414e34339152db88fa7c6e97083d501755caefff9ff1279ae55",
+      "modified_at": "2026-09-11T10:09:40"
     },
     {
       "category": "daily/results",
       "name": "Results Analysis HTML",
       "source": "reports/latest/results_analysis.html",
       "path": "daily/results/results_analysis.html",
-      "bytes": 3323,
-      "sha256": "ad48a680b0d421a3213ec5accf4b6419aa12a28df8065d8d029adb6afb86576b",
-      "modified_at": "2026-09-07T21:09:25"
+      "bytes": 3094,
+      "sha256": "144818d285295f67f01dd8f613cb4404df84b31c58dd612bd4fe9d3939d3e226",
+      "modified_at": "2026-09-11T10:14:21"
     },
     {
       "category": "daily/global",
@@ -116,9 +116,9 @@
       "name": "Intraday F&O Alert Latest",
       "source": "logs/intraday_alerts_latest.md",
       "path": "intraday/alerts/intraday_alerts_latest.md",
-      "bytes": 14004,
-      "sha256": "d8b14ecc2f87b07506a2e3df8dea50ad8403d8ff09b2138ab69ffa244eebaa5e",
-      "modified_at": "2026-09-08T09:38:28"
+      "bytes": 13978,
+      "sha256": "7d124af8e89cb5bbc690a1a2c7356878f27d826641ad904fc39aa6720a5d7857",
+      "modified_at": "2026-09-11T09:39:58"
     },
     {
       "category": "research/stocks",
@@ -128,6 +128,24 @@
       "bytes": 46338,
       "sha256": "678eda4779070665c92833e15d3b3a0c24e4bff7d8ea231e213069f319d19800",
       "modified_at": "2026-09-08T19:25:02"
+    },
+    {
+      "category": "research/stocks",
+      "name": "BHAGYANGR Deep Research Sep 2026",
+      "source": "reports/latest/bhagyangr_deep_research.html",
+      "path": "research/stocks/BHAGYANGR.html",
+      "bytes": 64145,
+      "sha256": "bf70593f09fc8e55997914cad56ea048dd3a2b73b51f97a68040e3b5c8fde154",
+      "modified_at": "2026-09-11T10:47:55"
+    },
+    {
+      "category": "research/commodities",
+      "name": "Copper Trade Strategy Sep 2026",
+      "source": "reports/latest/copper_strategy_sep8.html",
+      "path": "research/commodities/copper-strategy-sep8.html",
+      "bytes": 44279,
+      "sha256": "5561e5167f018f7b600c0542a90fed9b94fa45f2d62073edb3eb94f963c64b8e",
+      "modified_at": "2026-09-08T20:48:06"
     }
   ],
   "missing_optional": [

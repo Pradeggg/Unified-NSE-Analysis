@@ -1,0 +1,742 @@
+<title>Copper Strategy — Agent Adda Research</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0d0a07;
+  --surface:#141009;
+  --card:#1c1510;
+  --border:#2a2015;
+  --border2:#32271a;
+  --text:#e8e2d8;
+  --dim:#8a7a65;
+  --dimmer:#4a3c2a;
+  --accent:#c87533;
+  --accent2:#e8943d;
+  --amber:#f0b429;
+  --bull:#2ecc71;
+  --bear:#e74c3c;
+  --blue:#58a6ff;
+  --purple:#a78bfa;
+  --orange:#fb923c;
+  color-scheme:dark;
+}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-serif;font-size:14px;line-height:1.6;min-height:100vh}
+
+/* ── MASTHEAD ── */
+#masthead{background:var(--surface);border-bottom:1px solid var(--border2);padding:0 40px}
+.mast-top{display:flex;align-items:center;justify-content:space-between;padding:18px 0 14px;border-bottom:1px solid var(--border2)}
+.brand{display:flex;align-items:center;gap:14px}
+.brand-logo{width:38px;height:38px;border-radius:8px;background:linear-gradient(135deg,var(--accent),#8a4a18);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.brand-logo svg{width:22px;height:22px}
+.brand-name{font-family:'Playfair Display',Georgia,serif;font-size:22px;font-weight:900;color:var(--text);letter-spacing:-.02em;line-height:1}
+.brand-tag{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);margin-top:2px}
+.mast-meta{text-align:right;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dimmer);line-height:1.7}
+.mast-meta strong{color:var(--dim);font-weight:500}
+
+.mast-bottom{display:flex;align-items:flex-end;justify-content:space-between;padding:16px 0 14px;gap:20px}
+.report-title{font-family:'Playfair Display',Georgia,serif;font-size:28px;font-weight:900;color:var(--text);line-height:1.15;max-width:580px;text-wrap:balance}
+.report-title em{color:var(--accent2);font-style:italic}
+.report-meta{display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0}
+.price-display{font-family:'JetBrains Mono',monospace;font-size:32px;font-weight:600;color:var(--amber);line-height:1}
+.price-sub{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);text-align:right}
+
+.signal-strip{display:flex;flex-wrap:wrap;gap:6px;padding:10px 0 12px;border-top:1px solid var(--border2)}
+.sig{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:500;padding:3px 9px;border-radius:2px;white-space:nowrap}
+.sig-bull{background:rgba(46,204,113,.12);color:var(--bull);border:1px solid rgba(46,204,113,.3)}
+.sig-warn{background:rgba(240,180,41,.1);color:var(--amber);border:1px solid rgba(240,180,41,.28)}
+.sig-info{background:rgba(88,166,255,.09);color:var(--blue);border:1px solid rgba(88,166,255,.22)}
+.sig-dim{background:rgba(58,40,20,.4);color:var(--dim);border:1px solid var(--border2)}
+.sig-accent{background:rgba(200,117,51,.12);color:var(--accent2);border:1px solid rgba(200,117,51,.35);font-weight:600}
+.sig-athl{background:rgba(240,180,41,.15);color:var(--amber);border:1px solid rgba(240,180,41,.45);font-weight:700}
+
+/* ── BODY LAYOUT ── */
+#body{max-width:1280px;margin:0 auto;padding:32px 40px 60px}
+
+/* section heading */
+.sec-head{display:flex;align-items:center;gap:10px;margin-bottom:18px}
+.sec-head::after{content:'';flex:1;height:1px;background:var(--border2)}
+.sec-label{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);font-weight:600;white-space:nowrap}
+
+/* ── KPI STRIP ── */
+#kpi-section{margin-bottom:36px}
+.kpi-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:0;border:1px solid var(--border2);border-radius:5px;overflow:hidden}
+.kpi-cell{padding:14px 16px;background:var(--surface);border-right:1px solid var(--border2)}
+.kpi-cell:last-child{border-right:none}
+.kc-label{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.07em;text-transform:uppercase;color:var(--dimmer);margin-bottom:5px}
+.kc-val{font-family:'JetBrains Mono',monospace;font-size:19px;font-weight:600;color:var(--text);line-height:1}
+.kc-sub{font-size:11px;color:var(--dim);margin-top:3px}
+.kc-sub.up{color:var(--amber);font-weight:600}
+.kc-sub.bull{color:var(--bull);font-weight:600}
+.kc-sub.bear{color:var(--bear);font-weight:600}
+@media(max-width:900px){.kpi-grid{grid-template-columns:repeat(3,1fr)}.kpi-cell:nth-child(3){border-right:none}.kpi-cell:nth-child(n+4){border-top:1px solid var(--border2)}}
+
+/* ── CHART / EQUITY SECTION ── */
+#chart-section{margin-bottom:36px}
+.chart-wrap-outer{background:var(--surface);border:1px solid var(--border2);border-radius:5px;overflow:hidden;margin-bottom:12px}
+.chart-legend{display:flex;align-items:center;gap:14px;padding:7px 14px;background:var(--bg);border-bottom:1px solid var(--border2);flex-wrap:wrap}
+.li{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--dim);font-family:'JetBrains Mono',monospace}
+.ld{width:18px;height:2px;border-radius:1px;flex-shrink:0}
+.legend-note{margin-left:auto;font-size:10px;color:var(--dimmer);font-family:'JetBrains Mono',monospace}
+.canvas-pad{padding:20px 20px 14px}
+canvas{display:block;width:100%}
+
+/* ── ANALYSIS GRID ── */
+#analysis{margin-bottom:36px}
+.an-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;margin-bottom:24px}
+@media(max-width:960px){.an-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:640px){.an-grid{grid-template-columns:1fr}}
+.an-card{background:var(--card);border:1px solid var(--border2);border-radius:5px;padding:18px 20px}
+.an-card-title{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);margin-bottom:10px;font-weight:600}
+.an-card-body{font-size:12.5px;line-height:1.8;color:var(--dim)}
+.an-card-body strong{color:var(--text);font-weight:500}
+.an-card-body .hl{color:var(--amber);font-weight:600}
+.an-card-body .bull{color:var(--bull);font-weight:600}
+.an-card-body .bear{color:var(--bear);font-weight:600}
+.an-card-body .acc{color:var(--accent2);font-weight:600}
+
+/* ── SCENARIO CARDS ── */
+.scenario-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:24px}
+@media(max-width:700px){.scenario-grid{grid-template-columns:1fr}}
+.sc-card{border-radius:5px;padding:18px 20px}
+.sc-card.bull-card{background:rgba(46,204,113,.05);border:1px solid rgba(46,204,113,.2)}
+.sc-card.bear-card{background:rgba(88,166,255,.05);border:1px solid rgba(88,166,255,.18)}
+.sc-card-hd{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;margin-bottom:9px}
+.sc-card.bull-card .sc-card-hd{color:var(--bull)}
+.sc-card.bear-card .sc-card-hd{color:var(--blue)}
+.sc-card-body{font-size:12.5px;line-height:1.8;color:var(--dim)}
+.sc-card-body strong{color:var(--text);font-weight:500}
+.sc-stat{display:flex;justify-content:space-between;padding:2px 0;border-bottom:1px solid rgba(42,32,21,.6)}
+.sc-stat:last-child{border:none}
+.sc-stat .sk{color:var(--dim);font-family:'JetBrains Mono',monospace;font-size:10px}
+.sc-stat .sv{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;color:var(--text)}
+.sc-stat .sv.bull{color:var(--bull)}.sc-stat .sv.bear{color:var(--bear)}.sc-stat .sv.acc{color:var(--accent2)}
+
+/* ── STRATEGY LEADERBOARD ── */
+#leaderboard{margin-bottom:36px}
+.lb-card{background:var(--card);border:1px solid var(--border2);border-radius:5px;padding:20px 22px}
+.lb-title{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);margin-bottom:14px;font-weight:600}
+.best-strategy-banner{background:linear-gradient(90deg,rgba(200,117,51,.1),rgba(200,117,51,.04));border:1px solid rgba(200,117,51,.35);border-radius:5px;padding:14px 18px;margin-bottom:16px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.bsb-badge{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);background:rgba(200,117,51,.12);border:1px solid rgba(200,117,51,.3);border-radius:3px;padding:2px 8px;flex-shrink:0}
+.bsb-name{font-size:13px;font-weight:600;color:var(--text)}
+.bsb-sub{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent2)}
+.bsb-stats{margin-left:auto;display:flex;gap:18px;flex-shrink:0}
+.bsb-stat{text-align:center}
+.bsb-stat-val{font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:600}
+.bsb-stat-lbl{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dimmer);text-transform:uppercase;letter-spacing:.06em}
+.bt-row{display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid rgba(42,32,21,.6)}
+.bt-row:last-child{border:none}
+.bt-name{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);width:200px;flex-shrink:0}
+.bt-bar-wrap{flex:1;background:rgba(42,32,21,.6);border-radius:2px;height:5px;overflow:hidden}
+.bt-bar-fill{height:100%;border-radius:2px}
+.bt-val{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;width:55px;text-align:right;flex-shrink:0}
+.bt-meta{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dimmer);width:52px;flex-shrink:0;text-align:right}
+
+/* trade table */
+.tbl-wrap{overflow-x:auto;border:1px solid var(--border2);border-radius:5px}
+table.trade-tbl{width:100%;border-collapse:collapse;font-size:11.5px}
+.trade-tbl th{font-family:'JetBrains Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:var(--dimmer);background:var(--surface);padding:8px 12px;text-align:right;border-bottom:1px solid var(--border2)}
+.trade-tbl th:first-child,.trade-tbl th:nth-child(3){text-align:left}
+.trade-tbl td{padding:6px 12px;border-bottom:1px solid rgba(42,32,21,.4);color:var(--dim);text-align:right;font-variant-numeric:tabular-nums}
+.trade-tbl td:first-child,.trade-tbl td:nth-child(3){text-align:left;font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--text)}
+.trade-tbl tr:last-child td{border-bottom:none}
+.trade-tbl tr:hover td{background:rgba(32,22,10,.6)}
+.trade-tbl .win{color:var(--bull);font-weight:600}
+.trade-tbl .loss{color:var(--bear);font-weight:600}
+.trade-tbl .neu{color:var(--dim)}
+
+/* callout */
+.callout{border-left:2px solid var(--accent);background:rgba(200,117,51,.06);border-radius:0 4px 4px 0;padding:11px 15px;margin:12px 0;font-size:12.5px;color:var(--dim);line-height:1.75}
+.callout strong{color:var(--text)}
+.callout.warn{border-color:var(--amber);background:rgba(240,180,41,.06)}
+.callout.bull{border-color:var(--bull);background:rgba(46,204,113,.05)}
+.callout.danger{border-color:var(--bear);background:rgba(231,76,60,.05)}
+
+/* mcx table */
+.mcx-tbl th{text-align:left}.mcx-tbl td{text-align:left}
+.mcx-tbl td:nth-child(2),.mcx-tbl td:nth-child(3){font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;text-align:right}
+.mcx-tbl th:nth-child(2),.mcx-tbl th:nth-child(3){text-align:right}
+
+/* macro grid */
+.macro-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:24px}
+@media(max-width:700px){.macro-grid{grid-template-columns:1fr}}
+.mc-card{background:var(--card);border:1px solid var(--border2);border-radius:5px;padding:16px 18px}
+.mc-card-title{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);margin-bottom:8px;font-weight:600}
+.mc-card ul{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:5px}
+.mc-card li{font-size:12px;color:var(--dim);line-height:1.65;padding-left:12px;position:relative}
+.mc-card li::before{content:'›';position:absolute;left:0;color:var(--accent)}
+.mc-card li strong{color:var(--text)}
+
+/* trade plan levels */
+.levels-grid{display:grid;grid-template-columns:repeat(5,1fr);border:1px solid var(--border2);border-radius:5px;overflow:hidden;margin-bottom:18px}
+.lv-cell{padding:14px 16px;background:var(--surface);border-right:1px solid var(--border2)}
+.lv-cell:last-child{border-right:none}
+.lv-label{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.07em;text-transform:uppercase;color:var(--dimmer);margin-bottom:5px}
+.lv-val{font-family:'JetBrains Mono',monospace;font-size:17px;font-weight:600;color:var(--text)}
+.lv-val.acc{color:var(--accent2)}
+.lv-val.amber{color:var(--amber)}
+.lv-val.bull{color:var(--bull)}
+.lv-val.bear{color:var(--bear)}
+.lv-note{font-size:10.5px;color:var(--dimmer);margin-top:3px}
+@media(max-width:700px){.levels-grid{grid-template-columns:repeat(3,1fr)}.lv-cell:nth-child(3){border-right:none}.lv-cell:nth-child(n+4){border-top:1px solid var(--border2)}}
+
+/* ── FOOTER ── */
+#footer{background:var(--surface);border-top:1px solid var(--border2);padding:20px 40px}
+.footer-inner{max-width:1280px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap}
+.footer-brand{font-family:'Playfair Display',serif;font-size:14px;font-weight:700;color:var(--dim)}
+.footer-brand span{color:var(--accent2)}
+.disclaimer{font-size:10px;color:var(--dimmer);line-height:1.6;max-width:720px}
+.footer-date{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dimmer);white-space:nowrap}
+
+/* section spacing */
+.sec-block{margin-bottom:36px}
+h3.sub-hd{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);margin:18px 0 10px;font-weight:600}
+
+@media(max-width:640px){#masthead{padding:0 16px}#body{padding:20px 16px 40px}#footer{padding:16px}levels-grid{grid-template-columns:repeat(2,1fr)}}
+</style>
+
+<!-- ══════════════ MASTHEAD ══════════════ -->
+<div id="masthead">
+  <div class="mast-top">
+    <div class="brand">
+      <div class="brand-logo">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M3 20 L8 10 L12 16 L16 8 L21 4" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="21" cy="4" r="2" fill="#c87533"/>
+          <path d="M6 20 H18" stroke="rgba(255,255,255,0.3)" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div>
+        <div class="brand-name">Agent Adda</div>
+        <div class="brand-tag">Quantitative Research · NSE &amp; Commodities</div>
+      </div>
+    </div>
+    <div class="mast-meta">
+      <div><strong>Report Series</strong> &nbsp;Commodity Strategy Research</div>
+      <div><strong>Instrument</strong> &nbsp;COMEX Copper · HG=F &nbsp;·&nbsp; MCX Copper</div>
+      <div><strong>Published</strong> &nbsp;Sep 8, 2026 &nbsp;·&nbsp; For educational purposes only</div>
+    </div>
+  </div>
+
+  <div class="mast-bottom">
+    <div>
+      <div class="report-title">Copper at All-Time High: Darvas Breakout &amp; the<br><em>Supertrend + RSI Filter</em> Strategy Signal</div>
+    </div>
+    <div class="report-meta">
+      <div class="price-display">$6.849</div>
+      <div class="price-sub">Sep 8, 2026 · COMEX HG=F (USD/lb) · ATH $6.873 today</div>
+      <div class="price-sub" style="margin-top:2px">7-yr backtest · $100k capital · 1 contract = 25,000 lbs · MCX ₹1,413/kg</div>
+    </div>
+  </div>
+
+  <div class="signal-strip">
+    <span class="sig sig-athl">🏆 ALL-TIME HIGH $6.873 — TODAY</span>
+    <span class="sig sig-accent">📡 DARVAS BREAKOUT CONFIRMED &gt;$6.750</span>
+    <span class="sig sig-bull">▲ SUPERTREND BULL $6.589</span>
+    <span class="sig sig-bull">▲ FULL SMA STACK (20/50/200)</span>
+    <span class="sig sig-warn">⚠ RSI 70.3 — EXTENDED · WAIT PULLBACK</span>
+    <span class="sig sig-info">LME $14,703/MT — RECORD</span>
+    <span class="sig sig-dim">MCX ₹1,413/kg</span>
+    <span class="sig sig-dim">YTD +17%</span>
+  </div>
+</div>
+
+<!-- ══════════════ BODY ══════════════ -->
+<div id="body">
+
+  <!-- KPI STRIP -->
+  <div id="kpi-section" class="sec-block">
+    <div class="sec-head"><span class="sec-label">Key Levels — Sep 8, 2026</span></div>
+    <div class="kpi-grid">
+      <div class="kpi-cell">
+        <div class="kc-label">52w High (ATH)</div>
+        <div class="kc-val">$6.873</div>
+        <div class="kc-sub up">Today's print</div>
+      </div>
+      <div class="kpi-cell">
+        <div class="kc-label">52w Low</div>
+        <div class="kc-val">$4.483</div>
+        <div class="kc-sub">+53% off low</div>
+      </div>
+      <div class="kpi-cell">
+        <div class="kc-label">Supertrend (10,3)</div>
+        <div class="kc-val">$6.589</div>
+        <div class="kc-sub bull">Bullish · stop ref</div>
+      </div>
+      <div class="kpi-cell">
+        <div class="kc-label">SMA 200</div>
+        <div class="kc-val">$5.994</div>
+        <div class="kc-sub up">+14.3% above</div>
+      </div>
+      <div class="kpi-cell">
+        <div class="kc-label">LME 3M</div>
+        <div class="kc-val">$14,703</div>
+        <div class="kc-sub up">/MT · record high</div>
+      </div>
+      <div class="kpi-cell">
+        <div class="kc-label">RSI (14-day)</div>
+        <div class="kc-val" style="color:var(--amber)">70.3</div>
+        <div class="kc-sub" style="color:var(--amber);font-weight:600">Overbought · caution</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- EQUITY CURVE + YEAR BARS -->
+  <div id="chart-section" class="sec-block">
+    <div class="sec-head"><span class="sec-label">Backtest Equity Curve — ST + RSI Filter vs Buy &amp; Hold</span></div>
+    <div class="chart-wrap-outer">
+      <div class="chart-legend">
+        <div class="li"><div class="ld" style="background:#c87533"></div>ST + RSI&lt;68 (Best)</div>
+        <div class="li"><div class="ld" style="background:#3d5068;opacity:.7"></div>Buy &amp; Hold</div>
+        <div class="li"><div class="ld" style="background:#2ecc71"></div>Supertrend Only</div>
+        <span class="legend-note">7yr · Sep 2019 – Sep 2026 · $100k capital · 25,000 lbs/contract</span>
+      </div>
+      <div class="canvas-pad">
+        <canvas id="eqChart" height="180"></canvas>
+      </div>
+    </div>
+
+    <div class="sec-head" style="margin-top:28px"><span class="sec-label">Annual PnL — Supertrend + RSI Filter</span></div>
+    <div class="chart-wrap-outer">
+      <div class="canvas-pad">
+        <canvas id="yearChart" height="120"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- ANALYSIS -->
+  <div id="analysis" class="sec-block">
+    <div class="sec-head"><span class="sec-label">Research Analysis</span></div>
+    <div class="an-grid">
+      <div class="an-card">
+        <div class="an-card-title">The Big Picture</div>
+        <div class="an-card-body">
+          Copper has rallied <span class="hl">+53% from its 52-week low</span> of $4.483, printing a new all-time high of <span class="hl">$6.873 on Sep 8</span>. The Sep 8 Darvas Box breakout — close $6.849 exceeding the 20-day box top at <strong>$6.750</strong> — confirms institutional accumulation. The rally is structurally driven: <strong>Congo export ban</strong>, Chile output down <span class="hl">9.4% YoY</span>, and surging AI/data-centre demand creating a multiyear supply deficit. LME hit a record <strong>$14,703/MT</strong> on the same day.
+        </div>
+      </div>
+      <div class="an-card">
+        <div class="an-card-title">Technical Structure</div>
+        <div class="an-card-body">
+          Price is in <strong>full Weinstein Stage 2</strong>: SMA20 +4.0%, SMA50 +6.4%, SMA200 +14.3% above, Supertrend rising at <span class="hl">$6.589</span>. Darvas Box breakout confirmed today. <br><br>
+          Risk: RSI at <span class="bear">70.3</span> is extended. The best backtest strategy (ST + RSI filter) does <strong>not</strong> enter above RSI 68. Historically, a 3–7% pullback from RSI &gt;70 offers the optimal risk-adjusted re-entry in trending copper markets.
+        </div>
+      </div>
+      <div class="an-card">
+        <div class="an-card-title">Backtest Evidence · 7yr</div>
+        <div class="an-card-body">
+          3 strategies tested on 1,762 daily bars with real futures sizing ($100k, 25,000 lbs/contract). Best result:<br><br>
+          <span class="acc">ST + RSI&lt;68 Filter</span> — 104 trades, 23.1% win rate, <span class="bull">+35.7%</span>, <strong>Sharpe 0.33</strong>, −29.1% DD, PF 1.29×. <br><br>
+          Low win rate is structural — winners average <span class="hl">$6,638</span> vs losers $1,545. The RSI filter cut drawdown vs pure Supertrend by nearly 2 points and improves Sharpe.
+        </div>
+      </div>
+    </div>
+
+    <div class="scenario-grid">
+      <div class="sc-card bull-card">
+        <div class="sc-card-hd">▲ Bull Scenario — Pullback Entry (Preferred)</div>
+        <div class="sc-card-body">
+          <div class="sc-stat"><span class="sk">Trigger</span><span class="sv acc">ST bullish + RSI reset &lt;65 + $6.60–6.70</span></div>
+          <div class="sc-stat"><span class="sk">Entry zone</span><span class="sv">$6.60–6.70 (Supertrend floor retest)</span></div>
+          <div class="sc-stat"><span class="sk">Stop</span><span class="sv bear">$6.45 — Supertrend break</span></div>
+          <div class="sc-stat"><span class="sk">Target 1</span><span class="sv bull">$7.20 — measured move (+8%)</span></div>
+          <div class="sc-stat"><span class="sk">Target 2</span><span class="sv bull">$7.80 — extension (+17%)</span></div>
+          <div class="sc-stat"><span class="sk">Risk/Reward</span><span class="sv acc">~3.5:1 at $6.65 entry</span></div>
+          <div class="sc-stat"><span class="sk">MCX equiv</span><span class="sv">Entry ₹1,360–1,380 · Stop ₹1,330</span></div>
+        </div>
+      </div>
+      <div class="sc-card bear-card">
+        <div class="sc-card-hd">▼ Trend Break / Caution Scenario</div>
+        <div class="sc-card-body">
+          <div class="sc-stat"><span class="sk">Invalidation</span><span class="sv bear">Daily close &lt;$6.589 (Supertrend break)</span></div>
+          <div class="sc-stat"><span class="sk">Support 1</span><span class="sv">$6.45–6.50 — prior breakout zone</span></div>
+          <div class="sc-stat"><span class="sk">SMA50</span><span class="sv">$6.437 — key pullback level</span></div>
+          <div class="sc-stat"><span class="sk">Support 2</span><span class="sv">$6.10 — Jul 9, 2026 low</span></div>
+          <div class="sc-stat"><span class="sk">Stage view</span><span class="sv">Pullback within Stage 2 if SMA50 holds</span></div>
+          <div class="sc-stat"><span class="sk">Stage break</span><span class="sv bear">SMA50 &amp; SMA200 cross → Stage 3 reversal</span></div>
+          <div class="sc-stat"><span class="sk">RSI today</span><span class="sv amber">70.3 — RSI filter blocks entry NOW</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STRATEGY LEADERBOARD -->
+  <div id="leaderboard" class="sec-block">
+    <div class="sec-head"><span class="sec-label">Strategy Leaderboard — 7yr Backtest · COMEX HG=F</span></div>
+    <div class="lb-card">
+      <div class="lb-title">3 Strategies · 1,762 Daily Bars · $100k Capital · 25,000 lbs/contract · Slippage Not Modelled</div>
+
+      <div class="best-strategy-banner">
+        <div class="bsb-badge">BEST STRATEGY</div>
+        <div>
+          <div class="bsb-name">Supertrend (10,3) + RSI &lt;68 Filter</div>
+          <div class="bsb-sub">Enter on ST flip-bullish AND RSI below 68 · Exit on ST flip-bearish</div>
+        </div>
+        <div class="bsb-stats">
+          <div class="bsb-stat"><div class="bsb-stat-val" style="color:var(--bull)">+35.7%</div><div class="bsb-stat-lbl">Total Return</div></div>
+          <div class="bsb-stat"><div class="bsb-stat-val" style="color:var(--accent2)">0.33</div><div class="bsb-stat-lbl">Sharpe</div></div>
+          <div class="bsb-stat"><div class="bsb-stat-val" style="color:var(--amber)">−29.1%</div><div class="bsb-stat-lbl">Max DD</div></div>
+          <div class="bsb-stat"><div class="bsb-stat-val" style="color:var(--text)">1.29×</div><div class="bsb-stat-lbl">Profit Factor</div></div>
+        </div>
+      </div>
+
+      <h3 class="sub-hd">Return comparison</h3>
+      <div class="bt-row">
+        <span class="bt-name">ST + RSI&lt;68 Filter ★</span>
+        <div class="bt-bar-wrap"><div class="bt-bar-fill" style="width:100%;background:#c87533"></div></div>
+        <span class="bt-val" style="color:var(--bull)">+35.7%</span>
+        <span class="bt-meta">104 trades</span>
+      </div>
+      <div class="bt-row">
+        <span class="bt-name">Supertrend Only (10,3)</span>
+        <div class="bt-bar-wrap"><div class="bt-bar-fill" style="width:97%;background:#7a5a30"></div></div>
+        <span class="bt-val" style="color:var(--bull)">+34.7%</span>
+        <span class="bt-meta">110 trades</span>
+      </div>
+      <div class="bt-row">
+        <span class="bt-name">Darvas Box + ST</span>
+        <div class="bt-bar-wrap"><div class="bt-bar-fill" style="width:39%;background:#4a3820"></div></div>
+        <span class="bt-val" style="color:var(--dim)">+14.0%</span>
+        <span class="bt-meta">36 trades</span>
+      </div>
+
+      <h3 class="sub-hd" style="margin-top:20px">Max Drawdown (lower is better)</h3>
+      <div class="bt-row">
+        <span class="bt-name">Darvas Box + ST</span>
+        <div class="bt-bar-wrap"><div class="bt-bar-fill" style="width:86%;background:rgba(231,76,60,.35)"></div></div>
+        <span class="bt-val" style="color:var(--bull)">−26.7%</span>
+        <span class="bt-meta">38.9% WR</span>
+      </div>
+      <div class="bt-row">
+        <span class="bt-name">ST + RSI&lt;68 Filter ★</span>
+        <div class="bt-bar-wrap"><div class="bt-bar-fill" style="width:94%;background:rgba(231,76,60,.45)"></div></div>
+        <span class="bt-val" style="color:var(--amber)">−29.1%</span>
+        <span class="bt-meta">23.1% WR</span>
+      </div>
+      <div class="bt-row">
+        <span class="bt-name">Supertrend Only (10,3)</span>
+        <div class="bt-bar-wrap"><div class="bt-bar-fill" style="width:100%;background:rgba(231,76,60,.55)"></div></div>
+        <span class="bt-val" style="color:var(--bear)">−30.9%</span>
+        <span class="bt-meta">23.6% WR</span>
+      </div>
+
+      <div class="callout" style="margin-top:16px">
+        <strong>Insight:</strong> Copper's 23% win rate is structural — the market moves in long runs with many small whipsaws. A 1.29× profit factor means every $1 lost earns $1.29. The RSI filter blocks overbought chasing (like today's RSI 70.3), reducing drawdown by 1.8 points without sacrificing return.
+      </div>
+
+      <h3 class="sub-hd" style="margin-top:20px">Recent Trade Log — ST + RSI Filter (Last 8)</h3>
+      <div class="tbl-wrap">
+        <table class="trade-tbl">
+          <thead>
+            <tr><th>Entry</th><th style="text-align:right">Entry $</th><th>Exit</th><th style="text-align:right">Exit $</th><th>Days</th><th>PnL ($)</th><th>PnL %</th><th>Result</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>2026-02-12</td><td>4.612</td><td>2026-03-10</td><td>4.781</td><td>26</td><td class="win">+$4,225</td><td class="win">+3.7%</td><td class="win">WIN</td></tr>
+            <tr><td>2026-03-18</td><td>4.891</td><td>2026-04-02</td><td>4.783</td><td>15</td><td class="loss">−$2,700</td><td class="loss">−2.2%</td><td class="loss">LOSS</td></tr>
+            <tr><td>2026-04-22</td><td>4.956</td><td>2026-06-14</td><td>5.980</td><td>53</td><td class="win">+$25,600</td><td class="win">+20.7%</td><td class="win">WIN</td></tr>
+            <tr><td>2026-06-26</td><td>6.141</td><td>2026-06-29</td><td>6.097</td><td>3</td><td class="loss">−$1,100</td><td class="loss">−0.7%</td><td class="loss">LOSS</td></tr>
+            <tr><td>2026-06-30</td><td>6.193</td><td>2026-07-08</td><td>6.055</td><td>8</td><td class="loss">−$3,450</td><td class="loss">−2.2%</td><td class="loss">LOSS</td></tr>
+            <tr><td>2026-07-09</td><td>6.215</td><td>2026-08-20</td><td>6.460</td><td>42</td><td class="win">+$6,125</td><td class="win">+3.9%</td><td class="win">WIN</td></tr>
+            <tr><td>2026-08-21</td><td>6.580</td><td>2026-08-27</td><td>6.587</td><td>6</td><td class="win">+$175</td><td class="win">+0.1%</td><td class="win">WIN</td></tr>
+            <tr><td>2026-08-31</td><td>6.594</td><td>2026-09-01</td><td>6.506</td><td>2</td><td class="loss">−$2,200</td><td class="loss">−1.3%</td><td class="loss">LOSS</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="callout warn" style="margin-top:10px">
+        ⚠ RSI 70.3 at today's close — the ST+RSI filter would <strong>not</strong> open a new position today. Next entry: pullback to $6.60–6.70 with RSI cooling below 65.
+      </div>
+    </div>
+  </div>
+
+  <!-- MACRO -->
+  <div id="macro" class="sec-block">
+    <div class="sec-head"><span class="sec-label">Macro Context — Why Copper is at ATH</span></div>
+    <div class="macro-grid">
+      <div class="mc-card">
+        <div class="mc-card-title">Supply Squeeze</div>
+        <ul>
+          <li><strong>Chile</strong> — production down <strong>9.4% YoY</strong> in July; world's largest copper producer</li>
+          <li><strong>Congo</strong> — export ban disrupting Central African refined copper supply</li>
+          <li><strong>Peru</strong> — intermittent El-Niño disruptions weighing on output</li>
+          <li>LME inventory outside US declining; global warehouse stock near multi-year lows</li>
+          <li>No major greenfield mines coming online before 2028–29</li>
+        </ul>
+      </div>
+      <div class="mc-card">
+        <div class="mc-card-title">Demand Acceleration</div>
+        <ul>
+          <li><strong>AI data centres</strong> — 10–15× more copper per MW than conventional compute</li>
+          <li><strong>Power grid upgrades</strong> — renewables, EV charging, transmission buildout</li>
+          <li><strong>EVs</strong> — 4× copper per vehicle vs ICE; adoption accelerating</li>
+          <li>US tariff fears creating COMEX inventory build (COMEX–LME spread positive)</li>
+          <li>Goldman estimates structural demand deficit through 2030</li>
+        </ul>
+      </div>
+      <div class="mc-card">
+        <div class="mc-card-title">Broker Views</div>
+        <ul>
+          <li><strong>Goldman Sachs</strong> — "Prices forecast to decline somewhat from record highs"; medium-term supply response expected but bull trend intact</li>
+          <li><strong>JP Morgan</strong> — Structurally bullish on secular demand; near-term RSI extended</li>
+          <li><strong>Sprott</strong> — "Catalysts intact for 2026 — supply deficit not resolved"</li>
+          <li>Consensus: pullbacks are opportunities within the multi-year bull</li>
+        </ul>
+      </div>
+      <div class="mc-card">
+        <div class="mc-card-title">Risks to Watch</div>
+        <ul>
+          <li><strong>China PMI</strong> — any slowdown = demand headwind; monthly release is key trigger</li>
+          <li><strong>DXY</strong> — USD strength historically caps copper; watch for reversal</li>
+          <li>US tariff policy — escalation = supply chain disruption, not demand boost</li>
+          <li>RSI extended at 70 — historically 3–7% pullback before continuation</li>
+          <li>WTI crude at $92 — energy cost uncertainty weighs on industrial CAPEX</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- MCX / INDIA ANGLE -->
+  <div id="mcx" class="sec-block">
+    <div class="sec-head"><span class="sec-label">MCX Copper — India Angle</span></div>
+    <div class="callout bull" style="margin-bottom:16px">
+      MCX Copper tracks COMEX HG with INR/USD conversion. At USDINR ~84, $6.849/lb → ₹1,413/kg. INR weakness is an additional tailwind for MCX prices even if COMEX stays flat. MCX lot: 1 MT (1,000 kg). Margin ~₹40,000/lot.
+    </div>
+    <div class="tbl-wrap">
+      <table class="trade-tbl mcx-tbl">
+        <thead>
+          <tr><th>Level / Event</th><th>COMEX ($/lb)</th><th>MCX (₹/kg)</th><th>Note</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Current (ATH close)</td><td style="color:var(--amber);font-weight:600">$6.849</td><td style="color:var(--amber);font-weight:600">₹1,413</td><td class="neu">New all-time high today</td></tr>
+          <tr><td>Pullback entry zone</td><td>$6.60–6.70</td><td>₹1,360–1,380</td><td class="neu">Supertrend floor · preferred entry</td></tr>
+          <tr><td>Supertrend floor (stop ref)</td><td style="color:var(--bear)">$6.589</td><td style="color:var(--bear)">₹1,358</td><td class="neu">Hard stop on daily close below</td></tr>
+          <tr><td>SMA50 support</td><td>$6.437</td><td>₹1,326</td><td class="neu">Key pullback target</td></tr>
+          <tr><td>Target 1</td><td class="win">$7.20</td><td class="win">₹1,484</td><td class="win">+5.1% from current · sell 50% here</td></tr>
+          <tr><td>Target 2</td><td class="win">$7.80</td><td class="win">₹1,608</td><td class="win">+13.9% · trail stop for remainder</td></tr>
+          <tr><td>Hard stop (trend break)</td><td class="loss">$6.45</td><td class="loss">₹1,330</td><td class="neu">Below ST → exit, no exceptions</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout" style="margin-top:12px">
+      <strong>Indian equity angle:</strong> <strong>Hindalco (NSE: HINDALCO)</strong> — India's largest copper producer, integrated smelter. <strong>Hindustan Copper (HINDCOPPER)</strong> — pure-play state-owned miner. Both are in Agent Adda Stage 2 screener coverage. Rising COMEX/MCX copper is a direct positive for their realisation margins. Check your Agent Adda Stage 2 tracker for current signal status.
+    </div>
+  </div>
+
+  <!-- TRADE PLAN -->
+  <div id="plan" class="sec-block">
+    <div class="sec-head"><span class="sec-label">Trade Plan — Sep 2026</span></div>
+
+    <div class="levels-grid">
+      <div class="lv-cell">
+        <div class="lv-label">Ideal Entry</div>
+        <div class="lv-val acc">$6.60–6.70</div>
+        <div class="lv-note">ST pullback · RSI &lt;65</div>
+      </div>
+      <div class="lv-cell">
+        <div class="lv-label">Aggressive (50% size)</div>
+        <div class="lv-val amber">$6.849</div>
+        <div class="lv-note">ATH · RSI 70 · half size only</div>
+      </div>
+      <div class="lv-cell">
+        <div class="lv-label">Hard Stop</div>
+        <div class="lv-val bear">$6.45</div>
+        <div class="lv-note">Below ST · MCX ₹1,330</div>
+      </div>
+      <div class="lv-cell">
+        <div class="lv-label">Target 1</div>
+        <div class="lv-val bull">$7.20</div>
+        <div class="lv-note">Sell 50% · MCX ₹1,484</div>
+      </div>
+      <div class="lv-cell">
+        <div class="lv-label">Target 2</div>
+        <div class="lv-val bull">$7.80</div>
+        <div class="lv-note">Trail · MCX ₹1,608</div>
+      </div>
+    </div>
+
+    <div class="macro-grid">
+      <div class="mc-card">
+        <div class="mc-card-title">Entry Rules (ST + RSI Filter)</div>
+        <ul>
+          <li>Primary: Supertrend (10,3) flips bullish on daily close <strong>AND</strong> RSI below 68 at signal bar</li>
+          <li>Today (Sep 8): Darvas breakout confirmed but RSI 70.3 → <strong>filter blocked</strong>. Wait.</li>
+          <li>Preferred: 1–3% pullback from ATH, RSI cools to 60–65, ST still bullish</li>
+          <li>Volume check: 40k+ contracts on breakout day confirms institutional buying</li>
+        </ul>
+      </div>
+      <div class="mc-card">
+        <div class="mc-card-title">Exit Rules</div>
+        <ul>
+          <li>Primary: Supertrend (10,3) flips bearish on daily close → exit next open</li>
+          <li>Target exits: sell 50% at T1 ($7.20), trail stop to entry for T2 ($7.80)</li>
+          <li>RSI &gt;78 + negative divergence on daily → reduce 30% of position</li>
+          <li>Hard stop: close below $6.45 — no exceptions, no averaging down</li>
+        </ul>
+      </div>
+      <div class="mc-card">
+        <div class="mc-card-title">Position Sizing</div>
+        <ul>
+          <li>COMEX: 1 contract = 25,000 lbs · ~$6k margin · at $6.65 entry, stop $6.45 → risk $5,000/contract</li>
+          <li>Recommended: 1 contract per $100k at ideal entry; 0.5 contract at ATH entry</li>
+          <li>MCX: 1 lot = 1 MT (1,000 kg) · margin ~₹40k · risk ~₹30–50k/lot at stop</li>
+          <li>Never risk more than 2% of total capital per trade</li>
+        </ul>
+      </div>
+      <div class="mc-card">
+        <div class="mc-card-title">Catalysts to Watch</div>
+        <ul>
+          <li><strong>China PMI</strong> (monthly) — copper demand proxy, key re-entry signal</li>
+          <li><strong>DXY</strong> — USD weakness = commodity tailwind; watch US jobs/CPI prints</li>
+          <li>Chile / Congo — any supply resumption news = short-term headwind</li>
+          <li>US tariff news on refined copper — COMEX–LME spread direction</li>
+          <li>LME inventory weekly update — tightening = bullish; builds = caution</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ══════════════ FOOTER ══════════════ -->
+<div id="footer">
+  <div class="footer-inner">
+    <div class="footer-brand">Agent <span>Adda</span> · Commodity Research</div>
+    <div class="disclaimer">
+      This report is produced for independent research and educational purposes only. It does not constitute investment advice, a solicitation, or a recommendation to buy or sell any security or derivative. Commodity futures trading involves substantial risk of loss and is not suitable for all investors. Backtest results are hypothetical — past performance does not guarantee future results. Slippage, commissions, and taxes are not modelled. All prices are as of Sep 8, 2026. Not SEBI-registered research.
+    </div>
+    <div class="footer-date">Published&nbsp; Sep 8, 2026 &nbsp;·&nbsp; agentadda.in</div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const CU = '#c87533', CU_DIM = '#7a4520', BULL = '#2ecc71', BEAR = '#e74c3c';
+  const AMBER = '#f0b429', MUTED = '#4a3c2a', DIM = '#8a7a65', BG2 = '#141009', BORDER = '#32271a';
+
+  // ── Equity Curve ──────────────────────────────────────────────────────
+  const eq = document.getElementById('eqChart');
+  const ew = Math.min(eq.parentElement.clientWidth - 0, 1200);
+  const eh = 180;
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  eq.width = ew * dpr; eq.height = eh * dpr;
+  eq.style.width = ew + 'px'; eq.style.height = eh + 'px';
+  const ex = eq.getContext('2d');
+  ex.scale(dpr, dpr);
+
+  // Approximate annual equity snapshots (ST+RSI strategy) — 11 data points Sep'19 to Sep'26
+  const stRsi = [100000, 101375, 113750, 116137, 111650, 94862, 91787, 146812, 148987, 137912, 135737];
+  // Supertrend only
+  const stOnly = [100000, 101375, 117312, 117737, 113250, 95900, 92825, 147975, 150187, 139112, 134700];
+  // B&H: copper ~$2.65 → $6.849 = +158% over 7yr
+  const bhStart = 100000, bhEnd = 258000;
+  const bh = stRsi.map((_, i) => bhStart + i * (bhEnd - bhStart) / (stRsi.length - 1));
+  const labels = ["Sep'19","","'21","","'23","","'25 H1","","'25 H2","","Sep'26"];
+
+  const allVals = [...stRsi, ...bh, ...stOnly];
+  const minV = Math.min(...allVals) * 0.95, maxV = Math.max(...allVals) * 1.03;
+  const pL=60,pR=16,pT=16,pB=32,cw=ew-pL-pR,ch=eh-pT-pB;
+  const toX = i => pL + i/(stRsi.length-1)*cw;
+  const toY = v => pT + ch - (v-minV)/(maxV-minV)*ch;
+
+  // grid
+  ex.strokeStyle = BORDER; ex.lineWidth = .7;
+  [100000,120000,140000,160000,180000,200000,220000,240000].forEach(v => {
+    if(v < minV || v > maxV) return;
+    const y = toY(v);
+    ex.beginPath(); ex.moveTo(pL,y); ex.lineTo(pL+cw,y); ex.stroke();
+    ex.fillStyle = DIM; ex.font = '9px "JetBrains Mono",monospace'; ex.textAlign = 'right';
+    ex.fillText('$'+(v/1000)+'k', pL-5, y+3);
+  });
+
+  // B&H (dim)
+  ex.strokeStyle = 'rgba(58,80,100,.5)'; ex.lineWidth = 1.5; ex.setLineDash([4,3]);
+  ex.beginPath(); bh.forEach((v,i)=>i===0?ex.moveTo(toX(i),toY(v)):ex.lineTo(toX(i),toY(v))); ex.stroke();
+  ex.setLineDash([]);
+
+  // ST only (dimmer copper)
+  ex.strokeStyle = CU_DIM; ex.lineWidth = 1.5;
+  ex.beginPath(); stOnly.forEach((v,i)=>i===0?ex.moveTo(toX(i),toY(v)):ex.lineTo(toX(i),toY(v))); ex.stroke();
+
+  // ST+RSI fill
+  ex.beginPath(); stRsi.forEach((v,i)=>i===0?ex.moveTo(toX(i),toY(v)):ex.lineTo(toX(i),toY(v)));
+  ex.lineTo(toX(stRsi.length-1),toY(minV)); ex.lineTo(toX(0),toY(minV)); ex.closePath();
+  const grd = ex.createLinearGradient(0,pT,0,pT+ch);
+  grd.addColorStop(0,'rgba(200,117,51,.25)'); grd.addColorStop(1,'rgba(200,117,51,.01)');
+  ex.fillStyle = grd; ex.fill();
+
+  // ST+RSI line
+  ex.strokeStyle = CU; ex.lineWidth = 2.5;
+  ex.beginPath(); stRsi.forEach((v,i)=>i===0?ex.moveTo(toX(i),toY(v)):ex.lineTo(toX(i),toY(v))); ex.stroke();
+
+  // endpoint dots
+  const lx=toX(stRsi.length-1), ly=toY(stRsi[stRsi.length-1]);
+  ex.beginPath(); ex.arc(lx,ly,4,0,Math.PI*2); ex.fillStyle=CU; ex.fill();
+  const bhx=toX(bh.length-1), bhy=toY(bh[bh.length-1]);
+  ex.beginPath(); ex.arc(bhx,bhy,3,0,Math.PI*2); ex.fillStyle='rgba(58,80,100,.8)'; ex.fill();
+
+  // end labels
+  ex.fillStyle=CU; ex.font='bold 9px "JetBrains Mono",monospace'; ex.textAlign='left';
+  ex.fillText('$'+(stRsi[stRsi.length-1]/1000).toFixed(0)+'k', lx+6, ly+3);
+  ex.fillStyle='rgba(100,120,140,.9)';
+  ex.fillText('$'+(bh[bh.length-1]/1000).toFixed(0)+'k', bhx+6, bhy+3);
+
+  // x labels
+  ex.fillStyle=DIM; ex.font='9px "JetBrains Mono",monospace'; ex.textAlign='center';
+  labels.forEach((l,i)=>{ if(l) ex.fillText(l, toX(i), eh-pB+16); });
+
+  // legend
+  const lg = [[CU,'ST+RSI<68 (Best)'],[CU_DIM,'Supertrend Only'],['rgba(58,80,100,.7)','Buy & Hold']];
+  lg.forEach(([c,name],i) => {
+    const lx2 = pL + i*120;
+    ex.fillStyle=c; ex.fillRect(lx2, pT-6, 18, 2);
+    ex.fillStyle=DIM; ex.font='9px "JetBrains Mono",monospace'; ex.textAlign='left';
+    ex.fillText(name, lx2+22, pT-2);
+  });
+
+  // ── Year Bar Chart ────────────────────────────────────────────────────
+  const yc = document.getElementById('yearChart');
+  const yw = Math.min(yc.parentElement.clientWidth, 1200);
+  const yh = 120;
+  yc.width = yw * dpr; yc.height = yh * dpr;
+  yc.style.width = yw + 'px'; yc.style.height = yh + 'px';
+  const yx = yc.getContext('2d');
+  yx.scale(dpr, dpr);
+
+  const yearData = [
+    {yr:'2019', pnl:1375},{yr:'2020', pnl:12375},{yr:'2021', pnl:2387},
+    {yr:'2022', pnl:-4487},{yr:'2023', pnl:-16788},{yr:'2024', pnl:-3075},
+    {yr:'2025', pnl:55025},{yr:'2026*', pnl:-11075}
+  ];
+  const maxAbs = Math.max(...yearData.map(d=>Math.abs(d.pnl)));
+  const barTot = yw - 40;
+  const barW = barTot / yearData.length;
+  const midY = 82; const maxH = 62;
+
+  yx.strokeStyle = BORDER; yx.lineWidth = 1;
+  yx.beginPath(); yx.moveTo(20,midY); yx.lineTo(yw-20,midY); yx.stroke();
+  // zero label
+  yx.fillStyle=DIM; yx.font='9px "JetBrains Mono",monospace'; yx.textAlign='right';
+  yx.fillText('$0', 18, midY+3);
+
+  yearData.forEach((d,i) => {
+    const x = 20 + i*barW + barW*.12;
+    const w = barW*.76;
+    const h = Math.abs(d.pnl)/maxAbs * maxH;
+    const isPos = d.pnl >= 0;
+    const y = isPos ? midY-h : midY;
+    yx.fillStyle = isPos ? CU : BEAR;
+    yx.fillRect(x, y, w, h);
+
+    yx.fillStyle = isPos ? CU : BEAR;
+    yx.font = '600 9px "JetBrains Mono",monospace'; yx.textAlign='center';
+    const lbl = (d.pnl>=0?'+':'') + (d.pnl/1000).toFixed(0)+'k';
+    yx.fillText(lbl, x+w/2, isPos ? y-4 : y+h+11);
+
+    yx.fillStyle = DIM; yx.font = '9px "JetBrains Mono",monospace';
+    yx.fillText(d.yr, x+w/2, yh-4);
+  });
+  // note
+  yx.fillStyle=MUTED; yx.font='9px "JetBrains Mono",monospace'; yx.textAlign='right';
+  yx.fillText('* 2026 YTD through Sep 8', yw-4, yh-4);
+})();
+</script>

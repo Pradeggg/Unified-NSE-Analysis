@@ -1,19 +1,19 @@
-# Top Investment Picks Analysis — 2026-09-07
+# Top Investment Picks Analysis — 2026-09-10
 
 *Agent Adda - Market Intelligence Agent*
 
-**Generated:** 2026-09-07 21:02 IST  
+**Generated:** 2026-09-11 10:09 IST  
 **Sources:** Sector Rotation Report + Stage 2 Tracker + Swing Research Shortlist + PostgreSQL `scores.*`, `market.equity_eod`
 
 > **Disclaimer:** This report is not investment advice. It is a learning journey demonstrating how AI and rules-based agents can be applied to financial markets. Validate all data, prices, liquidity, corporate events, and risk independently before making any financial decision.
 
 ## Executive Summary
 
-This equity basket reflects a strong bullish sentiment, heavily weighted towards healthcare and capital goods, amidst a positive macro backdrop. The portfolio combines high-conviction plays in the pharma and healthcare sectors with a mix of essential consumer and industrial equities. Key risks include valuation pressures and sector-specific volatility which may challenge sustainable performance. This allocation particularly capitalizes on the buoyancy in growth sectors while maintaining resilience against potential economic shifts.
+This portfolio basket captures a dynamic selection of growth-oriented companies primarily from the Pharma & Healthcare and Capital Markets sectors, reflecting robust momentum amid a favorable macro environment. With a heavy emphasis on high-conviction stocks, the basket aims to capitalize on strong earnings growth and technical strength. Key risks include regulatory dependencies and potential volatility in commodities and healthcare markets. The diversified nature across sectors allows for balance while targeting high returns from leading growth stories.
 
-**Macro context:** Snapshot 2026-09-07: 2652 stocks scanned; Stage 2 count 432 vs Stage 4 538; BUY/STRONG_BUY signals 432; mean RS vs Nifty 500 50.0%.
+**Macro context:** Snapshot 2026-09-10: 1637 stocks scanned; Stage 2 count 430 vs Stage 4 413; BUY/STRONG_BUY signals 471; mean RS vs Nifty 500 53.5%.
 
-**Data freshness:** Latest available market snapshot used for this report is **2026-09-07**; generation time may be later than the EOD data date.
+**Data freshness:** Latest available market snapshot used for this report is **2026-09-10**; generation time may be later than the EOD data date.
 
 ## Methodology
 
@@ -62,76 +62,151 @@ A high-ranked pick should be read as a research shortlist candidate, not a direc
 
 | # | Symbol | Sector | Sub-sector | Price | Stage | Inv.Score | RS% | 6M Tgt | RR(4M) | Risk | Extension | Source |
 |---|---|---|---|---:|---|---:|---:|---:|---:|:---:|:---:|---|
-| 1 | **CUPID** | Pharma & Healthcare | Medical Devices & Sexual Wellness | 280.95 | STAGE_2 | 94.63 | 99.5% | ₹374 | 1.04x | 3.0 | NORMAL | vcp+sector |
-| 2 | **KABRAEXTRU** | Capital Goods | Unmapped | 634.50 | STAGE_2 | 95.65 | 100.0% | ₹873 | 0.91x | 7.5 | OVEREXTENDED | vcp+sector |
-| 3 | **AVADHSUGAR** | Fast Moving Consumer Goods | Unmapped | 839.70 | STAGE_2 | 96.06 | 99.3% | ₹1,217 | 1.40x | 5.5 | OVEREXTENDED | vcp+sector |
-| 4 | **AKUMS** | Healthcare | Unmapped | 754.65 | STAGE_2 | 94.55 | 93.5% | ₹1,019 | 1.90x | 1.5 | NORMAL | vcp+sector |
-| 5 | **AVALON** | Capital Goods | Unmapped | 2352.50 | STAGE_2 | 97.08 | 95.2% | ₹3,518 | 1.49x | 6.0 | OVEREXTENDED | vcp+sector |
-| 6 | **KRN** | Capital Goods | Unmapped | 1625.40 | STAGE_2 | 95.74 | 91.1% | ₹2,323 | 1.34x | 6.0 | OVEREXTENDED | vcp+sector |
-| 7 | **OFSS** | Information Technology | Unmapped | 11847.00 | STAGE_2 | 91.61 | 85.6% | ₹14,640 | 2.00x | 1.0 | NORMAL | strategy |
-| 8 | **BOSCHLTD** | EV & Auto Ancillaries | Auto Ancillaries | 48025.00 | STAGE_2 | 89.63 | 88.4% | ₹59,400 | 1.46x | 1.5 | NORMAL | strategy |
-| 9 | **IRISDOREME** | Textiles | Unmapped | 62.15 | STAGE_2 | 98.91 | 99.0% | ₹85 | 1.10x | 5.0 | EXTENDED | sector+s2 |
-| 10 | **INDSWFTLAB** | Healthcare | Unmapped | 368.70 | STAGE_2 | 98.63 | 99.8% | ₹506 | 1.04x | 6.0 | OVEREXTENDED | sector+s2 |
+| 1 | **LAURUSLABS** | Pharma & Healthcare | Pharma APIs & Formulations | 1945.00 | STAGE_2 | 79.70 | 99.2% | ₹2,298 | 1.04x | 1.5 | NORMAL | vcp+sector |
+| 2 | **CUPID** | Pharma & Healthcare | Medical Devices & Sexual Wellness | 277.45 | STAGE_2 | 82.90 | 100.0% | ₹373 | 1.31x | 3.0 | NORMAL | vcp+sector |
+| 3 | **DIVISLAB** | Pharma & Healthcare | Healthcare Products | 9438.50 | STAGE_2 | 78.20 | 94.7% | ₹11,430 | 0.85x | 2.5 | EXTENDED | vcp+sector |
+| 4 | **MCX** | Capital Markets | Unmapped | 3300.00 | STAGE_2 | 76.60 | 94.5% | ₹4,366 | 1.44x | 1.5 | NORMAL | vcp+sector |
+| 5 | **APARINDS** | Capital Goods & Industrials | Industrial Products | 17342.00 | STAGE_2 | 75.40 | 97.7% | ₹22,048 | 1.79x | 2.5 | NORMAL | vcp+sector |
+| 6 | **NAVINFLUOR** | Chemicals & Specialty | Specialty Chemicals | 8700.50 | STAGE_2 | 79.00 | 91.8% | ₹11,321 | 1.37x | 1.5 | NORMAL | vcp+sector |
+| 7 | **ATHERENERG** | EV & Auto Ancillaries | Auto Ancillaries | 1658.30 | STAGE_2 | 72.30 | 99.5% | ₹2,292 | 1.17x | 5.0 | EXTENDED | strategy+sector+s2 |
+| 8 | **AEROFLEX** | Defence & Aerospace | Defence & Aerospace Manufacturing | 564.20 | STAGE_2 | 78.30 | 99.4% | ₹805 | 1.40x | 2.5 | EXTENDED | sector+s2 |
+| 9 | **WELCORP** | Metals & Mining | Unmapped | 2776.90 | STAGE_2 | 77.20 | 99.9% | ₹3,901 | 0.77x | 7.0 | OVEREXTENDED | sector+s2 |
+| 10 | **PRICOLLTD** | EV & Auto Ancillaries | Auto Ancillaries | 739.60 | STAGE_2 | 80.70 | 88.0% | ₹998 | 2.00x | 2.5 | NORMAL | sector+s2 |
 
 ## Per-Stock Deep Dive
 
-### 1. CUPID — Pharma & Healthcare / Medical Devices & Sexual Wellness
+### 1. LAURUSLABS — Pharma & Healthcare / Pharma APIs & Formulations
 
-**Why selected:** VCP-confirmed Stage 2 (vcp=85, inv=94.6) in top-ranked sector Pharma & Healthcare (strength=95)
+**Why selected:** VCP-confirmed Stage 2 (vcp=82, inv=79.7) in top-ranked sector Pharma & Healthcare (strength=94)
 
-**What the company does:** Established in 1993, CUPID Limited is India's premier manufacturer of male and female condoms, personal lubricant, and IVD kits. [1]
+**What the company does:** Founded in 2005, Laurus Labs is a research-driven pharmaceutical and biotechnology company having a global leadership position in select Active Pharmaceutical Ingredients (APIs) including anti-retroviral, oncology drugs (including High Potent APIs), Cardiovascular, and Gastro therapeutics. They also offer integrated CMO and CDMO services to Global Innovators from Clinical phase drug development to commercial manufacturing. Laurus employs 6,500+ people, including around 1,050+ scientists, at more than 11 facilities.
 
-*Company profile source: screener.in (live) — https://www.screener.in/company/CUPID/*
+*Company profile source: screener.in (live) — https://www.screener.in/company/LAURUSLABS/*
 
-**Thesis:** CUPID Ltd's technical position suggests a strong bullish momentum with a stage score of 98.97 and a remarkable relative strength percentile of 99.51% against Nifty 500. Recent revenue growth illustrates a robust YoY increase of 141.54%, while the PAT has grown at a CAGR of 43.84%, indicating strong earnings quality. The strong operating profit margin of 40% reflects solid operational efficiency, whilst the balance sheet shows a low debt ratio of 0.124 and positive net cash, positioning it favorably in the Pharma sector, which has an average strength of 79.98.
+**Thesis:** Laurus Labs exhibits robust technical strength with an RSI of 65.88 and a Strong Buy signal, reflecting strong momentum across fundamental and technical factors despite nearing a 52-week high. The company has achieved a revenue growth of 29.04% YoY and a PAT growth of 123.46% YoY, paralleled by an optimal OPM increase of 750 bps. Moreover, Laurus maintains a firm financial footing with a debt trend that has decreased over the last three years and a favorable OCF/PAT ratio of 1.49, suggesting high cash flow quality.
 
-**Technical view:** The trend order remains bullish, indicated by EMA20, EMA50, and EMA200 alignment and a current RSI of 59.56, suggesting the stock is not overbought. The stock is currently 6.04% away from its 52-week high, maintaining strong momentum with a notable 206.71% return over the last six months.
+**Technical view:** The stock price shows bullish alignment with key EMAs as both the 20-day and 50-day averages are above the 200-day EMA. The price is just 0.51% from its 52-week high, showcasing strong upward momentum, even amidst a slight 1-day dip of -0.41%. The stock has seen volume levels rising above the 20-day average by 30.31%.
 
-**Fundamental view:** In the most recent quarter (Jun 2026), CUPID reported a revenue of ₹157 Cr and a PAT of ₹44 Cr, a significant improvement from preceding quarters, supporting a very high EPS. The company's operational profit has consistently improved, yielding a stable OCF to PAT ratio of 0.335, signaling healthy cash flow relative to profits and a strong financial position with a low computed D/E ratio of 0.124.
+**Fundamental view:** Laurus Labs reported a quarterly revenue of ₹2026 Cr with a PAT of ₹362 Cr, indicating significant growth trends. The company's operating margin has improved to 32% driven by operational efficiencies, while the financial strength reflects a computed debt-to-equity ratio of 0.475, providing strong balance sheet health.
 
-**Sector view:** The Pharma and Healthcare sector is exhibiting robust strength with an overall sector strength of 79.98. CUPID's performance ranks it among the top-tier stocks, with a sector RS of 92.52, positioning it well relative to peers.
+**Sector view:** Laurus Labs operates in a robust sector marked by a strength rating of 78.54, with the company showcasing above-average relative strength at 99.2%. Its peer positioning benefits from the overall bullish sentiment in the Pharma & Healthcare sector.
 
-**Valuation:** CUPID trades at a high P/E of 275, which raises questions about valuation comfort, yet it may be justifiable given the high growth rates of revenue and PAT.
+**Valuation:** Earnings reflect a high P/E of 95.6, indicating potential valuation stretch but balanced by significant growth projections.
 
 **Key catalysts:**
-- Stable OPM at 40% over the latest quarter, showing resilience
-- Strong EPS CAGR at 43.58% in the last 4 years
-- Recent uptick in revenue growth of 18.94% QoQ
+- Strong quarterly revenue growth of 11.81% QoQ
+- PAT growth of +28.37% QoQ
+- Debt has decreased by ₹59 Cr over three years
 
 **Key risks:**
-- Valuation stretch with P/E at 275
-- Potential slowdown in consumer demand
-- Dependence on regulatory clearance within the Pharma sector
+- High P/E ratio (95.6)
+- Dependence on global healthcare trends
+- Regulatory scrutiny on pharma
 
-**Research observation:** CUPID showcases a strong technical and fundamental position, warranting further observation for entry points on any pullbacks.
+**Research observation:** Laurus Labs stands strong in technical set-up and fundamental performance, signifying potential for further price appreciation.
 
-**Model ref targets:** 2M ₹308 · 4M ₹326 · 6M ₹374 _(model reference only)_  
-**Model inv. level:** ₹238 · **Reward/Risk (4M):** 1.04x  
-**Risk score:** 3.0 / 10 (LOW) · **Illustrative weight:** 8% _(not a personal allocation recommendation)_  
-**Extension:** NORMAL — 14.4% above EMA50. Extension is not the main risk flag; standard staged entry rules apply.
+**Model ref targets:** 2M ₹2,096 · 4M ₹2,197 · 6M ₹2,298 _(model reference only)_  
+**Model inv. level:** ₹1,701 · **Reward/Risk (4M):** 1.04x  
+**Risk score:** 1.5 / 10 (LOW) · **Illustrative weight:** 8% _(not a personal allocation recommendation)_  
+**Extension:** NORMAL — -0.5% from 52w high. Extension is not the main risk flag; standard staged entry rules apply.
 
-**Conviction:** **HIGH** — Due to strong earnings momentum, a low-risk profile, and bullish technical indicators.
+**Conviction:** **HIGH** — Strong momentum across fundamental and technical assertions justifies a high conviction level.
 
 **Snapshot:**
 
-- Price ₹280.95 · 1D -0.8% · 1W 0.2% · 1M 7.2%
-- Stage **STAGE_2** (score 98.97) · Stance **BULLISH** · Signal **BUY**
-- Investment score 94.63 (tech 92.54, fund 85.17)
-- Relative Strength 99.5% vs Nifty 500; Supertrend BULLISH around ₹256.02
+- Price ₹1945.00 · 1D 0.4% · 1W 4.1% · 1M 5.0%
+- Stage **STAGE_2** (score 0.85) · Stance **BULLISH** · Signal **STRONG_BUY**
+- Investment score 79.70 (tech 75.30, fund 81.72)
+- Relative Strength 99.2% vs Nifty 500; Supertrend BULLISH around ₹1805.47
 
 **Technicals:**
 
 | Metric | Value |
 |---|---:|
-| Close (2026-09-07) | ₹280.95 |
-| EMA 20 / 50 / 200 | ₹274.78 / ₹245.48 / ₹153.00 |
-| EMA50 slope (20d) | 22.35% |
-| RSI(14) | 59.56 |
-| ATR(14) | ₹8.91 (3.17%) |
-| 52W High / Low | ₹299.00 / ₹32.87 |
-| Distance from 52W high | -6.0% |
-| Returns 1M / 3M / 6M / 1Y | 7.2% / 86.6% / 206.7% / 684.8% |
-| Last-day volume vs 20d avg | 0.22x |
+| Close (2026-09-10) | ₹1945.00 |
+| EMA 20 / 50 / 200 | ₹1869.76 / ₹1754.09 / ₹1360.12 |
+| EMA50 slope (20d) | 9.23% |
+| RSI(14) | 65.88 |
+| ATR(14) | ₹50.48 (2.60%) |
+| 52W High / Low | ₹1955.00 / ₹823.10 |
+| Distance from 52W high | -0.5% |
+| Returns 1M / 3M / 6M / 1Y | 5.1% / 40.0% / 85.8% / 115.6% |
+| Last-day volume vs 20d avg | 0.30x |
+
+**Fundamentals:**
+
+| Metric | Value |
+|---|---:|
+| Piotroski F-score | — / 9 |
+| Altman Z-score | — |
+| Beneish M-score | — |
+| Forensic risk | — |
+| Revenue growth 3Y | — |
+| PAT growth 3Y | — |
+| ROE | — |
+| ROCE | — |
+| Debt / Equity | — |
+| Promoter holding | 27.5% |
+
+---
+
+### 2. CUPID — Pharma & Healthcare / Medical Devices & Sexual Wellness
+
+**Why selected:** VCP-confirmed Stage 2 (vcp=86, inv=82.9) in top-ranked sector Pharma & Healthcare (strength=94)
+
+**What the company does:** Established in 1993, CUPID Limited is India's premier manufacturer of male and female condoms, personal lubricant, and IVD kits. [1]
+
+*Company profile source: screener.in (live) — https://www.screener.in/company/CUPID/*
+
+**Thesis:** CUPID's technical indicators reveal an emerging bullish stance with a Strong Buy signal and an investment score of 82.9, supported by a robust 141.54% YoY revenue growth. The company presents a PAT CAGR of 43.84%, benefitting from its niche in the personal wellness segment, while maintaining strong operating margins at 40%. The balance sheet remains healthy, featuring a decreasing net debt trend and implying a solid financial backbone.
+
+**Technical view:** The technical set-up indicates a bullish trend with an RSI of 55.67 and an EMA structure confirming a favorable alignment above critical averages. However, the stock is 7.21% off its 52-week high while reflecting a recent short-term retracement of -0.8%.
+
+**Fundamental view:** CUPID's most recent quarterly results displayed revenues of ₹157 Cr and PAT of ₹44 Cr, indicating significant growth momentum. The company shows excellent operational efficiency with an OPM of 40% and a positive cash flow statement showcased by a calculated OCF/PAT of 0.34, denoting good earnings quality despite some weakness.
+
+**Sector view:** CUPID operates within a healthy Pharma & Healthcare sector with a strength of 78.54, benefiting from robust peer performance and illustrated growth momentum.
+
+**Valuation:** At a P/E of 274, CUPID reflects significant valuation stretch compared to historical norms, which may require strong performance continuity.
+
+**Key catalysts:**
+- Quarterly revenue growth of 18.94% QoQ
+- PAT growth of 22.22% QoQ
+- Strong promoter holding of 46.24%
+
+**Key risks:**
+- Extremely high P/E (274)
+- Weak quality of cash flows (OCF/PAT 0.34)
+- Potential for margin compression
+
+**Research observation:** CUPID's strong revenue momentum combined with operating efficiencies makes it a compelling watch amid its high valuation risk.
+
+**Model ref targets:** 2M ₹306 · 4M ₹324 · 6M ₹373 _(model reference only)_  
+**Model inv. level:** ₹242 · **Reward/Risk (4M):** 1.31x  
+**Risk score:** 3.0 / 10 (LOW) · **Illustrative weight:** 8% _(not a personal allocation recommendation)_  
+**Extension:** NORMAL. Extension is not the main risk flag; standard staged entry rules apply.
+
+**Conviction:** **MEDIUM** — While growth metrics are strong, the elevated valuation metrics restrict the conviction level.
+
+**Snapshot:**
+
+- Price ₹277.45 · 1D -0.8% · 1W -0.9% · 1M -5.9%
+- Stage **STAGE_2** (score 0.68) · Stance **BULLISH** · Signal **STRONG_BUY**
+- Investment score 82.90 (tech 71.30, fund 85.17)
+- Relative Strength 100.0% vs Nifty 500; Supertrend BULLISH around ₹256.02
+
+**Technicals:**
+
+| Metric | Value |
+|---|---:|
+| Close (2026-09-10) | ₹277.45 |
+| EMA 20 / 50 / 200 | ₹275.46 / ₹249.09 / ₹156.38 |
+| EMA50 slope (20d) | 18.36% |
+| RSI(14) | 55.67 |
+| ATR(14) | ₹9.36 (3.37%) |
+| 52W High / Low | ₹299.00 / ₹38.20 |
+| Distance from 52W high | -7.2% |
+| Returns 1M / 3M / 6M / 1Y | -4.3% / 68.3% / 241.1% / 605.8% |
+| Last-day volume vs 20d avg | 0.47x |
 
 **Fundamentals:**
 
@@ -150,63 +225,63 @@ A high-ranked pick should be read as a research shortlist candidate, not a direc
 
 ---
 
-### 2. KABRAEXTRU — Capital Goods / Unmapped
+### 3. DIVISLAB — Pharma & Healthcare / Healthcare Products
 
-**Why selected:** VCP-confirmed Stage 2 (vcp=87, inv=95.7) in top-ranked sector Capital Goods (strength=89)
+**Why selected:** VCP-confirmed Stage 2 (vcp=84, inv=78.2) in top-ranked sector Pharma & Healthcare (strength=94)
 
-**What the company does:** Kabra Extrusiontechnik Limited was incorporated in 1982. It is part of the Kolsite group and operates in the business of plastic extrusion machinery. KET specializes in providing plastic extrusion machinery for manufacturing pipes and films. It has two manufacturing locations in Daman. Co. has also started Lithium ion battery packs business from FY21 [1] [2]
+**What the company does:** Incorporated in 1990, Divis Laboratories Ltd manufactures and exports API's, Intermediates and Nutraceutical ingredients [1]
 
-*Company profile source: screener.in (live) — https://www.screener.in/company/KABRAEXTRU/*
+*Company profile source: screener.in (live) — https://www.screener.in/company/DIVISLAB/*
 
-**Thesis:** Kabra Extrusiontechnik showcases bullish momentum with its trading signal identified as a 'BUY' and a current price at ₹634.5, just 1.17% off its 52-week high. Additionally, the company has shown significant growth with a 3-month revenue increase of 170.73%, although recent quarterly performance has been volatile, highlighting the risks in the backdrop of a rapidly rising debt to creatively fund expansions in lithium-ion battery assembly. Nevertheless, the technical indicators suggest momentum with an RSI at overbought levels at 71.65% and a supportive EMA stack.
+**Thesis:** Divis Laboratories shows strong momentum backed by a Strong Buy signal and positive performance indicators with an investment score of 78.2. With a stellar revenue growth of 27.80% YoY, the company has been increasing profitability as seen in a PAT growth of 65.50%. The company presents ROCE of 22% alongside a stable financial standing characterized by low debt levels and a net cash position.
 
-**Technical view:** The current bullish trend is bolstered by a stack of EMAs aligned upwards and a high 1-month return of 41.44%. The current price is 15% above EMA20 and 37% above EMA50, indicating overextension but healthy momentum.
+**Technical view:** Technically, the stock is in a strong bullish phase with an RSI of 68.11, indicating momentum brewing within overbought regions while remaining positive due to its upward trend stack. The price sits approximately 1.84% from its 52-week high, making it a candidate for potential profit booking.
 
-**Fundamental view:** KABRAEXTRU's annual revenue from the last TTM period stands at ₹490 Cr, supported by a cash flow positive OCF of ₹9 Cr. The recent quarterly performance shows potential volatility, evident from a current PAT of -₹1.74 Cr in the latest quarter; thus EPS remains pressured to negative values indicating underlying earnings issues despite the high growth expectation dominating investor sentiment.
+**Fundamental view:** The latest quarterly results show a revenue figure of ₹3080 Cr, culminating in a PAT of ₹902 Cr, highlighting significant earnings momentum. Divis also demonstrates strong operational efficiency, boasting an OPM of 41%, with a calculated OCF significantly outweighing PAT, indicating good cash flow quality.
 
-**Sector view:** Sector strength stands at 88.68%, with KABRAEXTRU performing at a very high level relative to its peers and exhibiting solid growth rates.
+**Sector view:** Divis Labs operates in a robust healthcare products sector, rating strongly at 78.54, indicating solid performance in line with its peer group.
 
-**Valuation:** The current P/E ratio stands at 3,167, indicating extreme valuation stress while fundamental growth avenues require close scrutiny.
+**Valuation:** The company is presently trading with a P/E of 83.4, hinting at stretched valuations relative to earnings.
 
 **Key catalysts:**
-- Recent quarterly revenue growth of 44.81% YoY
-- Strong technical momentum with EMA and RSI
-- Increasing institutional backing at 63.5%
+- Quarterly PAT growth of 20.11% QoQ
+- Strong OPM at 41% in latest quarter
+- Low leverage with borrowings at ₹7 Cr
 
 **Key risks:**
-- Excessive reliance on debt with a rising trend
-- Tech volatility affected by economic conditions
-- Poor operational performance as indicated by ongoing PAT losses
+- High valuation (P/E 83.4)
+- Regulatory dependency
+- Potential earnings volatility
 
-**Research observation:** With potential overextensions in price and technical setups, KABRAEXTRU stages a prudent observation point for any pullback.
+**Research observation:** With solid foundational performance metrics and positive technicals, Divis Labs displays strong potential moving forward.
 
-**Model ref targets:** 2M ₹737 · 4M ₹805 · 6M ₹873 _(model reference only)_  
-**Model inv. level:** ₹448 · **Reward/Risk (4M):** 0.91x  
-**Risk score:** 7.5 / 10 (HIGH) · **Illustrative weight:** 3% _(not a personal allocation recommendation)_  
-**Extension:** OVEREXTENDED — 15.0% above EMA20; 37.4% above EMA50; RSI 72; -1.2% from 52w high; 1M return +41.4%. Do not chase; prefer pullback toward EMA20/base reset or staged entry only.
+**Model ref targets:** 2M ₹10,126 · 4M ₹10,584 · 6M ₹11,430 _(model reference only)_  
+**Model inv. level:** ₹8,089 · **Reward/Risk (4M):** 0.85x  
+**Risk score:** 2.5 / 10 (LOW) · **Illustrative weight:** 4% _(not a personal allocation recommendation)_  
+**Extension:** EXTENDED — 13.2% above EMA50; RSI 68; -1.8% from 52w high. Buy only on controlled pullback or tight base; keep size capped.
 
-**Conviction:** **LOW** — Principal concerns focus on poor earnings performance intertwined with high valuations and significant debt obligations.
+**Conviction:** **MEDIUM** — Strong revenue growth and balance sheet strength drive medium conviction amidst valuation concern.
 
 **Snapshot:**
 
-- Price ₹634.50 · 1D 9.6% · 1W 5.7% · 1M 41.4%
-- Stage **STAGE_2** (score 99.81) · Stance **BULLISH** · Signal **BUY**
-- Investment score 95.65 (tech 93.80, fund 41.35)
-- Relative Strength 100.0% vs Nifty 500; Supertrend BULLISH around ₹524.80
+- Price ₹9438.50 · 1D -0.5% · 1W 2.0% · 1M 11.0%
+- Stage **STAGE_2** (score 0.76) · Stance **BULLISH** · Signal **STRONG_BUY**
+- Investment score 78.20 (tech 76.70, fund 79.68)
+- Relative Strength 94.7% vs Nifty 500; Supertrend BULLISH around ₹8834.95
 
 **Technicals:**
 
 | Metric | Value |
 |---|---:|
-| Close (2026-09-07) | ₹634.50 |
-| EMA 20 / 50 / 200 | ₹551.66 / ₹461.71 / ₹322.35 |
-| EMA50 slope (20d) | 38.37% |
-| RSI(14) | 71.65 |
-| ATR(14) | ₹34.04 (5.36%) |
-| 52W High / Low | ₹642.00 / ₹180.00 |
-| Distance from 52W high | -1.2% |
-| Returns 1M / 3M / 6M / 1Y | 41.4% / 170.7% / 156.0% / 131.5% |
-| Last-day volume vs 20d avg | 2.35x |
+| Close (2026-09-10) | ₹9438.50 |
+| EMA 20 / 50 / 200 | ₹9017.25 / ₹8339.43 / ₹7126.47 |
+| EMA50 slope (20d) | 12.06% |
+| RSI(14) | 68.11 |
+| ATR(14) | ₹229.00 (2.43%) |
+| 52W High / Low | ₹9615.00 / ₹5636.50 |
+| Distance from 52W high | -1.8% |
+| Returns 1M / 3M / 6M / 1Y | 9.7% / 42.8% / 48.6% / 56.6% |
+| Last-day volume vs 20d avg | 0.77x |
 
 **Fundamentals:**
 
@@ -221,142 +296,67 @@ A high-ranked pick should be read as a research shortlist candidate, not a direc
 | ROE | — |
 | ROCE | — |
 | Debt / Equity | — |
-| Promoter holding | 60.4% |
+| Promoter holding | 51.9% |
 
 ---
 
-### 3. AVADHSUGAR — Fast Moving Consumer Goods / Unmapped
+### 4. MCX — Capital Markets / Unmapped
 
-**Why selected:** VCP-confirmed Stage 2 (vcp=85, inv=96.1) in top-ranked sector Fast Moving Consumer Goods (strength=92)
+**Why selected:** VCP-confirmed Stage 2 (vcp=84, inv=76.6) in top-ranked sector Capital Markets (strength=78)
 
-**What the company does:** Incorporated in 2015, Avadh Sugar & Energy Ltd manufactures and sells sugar and its by-products, spirits and power [1]
+**What the company does:** The MCX) commenced operation in Nov,03 is India’s first listed, national-level, electronic exchange, and India’s leading commodity derivatives exchange which offers the benefits of fair price discovery and price risk management to the Indian commodity market ecosystem. The Exchange operates under SEBI. [1]
 
-*Company profile source: screener.in (live) — https://www.screener.in/company/AVADHSUGAR/*
+*Company profile source: screener.in (live) — https://www.screener.in/company/MCX/*
 
-**Thesis:** Avadh Sugar & Energy positions itself within a strong sector environment, evidenced by its trading signal as 'BUY' and a price of ₹839.7, while maintaining a 99.26 RS percentile against Nifty 500. The company reports a compelling YoY revenue growth of 8.74% despite volatility in quarterly PAT performance that saw -99.59% QoQ drop in the latest quarter, suggesting fluctuations in market conditions and margin pressures. The operational profit margins remain strong at around 8%, although there is a rising debt trend posing potential risks to cash flow stability.
+**Thesis:** MCX is positioned strongly within its sector, showing technical health characterized by a bullish supertrend status and a 1-year price return of 116.8%. Despite a recent quarterly revenue dip of -21.03% QoQ, revenue continues to demonstrate robust growth with an 88.20% YoY increase. The company boasts an outstanding ROCE of 71.4% and a low debt-equity ratio of 0.0018, indicating strong balance sheet health and capability to leverage future growth opportunities.
 
-**Technical view:** Currently trading with an RSI of 68.45, Avadh Sugar indicates slight overbought conditions with substantial volume above the 20-day moving average. The stock is situated 5.1% off its 52-week high, suggesting impending resistance levels that may inhibit short-term momentum.
+**Technical view:** MCX exhibits a bullish technical setup with an EMA stack configuration fully supportive (20, 50, and 200 EMA all aligned). The RSI stands at 59.71, indicating a neutral momentum position, while a distance of -5.17% from the 52-week high suggests potential upward movement before hitting resistance.
 
-**Fundamental view:** In the latest quarter, the company posted revenue of ₹779.25 Cr but reported a meager PAT of ₹0.23 Cr, highlighting profitability challenges amidst strong operational capacities. The balance sheet shows a D/E ratio of 1.25, with substantial ongoing debt accumulation, indicating needs for awareness in cash flow management.
+**Fundamental view:** In the latest quarter (Jun 2026), MCX achieved a revenue of ₹702 Cr with a robust operating margin of 70%, reflecting strong profitability levels despite a dip from the prior quarter. The company maintains a low net debt of ₹-2944 Cr, which demonstrates excellent cash flow management, highlighted by an OCF/PAT ratio of 1.97.
 
-**Sector view:** With a sector strength of 92.11%, Avadh Sugar is well-positioned against its peers, bolstered by demand for FMCG products in challenging market conditions.
+**Sector view:** The capital markets sector, featuring a strength of 63.2, supports MCX's bullish stance, and the company ranks well with a relative strength of 94.5% compared to the Nifty 500 index.
 
-**Valuation:** Trading at a P/E of 25, while respectable for earnings sustainability, may pose growth concerns given historical revenue challenges.
-
-**Key catalysts:**
-- Positive revenue growth of 39.71% in the last month
-- Retained a strong promoter holding at 60.39%
-- Recent bulk investment activity reflecting insider confidence
-
-**Key risks:**
-- Ongoing rising debt with a D/E ratio of 1.25
-- Fluctuating sugar prices affecting revenue
-- Potential supply chain delays under FMCG disruptions
-
-**Research observation:** Investors should monitor price action closely as current momentum appears robust but is countered by fluctuations in profitability and debt concerns.
-
-**Model ref targets:** 2M ₹1,001 · 4M ₹1,109 · 6M ₹1,217 _(model reference only)_  
-**Model inv. level:** ₹647 · **Reward/Risk (4M):** 1.40x  
-**Risk score:** 5.5 / 10 (MEDIUM) · **Illustrative weight:** 3% _(not a personal allocation recommendation)_  
-**Extension:** OVEREXTENDED — 9.2% above EMA20; 25.9% above EMA50; RSI 68; 1M return +39.7%. Do not chase; prefer pullback toward EMA20/base reset or staged entry only.
-
-**Conviction:** **MEDIUM** — Due to a healthy sector backdrop but concerns over ongoing debt and operating income fluctuations.
-
-**Snapshot:**
-
-- Price ₹839.70 · 1D 3.7% · 1W -1.8% · 1M 39.7%
-- Stage **STAGE_2** (score 99.05) · Stance **BULLISH** · Signal **BUY**
-- Investment score 96.06 (tech 94.69, fund 56.27)
-- Relative Strength 99.3% vs Nifty 500; Supertrend BULLISH around ₹707.89
-
-**Technicals:**
-
-| Metric | Value |
-|---|---:|
-| Close (2026-09-07) | ₹839.70 |
-| EMA 20 / 50 / 200 | ₹769.25 / ₹666.82 / ₹508.28 |
-| EMA50 slope (20d) | 28.00% |
-| RSI(14) | 68.45 |
-| ATR(14) | ₹53.85 (6.41%) |
-| 52W High / Low | ₹884.80 / ₹306.05 |
-| Distance from 52W high | -5.1% |
-| Returns 1M / 3M / 6M / 1Y | 39.7% / 84.2% / 118.6% / 84.1% |
-| Last-day volume vs 20d avg | 0.44x |
-
-**Fundamentals:**
-
-| Metric | Value |
-|---|---:|
-| Piotroski F-score | — / 9 |
-| Altman Z-score | — |
-| Beneish M-score | — |
-| Forensic risk | — |
-| Revenue growth 3Y | — |
-| PAT growth 3Y | — |
-| ROE | — |
-| ROCE | — |
-| Debt / Equity | — |
-| Promoter holding | 60.4% |
-
----
-
-### 4. AKUMS — Healthcare / Unmapped
-
-**Why selected:** VCP-confirmed Stage 2 (vcp=80, inv=94.5) in top-ranked sector Healthcare (strength=83)
-
-**What the company does:** Established in 2004, Akums Drugs and Pharmaceuticals Limited is a pharmaceutical contract development and manufacturing organization (CDMO) offering a comprehensive range of pharmaceutical products and services. [1]
-
-*Company profile source: screener.in (live) — https://www.screener.in/company/AKUMS/*
-
-**Thesis:** Akums Drugs and Pharmaceuticals exhibits a strong technical setup, maintaining a bullish stage with a technical score of 94.98 and a relative strength (RS) of 93.53% vs. Nifty 500. Recent quarterly results show a revenue of ₹1167 Cr in Q2 FY26, growing 13.96% year-over-year, with PAT up 55.38% YoY, indicating robust operational momentum. The balance sheet remains healthy with a debt-to-equity ratio of 0.05 and decreasing borrowings over the past three years, alongside a strong operating cash flow (OCF) of ₹1181 Cr.
-
-**Technical view:** Technically, Akums is in a strong upward trend with all EMAs aligned positively. The RSI is at 54.73, indicating a neutral momentum but just below overbought territory with a tight distance of 5.26% from the 52-week high. The price action displays strong returns over 6 months (+59.09%) and solid resistance levels at ₹710, a critical breakout point.
-
-**Fundamental view:** In the latest quarter, Akums showed a significant improvement in OPM, moving to 15% compared to an average of 12% recently. The firm exhibits a strong OCF/PAT ratio of 4.03, indicating excellent cash flow quality, and a respectable EPS CAGR of 29.30%. The balance sheet is robust, with net debt of ₹157 Cr and a trend of decreasing borrowings.
-
-**Sector view:** Akums operates within the healthcare sector, which shows a strong sector strength of 83.21% and ranks favorably among its 20 peers with an RS that exceeds its sector average.
-
-**Valuation:** P/E at 38.9 indicates a stretch in valuation, though justified by strong growth metrics.
+**Valuation:** Current P/E at 54.0 indicates a stretch in valuation relative to historical norms, particularly given FY TTM EPS of ₹60.46.
 
 **Key catalysts:**
-- Q2 FY26 revenue growth of 13.96%
-- PAT increasing by 55.38% YoY
-- Strong OCF of ₹1181 Cr
+- PAT growth of 103.45% YoY
+- Strong technical score of 70.7
+- Market leadership in the commodities space
 
 **Key risks:**
-- High valuation could deter new investors
-- Regulatory risks in pharmaceutical sector
-- Dependence on maintaining operational efficiency
+- Revenue volatility in commodities trading
+- Potential regulatory changes affecting trading
+- High individual stock volatility evidenced by ATR at 3.01%
 
-**Research observation:** The current technical and fundamental conditions indicate a strong bullish setup for Akums, suggesting further potential upside as it consolidates around current levels.
+**Research observation:** The setup in MCX is firmly bullish, suggesting strong momentum and favorable investment conditions despite a slight pullback in recent revenue metrics.
 
-**Model ref targets:** 2M ₹834 · 4M ₹886 · 6M ₹1,019 _(model reference only)_  
-**Model inv. level:** ₹685 · **Reward/Risk (4M):** 1.90x  
+**Model ref targets:** 2M ₹3,598 · 4M ₹3,797 · 6M ₹4,366 _(model reference only)_  
+**Model inv. level:** ₹2,955 · **Reward/Risk (4M):** 1.44x  
 **Risk score:** 1.5 / 10 (LOW) · **Illustrative weight:** 8% _(not a personal allocation recommendation)_  
 **Extension:** NORMAL. Extension is not the main risk flag; standard staged entry rules apply.
 
-**Conviction:** **HIGH** — Supported by strong fundamentals, technical momentum, and sector strength.
+**Conviction:** **HIGH** — Strong fundamentals and technical indicators coupled with favorable sector context support high conviction.
 
 **Snapshot:**
 
-- Price ₹754.65 · 1D -1.4% · 1W -2.8% · 1M 8.2%
-- Stage **STAGE_2** (score 97.59) · Stance **BULLISH** · Signal **BUY**
-- Investment score 94.55 (tech 94.98, fund 73.12)
-- Relative Strength 93.5% vs Nifty 500; Supertrend BULLISH around ₹707.05
+- Price ₹3300.00 · 1D -1.5% · 1W 4.1% · 1M 11.1%
+- Stage **STAGE_2** (score 0.67) · Stance **BULLISH** · Signal **STRONG_BUY**
+- Investment score 76.60 (tech 70.70, fund 78.90)
+- Relative Strength 94.5% vs Nifty 500; Supertrend BULLISH around ₹3045.87
 
 **Technicals:**
 
 | Metric | Value |
 |---|---:|
-| Close (2026-09-07) | ₹754.65 |
-| EMA 20 / 50 / 200 | ₹751.38 / ₹706.49 / ₹576.00 |
-| EMA50 slope (20d) | 10.40% |
-| RSI(14) | 54.73 |
-| ATR(14) | ₹26.32 (3.49%) |
-| 52W High / Low | ₹796.55 / ₹409.30 |
-| Distance from 52W high | -5.3% |
-| Returns 1M / 3M / 6M / 1Y | 8.2% / 27.5% / 59.1% / 59.6% |
-| Last-day volume vs 20d avg | 0.30x |
+| Close (2026-09-10) | ₹3300.00 |
+| EMA 20 / 50 / 200 | ₹3206.01 / ₹3045.89 / ₹2605.44 |
+| EMA50 slope (20d) | 8.72% |
+| RSI(14) | 59.71 |
+| ATR(14) | ₹99.31 (3.01%) |
+| 52W High / Low | ₹3480.00 / ₹1505.20 |
+| Distance from 52W high | -5.2% |
+| Returns 1M / 3M / 6M / 1Y | 11.1% / 14.0% / 30.6% / 116.8% |
+| Last-day volume vs 20d avg | 0.57x |
 
 **Fundamentals:**
 
@@ -371,219 +371,67 @@ A high-ranked pick should be read as a research shortlist candidate, not a direc
 | ROE | — |
 | ROCE | — |
 | Debt / Equity | — |
-| Promoter holding | 75.3% |
+| Promoter holding | — |
 
 ---
 
-### 5. AVALON — Capital Goods / Unmapped
+### 5. APARINDS — Capital Goods & Industrials / Industrial Products
 
-**Why selected:** VCP-confirmed Stage 2 (vcp=83, inv=97.1) in top-ranked sector Capital Goods (strength=89)
+**Why selected:** VCP-confirmed Stage 2 (vcp=83, inv=75.4) in top-ranked sector Capital Goods & Industrials (strength=83)
 
-**What the company does:** AVALON: business description unavailable from live profile lookup.
+**What the company does:** Apar, founded by Mr. Dharmsinh D. Desai in 1958, is a market leader in India with a global presence. Contributing to India’s process of electrification it started from manufacturing power transmission cables to having three broad business segments, which are Conductors, Transformer and specialty oils (TSO), and Power/telecom Cables. [1] [2]
 
-*Company profile source: local fallback (fallback: <urlopen error [Errno 8] nodename nor servname provided, or not known>) — https://www.screener.in/company/AVALON/*
+*Company profile source: screener.in (live) — https://www.screener.in/company/APARINDS/*
 
-**Thesis:** Avalon demonstrates a compelling technical profile with a current price of ₹2352.50 sitting well in a bullish market stage (STAGE_2) and an investment score of 97.08. Its recent quarterly results reflect significant revenue growth of 49.85% YoY, alongside a notable PAT increase of 150%, indicating strong operational leverage. With a market cap of ₹15,716 Cr, Avalon’s positioning among an 88.68-strength sector underscores its competitive robustness.
+**Thesis:** Apar Industries shows robust fundamentals with a strong technical score of 78.7 and recent revenue reflecting a 29.13% YoY growth, while PAT has surged by 77.57% YoY. The company's strong balance sheet is underscored by a manageable debt-equity ratio of 0.1773 and an equity of ₹5393 Cr against total assets of ₹13711 Cr, positioning it well for continued growth in a strengthening sector.
 
-**Technical view:** The RSI is positioned at 64.06, indicating robust bullish momentum but nearing overbought territory. Notably, the stock is currently 2.95% away from its 52-week high, with strong recent returns reflecting positive buy-side activity amidst a healthy volume surge.
+**Technical view:** Technically, Apar Industries displays strong momentum with a current RSI of 55.47, positioned within a bullish setup with the price trading above the EMA 20/MAs. However, it is just 6.08% off the 52-week high, suggesting some overbought conditions.
 
-**Fundamental view:** Avalon's operating margin has shown stability at around 12%, supporting its good PAT growth of 134% for TTM. The balance sheet shows manageable net debt of ₹132 Cr against equity of ₹721 Cr. Moreover, its earnings quality flag indicates reliability, although the cash flow quality (OCF/PAT ratio) remains moderate at 0.43.
+**Fundamental view:** The latest quarter showed a solid performance with revenue at ₹6591 Cr and PAT growth indicating high earnings momentum. The debt trend is gradually rising, yet equity levels are sustaining sound financial flexibility aided by an OCF/PAT ratio of 0.82.
 
-**Sector view:** Being located in the Capital Goods sector, Avalon benefits from an overall strength of 88.68% and enjoys a favorable peer ranking, positioning it well relative to domestic and international competition.
+**Sector view:** In the capital goods sector, Apar Industries ranks favorably, outperforming the average sector metrics with a high relative strength of 97.7%.
 
-**Valuation:** Currently trading at a P/E of 118, the valuation appears elevated; however, strong growth prospects may justify this premium.
-
-**Key catalysts:**
-- Q2 FY26 revenue of ₹484 Cr, up 49.85% YoY
-- PAT growth of 150% YoY
-- Technical breakout with strong volume spike
-
-**Key risks:**
-- High degree of valuation stretch may pose risks
-- Cyclical nature of capital goods markets
-- Fluctuations in commodity prices impacting costs
-
-**Research observation:** Avalon showcases a highly bullish momentum with strong earnings trends but carries valuation considerations that possible investors must weigh carefully.
-
-**Model ref targets:** 2M ₹2,777 · 4M ₹3,059 · 6M ₹3,518 _(model reference only)_  
-**Model inv. level:** ₹1,877 · **Reward/Risk (4M):** 1.49x  
-**Risk score:** 6.0 / 10 (MEDIUM) · **Illustrative weight:** 3% _(not a personal allocation recommendation)_  
-**Extension:** OVEREXTENDED — 8.9% above EMA20; 19.9% above EMA50; -2.9% from 52w high; 1M return +19.7%. Do not chase; prefer pullback toward EMA20/base reset or staged entry only.
-
-**Conviction:** **MEDIUM** — Strong earnings growth, but with significant risks around valuations and cyclical trends.
-
-**Snapshot:**
-
-- Price ₹2352.50 · 1D 7.1% · 1W -0.9% · 1M 19.7%
-- Stage **STAGE_2** (score 98.36) · Stance **BULLISH** · Signal **BUY**
-- Investment score 97.08 (tech 97.88, fund 72.37)
-- Relative Strength 95.2% vs Nifty 500; Supertrend BULLISH around ₹1962.12
-
-**Technicals:**
-
-| Metric | Value |
-|---|---:|
-| Close (2026-09-07) | ₹2352.50 |
-| EMA 20 / 50 / 200 | ₹2159.55 / ₹1961.32 / ₹1446.74 |
-| EMA50 slope (20d) | 16.65% |
-| RSI(14) | 64.06 |
-| ATR(14) | ₹141.37 (6.01%) |
-| 52W High / Low | ₹2424.00 / ₹777.30 |
-| Distance from 52W high | -2.9% |
-| Returns 1M / 3M / 6M / 1Y | 19.7% / 53.5% / 160.0% / 172.4% |
-| Last-day volume vs 20d avg | 2.94x |
-
-**Fundamentals:**
-
-| Metric | Value |
-|---|---:|
-| Piotroski F-score | — / 9 |
-| Altman Z-score | — |
-| Beneish M-score | — |
-| Forensic risk | — |
-| Revenue growth 3Y | — |
-| PAT growth 3Y | — |
-| ROE | — |
-| ROCE | — |
-| Debt / Equity | — |
-| Promoter holding | 44.4% |
-
----
-
-### 6. KRN — Capital Goods / Unmapped
-
-**Why selected:** VCP-confirmed Stage 2 (vcp=82, inv=95.7) in top-ranked sector Capital Goods (strength=89)
-
-**What the company does:** KRN Heat Exchanger and Refrigeration (KHERL), manufactures fin and tube-type heat exchangers for the Heat Ventilation Air Conditioning, and Refrigeration Industry. [1]
-
-*Company profile source: screener.in (live) — https://www.screener.in/company/KRN/*
-
-**Thesis:** KRN Heat Exchanger operates within an encouraging sector context, displaying stage 2 characteristics with a technical score of 97.74 and an RSI of 68.63, indicating strong momentum albeit nearing overbought levels. The latest quarterly result shows a revenue increase of 59.65% YoY, with a commendable PAT of ₹74 Cr, reflecting solid operational execution. KRN’s debt levels remain manageable with positive net cash of ₹260 Cr, making it a strong candidate within its peer group in a strong capital goods sector.
-
-**Technical view:** KRN's 6-month trend suggests elevated momentum with a 34.51% return over the past month, and currently is about 2.55% from its 52-week high. The technical setup shows bullish alignment in EMAs with potential for further upside as it continues to consolidate near key support.
-
-**Fundamental view:** The company posted an OPM of 12% with a PAT CAGR of 23.32% which points to improving operational efficiency. KRN's financials indicate it is in a solid position with a debt-to-equity ratio of 0.16, reflecting a stable financial standing coupled with rising trends in cash flow quality (OCF/PAT ratio of 0.19).
-
-**Sector view:** KRN is positioned in the Capital Goods sector, which has a high sector strength score of 88.68, benefited by comprehensive demand growth and competitive advantages among peers.
-
-**Valuation:** The current P/E of 143 indicates substantial growth expectations, placing valuation under scrutiny even amidst positive operational results.
+**Valuation:** P/E at 58.4 may indicate valuation pressures, reflecting investor optimism that may not sustain growth expectations across cycles.
 
 **Key catalysts:**
-- Latest quarter revenue surged by 59.65% YoY
-- Strong PAT of ₹74 Cr indicates operational efficiency
-- Healthy balance sheet reflects positive net cash position
+- PAT surge of 77.57% YoY
+- Strong earnings quality score of 81.0
+- Sector strength rated at 77.6
 
 **Key risks:**
-- Rapid valuation escalation poses risks
-- Cyclical industry sensitivity reflecting demand fluctuations
-- Cash flow concerns might limit growth capacity
+- Cyclical demand fluctuations in industrial products
+- Increasing debt could pressure earnings
+- Volatility in global supply chains
 
-**Research observation:** KRN displays a technical and fundamental setup that is gaining traction, with a notable momentum but must be viewed against high valuations that could trigger volatility.
+**Research observation:** Apar Industries maintains a strong fundamental base for growth, though market factors and valuation must be continuously monitored in a shifting economic landscape.
 
-**Model ref targets:** 2M ₹1,862 · 4M ₹2,020 · 6M ₹2,323 _(model reference only)_  
-**Model inv. level:** ₹1,332 · **Reward/Risk (4M):** 1.34x  
-**Risk score:** 6.0 / 10 (MEDIUM) · **Illustrative weight:** 3% _(not a personal allocation recommendation)_  
-**Extension:** OVEREXTENDED — 9.1% above EMA20; 18.2% above EMA50; RSI 69; -2.6% from 52w high; 1M return +34.5%. Do not chase; prefer pullback toward EMA20/base reset or staged entry only.
-
-**Conviction:** **MEDIUM** — While displaying positive momentum, concerns around valuation hold back stronger conviction.
-
-**Snapshot:**
-
-- Price ₹1625.40 · 1D 3.0% · 1W 4.7% · 1M 34.5%
-- Stage **STAGE_2** (score 97.38) · Stance **BULLISH** · Signal **BUY**
-- Investment score 95.74 (tech 97.74, fund 82.80)
-- Relative Strength 91.1% vs Nifty 500; Supertrend BULLISH around ₹1372.30
-
-**Technicals:**
-
-| Metric | Value |
-|---|---:|
-| Close (2026-09-07) | ₹1625.40 |
-| EMA 20 / 50 / 200 | ₹1489.46 / ₹1375.17 / ₹1095.56 |
-| EMA50 slope (20d) | 14.23% |
-| RSI(14) | 68.63 |
-| ATR(14) | ₹78.90 (4.85%) |
-| 52W High / Low | ₹1668.00 / ₹589.80 |
-| Distance from 52W high | -2.6% |
-| Returns 1M / 3M / 6M / 1Y | 34.5% / 29.4% / 76.9% / 87.8% |
-| Last-day volume vs 20d avg | 1.11x |
-
-**Fundamentals:**
-
-| Metric | Value |
-|---|---:|
-| Piotroski F-score | — / 9 |
-| Altman Z-score | — |
-| Beneish M-score | — |
-| Forensic risk | — |
-| Revenue growth 3Y | — |
-| PAT growth 3Y | — |
-| ROE | — |
-| ROCE | — |
-| Debt / Equity | — |
-| Promoter holding | 65.7% |
-
----
-
-### 7. OFSS — Information Technology / Unmapped
-
-**Why selected:** Portfolio lab best strategy `moving_average_trend_v1` confirms as open position; current Stage 2 inv=91.6
-
-**Portfolio lab confirmation:** `moving_average_trend_v1` (Moving Average Trend, rank 1, 7.19% return) marks this as **open position**.
-
-**What the company does:** Oracle Financial Services Software Ltd provides financial software, custom application development, consulting, IT infrastructure management, and outsourced business processing services to the financial services industry. The company was incorporated in 1989 and is based in Mumbai, India. Oracle Financial Services Software Limited is a subsidiary of Oracle Global (Mauritius) Limited. [1]
-
-*Company profile source: screener.in (live) — https://www.screener.in/company/OFSS/*
-
-**Thesis:** Oracle Financial Services Software Ltd (OFSS) exhibits strong performance with a technical stage score of 95.57, supported by a bullish trend as indicated by the moving averages and a supertrend state also bullish. The company's revenue shows a remarkable QoQ growth of 51.33% and a YoY growth of 68.74%, with a staggering PAT CAGR of 120.56% over the last year. Additionally, robust metrics such as a 60% OPM and a high promoter holding of 72.41% signal confidence in management and operational efficiency.
-
-**Technical view:** The technical setup is robust, with an EMA stack aligned strongly (20 above 50 above 200) and RSI at 51.29, suggesting a neutral zone. The distance from the 52-week high is approximately -5.53%, indicating some room for momentum gain should the sentiment turn positive.
-
-**Fundamental view:** In the latest quarter (Jun 2026), OFSS reported revenue of ₹3,125 Cr with a PAT of ₹1,416 Cr, reflecting a significant increase in operational profitability (OPM up 1,533 bps QoQ). With a stable borrowing trend and a negligible D/E ratio of 0.004, the balance sheet appears healthy, while the OCF/PAT ratio stands at 0.773, indicating good cash flow quality.
-
-**Sector view:** The IT sector is witnessing moderate strength, with OFSS outperforming the sector average RS of 80.93% at its own RS of 85.58%. This solid positioning among 34 peers indicates robust relative strength and potential for continued upward momentum.
-
-**Valuation:** Current P/E at 30.2 suggests it is tailored towards growth investors, though somewhat stretched given the high expectations baked in.
-
-**Key catalysts:**
-- QoQ revenue growth of 51.33%
-- PAT YoY growth of 120.56%
-- Promoter holding at 72.41%
-
-**Key risks:**
-- Dependency on tech trends in finance
-- Volatility in market sentiment towards IT
-- Global economic fluctuations affecting clients
-
-**Research observation:** OFSS is positioned well in the market with solid operational fundamentals and technical indicators supporting growth, although one should remain vigilant about market conditions impacting technology adoption in finance.
-
-**Model ref targets:** 2M ₹12,872 · 4M ₹13,556 · 6M ₹14,640 _(model reference only)_  
-**Model inv. level:** ₹10,993 · **Reward/Risk (4M):** 2.00x  
-**Risk score:** 1.0 / 10 (LOW) · **Illustrative weight:** 8% _(not a personal allocation recommendation)_  
+**Model ref targets:** 2M ₹19,186 · 4M ₹20,415 · 6M ₹22,048 _(model reference only)_  
+**Model inv. level:** ₹15,626 · **Reward/Risk (4M):** 1.79x  
+**Risk score:** 2.5 / 10 (LOW) · **Illustrative weight:** 8% _(not a personal allocation recommendation)_  
 **Extension:** NORMAL. Extension is not the main risk flag; standard staged entry rules apply.
 
-**Conviction:** **HIGH** — Strong technical and fundamental foundation with growth visibility.
+**Conviction:** **MEDIUM** — Solid technical indicators support a bullish case, though valuation pressures warrant caution.
 
 **Snapshot:**
 
-- Price ₹11847.00 · 1D -1.7% · 1W -5.5% · 1M 0.4%
-- Stage **STAGE_2** (score 95.57) · Stance **BULLISH** · Signal **BUY**
-- Investment score 91.61 (tech 94.19, fund 80.73)
-- Relative Strength 85.6% vs Nifty 500; Supertrend BULLISH around ₹11335.30
+- Price ₹17342.00 · 1D -0.6% · 1W -2.0% · 1M 0.7%
+- Stage **STAGE_2** (score 0.73) · Stance **BULLISH** · Signal **STRONG_BUY**
+- Investment score 75.40 (tech 78.70, fund 75.60)
+- Relative Strength 97.7% vs Nifty 500; Supertrend BULLISH around ₹15920.80
 
 **Technicals:**
 
 | Metric | Value |
 |---|---:|
-| Close (2026-09-07) | ₹11847.00 |
-| EMA 20 / 50 / 200 | ₹11889.34 / ₹11419.23 / ₹9650.59 |
-| EMA50 slope (20d) | 5.64% |
-| RSI(14) | 51.29 |
-| ATR(14) | ₹341.71 (2.88%) |
-| 52W High / Low | ₹12540.00 / ₹6234.50 |
-| Distance from 52W high | -5.5% |
-| Returns 1M / 3M / 6M / 1Y | 0.4% / 25.1% / 76.5% / 42.8% |
-| Last-day volume vs 20d avg | 0.84x |
+| Close (2026-09-10) | ₹17342.00 |
+| EMA 20 / 50 / 200 | ₹17114.01 / ₹16109.26 / ₹12585.76 |
+| EMA50 slope (20d) | 9.80% |
+| RSI(14) | 55.47 |
+| ATR(14) | ₹614.64 (3.54%) |
+| 52W High / Low | ₹18465.00 / ₹6801.00 |
+| Distance from 52W high | -6.1% |
+| Returns 1M / 3M / 6M / 1Y | -3.7% / 8.5% / 83.4% / 118.2% |
+| Last-day volume vs 20d avg | 0.86x |
 
 **Fundamentals:**
 
@@ -598,69 +446,67 @@ A high-ranked pick should be read as a research shortlist candidate, not a direc
 | ROE | — |
 | ROCE | — |
 | Debt / Equity | — |
-| Promoter holding | 72.4% |
+| Promoter holding | 55.4% |
 
 ---
 
-### 8. BOSCHLTD — EV & Auto Ancillaries / Auto Ancillaries
+### 6. NAVINFLUOR — Chemicals & Specialty / Specialty Chemicals
 
-**Why selected:** Portfolio lab best strategy `moving_average_trend_v1` confirms as open position; current Stage 2 inv=89.6
+**Why selected:** VCP-confirmed Stage 2 (vcp=82, inv=79.0) in top-ranked sector Chemicals & Specialty (strength=92)
 
-**Portfolio lab confirmation:** `moving_average_trend_v1` (Moving Average Trend, rank 1, 7.19% return) marks this as **open position**.
+**What the company does:** Navin Fluorine International Ltd is primary engaged in producing refrigeration gases, inorganic fluorides, specialty organofluorines and offers contract research and manufacturing services. [1] Its portfolio includes 50+ fluorinated compounds developed over the years. [2]
 
-**What the company does:** Bosch Ltd has presence across automotive technology, industrial technology, consumer goods and energy and building technology. It manufactures and trades in products such as diesel and gasoline fuel injection systems, automotive aftermarket products, industrial equipment, electrical power tools, security systems and industrial and consumer energy products and solutions. [1]
+*Company profile source: screener.in (live) — https://www.screener.in/company/NAVINFLUOR/*
 
-*Company profile source: screener.in (live) — https://www.screener.in/company/BOSCHLTD/*
+**Thesis:** Navin Fluorine is demonstrating stable growth as evidenced by a 44.14% YoY revenue increase alongside a notable cash flow quality signaled by an OCF/PAT ratio of 1.13. While maintaining an investment score of 79, the firm's strong balance sheet with a net debt of just ₹43 Cr against equity of ₹3974 Cr indicates its capacity for further expansion in the specialty chemicals space.
 
-**Thesis:** Bosch Ltd showcases impressive resilience in the EV & Auto Ancillary sector, with a technical score of 96.5 and a strong trading signal highlighting bullish momentum. Its revenue has reflected a steady YoY growth of 22% and a PAT CAGR of 13.46%, demonstrating a robust operational backbone despite sector challenges. Furthermore, a low net debt of -₹7,901 Cr indicates a solid capital structure.
+**Technical view:** With an RSI of 61.62 and an EMA alignment supporting upward trends, Navin Fluorine is situated positively among the bullish social context. The stock is positioned -2.78% from the 52-week high, exhibiting resilience amidst upward price trends.
 
-**Technical view:** Bosch has maintained a bullish technical structure with EMAs in a positive stack, RSI at 59.18 suggesting room for significant uptrend continuation. The current price is just -3.95% from its 52-week high, reflecting strength.
+**Fundamental view:** For the latest quarter, revenues reached ₹1045 Cr, reflecting a positive trend, and significant improvement in profitability with an operating margin stability at 34%. Despite challenges, debt levels are declining with a net cash position indicating structural financial robustness.
 
-**Fundamental view:** The recent quarterly results show revenue of ₹5,842 Cr and a PAT of ₹706 Cr, producing a consistent OPM of 14%. Net debt has been negative indicating significant cash positions, supporting capital expenditure and growth.
+**Sector view:** Within the chemicals and specialty sector, Navin Fluorine ranks favorably amidst a mid-tier softness evidenced through the sector strength of 76.94 against peers.
 
-**Sector view:** Within the EV & Auto Ancillaries sector, Bosch is performing well with a sector strength of 73.08% and an RS of 88.37%, placing it strongly among its peers.
-
-**Valuation:** Current P/E at 60.0 suggests elevated valuation, possibly pricing in strong future growth but presents risks if expectations are not met.
+**Valuation:** Current P/E at 55.5, while showing premium characteristics, is justified through consistent earnings growth and solid momentum.
 
 **Key catalysts:**
-- YoY revenue growth of 21.99%
-- Promoter holding at 70.54%
-- PAT CAGR of 13.46%
+- PAT growth by 107.69% YoY
+- Operating margin stability at ~34%
+- Solid cash flows with ₹894 Cr OCF
 
 **Key risks:**
-- Cyclical risks from new vehicle trends
-- Fluctuations in commodity prices
-- Dependence on global supply chains
+- Dependency on specific chemical markets
+- Rising raw material costs affecting margins
+- Potential liquidity issues given cash flow pressures
 
-**Research observation:** Bosch is mimicking strong sector trends with robust earnings growth and a solid technical foundation, though risks around broader economic cycles warrant careful observation.
+**Research observation:** Navin Fluorine shows solid operational metrics underpinning its growth story, allowing for market positioning despite the typical risks associated with specialty chemicals.
 
-**Model ref targets:** 2M ₹51,372 · 4M ₹55,000 · 6M ₹59,400 _(model reference only)_  
-**Model inv. level:** ₹43,261 · **Reward/Risk (4M):** 1.46x  
+**Model ref targets:** 2M ₹9,343 · 4M ₹9,844 · 6M ₹11,321 _(model reference only)_  
+**Model inv. level:** ₹7,867 · **Reward/Risk (4M):** 1.37x  
 **Risk score:** 1.5 / 10 (LOW) · **Illustrative weight:** 8% _(not a personal allocation recommendation)_  
-**Extension:** NORMAL. Extension is not the main risk flag; standard staged entry rules apply.
+**Extension:** NORMAL — -2.8% from 52w high. Extension is not the main risk flag; standard staged entry rules apply.
 
-**Conviction:** **MEDIUM** — Solid technicals but higher valuation calls for caution.
+**Conviction:** **HIGH** — Strong cash flows and profitability metrics cultivate high conviction in the investment narrative.
 
 **Snapshot:**
 
-- Price ₹48025.00 · 1D 2.6% · 1W -4.0% · 1M 11.8%
-- Stage **STAGE_2** (score 96.50) · Stance **BULLISH** · Signal **BUY**
-- Investment score 89.63 (tech 90.17, fund 64.03)
-- Relative Strength 88.4% vs Nifty 500; Supertrend BULLISH around ₹46139.50
+- Price ₹8700.50 · 1D -0.8% · 1W 0.0% · 1M 4.9%
+- Stage **STAGE_2** (score 0.70) · Stance **BULLISH** · Signal **STRONG_BUY**
+- Investment score 79.00 (tech 74.00, fund 81.47)
+- Relative Strength 91.8% vs Nifty 500; Supertrend BULLISH around ₹8190.40
 
 **Technicals:**
 
 | Metric | Value |
 |---|---:|
-| Close (2026-09-07) | ₹48025.00 |
-| EMA 20 / 50 / 200 | ₹47146.22 / ₹44598.93 / ₹39976.07 |
-| EMA50 slope (20d) | 10.13% |
-| RSI(14) | 59.18 |
-| ATR(14) | ₹1115.71 (2.32%) |
-| 52W High / Low | ₹50000.00 / ₹28610.00 |
-| Distance from 52W high | -4.0% |
-| Returns 1M / 3M / 6M / 1Y | 11.8% / 27.1% / 44.1% / 16.8% |
-| Last-day volume vs 20d avg | 1.12x |
+| Close (2026-09-10) | ₹8700.50 |
+| EMA 20 / 50 / 200 | ₹8478.89 / ₹8110.59 / ₹6912.32 |
+| EMA50 slope (20d) | 6.41% |
+| RSI(14) | 61.62 |
+| ATR(14) | ₹214.25 (2.46%) |
+| 52W High / Low | ₹8949.50 / ₹4498.50 |
+| Distance from 52W high | -2.8% |
+| Returns 1M / 3M / 6M / 1Y | 4.1% / 19.4% / 39.9% / 86.1% |
+| Last-day volume vs 20d avg | 0.51x |
 
 **Fundamentals:**
 
@@ -675,67 +521,69 @@ A high-ranked pick should be read as a research shortlist candidate, not a direc
 | ROE | — |
 | ROCE | — |
 | Debt / Equity | — |
-| Promoter holding | 70.5% |
+| Promoter holding | 27.1% |
 
 ---
 
-### 9. IRISDOREME — Textiles / Unmapped
+### 7. ATHERENERG — EV & Auto Ancillaries / Auto Ancillaries
 
-**Why selected:** Stage 2 leader in top sector Textiles (strength=89), inv=98.9
+**Why selected:** Portfolio lab best strategy `stage2_continuation_v1` confirms as open position; current Stage 2 inv=72.3, top sector strength=69
 
-**What the company does:** IRIS Clothings Limited, incorporated in 1956, is engaged in designing, manufacturing, branding and selling garments for kids. [1] Iris Clothings Limited is a fast-growing readymade garment company and is engaged in designing, manufacturing, branding and selling garments for kids wear under the brand name DOREME in India. It produces a broad range of unique apparels for infants, toddlers and junior boys and girls.
+**Portfolio lab confirmation:** `stage2_continuation_v1` (Stage 2 Continuation, rank 1, 8.84% return) marks this as **open position**.
 
-*Company profile source: screener.in (live) — https://www.screener.in/company/IRISDOREME/*
+**What the company does:** Incorporated in 2013, Ather Energy ltd is an Indian electric two-wheeler (E2W) company engaged in the design, development, and in-house assembly of electric scooters, battery packs, charging infrastructure, and supporting software systems [1]
 
-**Thesis:** IRIS Clothings Ltd presents a compelling growth narrative within the textiles sector, marked by an impressive revenue CAGR of over 15% and a strong recent jump of 26.31% YoY. The company is currently in an aggressive expansion phase, buoyed by a technical score of 98.86, and underpinned by steady high RSI levels at 71.66 indicating overbought conditions.
+*Company profile source: screener.in (live) — https://www.screener.in/company/ATHERENERG/*
 
-**Technical view:** With a bullish price momentum and RSI indicating overbought conditions, IRIS is currently pushing against its 52-week high, exhibiting a strong technical setup across its EMA positions.
+**Thesis:** Ather Energy has shown remarkable price momentum with a 1-year return of 189.28%, reflecting bullish sentiment in a strong sector with a strength score of 78.56 and a relative strength of 99.5% versus the Nifty 500. Although recent quarterly PAT is negative at -51 Cr with OPM at -2.7%, the overall revenue has grown YoY by 88.68%, indicating significant growth potential. The cash flow quality is concerning with an OCF/PAT ratio of -0.082, but the low debt-to-equity ratio of 0.26 shows manageable leverage supported by rising institutional backing at 76.0%.
 
-**Fundamental view:** In the last quarter, IRIS reported a revenue of ₹47.24 Cr with PAT reaching ₹4.01 Cr, reflecting an OPM of 17.04%. Nevertheless, operating cash flow has been negative, indicating potential cash flow challenges.
+**Technical view:** The stock is in a bullish trend with EMA stacks showing the 20 EMA above the 50 and 200 EMAs, and RSI at 64.38 suggests momentum without being overbought. The price is -4.91% from the 52-week high, with average volume supporting the momentum (1.64x above the 20-day average).
 
-**Sector view:** The textiles sector displays strong momentum overall, benefiting from consumer demand and digital adoption trends for unique garments, with IRIS standing out with a strong RS of 99.02%.
+**Fundamental view:** Latest quarterly revenue of 1217 Cr shows a sequential increase of 3.57%, albeit with negative PAT. The financial health reflects a rising debt trend but a manageable debt-to-equity ratio of 0.26. The earnings quality is flagged as weak with an OCF of only 32 Cr, translating to an OCF/PAT ratio of -0.082.
 
-**Valuation:** A P/E ratio of 67.3 suggests high market expectations, potentially leading to a stretched valuation if growth falters.
+**Sector view:** Ather Energy operates within the EV & Auto Ancillaries sector, which exhibits overall sector strength of 78.56, positioning it favorably among competitors. The sector’s robust average technical score of 78.56 further underlines the growth potential.
+
+**Valuation:** The current valuation appears somewhat stretched given the negative earnings, but the potential for earnings recovery could adjust this if growth sustains.
 
 **Key catalysts:**
-- YoY revenue growth of 26.31%
-- Strong price momentum with 1M return of 13.99%
-- Promoter holding at 61.17%
+- Revenue growth YoY: +88.68%
+- Strong institutional backing: 76.0%
+- Recent 6-month return: +133.38%
 
 **Key risks:**
-- Over-reliance on retail market growth
-- Weak cash flow profile
-- High valuation amidst sector volatility
+- Insufficient cash flow quality: OCF/PAT -0.082
+- Persistently negative profitability trend
+- High competitive pressures in the EV sector
 
-**Research observation:** IRIS is addressing rapid growth in a buoyant textile environment, though attention to valuation and cash flows is warranted as it progresses.
+**Research observation:** The stock exhibits potential for meaningful upside but comes with elevated risks due to current cash flow challenges and market conditions.
 
-**Model ref targets:** 2M ₹69 · 4M ₹74 · 6M ₹85 _(model reference only)_  
-**Model inv. level:** ₹51 · **Reward/Risk (4M):** 1.10x  
+**Model ref targets:** 2M ₹1,859 · 4M ₹1,993 · 6M ₹2,292 _(model reference only)_  
+**Model inv. level:** ₹1,372 · **Reward/Risk (4M):** 1.17x  
 **Risk score:** 5.0 / 10 (MEDIUM) · **Illustrative weight:** 5% _(not a personal allocation recommendation)_  
-**Extension:** EXTENDED — 7.2% above EMA20; 17.9% above EMA50; RSI 72; 1M return +14.0%. Buy only on controlled pullback or tight base; keep size capped.
+**Extension:** EXTENDED — 6.4% above EMA20; 17.2% above EMA50. Buy only on controlled pullback or tight base; keep size capped.
 
-**Conviction:** **MEDIUM** — Strong growth yet stretched valuations prompt cautious optimism.
+**Conviction:** **MEDIUM** — Moderate confidence due to strong growth vectors but tempered by financial performance concerns.
 
 **Snapshot:**
 
-- Price ₹62.15 · 1D -2.2% · 1W 6.3% · 1M 14.0%
-- Stage **STAGE_2** (score 99.10) · Stance **BULLISH** · Signal **BUY**
-- Investment score 98.91 (tech 98.86, fund 62.00)
-- Relative Strength 99.0% vs Nifty 500; Supertrend None around ₹—
+- Price ₹1658.30 · 1D 5.0% · 1W 1.2% · 1M 8.6%
+- Stage **STAGE_2** (score 0.77) · Stance **BULLISH** · Signal **STRONG_BUY**
+- Investment score 72.30 (tech 86.70, fund 72.33)
+- Relative Strength 99.5% vs Nifty 500; Supertrend BULLISH around ₹1522.70
 
 **Technicals:**
 
 | Metric | Value |
 |---|---:|
-| Close (2026-09-07) | ₹62.15 |
-| EMA 20 / 50 / 200 | ₹57.98 / ₹52.70 / ₹41.48 |
-| EMA50 slope (20d) | 16.47% |
-| RSI(14) | 71.66 |
-| ATR(14) | ₹2.42 (3.90%) |
-| 52W High / Low | ₹65.00 / ₹26.35 |
-| Distance from 52W high | -4.4% |
-| Returns 1M / 3M / 6M / 1Y | 14.0% / 74.0% / 99.8% / 94.0% |
-| Last-day volume vs 20d avg | 0.71x |
+| Close (2026-09-10) | ₹1658.30 |
+| EMA 20 / 50 / 200 | ₹1558.46 / ₹1414.75 / ₹1022.68 |
+| EMA50 slope (20d) | 15.38% |
+| RSI(14) | 64.38 |
+| ATR(14) | ₹67.01 (4.04%) |
+| 52W High / Low | ₹1744.00 / ₹522.05 |
+| Distance from 52W high | -4.9% |
+| Returns 1M / 3M / 6M / 1Y | 5.7% / 61.4% / 133.4% / 189.3% |
+| Last-day volume vs 20d avg | 1.64x |
 
 **Fundamentals:**
 
@@ -747,70 +595,70 @@ A high-ranked pick should be read as a research shortlist candidate, not a direc
 | Forensic risk | — |
 | Revenue growth 3Y | — |
 | PAT growth 3Y | — |
-| ROE | — |
-| ROCE | — |
+| ROE | -33.4% |
+| ROCE | -19.8% |
 | Debt / Equity | — |
-| Promoter holding | 61.2% |
+| Promoter holding | 39.6% |
 
 ---
 
-### 10. INDSWFTLAB — Healthcare / Unmapped
+### 8. AEROFLEX — Defence & Aerospace / Defence & Aerospace Manufacturing
 
-**Why selected:** Stage 2 leader in top sector Healthcare (strength=83), inv=98.6
+**Why selected:** Stage 2 leader in top sector Defence & Aerospace (strength=83), inv=78.3
 
-**What the company does:** Incorporated in 1995, Ind-Swift Laboratories Ltd is a pharmaceutical company focused on finished dosage formulations (FDF). Co. manufactures tablets, capsules, ointments, injectables, liquids and dry syrups across therapies including gynaecology, paediatrics, cardiology, diabetology and dermatology. Operations span domestic formulations and international markets through own brands, contract manufacturing and out-licensing. [1]
+**What the company does:** Incorporated in 1993, Aeroflex Industries Limited, manufactures and supplies environment-friendly metallic flexible flow solution products. [1]
 
-*Company profile source: screener.in (live) — https://www.screener.in/company/INDSWFTLAB/*
+*Company profile source: screener.in (live) — https://www.screener.in/company/AEROFLEX/*
 
-**Thesis:** Ind-Swift Laboratories Ltd operates in a robust healthcare sector with a strength score of 83.21. The stock exhibits substantial momentum, as indicated by a 1-month return of 61.42% and a 1-year return of 259.46%. Financially, revenue for the latest quarter (June 2026) reached ₹191 Cr, with a notable PAT increase of 66.67% QoQ to ₹25 Cr. Additionally, the company has a stable debt trend and is net cash positive, showcasing a low debt ratio of 0.013.
+**Thesis:** Aeroflex Industries is demonstrating robust growth with a strong 1-year price return of 221.59%, supported by a current technical setup that shows a bullish stance indicated by its relative strength at 99.4% of Nifty 500. The company reported a latest quarter revenue of 145 Cr, with a PAT increase of 171.43% YoY, reflecting healthy growth momentum. The operational margin has been stable around 23%, and balance sheet metrics reflect low debt at 0.02, establishing a solid financial footing.
 
-**Technical view:** The stock is currently in a bullish technical setup supported by a stage score of 99.15 and trading above key EMAs. The RSI stands at 68.95, indicating an approaching overbought condition, while it sits just 5.34% away from its 52-week high.
+**Technical view:** The stock is showing a strong bullish trend with EMA lines in a stacked configuration (20 EMA > 50 EMA > 200 EMA) and RSI at 65.63 indicating momentum. The stock is slightly below its 52-week high by 3.42%, coupled with average volume well maintained reflecting institutional interest.
 
-**Fundamental view:** In the latest quarter, Ind-Swift reported a revenue of ₹191 Cr and a PAT of ₹25 Cr, showing a substantial increase in both fronts with an operating profit margin improvement of 500 bps QoQ. The balance sheet reflects stable debt, with net debt figures indicating financial health alongside a cash flow situation that warrants caution (OCF/PAT at -1.23).
+**Fundamental view:** Aeroflex's latest quarterly results show a revenue increase of 15.08% QoQ, with PAT expanding to 19 Cr and an OPM holding at 23%. With negligible borrowings and a net cash position, the balance sheet appears healthy, supporting future growth and investments. The company has demonstrated a consistent increase in earnings quality with a score of 81.00.
 
-**Sector view:** Within the healthcare sector, Ind-Swift is positioned favorably, exhibiting strength that exceeds the sector average with a relative strength percentage of 99.80. The stock ranks well among peers, bolstered by its institutional backing score of 66.0.
+**Sector view:** Belonging to the Defence & Aerospace sector, Aeroflex benefits from overarching sector strength of 68.4 and a healthy peer context, indicated by robust technical scores around 68.4 and 94.88% RS against Nifty 500.
 
-**Valuation:** Despite a high P/E ratio of 49.4, the valuation appears stretched given the mixed earnings quality reflected in scores for earnings stability.
+**Valuation:** Current valuations appear fully priced given a high P/E ratio of 109, suggesting the need for careful monitoring of growth delivery.
 
 **Key catalysts:**
-- Latest quarterly revenue growth of 12.35% QoQ
-- PAT growth of 177.78% YoY
-- Bullish technical outlook with stage score 99.15
+- Quarterly PAT growth YoY: +171.43%
+- Stable operational margins at 23%
+- Recent 1-month return: +26.35%
 
 **Key risks:**
-- OCF/PAT trend of -1.23 indicating weak cash flow conversion
-- Valuation concerns with P/E at 49.4
-- Market volatility could impact performance given high RSI
+- Valuation pressure due to high P/E of 109
+- Potential economic downturn impacts on defence budgets
+- Operational risks tied to government contracts
 
-**Research observation:** The stock is displaying strong technical momentum amidst positive revenue performance but carries inherited risks related to cash flows and valuation metrics that should be monitored closely.
+**Research observation:** The stock showcases a strong growth narrative, but investors should remain vigilant regarding valuation metrics and economic conditions.
 
-**Model ref targets:** 2M ₹428 · 4M ₹467 · 6M ₹506 _(model reference only)_  
-**Model inv. level:** ₹274 · **Reward/Risk (4M):** 1.04x  
-**Risk score:** 6.0 / 10 (MEDIUM) · **Illustrative weight:** 3% _(not a personal allocation recommendation)_  
-**Extension:** OVEREXTENDED — 10.2% above EMA20; 30.4% above EMA50; RSI 69; 1M return +61.4%. Do not chase; prefer pullback toward EMA20/base reset or staged entry only.
+**Model ref targets:** 2M ₹646 · 4M ₹700 · 6M ₹805 _(model reference only)_  
+**Model inv. level:** ₹467 · **Reward/Risk (4M):** 1.40x  
+**Risk score:** 2.5 / 10 (LOW) · **Illustrative weight:** 5% _(not a personal allocation recommendation)_  
+**Extension:** EXTENDED — 7.7% above EMA20; 17.2% above EMA50; 1M return +26.3%. Buy only on controlled pullback or tight base; keep size capped.
 
-**Conviction:** **MEDIUM** — Conviction reflects mixed signals from strong momentum offsets by valuation and cash flow risks.
+**Conviction:** **HIGH** — Strong fundamentals and technical setup underpin the high conviction.
 
 **Snapshot:**
 
-- Price ₹368.70 · 1D 3.6% · 1W 1.0% · 1M 61.4%
-- Stage **STAGE_2** (score 99.15) · Stance **BULLISH** · Signal **BUY**
-- Investment score 98.63 (tech 98.13, fund 63.41)
-- Relative Strength 99.8% vs Nifty 500; Supertrend BULLISH around ₹315.38
+- Price ₹564.20 · 1D 0.5% · 1W 4.1% · 1M 25.9%
+- Stage **STAGE_2** (score 0.74) · Stance **BULLISH** · Signal **STRONG_BUY**
+- Investment score 78.30 (tech 76.00, fund 78.99)
+- Relative Strength 99.4% vs Nifty 500; Supertrend BULLISH around ₹482.19
 
 **Technicals:**
 
 | Metric | Value |
 |---|---:|
-| Close (2026-09-07) | ₹368.70 |
-| EMA 20 / 50 / 200 | ₹334.42 / ₹282.71 / ₹185.64 |
-| EMA50 slope (20d) | 36.19% |
-| RSI(14) | 68.95 |
-| ATR(14) | ₹19.67 (5.34%) |
-| 52W High / Low | ₹389.50 / ₹87.15 |
-| Distance from 52W high | -5.3% |
-| Returns 1M / 3M / 6M / 1Y | 61.4% / 126.4% / 163.7% / 259.5% |
-| Last-day volume vs 20d avg | 0.29x |
+| Close (2026-09-10) | ₹564.20 |
+| EMA 20 / 50 / 200 | ₹524.01 / ₹481.57 / ₹343.68 |
+| EMA50 slope (20d) | 13.40% |
+| RSI(14) | 65.63 |
+| ATR(14) | ₹27.17 (4.82%) |
+| 52W High / Low | ₹584.15 / ₹158.00 |
+| Distance from 52W high | -3.4% |
+| Returns 1M / 3M / 6M / 1Y | 26.3% / 18.0% / 137.9% / 221.6% |
+| Last-day volume vs 20d avg | 0.61x |
 
 **Fundamentals:**
 
@@ -825,23 +673,173 @@ A high-ranked pick should be read as a research shortlist candidate, not a direc
 | ROE | — |
 | ROCE | — |
 | Debt / Equity | — |
-| Promoter holding | 42.9% |
+| Promoter holding | 65.5% |
+
+---
+
+### 9. WELCORP — Metals & Mining / Unmapped
+
+**Why selected:** Stage 2 leader in top sector Metals & Mining (strength=88), inv=77.2
+
+**What the company does:** WCL is one of the largest manufacturers of large diameter pipes globally. The company also manufactures BIS-certified Steel Billets, TMT (Thermo-Mechanically Treated) Rebars, Ductile Iron (DI) Pipes, Stainless Steel Pipes, and Tubes & Bars. The company acquired Sintex-BAPL, a market leader in water tanks and other plastic products, to expand its building materials portfolio. It has also made strategic acquisition of specified assets of ABG Shipyard. [1]
+
+*Company profile source: screener.in (live) — https://www.screener.in/company/WELCORP/*
+
+**Thesis:** Welcorp is positioned strongly with a remarkable 1-year price increase of 213.72% and an exceptional operational PM at 14%, suggesting a profitable environment in the Metals & Mining sector where the company ranks highly with an RS of 99.9% against Nifty 500. Despite recent quarterly revenue declines of -5.38% QoQ, PAT growth remains robust at +182.48% YoY, benefiting from a relatively stable balance sheet with a debt-to-equity ratio of 0.257.
+
+**Technical view:** The technical outlook is bullish, with an RSI of 82.72 indicating overbought conditions but overall strength supported by strong volume (1.35x above 20-day avg). The stock trades right at its 52-week high with potential for further upside while caution is needed due to high volatility.
+
+**Fundamental view:** With TTM revenue of 17300 Cr and a stable PAT of 2319 Cr, the financials reflect solid cash flow quality with an OCF/PAT ratio of 1.38, indicating sustainable profitability. The debt trend, while rising, is manageable, allowing for continued investment in growth opportunities.
+
+**Sector view:** The Metals & Mining sector has solid strength (73.32%) supporting WELCOR's strong performance characterized by robust earnings quality at 88.6% and strong institutional backing at 76%.
+
+**Valuation:** Valuation appears stretched with a P/E ratio of 30.8, suggesting near-term price corrections could be possible.
+
+**Key catalysts:**
+- Quarterly PAT growth YoY: +200.29%
+- High operational margins: 14%
+- Strong recent price momentum: +101.27% over 3 months
+
+**Key risks:**
+- Highly leveraged at 0.257 D/E ratio
+- Volatility due to commodity pricing dynamics
+- Recent falling revenue trends
+
+**Research observation:** The stock possesses compelling growth metrics but faces challenges amidst potential valuation corrections.
+
+**Model ref targets:** 2M ₹3,146 · 4M ₹3,393 · 6M ₹3,901 _(model reference only)_  
+**Model inv. level:** ₹1,982 · **Reward/Risk (4M):** 0.77x  
+**Risk score:** 7.0 / 10 (HIGH) · **Illustrative weight:** 3% _(not a personal allocation recommendation)_  
+**Extension:** OVEREXTENDED — 16.4% above EMA20; 35.9% above EMA50; RSI 83; -0.3% from 52w high; 1M return +48.7%. Do not chase; prefer pullback toward EMA20/base reset or staged entry only.
+
+**Conviction:** **MEDIUM** — High upside potential but considered risky due to overvaluation and leverage.
+
+**Snapshot:**
+
+- Price ₹2776.90 · 1D 6.5% · 1W 5.1% · 1M 47.4%
+- Stage **STAGE_2** (score 1.00) · Stance **BULLISH** · Signal **STRONG_BUY**
+- Investment score 77.20 (tech 88.00, fund 75.19)
+- Relative Strength 99.9% vs Nifty 500; Supertrend BULLISH around ₹2348.01
+
+**Technicals:**
+
+| Metric | Value |
+|---|---:|
+| Close (2026-09-10) | ₹2776.90 |
+| EMA 20 / 50 / 200 | ₹2385.51 / ₹2043.44 / ₹1387.87 |
+| EMA50 slope (20d) | 28.37% |
+| RSI(14) | 82.72 |
+| ATR(14) | ₹123.14 (4.43%) |
+| 52W High / Low | ₹2784.80 / ₹710.00 |
+| Distance from 52W high | -0.3% |
+| Returns 1M / 3M / 6M / 1Y | 48.7% / 101.3% / 228.9% / 213.7% |
+| Last-day volume vs 20d avg | 1.35x |
+
+**Fundamentals:**
+
+| Metric | Value |
+|---|---:|
+| Piotroski F-score | — / 9 |
+| Altman Z-score | — |
+| Beneish M-score | — |
+| Forensic risk | — |
+| Revenue growth 3Y | — |
+| PAT growth 3Y | — |
+| ROE | — |
+| ROCE | — |
+| Debt / Equity | — |
+| Promoter holding | 49.7% |
+
+---
+
+### 10. PRICOLLTD — EV & Auto Ancillaries / Auto Ancillaries
+
+**Why selected:** Stage 2 leader in top sector EV & Auto Ancillaries (strength=69), inv=80.7
+
+**What the company does:** Pricol Limited is engaged in the business of manufacturing and selling of instrument clusters and other allied automobile components to OEMs and replacement markets. [1] The business was started in 1974 and is headquartered in Coimbatore, Tamil Nadu. [2]
+
+*Company profile source: screener.in (live) — https://www.screener.in/company/PRICOLLTD/*
+
+**Thesis:** Pricol Limited operates in a resilient sector with strong fundamentals, exhibiting a bullish sentiment indicated by its stage score of 0.57 and an investment score of 80.7. The company boasts a revenue growth of 23.46% YoY and a robust EPS CAGR of 21.08%, ensuring earnings quality as reflected in its high OCF/PAT ratio of 1.05. Moreover, operational efficiency remains stable, evidenced by consistent OPM around 12%. With a technical score of 63.3, the stock showcases potential for further gains amid favorable sector dynamics.
+
+**Technical view:** Pricol's technical landscape shows it above the EMA20 and in a bullish condition, with an RSI reading of 44.80 indicating potential for upward momentum. The stock's distance from its 52-week high stands at -10.13%, signaling possible recovery from current levels. Volume analysis suggests a low relative volume at 0.58x the 20-day average, which may indicate consolidation.
+
+**Fundamental view:** In the latest quarter (Jun 2026), Pricol reported revenues of ₹1,105 Cr with PAT of ₹67 Cr, demonstrating a QoQ revenue increase of 0.55%. While OPM dipped by 100 bps to 11%, overall growth trends remain encouraging with total revenues over the trailing twelve months reaching ₹4,251 Cr and an EPS of ₹21.99, highlighting a solid growth trajectory despite rising borrowings, which stood at ₹379 Cr as of Mar 2026.
+
+**Sector view:** The EV & Auto Ancillary sector is witnessing a strength score of 78.56, positioning Pricol favorably among its peers. With a peer count of 30 and an average RS% of 94.28, Pricol's performance denotes relative resilience within the sector.
+
+**Valuation:** At a P/E of 34.1, Pricol appears somewhat elevated relative to historical averages but justified given its strong growth metrics and sector context.
+
+**Key catalysts:**
+- Revenue growth of 23.46% YoY
+- PAT CAGR of 21.01%
+- Strong OCF/PAT ratio of 1.05
+
+**Key risks:**
+- Increasing debt levels with borrowings up by 100% YoY
+- Possible macroeconomic pressures affecting consumer spending
+- Cyclical risks exacerbating in the auto sector
+
+**Research observation:** The technical and fundamental condition of Pricol Limited suggests a cautiously optimistic stance, bolstered by a solid performance record and favorable sector trends despite some bearish signals.
+
+**Model ref targets:** 2M ₹817 · 4M ₹868 · 6M ₹998 _(model reference only)_  
+**Model inv. level:** ₹675 · **Reward/Risk (4M):** 2.00x  
+**Risk score:** 2.5 / 10 (LOW) · **Illustrative weight:** 8% _(not a personal allocation recommendation)_  
+**Extension:** NORMAL. Extension is not the main risk flag; standard staged entry rules apply.
+
+**Conviction:** **MEDIUM** — Conviction is tempered by growth metrics but uncertainty around debt and sector volatility.
+
+**Snapshot:**
+
+- Price ₹739.60 · 1D -0.8% · 1W -3.8% · 1M -3.3%
+- Stage **STAGE_2** (score 0.57) · Stance **BULLISH** · Signal **BUY**
+- Investment score 80.70 (tech 63.30, fund 85.58)
+- Relative Strength 88.0% vs Nifty 500; Supertrend BULLISH around ₹732.27
+
+**Technicals:**
+
+| Metric | Value |
+|---|---:|
+| Close (2026-09-10) | ₹739.60 |
+| EMA 20 / 50 / 200 | ₹763.58 / ₹722.31 / ₹633.57 |
+| EMA50 slope (20d) | 10.46% |
+| RSI(14) | 44.80 |
+| ATR(14) | ₹25.66 (3.47%) |
+| 52W High / Low | ₹823.00 / ₹498.00 |
+| Distance from 52W high | -10.1% |
+| Returns 1M / 3M / 6M / 1Y | -5.6% / 27.2% / 36.5% / 47.9% |
+| Last-day volume vs 20d avg | 0.58x |
+
+**Fundamentals:**
+
+| Metric | Value |
+|---|---:|
+| Piotroski F-score | — / 9 |
+| Altman Z-score | — |
+| Beneish M-score | — |
+| Forensic risk | — |
+| Revenue growth 3Y | — |
+| PAT growth 3Y | — |
+| ROE | — |
+| ROCE | — |
+| Debt / Equity | — |
+| Promoter holding | 38.5% |
 
 ---
 
 ## Portfolio Construction
 
-The portfolio will be constructed with a heavier emphasis on HIGH conviction stocks, allocating 30% each to CUPID and AKUMS, and 20% to OFSS due to their robust fundamentals and high growth potential. MEDIUM conviction stocks will receive equal-weighted allocations of 10% each from sectors like Fast Moving Consumer Goods, Capital Goods, and Textiles, making up 40% of the basket collectively. Given low debt levels and healthy cash positions among these selections, the portfolio maintains a 10% cash exposure to buffer against volatility. Stop-loss discipline will be set at 15% for HIGH conviction stocks and 10% for MEDIUM conviction stocks, with a medium-term investment horizon of 1-2 years to allow growth visibility.
+The portfolio will be constructed with a significant overweight in HIGH conviction stocks, aiming for 50% allocation collectively, while MEDIUM conviction stocks will be allocated 30% and any LOW conviction stocks will receive 20%. Given the prevailing market momentum and the positive macro indicators, exposure to gross equity will be maintained in line with strong growth sectors. A stop-loss discipline will be applied, targeting a 15% threshold on individual stock positions. The investment horizon is medium to long-term, anticipating value creation over the next 1-2 years.
 
 **Sector spread:**
 
-- Capital Goods: **3** name(s)
-- Healthcare: **2** name(s)
-- Pharma & Healthcare: **1** name(s)
-- Fast Moving Consumer Goods: **1** name(s)
-- Information Technology: **1** name(s)
-- EV & Auto Ancillaries: **1** name(s)
-- Textiles: **1** name(s)
+- Pharma & Healthcare: **3** name(s)
+- EV & Auto Ancillaries: **2** name(s)
+- Capital Markets: **1** name(s)
+- Capital Goods & Industrials: **1** name(s)
+- Chemicals & Specialty: **1** name(s)
+- Defence & Aerospace: **1** name(s)
+- Metals & Mining: **1** name(s)
 
 ## Full Disclaimer
 

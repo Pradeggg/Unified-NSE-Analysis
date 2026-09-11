@@ -1,8 +1,8 @@
 # Agent Adda Intraday Alerts - Latest Cycle
 
-- Time: 2026-09-08 09:38:27
-- Cycle: 5
-- Market: NIFTY 23,685 -0.40%, BANKNIFTY 56,953 -0.24%, VIX 11.16 -0.04%, breadth 258A/489D
+- Time: 2026-09-11 09:39:56
+- Cycle: 6
+- Market: NIFTY 23,261 -0.92%, BANKNIFTY 55,875 -1.06%, VIX 12.51 +6.04%, breadth 59A/690D
 - Source health: get_live_market_overview ok | get_top_gainers_losers ok | get_nse_quotes ok: yfinance (NSE batch) | scan_symbols_intraday ok | fno_context ok | edge_memory ok: 0 | options_execution ok
 - Fresh alerts: 0
 - Total candidates: 0
@@ -25,7 +25,7 @@
 
 - New added: none
 - Removed: none
-- Forming: AMBER, ALKEM, ANGELONE, ASHOKLEY, ADANIPOWER, ASIANPAINT, AMBUJACEM, APLAPOLLO, APOLLOHOSP, 360ONE, ABB, ABCAPITAL, ADANIENSOL, ADANIENT, ADANIGREEN
+- Forming: ADANIPORTS, ALKEM, ADANIPOWER, 360ONE, ABB, ABCAPITAL, ADANIENSOL, ADANIENT, ADANIGREEN, AMBER, AMBUJACEM, ANGELONE, APLAPOLLO, APOLLOHOSP, ASHOKLEY
 - Confirmed: none
 - Active: none
 
@@ -37,21 +37,21 @@ No fresh alerts this cycle.
 
 | Symbol | Read | Decision | Options | Score | F&O | LTP | Chg | Entry | Stop | T1/RR |
 |---|---|---|---|---:|---|---:|---:|---:|---:|---:|
-| AMBER | WATCH watch | AVOID | No Trade | 3 | sideways PCR n/a basis n/a MP n/a | n/a | n/a | n/a | n/a | n/a |
+| ADANIPORTS | WATCH watch | AVOID | No Trade | 3 | sideways PCR n/a basis n/a MP n/a | n/a | n/a | n/a | n/a | n/a |
 | ALKEM | WATCH watch | AVOID | No Trade | 3 | sideways PCR n/a basis n/a MP n/a | n/a | n/a | n/a | n/a | n/a |
-| ANGELONE | WATCH watch | AVOID | No Trade | 3 | sideways PCR n/a basis n/a MP n/a | n/a | n/a | n/a | n/a | n/a |
-| ASHOKLEY | WATCH watch | AVOID | No Trade | 3 | sideways PCR n/a basis n/a MP n/a | n/a | n/a | n/a | n/a | n/a |
 | ADANIPOWER | WATCH watch | AVOID | No Trade | 3 | sideways PCR n/a basis n/a MP n/a | n/a | n/a | n/a | n/a | n/a |
-| ASIANPAINT | WATCH watch | AVOID | No Trade | 3 | sideways PCR n/a basis n/a MP n/a | n/a | n/a | n/a | n/a | n/a |
-| AMBUJACEM | WATCH watch | AVOID | No Trade | 3 | sideways PCR n/a basis n/a MP n/a | n/a | n/a | n/a | n/a | n/a |
-| APLAPOLLO | WATCH watch | AVOID | No Trade | 3 | sideways PCR n/a basis n/a MP n/a | n/a | n/a | n/a | n/a | n/a |
-| APOLLOHOSP | WATCH watch | AVOID | No Trade | 3 | sideways PCR n/a basis n/a MP n/a | n/a | n/a | n/a | n/a | n/a |
 | 360ONE | WATCH watch | AVOID | No Trade | 3 | sideways PCR n/a basis n/a MP n/a | n/a | n/a | n/a | n/a | n/a |
 | ABB | WATCH watch | AVOID | No Trade | 3 | sideways PCR n/a basis n/a MP n/a | n/a | n/a | n/a | n/a | n/a |
 | ABCAPITAL | WATCH watch | AVOID | No Trade | 3 | sideways PCR n/a basis n/a MP n/a | n/a | n/a | n/a | n/a | n/a |
 | ADANIENSOL | WATCH watch | AVOID | No Trade | 3 | sideways PCR n/a basis n/a MP n/a | n/a | n/a | n/a | n/a | n/a |
 | ADANIENT | WATCH watch | AVOID | No Trade | 3 | sideways PCR n/a basis n/a MP n/a | n/a | n/a | n/a | n/a | n/a |
 | ADANIGREEN | WATCH watch | AVOID | No Trade | 3 | sideways PCR n/a basis n/a MP n/a | n/a | n/a | n/a | n/a | n/a |
+| AMBER | WATCH watch | AVOID | No Trade | 3 | sideways PCR n/a basis n/a MP n/a | n/a | n/a | n/a | n/a | n/a |
+| AMBUJACEM | WATCH watch | AVOID | No Trade | 3 | sideways PCR n/a basis n/a MP n/a | n/a | n/a | n/a | n/a | n/a |
+| ANGELONE | WATCH watch | AVOID | No Trade | 3 | sideways PCR n/a basis n/a MP n/a | n/a | n/a | n/a | n/a | n/a |
+| APLAPOLLO | WATCH watch | AVOID | No Trade | 3 | sideways PCR n/a basis n/a MP n/a | n/a | n/a | n/a | n/a | n/a |
+| APOLLOHOSP | WATCH watch | AVOID | No Trade | 3 | sideways PCR n/a basis n/a MP n/a | n/a | n/a | n/a | n/a | n/a |
+| ASHOKLEY | WATCH watch | AVOID | No Trade | 3 | sideways PCR n/a basis n/a MP n/a | n/a | n/a | n/a | n/a | n/a |
 
 ## Why No Trade - Top 5 Blocked
 
@@ -67,61 +67,61 @@ No fresh alerts this cycle.
 
 | Symbol | Action | Options | Score | Market Regime | Reasons |
 |---|---|---|---:|---|---|
-| AMBER | AVOID | No Trade | 3 | weak_tape | MTF level-derived; F&O sideways; volume not confirmed |
-| ALKEM | AVOID | No Trade | 3 | weak_tape | MTF level-derived; F&O sideways; volume not confirmed |
-| ANGELONE | AVOID | No Trade | 3 | weak_tape | MTF level-derived; F&O sideways; volume not confirmed |
-| ASHOKLEY | AVOID | No Trade | 3 | weak_tape | MTF level-derived; F&O sideways; volume not confirmed |
-| ADANIPOWER | AVOID | No Trade | 3 | weak_tape | MTF level-derived; F&O sideways; volume not confirmed |
-| ASIANPAINT | AVOID | No Trade | 3 | weak_tape | MTF level-derived; F&O sideways; volume not confirmed |
-| AMBUJACEM | AVOID | No Trade | 3 | weak_tape | MTF level-derived; F&O sideways; volume not confirmed |
-| APLAPOLLO | AVOID | No Trade | 3 | weak_tape | MTF level-derived; F&O sideways; volume not confirmed |
-| APOLLOHOSP | AVOID | No Trade | 3 | weak_tape | MTF level-derived; F&O sideways; volume not confirmed |
-| 360ONE | AVOID | No Trade | 3 | weak_tape | MTF level-derived; F&O sideways; volume not confirmed |
-| ABB | AVOID | No Trade | 3 | weak_tape | MTF level-derived; F&O sideways; volume not confirmed |
-| ABCAPITAL | AVOID | No Trade | 3 | weak_tape | MTF level-derived; F&O sideways; volume not confirmed |
-| ADANIENSOL | AVOID | No Trade | 3 | weak_tape | MTF level-derived; F&O sideways; volume not confirmed |
-| ADANIENT | AVOID | No Trade | 3 | weak_tape | MTF level-derived; F&O sideways; volume not confirmed |
-| ADANIGREEN | AVOID | No Trade | 3 | weak_tape | MTF level-derived; F&O sideways; volume not confirmed |
+| ADANIPORTS | AVOID | No Trade | 3 | risk_off | MTF level-derived; F&O sideways; volume not confirmed |
+| ALKEM | AVOID | No Trade | 3 | risk_off | MTF level-derived; F&O sideways; volume not confirmed |
+| ADANIPOWER | AVOID | No Trade | 3 | risk_off | MTF level-derived; F&O sideways; volume not confirmed |
+| 360ONE | AVOID | No Trade | 3 | risk_off | MTF level-derived; F&O sideways; volume not confirmed |
+| ABB | AVOID | No Trade | 3 | risk_off | MTF level-derived; F&O sideways; volume not confirmed |
+| ABCAPITAL | AVOID | No Trade | 3 | risk_off | MTF level-derived; F&O sideways; volume not confirmed |
+| ADANIENSOL | AVOID | No Trade | 3 | risk_off | MTF level-derived; F&O sideways; volume not confirmed |
+| ADANIENT | AVOID | No Trade | 3 | risk_off | MTF level-derived; F&O sideways; volume not confirmed |
+| ADANIGREEN | AVOID | No Trade | 3 | risk_off | MTF level-derived; F&O sideways; volume not confirmed |
+| AMBER | AVOID | No Trade | 3 | risk_off | MTF level-derived; F&O sideways; volume not confirmed |
+| AMBUJACEM | AVOID | No Trade | 3 | risk_off | MTF level-derived; F&O sideways; volume not confirmed |
+| ANGELONE | AVOID | No Trade | 3 | risk_off | MTF level-derived; F&O sideways; volume not confirmed |
+| APLAPOLLO | AVOID | No Trade | 3 | risk_off | MTF level-derived; F&O sideways; volume not confirmed |
+| APOLLOHOSP | AVOID | No Trade | 3 | risk_off | MTF level-derived; F&O sideways; volume not confirmed |
+| ASHOKLEY | AVOID | No Trade | 3 | risk_off | MTF level-derived; F&O sideways; volume not confirmed |
 
 ## Trade Timing
 
 | Symbol | Window | Timing Score | Time Bucket | Reasons |
 |---|---|---:|---|---|
-| AMBER | NO_TRADE_WINDOW | 0 | opening_drive | no persisted edge; opening-drive timing; watch-only structure; R:R weak; F&O sideways |
+| ADANIPORTS | NO_TRADE_WINDOW | 0 | opening_drive | no persisted edge; opening-drive timing; watch-only structure; R:R weak; F&O sideways |
 | ALKEM | NO_TRADE_WINDOW | 0 | opening_drive | no persisted edge; opening-drive timing; watch-only structure; R:R weak; F&O sideways |
-| ANGELONE | NO_TRADE_WINDOW | 0 | opening_drive | no persisted edge; opening-drive timing; watch-only structure; R:R weak; F&O sideways |
-| ASHOKLEY | NO_TRADE_WINDOW | 0 | opening_drive | no persisted edge; opening-drive timing; watch-only structure; R:R weak; F&O sideways |
 | ADANIPOWER | NO_TRADE_WINDOW | 0 | opening_drive | no persisted edge; opening-drive timing; watch-only structure; R:R weak; F&O sideways |
-| ASIANPAINT | NO_TRADE_WINDOW | 0 | opening_drive | no persisted edge; opening-drive timing; watch-only structure; R:R weak; F&O sideways |
-| AMBUJACEM | NO_TRADE_WINDOW | 0 | opening_drive | no persisted edge; opening-drive timing; watch-only structure; R:R weak; F&O sideways |
-| APLAPOLLO | NO_TRADE_WINDOW | 0 | opening_drive | no persisted edge; opening-drive timing; watch-only structure; R:R weak; F&O sideways |
-| APOLLOHOSP | NO_TRADE_WINDOW | 0 | opening_drive | no persisted edge; opening-drive timing; watch-only structure; R:R weak; F&O sideways |
 | 360ONE | NO_TRADE_WINDOW | 0 | opening_drive | no persisted edge; opening-drive timing; watch-only structure; R:R weak; F&O sideways |
 | ABB | NO_TRADE_WINDOW | 0 | opening_drive | no persisted edge; opening-drive timing; watch-only structure; R:R weak; F&O sideways |
 | ABCAPITAL | NO_TRADE_WINDOW | 0 | opening_drive | no persisted edge; opening-drive timing; watch-only structure; R:R weak; F&O sideways |
 | ADANIENSOL | NO_TRADE_WINDOW | 0 | opening_drive | no persisted edge; opening-drive timing; watch-only structure; R:R weak; F&O sideways |
 | ADANIENT | NO_TRADE_WINDOW | 0 | opening_drive | no persisted edge; opening-drive timing; watch-only structure; R:R weak; F&O sideways |
 | ADANIGREEN | NO_TRADE_WINDOW | 0 | opening_drive | no persisted edge; opening-drive timing; watch-only structure; R:R weak; F&O sideways |
+| AMBER | NO_TRADE_WINDOW | 0 | opening_drive | no persisted edge; opening-drive timing; watch-only structure; R:R weak; F&O sideways |
+| AMBUJACEM | NO_TRADE_WINDOW | 0 | opening_drive | no persisted edge; opening-drive timing; watch-only structure; R:R weak; F&O sideways |
+| ANGELONE | NO_TRADE_WINDOW | 0 | opening_drive | no persisted edge; opening-drive timing; watch-only structure; R:R weak; F&O sideways |
+| APLAPOLLO | NO_TRADE_WINDOW | 0 | opening_drive | no persisted edge; opening-drive timing; watch-only structure; R:R weak; F&O sideways |
+| APOLLOHOSP | NO_TRADE_WINDOW | 0 | opening_drive | no persisted edge; opening-drive timing; watch-only structure; R:R weak; F&O sideways |
+| ASHOKLEY | NO_TRADE_WINDOW | 0 | opening_drive | no persisted edge; opening-drive timing; watch-only structure; R:R weak; F&O sideways |
 
 ## Options Execution
 
 | Symbol | Verdict | Strategy | Option | Strike | Premium | Breakeven | Exp/DTE | IV | Delta/Theta | Expected Move | OI Wall | Notes |
 |---|---|---|---|---:|---:|---:|---|---:|---|---:|---|---|
-| AMBER | NO OPTIONS TRADE | No options structure (NO OPTIONS STRATEGY) | CE | n/a | n/a | n/a | n/a | n/a | n/a / n/a | n/a | n/a | row is not LONG or SHORT |
+| ADANIPORTS | NO OPTIONS TRADE | No options structure (NO OPTIONS STRATEGY) | CE | n/a | n/a | n/a | n/a | n/a | n/a / n/a | n/a | n/a | row is not LONG or SHORT |
 | ALKEM | NO OPTIONS TRADE | No options structure (NO OPTIONS STRATEGY) | CE | n/a | n/a | n/a | n/a | n/a | n/a / n/a | n/a | n/a | row is not LONG or SHORT |
-| ANGELONE | NO OPTIONS TRADE | No options structure (NO OPTIONS STRATEGY) | CE | n/a | n/a | n/a | n/a | n/a | n/a / n/a | n/a | n/a | row is not LONG or SHORT |
-| ASHOKLEY | NO OPTIONS TRADE | No options structure (NO OPTIONS STRATEGY) | CE | n/a | n/a | n/a | n/a | n/a | n/a / n/a | n/a | n/a | row is not LONG or SHORT |
 | ADANIPOWER | NO OPTIONS TRADE | No options structure (NO OPTIONS STRATEGY) | CE | n/a | n/a | n/a | n/a | n/a | n/a / n/a | n/a | n/a | row is not LONG or SHORT |
-| ASIANPAINT | NO OPTIONS TRADE | No options structure (NO OPTIONS STRATEGY) | CE | n/a | n/a | n/a | n/a | n/a | n/a / n/a | n/a | n/a | row is not LONG or SHORT |
-| AMBUJACEM | NO OPTIONS TRADE | No options structure (NO OPTIONS STRATEGY) | CE | n/a | n/a | n/a | n/a | n/a | n/a / n/a | n/a | n/a | row is not LONG or SHORT |
-| APLAPOLLO | NO OPTIONS TRADE | No options structure (NO OPTIONS STRATEGY) | CE | n/a | n/a | n/a | n/a | n/a | n/a / n/a | n/a | n/a | row is not LONG or SHORT |
-| APOLLOHOSP | NO OPTIONS TRADE | No options structure (NO OPTIONS STRATEGY) | CE | n/a | n/a | n/a | n/a | n/a | n/a / n/a | n/a | n/a | row is not LONG or SHORT |
 | 360ONE | NO OPTIONS TRADE | No options structure (NO OPTIONS STRATEGY) | CE | n/a | n/a | n/a | n/a | n/a | n/a / n/a | n/a | n/a | row is not LONG or SHORT |
 | ABB | NO OPTIONS TRADE | No options structure (NO OPTIONS STRATEGY) | CE | n/a | n/a | n/a | n/a | n/a | n/a / n/a | n/a | n/a | row is not LONG or SHORT |
 | ABCAPITAL | NO OPTIONS TRADE | No options structure (NO OPTIONS STRATEGY) | CE | n/a | n/a | n/a | n/a | n/a | n/a / n/a | n/a | n/a | row is not LONG or SHORT |
 | ADANIENSOL | NO OPTIONS TRADE | No options structure (NO OPTIONS STRATEGY) | CE | n/a | n/a | n/a | n/a | n/a | n/a / n/a | n/a | n/a | row is not LONG or SHORT |
 | ADANIENT | NO OPTIONS TRADE | No options structure (NO OPTIONS STRATEGY) | CE | n/a | n/a | n/a | n/a | n/a | n/a / n/a | n/a | n/a | row is not LONG or SHORT |
 | ADANIGREEN | NO OPTIONS TRADE | No options structure (NO OPTIONS STRATEGY) | CE | n/a | n/a | n/a | n/a | n/a | n/a / n/a | n/a | n/a | row is not LONG or SHORT |
+| AMBER | NO OPTIONS TRADE | No options structure (NO OPTIONS STRATEGY) | CE | n/a | n/a | n/a | n/a | n/a | n/a / n/a | n/a | n/a | row is not LONG or SHORT |
+| AMBUJACEM | NO OPTIONS TRADE | No options structure (NO OPTIONS STRATEGY) | CE | n/a | n/a | n/a | n/a | n/a | n/a / n/a | n/a | n/a | row is not LONG or SHORT |
+| ANGELONE | NO OPTIONS TRADE | No options structure (NO OPTIONS STRATEGY) | CE | n/a | n/a | n/a | n/a | n/a | n/a / n/a | n/a | n/a | row is not LONG or SHORT |
+| APLAPOLLO | NO OPTIONS TRADE | No options structure (NO OPTIONS STRATEGY) | CE | n/a | n/a | n/a | n/a | n/a | n/a / n/a | n/a | n/a | row is not LONG or SHORT |
+| APOLLOHOSP | NO OPTIONS TRADE | No options structure (NO OPTIONS STRATEGY) | CE | n/a | n/a | n/a | n/a | n/a | n/a / n/a | n/a | n/a | row is not LONG or SHORT |
+| ASHOKLEY | NO OPTIONS TRADE | No options structure (NO OPTIONS STRATEGY) | CE | n/a | n/a | n/a | n/a | n/a | n/a / n/a | n/a | n/a | row is not LONG or SHORT |
 
 
 ## Edge Memory
@@ -134,51 +134,51 @@ No fresh alerts this cycle.
 
 | Symbol | Bias | PCR | Basis | Max Pain | Note |
 |---|---|---:|---:|---:|---|
-| AMBER | sideways | n/a | n/a | n/a |  |
+| ADANIPORTS | sideways | n/a | n/a | n/a |  |
 | ALKEM | sideways | n/a | n/a | n/a |  |
-| ANGELONE | sideways | n/a | n/a | n/a |  |
-| ASHOKLEY | sideways | n/a | n/a | n/a |  |
 | ADANIPOWER | sideways | n/a | n/a | n/a |  |
-| ASIANPAINT | sideways | n/a | n/a | n/a |  |
-| AMBUJACEM | sideways | n/a | n/a | n/a |  |
-| APLAPOLLO | sideways | n/a | n/a | n/a |  |
-| APOLLOHOSP | sideways | n/a | n/a | n/a |  |
 | 360ONE | sideways | n/a | n/a | n/a |  |
 | ABB | sideways | n/a | n/a | n/a |  |
 | ABCAPITAL | sideways | n/a | n/a | n/a |  |
 | ADANIENSOL | sideways | n/a | n/a | n/a |  |
 | ADANIENT | sideways | n/a | n/a | n/a |  |
 | ADANIGREEN | sideways | n/a | n/a | n/a |  |
+| AMBER | sideways | n/a | n/a | n/a |  |
+| AMBUJACEM | sideways | n/a | n/a | n/a |  |
+| ANGELONE | sideways | n/a | n/a | n/a |  |
+| APLAPOLLO | sideways | n/a | n/a | n/a |  |
+| APOLLOHOSP | sideways | n/a | n/a | n/a |  |
+| ASHOKLEY | sideways | n/a | n/a | n/a |  |
 
 ## Commentary
 
 Current read from the tracker:
 
-- AMBER: watch; Watch price n/a; no active setup; F&O sideways (PCR n/a, basis n/a, max pain n/a); Decision AVOID (No Trade, score 3)
+- ADANIPORTS: watch; Watch price n/a; no active setup; F&O sideways (PCR n/a, basis n/a, max pain n/a); Decision AVOID (No Trade, score 3)
 - ALKEM: watch; Watch price n/a; no active setup; F&O sideways (PCR n/a, basis n/a, max pain n/a); Decision AVOID (No Trade, score 3)
-- ANGELONE: watch; Watch price n/a; no active setup; F&O sideways (PCR n/a, basis n/a, max pain n/a); Decision AVOID (No Trade, score 3)
-- ASHOKLEY: watch; Watch price n/a; no active setup; F&O sideways (PCR n/a, basis n/a, max pain n/a); Decision AVOID (No Trade, score 3)
 - ADANIPOWER: watch; Watch price n/a; no active setup; F&O sideways (PCR n/a, basis n/a, max pain n/a); Decision AVOID (No Trade, score 3)
-- ASIANPAINT: watch; Watch price n/a; no active setup; F&O sideways (PCR n/a, basis n/a, max pain n/a); Decision AVOID (No Trade, score 3)
-- AMBUJACEM: watch; Watch price n/a; no active setup; F&O sideways (PCR n/a, basis n/a, max pain n/a); Decision AVOID (No Trade, score 3)
-- APLAPOLLO: watch; Watch price n/a; no active setup; F&O sideways (PCR n/a, basis n/a, max pain n/a); Decision AVOID (No Trade, score 3)
-- APOLLOHOSP: watch; Watch price n/a; no active setup; F&O sideways (PCR n/a, basis n/a, max pain n/a); Decision AVOID (No Trade, score 3)
 - 360ONE: watch; Watch price n/a; no active setup; F&O sideways (PCR n/a, basis n/a, max pain n/a); Decision AVOID (No Trade, score 3)
+- ABB: watch; Watch price n/a; no active setup; F&O sideways (PCR n/a, basis n/a, max pain n/a); Decision AVOID (No Trade, score 3)
+- ABCAPITAL: watch; Watch price n/a; no active setup; F&O sideways (PCR n/a, basis n/a, max pain n/a); Decision AVOID (No Trade, score 3)
+- ADANIENSOL: watch; Watch price n/a; no active setup; F&O sideways (PCR n/a, basis n/a, max pain n/a); Decision AVOID (No Trade, score 3)
+- ADANIENT: watch; Watch price n/a; no active setup; F&O sideways (PCR n/a, basis n/a, max pain n/a); Decision AVOID (No Trade, score 3)
+- ADANIGREEN: watch; Watch price n/a; no active setup; F&O sideways (PCR n/a, basis n/a, max pain n/a); Decision AVOID (No Trade, score 3)
+- AMBER: watch; Watch price n/a; no active setup; F&O sideways (PCR n/a, basis n/a, max pain n/a); Decision AVOID (No Trade, score 3)
 
 Cycle changes:
 - New added: none
 - Removed: none
-- Forming: AMBER, ALKEM, ANGELONE, ASHOKLEY, ADANIPOWER, ASIANPAINT, AMBUJACEM, APLAPOLLO
+- Forming: ADANIPORTS, ALKEM, ADANIPOWER, 360ONE, ABB, ABCAPITAL, ADANIENSOL, ADANIENT
 - Confirmed: none
 - Active: none
 
 Best actionable names:
-1. AMBER watch, avoid; decision gate not satisfied.
+1. ADANIPORTS watch, avoid; decision gate not satisfied.
 2. ALKEM watch, avoid; decision gate not satisfied.
-3. ANGELONE watch, avoid; decision gate not satisfied.
-4. ASHOKLEY watch, avoid; decision gate not satisfied.
-5. ADANIPOWER watch, avoid; decision gate not satisfied.
+3. ADANIPOWER watch, avoid; decision gate not satisfied.
+4. 360ONE watch, avoid; decision gate not satisfied.
+5. ABB watch, avoid; decision gate not satisfied.
 
 Watch next:
-- Market context: NIFTY 23,685 -0.40%, BANKNIFTY 56,953 -0.24%, VIX 11.16 -0.04%, breadth 258A/489D
+- Market context: NIFTY 23,261 -0.92%, BANKNIFTY 55,875 -1.06%, VIX 12.51 +6.04%, breadth 59A/690D
 - Source health: get_live_market_overview ok | get_top_gainers_losers ok | get_nse_quotes ok: yfinance (NSE batch) | scan_symbols_intraday ok

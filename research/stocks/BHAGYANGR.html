@@ -1,0 +1,988 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>BHAGYANGR Deep Research</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Kalam:wght@300;400;700&family=Permanent+Marker&display=swap">
+<style>
+:root{
+  --paper:#fbf5e6; --paper-edge:#efe6d2; --rule:#cfe0f2; --spiral-ink:#8a93a6;
+  --ink:#1c2a49; --ink-soft:#435070;
+  --red:#cf4258; --purple:#6c4a9c; --blue:#2f6fce; --green:#1f8f5c;
+  --orange:#d97f33; --tag-yellow:#f4cf6d; --copper:#b06020;
+  --chart-bg:#0b1422; --chart-grid:rgba(255,255,255,0.07);
+  --bull:#26a069; --bear:#ef5350;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{
+  background:var(--paper-edge);
+  display:flex; flex-direction:column; align-items:center;
+  padding:clamp(16px,4vw,48px) clamp(12px,3vw,32px);
+  gap:40px;
+  font-family:'Kalam','Segoe UI',sans-serif; color:var(--ink);
+  min-height:100vh;
+}
+.page{
+  position:relative; width:100%; max-width:1200px;
+  background:var(--paper); border-radius:14px;
+  box-shadow:0 18px 40px -20px rgba(28,42,73,0.35);
+  padding:34px clamp(18px,4vw,56px) 48px clamp(58px,8vw,84px);
+  background-image:repeating-linear-gradient(to bottom, transparent 0, transparent 38px, var(--rule) 38px, var(--rule) 40px);
+  background-position:0 96px; overflow:hidden;
+}
+.page-num{position:absolute;top:18px;right:24px;font-family:'Permanent Marker',cursive;font-size:0.82rem;color:var(--ink-soft);}
+.spiral{position:absolute;left:10px;top:0;bottom:0;width:clamp(28px,5vw,44px);pointer-events:none;z-index:2;}
+.spiral canvas{width:100%;height:100%;display:block;}
+.mark{display:inline-block;transform:rotate(-1deg);padding-bottom:1px;border-bottom:3px solid currentColor;}
+.mark.purple{color:var(--purple);}  .mark.blue{color:var(--blue);transform:rotate(0.8deg);}
+.mark.red{color:var(--red);transform:rotate(0.8deg);} .mark.green{color:var(--green);}
+.mark.orange{color:var(--orange);} .mark.copper{color:var(--copper);}
+.layout{display:grid;grid-template-columns:1fr 310px;gap:26px 34px;}
+.title-block{grid-column:1/-1;margin-bottom:6px;}
+.main-col{grid-column:1;display:flex;flex-direction:column;gap:22px;}
+.side-col{grid-column:2;display:flex;flex-direction:column;gap:20px;}
+.takeaway{grid-column:1/-1;margin-top:6px;}
+.full-col{grid-column:1/-1;}
+.page-title{font-family:'Permanent Marker',cursive;font-size:clamp(1.7rem,4vw,2.4rem);color:var(--ink);line-height:1.15;margin-bottom:6px;}
+.page-subtitle{font-size:1.05rem;color:var(--ink-soft);font-weight:300;margin-bottom:10px;}
+.tag-pill{display:inline-block;position:relative;padding:4px 13px;font-size:0.82rem;font-weight:700;font-family:'Permanent Marker',cursive;vertical-align:middle;margin-right:7px;margin-bottom:4px;}
+.tag-pill canvas{position:absolute;inset:0;width:100%;height:100%;}
+.tag-pill span{position:relative;z-index:1;}
+.sec-head{margin-bottom:10px;display:inline-block;}
+.sec-head .label{font-family:'Permanent Marker',cursive;font-size:1.1rem;display:block;}
+.sec-head canvas{display:block;width:100%;height:12px;margin-top:-3px;}
+.sketch-box{position:relative;padding:14px 16px 14px 18px;}
+.sketch-box canvas.border-canvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;}
+.sketch-box .inner{position:relative;z-index:1;}
+.prose{font-size:1rem;line-height:1.72;color:var(--ink-soft);}
+.fact-list{list-style:none;padding:0;}
+.fact-list li{display:flex;align-items:baseline;gap:8px;font-size:0.97rem;line-height:1.65;margin-bottom:5px;color:var(--ink);}
+.fact-list li::before{content:'→';font-family:'Permanent Marker',cursive;color:var(--blue);flex-shrink:0;font-size:1rem;}
+.stat-row{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:4px;}
+.stat-tile{flex:1;min-width:80px;text-align:center;padding:10px 8px 8px;}
+.stat-val{font-family:'Permanent Marker',cursive;font-size:1.55rem;line-height:1.1;}
+.stat-lbl{font-size:0.72rem;color:var(--ink-soft);line-height:1.4;margin-top:2px;}
+.callout-title{font-family:'Permanent Marker',cursive;font-size:1rem;margin-bottom:8px;display:block;}
+.takeaway-inner{position:relative;padding:16px 22px 16px 24px;}
+.takeaway-inner canvas.border-canvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;}
+.takeaway-inner .inner{position:relative;z-index:1;}
+.takeaway-label{font-family:'Permanent Marker',cursive;font-size:0.82rem;color:var(--orange);letter-spacing:.05em;text-transform:uppercase;margin-bottom:4px;display:block;}
+.takeaway-text{font-size:1.08rem;font-weight:700;color:var(--ink);line-height:1.5;}
+.bar-chart{display:flex;align-items:flex-end;gap:10px;height:90px;margin:10px 0;}
+.bar-col{display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;}
+.bar{width:100%;background:var(--copper);border-radius:3px 3px 0 0;}
+.bar-val{font-family:'Permanent Marker',cursive;font-size:0.72rem;color:var(--copper);}
+.bar-yr{font-size:0.68rem;color:var(--ink-soft);}
+.margin-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
+.margin-label{font-size:0.82rem;color:var(--ink-soft);min-width:58px;}
+.margin-track{flex:1;height:14px;background:#e8ddc8;border-radius:3px;overflow:hidden;}
+.margin-fill{height:100%;border-radius:3px;}
+.margin-val{font-family:'Permanent Marker',cursive;font-size:0.85rem;min-width:38px;text-align:right;}
+.eps-row{display:flex;align-items:flex-end;gap:6px;margin:8px 0;}
+.eps-block{display:flex;flex-direction:column;align-items:center;gap:3px;flex:1;}
+.eps-bar{width:100%;background:var(--green);border-radius:2px 2px 0 0;}
+.eps-val{font-size:0.7rem;font-family:'Permanent Marker',cursive;color:var(--green);}
+.eps-lbl{font-size:0.6rem;color:var(--ink-soft);text-align:center;}
+.risk-pill{display:inline-block;background:rgba(207,66,88,0.1);border:1.5px solid var(--red);border-radius:4px;padding:3px 10px;font-size:0.82rem;color:var(--red);margin:3px 3px 3px 0;}
+/* ─── CHART WRAPPER ─── */
+.chart-panel{background:var(--chart-bg);border-radius:10px;overflow:hidden;position:relative;}
+#mainChartCanvas{display:block;width:100%;}
+.chart-legend{display:flex;gap:18px;flex-wrap:wrap;padding:8px 14px 6px;background:rgba(11,20,34,0.96);font-size:0.75rem;font-family:'Kalam',sans-serif;}
+.chart-legend span{color:rgba(255,255,255,0.55);}
+.chart-legend b{color:rgba(255,255,255,0.88);}
+/* ─── Future page styles ─── */
+.fut-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin:12px 0;}
+.fut-card{position:relative;padding:14px 14px 12px;}
+.fut-card canvas.border-canvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;}
+.fut-card .inner{position:relative;z-index:1;}
+.fut-card-title{font-family:'Permanent Marker',cursive;font-size:0.92rem;margin-bottom:7px;display:block;}
+.fut-card-body{font-size:0.82rem;color:var(--ink-soft);line-height:1.65;}
+.target-row{display:flex;align-items:center;gap:12px;margin:8px 0;padding:10px 14px;background:rgba(31,143,92,0.07);border-radius:6px;border-left:4px solid var(--green);}
+.target-px{font-family:'Permanent Marker',cursive;font-size:1.6rem;color:var(--green);}
+.target-meta{font-size:0.82rem;color:var(--ink-soft);line-height:1.6;}
+.md-quote{position:relative;padding:12px 16px 12px 22px;border-left:4px solid var(--copper);background:rgba(176,96,32,0.06);border-radius:0 8px 8px 0;font-size:0.88rem;color:var(--ink-soft);line-height:1.7;font-style:italic;margin:10px 0;}
+.md-quote strong{color:var(--copper);font-style:normal;}
+/* FY projection bar */
+.proj-row{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+.proj-label{font-size:0.8rem;color:var(--ink-soft);min-width:48px;}
+.proj-track{flex:1;height:18px;background:#e8ddc8;border-radius:3px;overflow:hidden;position:relative;}
+.proj-fill{height:100%;border-radius:3px;display:flex;align-items:center;padding-left:6px;font-family:'Permanent Marker',cursive;font-size:0.72rem;color:#fff;}
+.proj-val{font-family:'Permanent Marker',cursive;font-size:0.88rem;min-width:70px;text-align:right;}
+/* VAP donut label */
+.vap-row{display:flex;align-items:center;justify-content:space-around;gap:16px;margin:10px 0;}
+.vap-stat{text-align:center;}
+.vap-num{font-family:'Permanent Marker',cursive;font-size:1.4rem;}
+.vap-lbl{font-size:0.72rem;color:var(--ink-soft);}
+/* EBITDA/kg step */
+.ekg-row{display:flex;align-items:flex-end;gap:8px;height:72px;margin:8px 0;}
+.ekg-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;}
+.ekg-bar{width:100%;border-radius:2px 2px 0 0;}
+.ekg-val{font-family:'Permanent Marker',cursive;font-size:0.72rem;}
+.ekg-lbl{font-size:0.62rem;color:var(--ink-soft);}
+</style>
+</head>
+<body>
+
+<!-- ═══ PAGE 1 — THE BUSINESS ═══ -->
+<div class="page">
+  <div class="page-num">1 / 4</div>
+  <div class="spiral"><canvas id="sp1"></canvas></div>
+  <div class="layout">
+    <div class="title-block">
+      <div class="page-title">Copper's <span class="mark copper">hidden compounder</span> — BHAGYANGR</div>
+      <div class="page-subtitle">Bhagyanagar India Ltd · Hyderabad · Est. 1985 · 35,000 MT capacity · 500+ clients · Sep 11, 2026</div>
+      <div style="margin-top:10px;">
+        <span class="tag-pill"><canvas data-sketch="rect" data-stroke="var(--copper)" data-fill="var(--tag-yellow)"></canvas><span>Secondary Copper #1</span></span>
+        <span class="tag-pill"><canvas data-sketch="rect" data-stroke="var(--blue)" data-fill="var(--tag-yellow)"></canvas><span>₹1,409 Cr MCap</span></span>
+        <span class="tag-pill"><canvas data-sketch="rect" data-stroke="var(--green)" data-fill="var(--tag-yellow)"></canvas><span>Stage 2 ✅</span></span>
+        <span class="tag-pill"><canvas data-sketch="rect" data-stroke="var(--purple)" data-fill="var(--tag-yellow)"></canvas><span>NCLT Demerger Approved Sep 7</span></span>
+        <span class="tag-pill"><canvas data-sketch="rect" data-stroke="var(--orange)" data-fill="var(--tag-yellow)"></canvas><span>62% VAP Mix (FY26)</span></span>
+      </div>
+      <canvas data-sketch="line-double" data-color="var(--ink)" style="display:block;width:min(640px,100%);height:14px;margin-top:10px;"></canvas>
+    </div>
+    <div class="main-col">
+      <div>
+        <div class="sec-head"><span class="label" style="color:var(--copper);">What They Make</span><canvas data-sketch="line" data-color="var(--copper)"></canvas></div>
+        <div class="prose">
+          <p>Bhagyanagar is India's oldest and most diversified secondary copper fabricator — <span class="mark copper">copper rods, strips, bus bars, enamelled wires, transformer windings, PV ribbons, and silver-plated bus bars for AI data centres</span>. The company is the <em>only</em> Indian manufacturer producing copper bus bars up to 300 mm width. Built across three Surana family generations since 1985 on a 60-acre, 2-ISO-certified Hyderabad campus.</p>
+          <p>The business model is a conversion spread: procure copper scrap/cathode from 30+ countries, transform it into value-added forms, and sell to 500+ OEM clients across power, EV, renewables, and defence. EBITDA per kg is the core profit driver — it more than tripled from FY24 to FY26.</p>
+        </div>
+      </div>
+      <div>
+        <div class="sec-head"><span class="label" style="color:var(--green);">Revenue — 10-Year Build · 23% CAGR</span><canvas data-sketch="line" data-color="var(--green)"></canvas></div>
+        <div style="font-size:0.82rem;color:var(--ink-soft);margin-bottom:6px;">₹ Crores · Consolidated</div>
+        <div class="bar-chart">
+          <div class="bar-col"><div class="bar" style="height:12%"></div><div class="bar-val">279</div><div class="bar-yr">FY15</div></div>
+          <div class="bar-col"><div class="bar" style="height:17%"></div><div class="bar-val">380</div><div class="bar-yr">FY17</div></div>
+          <div class="bar-col"><div class="bar" style="height:26%"></div><div class="bar-val">562</div><div class="bar-yr">FY20</div></div>
+          <div class="bar-col"><div class="bar" style="height:60%"></div><div class="bar-val">1,429</div><div class="bar-yr">FY24</div></div>
+          <div class="bar-col"><div class="bar" style="height:68%"></div><div class="bar-val">1,626</div><div class="bar-yr">FY25</div></div>
+          <div class="bar-col"><div class="bar" style="height:100%;background:var(--green)"></div><div class="bar-val" style="color:var(--green)">2,378</div><div class="bar-yr" style="color:var(--green);font-weight:700">FY26★</div></div>
+          <div class="bar-col"><div class="bar" style="height:118%;background:var(--orange);opacity:0.75"></div><div class="bar-val" style="color:var(--orange)">TTM≈</div><div class="bar-yr" style="color:var(--orange)">2,820</div></div>
+        </div>
+      </div>
+      <div class="sketch-box">
+        <canvas class="border-canvas" data-sketch="rect" data-stroke="var(--purple)" data-fill="rgba(108,74,156,0.05)"></canvas>
+        <div class="inner">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">
+            <canvas data-sketch="lightbulb-icon" style="width:34px;height:38px;flex-shrink:0;display:block;"></canvas>
+            <span style="font-family:'Permanent Marker',cursive;font-size:1.05rem;color:var(--purple);">⚡ The Re-rating Catalyst</span>
+          </div>
+          <div class="prose">
+            <p><strong>Sep 7, 2026:</strong> NCLT Hyderabad approved a <span class="mark purple">composite scheme — amalgamation of Tieramet Ltd + demerger of copper business</span> into a separately listed entity. Non-copper subsidiaries (telecom, solar, real estate, wind) carved out. What remains: a pure-play copper fabricator with superior margins.</p>
+            <p>Markets historically re-rate pure-plays at 25–40× vs. 15–20× for conglomerates. The demerger removes the holding-company discount — and surfaces the copper business on its own metrics. Recycling compeer P/Es trade 30–40× per concall peer analysis.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="side-col">
+      <div class="sketch-box">
+        <canvas class="border-canvas" data-sketch="rect" data-stroke="var(--copper)"></canvas>
+        <div class="inner">
+          <span class="callout-title" style="color:var(--copper);">📊 FY26 Snapshot</span>
+          <div class="stat-row">
+            <div class="stat-tile"><div class="stat-val" style="color:var(--green);">21.6%</div><div class="stat-lbl">ROE</div></div>
+            <div class="stat-tile"><div class="stat-val" style="color:var(--green);">20.7%</div><div class="stat-lbl">ROCE</div></div>
+          </div>
+          <div class="stat-row">
+            <div class="stat-tile"><div class="stat-val">22.4×</div><div class="stat-lbl">P/E (FY26)</div></div>
+            <div class="stat-tile"><div class="stat-val" style="color:var(--copper);">₹43</div><div class="stat-lbl">EBITDA/kg</div></div>
+          </div>
+          <div style="border-top:1px dashed var(--rule);padding-top:8px;margin-top:4px;font-size:0.82rem;color:var(--ink-soft);">
+            Revenue ₹2,378 Cr · PAT ₹50 Cr · Vol 24,655 MT
+          </div>
+        </div>
+      </div>
+      <div class="sketch-box">
+        <canvas class="border-canvas" data-sketch="rect" data-stroke="var(--blue)"></canvas>
+        <div class="inner">
+          <span class="callout-title" style="color:var(--blue);">🏛 Institutional Discovery</span>
+          <div style="font-size:0.88rem;line-height:1.9;color:var(--ink);">
+            FIIs: <strong style="color:var(--green);">0% → 2.15% ▲</strong><br>
+            DIIs: <strong style="color:var(--green);">0% → 2.08% ▲</strong><br>
+            Shareholders: <strong style="color:var(--green);">10,764 → 31,751</strong><br>
+            Promoters: 73.76% → 65.80%<br>
+            <span style="font-size:0.75rem;color:var(--ink-soft);">(demerger scheme dilution, not exit)</span>
+          </div>
+          <div style="font-size:0.78rem;color:var(--green);font-style:italic;margin-top:6px;">Institutions entering from zero → still early innings</div>
+        </div>
+      </div>
+      <div class="sketch-box">
+        <canvas class="border-canvas" data-sketch="rect" data-stroke="var(--green)"></canvas>
+        <div class="inner">
+          <span class="callout-title" style="color:var(--green);">⚡ End Markets</span>
+          <ul class="fact-list">
+            <li>AI data centre bus bars (silver-plated)</li>
+            <li>Power grid / transformer windings</li>
+            <li>EV wiring, motors, chargers</li>
+            <li>Solar PV ribbons & collectors</li>
+            <li>Defence & telecom equipment</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="takeaway">
+      <div class="takeaway-inner">
+        <canvas class="border-canvas" data-sketch="rect" data-stroke="var(--orange)" data-fill="rgba(217,127,51,0.07)"></canvas>
+        <div class="inner">
+          <span class="takeaway-label">★ Page 1 Takeaway</span>
+          <div class="takeaway-text">Pure-play copper + NCLT-approved demerger = conglomerate discount removal. 62% value-added product mix. EBITDA/kg tripled. FIIs/DIIs just started buying from zero. Institutional discovery in early innings.</div>
+          <div style="margin-top:6px;font-size:0.8rem;color:var(--ink-soft);">Agent Adda · Sep 11, 2026 · Research only · Not investment advice</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══ PAGE 2 — FINANCIALS ═══ -->
+<div class="page">
+  <div class="page-num">2 / 4</div>
+  <div class="spiral"><canvas id="sp2"></canvas></div>
+  <div class="layout">
+    <div class="title-block">
+      <div class="page-title">The <span class="mark green">margin inflection</span> is the real story</div>
+      <div class="page-subtitle">BHAGYANGR · Financial Deep Dive · FY24–FY26 + Q1 FY27 · Source: screener.in consolidated + concall packs</div>
+      <canvas data-sketch="line-double" data-color="var(--ink)" style="display:block;width:min(640px,100%);height:14px;margin-top:10px;"></canvas>
+    </div>
+    <div class="main-col">
+      <div>
+        <div class="sec-head"><span class="label" style="color:var(--green);">OPM Expansion — Structural Mix Shift</span><canvas data-sketch="line" data-color="var(--green)"></canvas></div>
+        <div style="font-size:0.82rem;color:var(--ink-soft);margin-bottom:10px;">VAP at 59% of volume in FY26, exit quarter Q4 at 62% — EBITDA/kg went ₹20 → ₹43 → ₹62 (Q4 exit)</div>
+        <div class="margin-row"><div class="margin-label">FY24</div><div class="margin-track"><div class="margin-fill" style="width:20%;background:#aab;"></div></div><div class="margin-val" style="color:var(--ink-soft);">~2.1%</div></div>
+        <div class="margin-row"><div class="margin-label">FY25</div><div class="margin-track"><div class="margin-fill" style="width:25%;background:#99b;"></div></div><div class="margin-val" style="color:var(--ink-soft);">2.3%</div></div>
+        <div class="margin-row"><div class="margin-label">Jun25</div><div class="margin-track"><div class="margin-fill" style="width:33%;background:var(--blue);opacity:0.55;"></div></div><div class="margin-val" style="color:var(--blue);">3.3%</div></div>
+        <div class="margin-row"><div class="margin-label">Sep25</div><div class="margin-track"><div class="margin-fill" style="width:43%;background:var(--blue);opacity:0.7;"></div></div><div class="margin-val" style="color:var(--blue);">4.3%</div></div>
+        <div class="margin-row"><div class="margin-label">Dec25</div><div class="margin-track"><div class="margin-fill" style="width:50%;background:var(--blue);"></div></div><div class="margin-val" style="color:var(--blue);">5.0%</div></div>
+        <div class="margin-row"><div class="margin-label">Mar26</div><div class="margin-track"><div class="margin-fill" style="width:49%;background:var(--green);"></div></div><div class="margin-val" style="color:var(--green);">4.9%</div></div>
+        <div class="margin-row"><div class="margin-label" style="color:var(--copper);font-weight:700;">Jun26 Q1</div><div class="margin-track"><div class="margin-fill" style="width:50%;background:var(--copper);"></div></div><div class="margin-val" style="color:var(--copper);font-family:'Permanent Marker',cursive;">5.0%★</div></div>
+      </div>
+      <div>
+        <div class="sec-head"><span class="label" style="color:var(--green);">EPS — Six Consecutive Growth Quarters</span><canvas data-sketch="line" data-color="var(--green)"></canvas></div>
+        <div class="eps-row">
+          <div class="eps-block"><div class="eps-bar" style="height:18px;"></div><div class="eps-val">₹1.43</div><div class="eps-lbl">Mar25</div></div>
+          <div class="eps-block"><div class="eps-bar" style="height:30px;"></div><div class="eps-val">₹2.37</div><div class="eps-lbl">Jun25</div></div>
+          <div class="eps-block"><div class="eps-bar" style="height:44px;"></div><div class="eps-val">₹3.52</div><div class="eps-lbl">Sep25</div></div>
+          <div class="eps-block"><div class="eps-bar" style="height:50px;"></div><div class="eps-val">₹4.01</div><div class="eps-lbl">Dec25</div></div>
+          <div class="eps-block"><div class="eps-bar" style="height:72px;background:var(--copper);"></div><div class="eps-val" style="color:var(--copper);">₹5.78</div><div class="eps-lbl">Mar26</div></div>
+          <div class="eps-block"><div class="eps-bar" style="height:80px;background:var(--copper);"></div><div class="eps-val" style="color:var(--copper);font-size:0.75rem;">₹6.33★</div><div class="eps-lbl" style="color:var(--copper);font-weight:700;">Jun26</div></div>
+        </div>
+        <div style="font-size:0.82rem;color:var(--ink-soft);">Annualised Q1 FY27 run-rate: <span style="font-family:'Permanent Marker',cursive;color:var(--green);">₹25.3 EPS</span> → implied FY27E P/E: <span style="font-family:'Permanent Marker',cursive;color:var(--green);">16.6×</span> at CMP ₹420</div>
+      </div>
+      <div class="sketch-box">
+        <canvas class="border-canvas" data-sketch="rect" data-stroke="var(--blue)"></canvas>
+        <div class="inner">
+          <span style="font-family:'Permanent Marker',cursive;font-size:0.9rem;color:var(--blue);display:block;margin-bottom:8px;">💰 Cash Flow &amp; Balance Sheet</span>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 16px;font-size:0.88rem;line-height:1.75;">
+            <div><span style="color:var(--ink-soft);">CFO (FY26):</span> <strong style="color:var(--green);">+₹59 Cr ✅</strong></div>
+            <div><span style="color:var(--ink-soft);">Borrowings:</span> <strong>₹259 Cr</strong></div>
+            <div><span style="color:var(--ink-soft);">FCF (FY26):</span> <strong style="color:var(--green);">+₹50 Cr ✅</strong></div>
+            <div><span style="color:var(--ink-soft);">Debtor days:</span> <strong style="color:var(--red);">75d ▲</strong></div>
+            <div><span style="color:var(--ink-soft);">Capex FY26:</span> ₹9 Cr (disciplined)</div>
+            <div><span style="color:var(--ink-soft);">FY27E Capex:</span> ₹25 Cr (guided)</div>
+            <div><span style="color:var(--ink-soft);">Debt/EBITDA:</span> <strong style="color:var(--green);">2.7× ↓</strong> (was 7.7×)</div>
+            <div><span style="color:var(--ink-soft);">Net Worth:</span> ₹257 Cr (+24%)</div>
+          </div>
+          <div style="font-size:0.77rem;color:var(--green);margin-top:8px;">First +ve FCF after 3 years of investment phase. Debt coverage 2.7× vs 7.7× in FY25 = step-change.</div>
+        </div>
+      </div>
+    </div>
+    <div class="side-col">
+      <div class="sketch-box">
+        <canvas class="border-canvas" data-sketch="rect" data-stroke="var(--copper)"></canvas>
+        <div class="inner">
+          <span class="callout-title" style="color:var(--copper);">📋 Quarterly P&amp;L</span>
+          <div style="font-size:0.8rem;color:var(--ink-soft);margin-bottom:6px;">₹ Cr · Consolidated</div>
+          <table style="width:100%;font-size:0.8rem;border-collapse:collapse;">
+            <tr style="border-bottom:1px solid var(--rule);">
+              <td style="padding:2px 0;color:var(--ink-soft);">Qtr</td>
+              <td style="text-align:right;color:var(--ink-soft);">Rev</td>
+              <td style="text-align:right;color:var(--ink-soft);">OPM</td>
+              <td style="text-align:right;color:var(--ink-soft);">EPS</td>
+            </tr>
+            <tr style="color:var(--copper);font-weight:700;border-top:2px solid var(--copper);">
+              <td style="padding:3px 0;">Jun26★</td><td style="text-align:right;">705</td><td style="text-align:right;">5.0%</td><td style="text-align:right;">₹6.33</td>
+            </tr>
+            <tr><td style="padding:2px 0;">Mar26</td><td style="text-align:right;">735</td><td style="text-align:right;">4.9%</td><td style="text-align:right;">₹5.78</td></tr>
+            <tr><td style="padding:2px 0;">Dec25</td><td style="text-align:right;">577</td><td style="text-align:right;">5.0%</td><td style="text-align:right;">₹4.01</td></tr>
+            <tr><td style="padding:2px 0;">Sep25</td><td style="text-align:right;">580</td><td style="text-align:right;">4.3%</td><td style="text-align:right;">₹3.52</td></tr>
+            <tr><td style="padding:2px 0;">Jun25</td><td style="text-align:right;">486</td><td style="text-align:right;">3.3%</td><td style="text-align:right;">₹2.37</td></tr>
+            <tr><td style="padding:2px 0;color:var(--ink-soft);">Mar25</td><td style="text-align:right;color:var(--ink-soft);">454</td><td style="text-align:right;color:var(--ink-soft);">2.5%</td><td style="text-align:right;color:var(--ink-soft);">₹1.43</td></tr>
+          </table>
+          <div style="font-size:0.75rem;color:var(--green);margin-top:8px;">Jun26 revenue +45% YoY. Revenue almost doubled in 4 quarters.</div>
+        </div>
+      </div>
+      <div class="sketch-box">
+        <canvas class="border-canvas" data-sketch="rect" data-stroke="var(--green)" data-fill="rgba(31,143,92,0.06)"></canvas>
+        <div class="inner">
+          <span class="callout-title" style="color:var(--green);">🚀 Growth Rates</span>
+          <div style="font-family:'Permanent Marker',cursive;font-size:1.9rem;color:var(--green);text-align:center;margin:4px 0;">70.5%</div>
+          <div style="text-align:center;font-size:0.8rem;color:var(--ink-soft);margin-bottom:8px;">5-year profit CAGR</div>
+          <div style="font-size:0.82rem;color:var(--ink-soft);line-height:1.8;">
+            10yr Sales CAGR: <strong>23%</strong><br>
+            EBITDA/kg: ₹20 → <strong style="color:var(--copper);">₹62</strong> (exit Q4)<br>
+            PAT FY26: ₹50 Cr (FY25: ₹14 Cr)<br>
+            <strong style="color:var(--green);">+258% PAT</strong> on +46% revenue
+          </div>
+        </div>
+      </div>
+      <div class="sketch-box">
+        <canvas class="border-canvas" data-sketch="rect" data-stroke="var(--red)"></canvas>
+        <div class="inner">
+          <span class="callout-title" style="color:var(--red);">⚠️ Watch Points</span>
+          <div class="risk-pill">Debtor days 75d ▲ (was 46d)</div>
+          <div class="risk-pill">Borrowings ₹259 Cr (D/E ~1×)</div>
+          <div class="risk-pill">Promoter stake −8.9% over 3 yrs</div>
+          <div class="risk-pill">No dividend despite profits</div>
+          <div class="risk-pill">Copper price pass-through lag</div>
+          <div style="font-size:0.76rem;color:var(--ink-soft);margin-top:8px;">WC up ₹120 Cr YoY — proportional to +46% revenue scale-up; ROCE 20% &gt; cost of funds ✅</div>
+        </div>
+      </div>
+    </div>
+    <div class="takeaway">
+      <div class="takeaway-inner">
+        <canvas class="border-canvas" data-sketch="rect" data-stroke="var(--orange)" data-fill="rgba(217,127,51,0.07)"></canvas>
+        <div class="inner">
+          <span class="takeaway-label">★ Page 2 Takeaway</span>
+          <div class="takeaway-text">OPM: 2.3% → 5.0% in 5 quarters. EBITDA/kg tripled. Q4 exit rate ₹62/kg. Six straight EPS beats. FCF turned positive. FY27E P/E = 16.6× — not expensive for 70% profit CAGR. Watch debtor days.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══ PAGE 3 — THE TRADE (ENHANCED CHART) ═══ -->
+<div class="page">
+  <div class="page-num">3 / 4</div>
+  <div class="spiral"><canvas id="sp3"></canvas></div>
+  <div class="layout">
+    <div class="title-block">
+      <div class="page-title">The <span class="mark orange">entry setup</span> — 40-day chart with full anatomy</div>
+      <div class="page-subtitle">BHAGYANGR · Technical · Sep 11, 2026 · Entry ₹420 · Darvas breakout confirmed · Volume 181% avg · R/R 2.2×</div>
+      <canvas data-sketch="line-double" data-color="var(--ink)" style="display:block;width:min(640px,100%);height:14px;margin-top:10px;"></canvas>
+    </div>
+
+    <!-- FULL-WIDTH ENHANCED CHART -->
+    <div class="full-col">
+      <div class="sec-head">
+        <span class="label" style="color:var(--blue);">40-Day OHLCV · Supertrend(10,3) · SMA50/200 · Darvas Box · Volume Histogram</span>
+        <canvas data-sketch="line" data-color="var(--blue)"></canvas>
+      </div>
+      <div class="chart-panel">
+        <canvas id="mainChartCanvas" style="height:320px;"></canvas>
+        <div class="chart-legend">
+          <span>🟢 <b>Bull candle</b></span>
+          <span>🔴 <b>Bear candle</b></span>
+          <span style="color:#5bc4f5;">━ <b>SMA50</b> (₹387)</span>
+          <span style="color:#888;">━ <b>SMA200</b> (₹256)</span>
+          <span style="color:#f4a261;">╌ <b>ST(10,3)</b> floor</span>
+          <span style="color:rgba(244,207,109,0.8);">░ <b>Darvas Box</b> (₹370–₹412)</span>
+          <span style="color:#26a069;">▐ <b>Vol Spike</b> &gt;3L</span>
+          <span style="color:#f4cf6d;">▲ <b>Entry arrow</b></span>
+        </div>
+      </div>
+      <div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;font-size:0.8rem;color:var(--ink-soft);">
+        <span>📍 Aug 18: <strong>5.5L vol spike</strong> — first accumulation signal</span>
+        <span>📍 Sep 9: <strong>4.7L — Darvas break ₹411.65</strong></span>
+        <span>📍 Sep 10: <strong>4.9L — ATH ₹432</strong></span>
+        <span>📍 Sep 11: <strong>3.4L — pullback to entry ₹420</strong></span>
+      </div>
+    </div>
+
+    <div class="main-col">
+      <div>
+        <div class="sec-head"><span class="label" style="color:var(--green);">Technical Checklist — All Green</span><canvas data-sketch="line" data-color="var(--green)"></canvas></div>
+        <div class="sketch-box">
+          <canvas class="border-canvas" data-sketch="rect" data-stroke="var(--green)" data-fill="rgba(31,143,92,0.04)"></canvas>
+          <div class="inner">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 14px;font-size:0.88rem;line-height:1.8;">
+              <div><span style="color:var(--green);">✅</span> Stage 2 — SMA50 &gt; SMA200</div>
+              <div><span style="color:var(--green);">✅</span> ST(10,3) BULL floor ₹375.34</div>
+              <div><span style="color:var(--green);">✅</span> SMA50 ₹387 · SMA200 ₹256</div>
+              <div><span style="color:var(--green);">✅</span> MACD histogram +6.95</div>
+              <div><span style="color:var(--green);">✅</span> RSI 60.5 — IDEAL (45–68)</div>
+              <div><span style="color:var(--green);">✅</span> Darvas break &gt;₹411.65</div>
+              <div><span style="color:var(--green);">✅</span> ADX 28.4 (trend strong)</div>
+              <div><span style="color:var(--green);">✅</span> Volume 181% of 20d avg</div>
+              <div><span style="color:var(--green);">✅</span> 52w High ₹432 (−3.1%)</div>
+              <div><span style="color:var(--green);">✅</span> InvScore 96 / 100</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="sec-head"><span class="label" style="color:var(--blue);">Bull vs Bear Case</span><canvas data-sketch="line" data-color="var(--blue)"></canvas></div>
+        <div class="sketch-box" style="margin-bottom:10px;">
+          <canvas class="border-canvas" data-sketch="rect" data-stroke="var(--green)"></canvas>
+          <div class="inner">
+            <span style="font-family:'Permanent Marker',cursive;color:var(--green);">🐂 Bull Case</span>
+            <ul class="fact-list" style="margin-top:6px;">
+              <li>Demerger unlocks pure-play re-rating (sector P/E 30–40×)</li>
+              <li>OPM hits 6–7% as VAP mix reaches 70%+</li>
+              <li>FII/DII at 2% — mutual fund SIP flows still incoming</li>
+              <li>AI data-centre bus bar contract ramp</li>
+            </ul>
+          </div>
+        </div>
+        <div class="sketch-box">
+          <canvas class="border-canvas" data-sketch="rect" data-stroke="var(--red)"></canvas>
+          <div class="inner">
+            <span style="font-family:'Permanent Marker',cursive;color:var(--red);">🐻 Bear Case</span>
+            <ul class="fact-list" style="margin-top:6px;">
+              <li style="color:var(--ink-soft);">COMEX copper −4.95% Sep 10 — cost squeeze</li>
+              <li style="color:var(--ink-soft);">Debtor days creeping → WC trap at scale</li>
+              <li style="color:var(--ink-soft);">Demerger timeline slip → discount persists</li>
+              <li style="color:var(--ink-soft);">Promoter pledge risk on 65.8% stake</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col">
+      <div class="sketch-box">
+        <canvas class="border-canvas" data-sketch="rect" data-stroke="var(--orange)" data-fill="rgba(217,127,51,0.08)"></canvas>
+        <div class="inner">
+          <span class="callout-title" style="color:var(--orange);">🎯 Entry Ticket</span>
+          <div style="font-family:'Permanent Marker',cursive;font-size:2rem;color:var(--ink);text-align:center;margin:4px 0;">₹420</div>
+          <div style="text-align:center;font-size:0.8rem;color:var(--ink-soft);margin-bottom:10px;">CMP · SC Fund · 47 shares · ₹19,740</div>
+          <div style="font-size:0.92rem;line-height:2.1;">
+            <div>🛑 Stop: <strong style="color:var(--red);">₹375</strong> <span style="color:var(--ink-soft);font-size:0.77rem;">(ST floor, −10.4%)</span></div>
+            <div>🎯 T1: <strong style="color:var(--green);">₹520</strong> <span style="color:var(--ink-soft);font-size:0.77rem;">(+23.8%)</span></div>
+            <div>🎯 T2: <strong style="color:var(--blue);">₹620</strong> <span style="color:var(--ink-soft);font-size:0.77rem;">(+47.6%)</span></div>
+          </div>
+          <div style="border-top:1px dashed var(--rule);margin-top:8px;padding-top:8px;text-align:center;">
+            <div style="font-family:'Permanent Marker',cursive;font-size:1.2rem;color:var(--green);">R/R: 2.2×</div>
+            <div style="font-size:0.75rem;color:var(--ink-soft);">Risk −₹2,099 · Reward T1 +₹4,700</div>
+          </div>
+        </div>
+      </div>
+      <div class="sketch-box">
+        <canvas class="border-canvas" data-sketch="rect" data-stroke="var(--blue)"></canvas>
+        <div class="inner">
+          <span class="callout-title" style="color:var(--blue);">📐 Key Levels</span>
+          <div style="font-size:0.85rem;line-height:2.2;color:var(--ink-soft);">
+            <div>ATH: <strong style="color:var(--copper);">₹432.20</strong> (Sep 10)</div>
+            <div>Darvas: <strong style="color:var(--orange);">₹411.65</strong> ✅ broken</div>
+            <div>SMA50: <strong style="color:#5bc4f5;">₹386.92</strong></div>
+            <div>SMA200: <strong style="color:#888;">₹256.06</strong></div>
+            <div>ST floor: <strong style="color:var(--red);">₹375.34</strong></div>
+            <div>52w Low: ₹88.25 (+374%)</div>
+          </div>
+        </div>
+      </div>
+      <div class="sketch-box">
+        <canvas class="border-canvas" data-sketch="rect" data-stroke="var(--copper)" data-fill="rgba(176,96,32,0.06)"></canvas>
+        <div class="inner">
+          <span class="callout-title" style="color:var(--copper);">🔥 Volume Confirmation</span>
+          <div style="font-family:'Permanent Marker',cursive;font-size:1.7rem;color:var(--copper);text-align:center;">181%</div>
+          <div style="text-align:center;font-size:0.8rem;color:var(--ink-soft);margin-bottom:8px;">of 20-day average</div>
+          <div style="font-size:0.82rem;color:var(--ink-soft);line-height:1.7;">
+            Sep 9: 4.7L (breakout)<br>Sep 10: 4.9L (ATH)<br>Sep 11: 3.4L (still elevated)
+          </div>
+          <div style="font-size:0.78rem;color:var(--green);margin-top:6px;">3 consecutive high-volume sessions = accumulation, not distribution</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="takeaway">
+      <div class="takeaway-inner">
+        <canvas class="border-canvas" data-sketch="rect" data-stroke="var(--orange)" data-fill="rgba(217,127,51,0.07)"></canvas>
+        <div class="inner">
+          <span class="takeaway-label">★ Page 3 Takeaway</span>
+          <div class="takeaway-text">All 10 technical conditions green. Darvas breakout + 181% volume + RSI 60.5 = textbook Stage 2 entry. Stop at ST floor ₹375, 10.4% risk, 2.2× R/R to T1. The chart confirms what the fundamentals justify.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══ PAGE 4 — THE FUTURE (CONCALL SYNTHESIS) ═══ -->
+<div class="page">
+  <div class="page-num">4 / 4</div>
+  <div class="spiral"><canvas id="sp4"></canvas></div>
+  <div class="layout">
+    <div class="title-block">
+      <div class="page-title">What <span class="mark purple">management is building</span> — concall synthesis</div>
+      <div class="page-subtitle">Source: FY26 Earnings Concall (May 2026) + June 2026 Investor Presentation · Devendra Surana, MD</div>
+      <canvas data-sketch="line-double" data-color="var(--ink)" style="display:block;width:min(640px,100%);height:14px;margin-top:10px;"></canvas>
+    </div>
+
+    <div class="main-col">
+
+      <!-- MD quotes -->
+      <div>
+        <div class="sec-head"><span class="label" style="color:var(--copper);">MD's Own Words — May 2026 Concall</span><canvas data-sketch="line" data-color="var(--copper)"></canvas></div>
+        <div class="md-quote">
+          <strong>"FY26 was a defining year."</strong> Consolidated revenue crossed the ₹2,000 Cr milestone and PAT crossed ₹50 Cr. Q4 EBITDA per kg reached <strong>₹62/kg</strong> — the strongest quarterly number in our dataset. Operating leverage from our shift to value-added products has begun to show through.
+        </div>
+        <div class="md-quote">
+          <strong>"The demerger has cleared all preliminary approvals."</strong> The NCLT hearing was scheduled for June 9, 2026. Copper business demerged into Tieramet Ltd as a separately listed company. Final timelines and listing subject to approval — now confirmed Sep 7, 2026.
+        </div>
+        <div class="md-quote">
+          <strong>"We are planning to invest another ₹40 Cr on capacities and new ventures over 2 years"</strong> to ensure competitiveness in this growing market. FY27E guided capex: ₹25 Cr. Recycling verticals (aluminium + plastic) being converted from scrap-selling to value-added inhouse products.
+        </div>
+      </div>
+
+      <!-- Forward projections -->
+      <div>
+        <div class="sec-head"><span class="label" style="color:var(--green);">Revenue / PAT Projection Roadmap</span><canvas data-sketch="line" data-color="var(--green)"></canvas></div>
+        <div style="font-size:0.82rem;color:var(--ink-soft);margin-bottom:10px;">Based on: Q1 FY27 run-rate + guided VAP mix ramp + ₹40 Cr capex plan + EBITDA/kg trend</div>
+        <div class="proj-row">
+          <div class="proj-label">FY26A</div>
+          <div class="proj-track"><div class="proj-fill" style="width:58%;background:var(--copper);">₹2,378 Cr</div></div>
+          <div class="proj-val" style="color:var(--copper);">₹50 Cr PAT</div>
+        </div>
+        <div class="proj-row">
+          <div class="proj-label">FY27E</div>
+          <div class="proj-track"><div class="proj-fill" style="width:75%;background:var(--green);">₹2,820–3,000 Cr</div></div>
+          <div class="proj-val" style="color:var(--green);">~₹80 Cr PAT</div>
+        </div>
+        <div class="proj-row">
+          <div class="proj-label">FY28E</div>
+          <div class="proj-track"><div class="proj-fill" style="width:95%;background:var(--blue);opacity:0.75;">₹3,500+ Cr</div></div>
+          <div class="proj-val" style="color:var(--blue);">~₹120 Cr PAT</div>
+        </div>
+        <div style="font-size:0.8rem;color:var(--ink-soft);margin-top:4px;font-style:italic;">Assumes OPM 5.5–6% (VAP mix 65–70%); Q1 FY27 EPS ₹6.33 × 4 = ₹25.3 annualised → P/E 16.6× at CMP ₹420</div>
+      </div>
+
+      <!-- Strategic pillars -->
+      <div>
+        <div class="sec-head"><span class="label" style="color:var(--blue);">5 Strategic Pillars (From June 2026 Presentation)</span><canvas data-sketch="line" data-color="var(--blue)"></canvas></div>
+        <div class="fut-grid">
+          <div class="fut-card">
+            <canvas class="border-canvas" data-sketch="rect" data-stroke="var(--copper)"></canvas>
+            <div class="inner">
+              <span class="fut-card-title" style="color:var(--copper);">🔧 VAP Mix &gt;70%</span>
+              <div class="fut-card-body">Currently 62% (FY26). Exit Q4 at 62%. Guided push to 70%+ by FY28. Bus bars, enamelled wires, PV ribbons, silver-plated AI bus bars — all carry 2–4× margin vs commodity rod.</div>
+            </div>
+          </div>
+          <div class="fut-card">
+            <canvas class="border-canvas" data-sketch="rect" data-stroke="var(--purple)"></canvas>
+            <div class="inner">
+              <span class="fut-card-title" style="color:var(--purple);">🤖 AI Data Centre</span>
+              <div class="fut-card-body">Silver-plated copper bus bars for hyperscaler data centres. Only manufacturer in India producing these at scale. High-conductivity, oxidation-resistant — premium pricing tier.</div>
+            </div>
+          </div>
+          <div class="fut-card">
+            <canvas class="border-canvas" data-sketch="rect" data-stroke="var(--green)"></canvas>
+            <div class="inner">
+              <span class="fut-card-title" style="color:var(--green);">♻️ Recycling Loop</span>
+              <div class="fut-card-body">₹10 Cr capex for plastic recycling. Cable waste → granules + refined metals → back into supply chain. Aluminium recycling added. Closed-loop = margin accretion, waste reduction.</div>
+            </div>
+          </div>
+          <div class="fut-card">
+            <canvas class="border-canvas" data-sketch="rect" data-stroke="var(--blue)"></canvas>
+            <div class="inner">
+              <span class="fut-card-title" style="color:var(--blue);">🌏 Export Push</span>
+              <div class="fut-card-body">Targeting East Asia, Middle East, North America. Currently sourcing from 30+ countries. Revenue from exports not yet disclosed but geographic diversification is a stated FY27–28 priority.</div>
+            </div>
+          </div>
+          <div class="fut-card">
+            <canvas class="border-canvas" data-sketch="rect" data-stroke="var(--orange)"></canvas>
+            <div class="inner">
+              <span class="fut-card-title" style="color:var(--orange);">⚡ EV + Solar Ramp</span>
+              <div class="fut-card-body">PV ribbon demand +38% CAGR to FY30. EV copper demand +10%/yr to 2035. Management explicitly targeting these — interconnect ribbons, wiring harnesses, charging infra.</div>
+            </div>
+          </div>
+          <div class="fut-card">
+            <canvas class="border-canvas" data-sketch="rect" data-stroke="var(--red)"></canvas>
+            <div class="inner">
+              <span class="fut-card-title" style="color:var(--red);">📋 Demerger Path</span>
+              <div class="fut-card-body">NCLT Hyderabad approved Sep 7, 2026. Copper business → Tieramet Ltd (separately listed). Existing BIL shareholders get Tieramet shares. Promoter dilution is scheme-driven.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- end main col -->
+
+    <div class="side-col">
+
+      <!-- India copper demand tailwind -->
+      <div class="sketch-box">
+        <canvas class="border-canvas" data-sketch="rect" data-stroke="var(--blue)" data-fill="rgba(47,111,206,0.05)"></canvas>
+        <div class="inner">
+          <span class="callout-title" style="color:var(--blue);">🌐 India Copper TAM to FY30</span>
+          <div style="font-size:0.82rem;color:var(--ink-soft);margin-bottom:8px;">Management cited (June 2026 presentation)</div>
+          <div style="font-size:0.88rem;line-height:1.9;">
+            <div>Power &amp; Grid: <strong>₹18,000 Cr</strong></div>
+            <div>Automotive &amp; EV: <strong>₹15,000 Cr</strong></div>
+            <div>Renewables: <strong>₹6,500 Cr</strong></div>
+            <div>Electronics: <strong>₹5,000 Cr</strong></div>
+            <div style="border-top:1px dashed var(--rule);padding-top:6px;margin-top:6px;font-family:'Permanent Marker',cursive;font-size:1rem;color:var(--blue);">Total: ₹58,000 Cr</div>
+          </div>
+          <div style="font-size:0.78rem;color:var(--green);margin-top:6px;">India to be world's 2nd largest copper consumer by 2050</div>
+        </div>
+      </div>
+
+      <!-- EBITDA/kg trend -->
+      <div class="sketch-box">
+        <canvas class="border-canvas" data-sketch="rect" data-stroke="var(--copper)"></canvas>
+        <div class="inner">
+          <span class="callout-title" style="color:var(--copper);">💡 EBITDA/kg Journey</span>
+          <div class="ekg-row">
+            <div class="ekg-col"><div class="ekg-bar" style="height:20px;background:#aab;"></div><div class="ekg-val" style="color:var(--ink-soft);">₹20</div><div class="ekg-lbl">FY24</div></div>
+            <div class="ekg-col"><div class="ekg-bar" style="height:28px;background:var(--blue);opacity:0.6;"></div><div class="ekg-val" style="color:var(--blue);">₹28</div><div class="ekg-lbl">FY25</div></div>
+            <div class="ekg-col"><div class="ekg-bar" style="height:46px;background:var(--green);"></div><div class="ekg-val" style="color:var(--green);">₹43</div><div class="ekg-lbl">FY26</div></div>
+            <div class="ekg-col"><div class="ekg-bar" style="height:65px;background:var(--copper);"></div><div class="ekg-val" style="color:var(--copper);font-size:0.75rem;">₹62</div><div class="ekg-lbl" style="color:var(--copper);font-weight:700;">Q4exit</div></div>
+            <div class="ekg-col"><div class="ekg-bar" style="height:72px;background:var(--orange);opacity:0.8;border:2px dashed var(--orange);"></div><div class="ekg-val" style="color:var(--orange);">₹70+</div><div class="ekg-lbl" style="color:var(--orange);">FY28E</div></div>
+          </div>
+          <div style="font-size:0.77rem;color:var(--ink-soft);">Each ₹10 EBITDA/kg on 30,000 MT = ₹30 Cr EBITDA uplift</div>
+        </div>
+      </div>
+
+      <!-- Peer re-rating -->
+      <div class="sketch-box">
+        <canvas class="border-canvas" data-sketch="rect" data-stroke="var(--purple)" data-fill="rgba(108,74,156,0.05)"></canvas>
+        <div class="inner">
+          <span class="callout-title" style="color:var(--purple);">🔭 Re-rating Potential</span>
+          <div style="font-size:0.85rem;line-height:1.9;color:var(--ink-soft);">
+            <div>Current P/E: <strong style="color:var(--ink);">22.4×</strong> (FY26)</div>
+            <div>FY27E P/E: <strong style="color:var(--green);">16.6×</strong> at ₹420</div>
+            <div>Recycling peer P/E: <strong style="color:var(--purple);">30–40×</strong></div>
+            <div>Pure-play copper target: <strong style="color:var(--purple);">25–35×</strong></div>
+          </div>
+          <div style="border-top:1px dashed var(--rule);padding-top:8px;margin-top:6px;">
+            <div style="font-family:'Permanent Marker',cursive;font-size:0.9rem;color:var(--purple);">If FY27E PAT ₹80 Cr × 30× P/E</div>
+            <div style="font-family:'Permanent Marker',cursive;font-size:1.4rem;color:var(--green);text-align:center;margin-top:4px;">MCap → ₹2,400 Cr</div>
+            <div style="text-align:center;font-size:0.78rem;color:var(--ink-soft);">vs today ₹1,409 Cr → <strong style="color:var(--green);">+70% upside case</strong></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Govt policy tailwind -->
+      <div class="sketch-box">
+        <canvas class="border-canvas" data-sketch="rect" data-stroke="var(--green)"></canvas>
+        <div class="inner">
+          <span class="callout-title" style="color:var(--green);">🏛 Policy Tailwinds</span>
+          <ul class="fact-list" style="font-size:0.82rem;">
+            <li>Critical Mineral Mission (2025) — copper mandated</li>
+            <li>EPR framework for non-ferrous metals (2024)</li>
+            <li>Vehicle Scrappage Policy → copper recovery</li>
+            <li>5% recycled content mandate from FY28 (→10%→20%)</li>
+            <li>Indian grid expansion for AI data centres</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="takeaway">
+      <div class="takeaway-inner">
+        <canvas class="border-canvas" data-sketch="rect" data-stroke="var(--orange)" data-fill="rgba(217,127,51,0.07)"></canvas>
+        <div class="inner">
+          <span class="takeaway-label">★ Investment Thesis — One Paragraph</span>
+          <div class="takeaway-text">Pure-play copper compounder at 16.6× FY27E P/E, compounding at 70% profit CAGR. NCLT-approved demerger removes conglomerate discount. AI data centre silver-plated bus bars = new premium product. EBITDA/kg ₹62 exit rate and rising. Institutions entering from zero. If re-rated to 30× on ₹80 Cr FY27E PAT: MCap ₹2,400 Cr vs. today ₹1,409 Cr — 70% upside case. Stop 10.4% below CMP at ST floor. The chart confirms. The fundamentals justify. The future is guided.</div>
+          <div style="margin-top:8px;font-size:0.8rem;color:var(--ink-soft);">Agent Adda · Deep Research · Sep 11, 2026 · Educational only · Not investment advice · Not SEBI-registered research</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+
+<script>
+/* ─── Core canvas primitives ─── */
+function resolveColor(str,fb){
+  if(!str)return fb;
+  var m=str.match(/^var\((--[\w-]+)\)$/);
+  if(m){var v=getComputedStyle(document.documentElement).getPropertyValue(m[1]).trim();return v||fb;}
+  return str;
+}
+function rnd(seed){var s=seed;return function(){s=(s*9301+49297)%233280;return s/233280;};}
+function fitCanvas(c){
+  var r=c.getBoundingClientRect(),dpr=window.devicePixelRatio||1;
+  var w=Math.max(1,Math.round(r.width)),h=Math.max(1,Math.round(r.height));
+  c.width=w*dpr;c.height=h*dpr;
+  var ctx=c.getContext('2d');ctx.setTransform(dpr,0,0,dpr,0,0);
+  return{ctx,w,h};
+}
+function roundedRectPoints(x,y,w,h,r,j,rand){
+  r=Math.min(r,w/2,h/2);
+  var pts=[[x+r,y],[x+w-r,y],[x+w,y+r],[x+w,y+h-r],[x+w-r,y+h],[x+r,y+h],[x,y+h-r],[x,y+r]];
+  var out=[];
+  for(var i=0;i<pts.length;i+=2){
+    var a=pts[i],b=pts[i+1];
+    for(var s=0;s<=5;s++){var t=s/5;out.push([a[0]+(b[0]-a[0])*t+(rand()-0.5)*j,a[1]+(b[1]-a[1])*t+(rand()-0.5)*j]);}
+  }
+  return out;
+}
+function strokeWobblyPath(ctx,pts,color,lw){
+  ctx.beginPath();ctx.moveTo(pts[0][0],pts[0][1]);
+  for(var i=1;i<pts.length;i++)ctx.lineTo(pts[i][0],pts[i][1]);
+  ctx.closePath();ctx.strokeStyle=color;ctx.lineWidth=lw;ctx.lineJoin='round';ctx.lineCap='round';ctx.stroke();
+}
+function drawSketchRect(c){
+  var f=fitCanvas(c),ctx=f.ctx,w=f.w,h=f.h;ctx.clearRect(0,0,w,h);
+  var stroke=resolveColor(c.dataset.stroke,'#1c2a49'),fill=resolveColor(c.dataset.fill,null);
+  var rand=rnd(Math.round(w*7+h*13)),pad=4,r=Math.min(18,Math.min(w,h)/5);
+  if(c.dataset.fill&&fill){
+    var fp=roundedRectPoints(pad,pad,w-pad*2,h-pad*2,r,1.2,rand);
+    ctx.beginPath();ctx.moveTo(fp[0][0],fp[0][1]);
+    for(var i=1;i<fp.length;i++)ctx.lineTo(fp[i][0],fp[i][1]);
+    ctx.closePath();ctx.fillStyle=fill;ctx.fill();
+  }
+  for(var p=0;p<2;p++){strokeWobblyPath(ctx,roundedRectPoints(pad,pad,w-pad*2,h-pad*2,r,2.4,rand),stroke,2.4);}
+}
+function drawSketchLine(c,dbl){
+  var f=fitCanvas(c),ctx=f.ctx,w=f.w,h=f.h;ctx.clearRect(0,0,w,h);
+  var color=resolveColor(c.dataset.color,'#cf4258'),rand=rnd(Math.round(w*3+h*11)+1),midY=h*0.5;
+  function oneStroke(yBase,wt){
+    ctx.beginPath();
+    for(var s=0;s<=14;s++){var t=s/14,x=t*w,y=yBase+Math.sin(t*Math.PI*2.4+rand()*2)*(h*0.14)+(rand()-0.5)*(h*0.18);
+      if(s===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);}
+    ctx.strokeStyle=color;ctx.lineWidth=wt;ctx.lineCap='round';ctx.lineJoin='round';ctx.stroke();
+  }
+  oneStroke(midY,3.2);if(dbl)oneStroke(midY+h*0.28,2.4);
+}
+function wobbleLine(ctx,x1,y1,x2,y2,color,wt,rand){
+  ctx.beginPath();
+  for(var s=0;s<=6;s++){var t=s/6,x=x1+(x2-x1)*t+(rand()-0.5)*1.6,y=y1+(y2-y1)*t+(rand()-0.5)*1.6;
+    if(s===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);}
+  ctx.strokeStyle=color;ctx.lineWidth=wt;ctx.lineCap='round';ctx.stroke();
+}
+function wobbleEllipse(ctx,cx,cy,rx,ry,color,wt,rand){
+  ctx.beginPath();
+  for(var s=0;s<=24;s++){var t=s/24*Math.PI*2,x=cx+Math.cos(t)*rx+(rand()-0.5)*1.4,y=cy+Math.sin(t)*ry+(rand()-0.5)*1.4;
+    if(s===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);}
+  ctx.closePath();ctx.strokeStyle=color;ctx.lineWidth=wt;ctx.lineJoin='round';ctx.stroke();
+}
+function drawLightbulbIcon(c){
+  var f=fitCanvas(c),ctx=f.ctx,w=f.w,h=f.h;ctx.clearRect(0,0,w,h);
+  var rand=rnd(Math.round(w*5+h*11)),ink=resolveColor('var(--purple)','#6c4a9c');
+  var cx=w/2,bulbR=w*0.28,bulbY=h*0.38;
+  wobbleEllipse(ctx,cx,bulbY,bulbR,bulbR*0.95,ink,2.2,rand);
+  wobbleLine(ctx,cx-bulbR*0.6,bulbY+bulbR*0.85,cx-bulbR*0.4,bulbY+bulbR*1.25,ink,1.8,rand);
+  wobbleLine(ctx,cx+bulbR*0.6,bulbY+bulbR*0.85,cx+bulbR*0.4,bulbY+bulbR*1.25,ink,1.8,rand);
+  wobbleLine(ctx,cx-bulbR*0.4,bulbY+bulbR*1.25,cx+bulbR*0.4,bulbY+bulbR*1.25,ink,1.8,rand);
+  wobbleLine(ctx,cx-bulbR*0.3,bulbY+bulbR*1.55,cx+bulbR*0.3,bulbY+bulbR*1.55,ink,1.8,rand);
+  wobbleLine(ctx,cx,bulbY-bulbR*0.2,cx,bulbY+bulbR*0.4,ink,1.4,rand);
+}
+function drawSpiral(c){
+  var f=fitCanvas(c),ctx=f.ctx,w=f.w,h=f.h;ctx.clearRect(0,0,w,h);
+  var color=resolveColor('var(--spiral-ink)','#8a93a6'),rand=rnd(303),ringR=Math.min(w*0.85,11),gap=34,cx=w*0.55;
+  for(var y=20;y<h-10;y+=gap)wobbleEllipse(ctx,cx,y,ringR,ringR*1.1,color,2.2,rand);
+}
+
+/* ─── ENHANCED CANDLESTICK CHART ─── */
+function drawMainChart(){
+  var canvas=document.getElementById('mainChartCanvas');
+  if(!canvas)return;
+  var dpr=window.devicePixelRatio||1;
+  var rect=canvas.getBoundingClientRect();
+  var W=Math.round(rect.width),H=Math.round(rect.height);
+  if(!W||!H)return;
+  canvas.width=W*dpr; canvas.height=H*dpr;
+  var ctx=canvas.getContext('2d');
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+
+  /* ── DATA: 40 trading days Jul17–Sep11 ── */
+  var dates=['Jul17','Jul20','Jul21','Jul22','Jul23','Jul24','Jul27','Jul28','Jul29','Jul30',
+             'Jul31','Aug3','Aug4','Aug5','Aug6','Aug7','Aug10','Aug11','Aug12','Aug13',
+             'Aug14','Aug17','Aug18','Aug19','Aug20','Aug21','Aug24','Aug25','Aug26','Aug27',
+             'Aug28','Aug31','Sep1','Sep2','Sep3','Sep4','Sep8','Sep9','Sep10','Sep11'];
+  var O=[398,401,370,375,386,414,410,416,387,372,360,390,394,376,384,382,393,370,384,380,
+         361,360,388,409,383,392,391,392,392,385,381,394,381,380,385,373,386,399,416,419];
+  var H2=[409,401,385,391,404,420,431,429,387,393,382,393,395,389,387,400,394,391,386,384,
+          381,383,402,409,391,402,399,394,392,392,399,394,389,386,385,382,392,412,432,432];
+  var L=[395,381,370,375,382,385,392,405,387,367,360,376,377,376,376,377,374,364,375,365,
+         358,357,376,381,380,384,384,380,381,380,380,382,377,368,371,369,380,391,416,411];
+  var C=[401,383,379,384,404,411,427,407,387,368,380,387,381,384,382,393,381,386,379,370,
+         364,383,401,382,384,395,389,383,385,383,391,385,380,380,373,370,392,412,432,419];
+  // ST floor — stepped: base 359, then 375 after Sep9
+  var ST=[];for(var i=0;i<40;i++)ST.push(i<37?359:(i===37?359:375));
+  ST[38]=375; ST[39]=375;
+  // Volume (Lakhs)
+  var VOL=[1.3,0.6,0.6,0.4,0.8,1.1,2.8,0.9,0.3,1.9,0.7,0.7,0.9,0.6,0.6,1.0,0.9,1.2,0.8,1.5,
+           1.6,2.3,5.5,2.7,0.9,1.4,0.8,0.5,0.8,0.5,0.8,0.6,0.8,1.4,0.8,0.8,1.9,4.7,4.9,3.4];
+  var n=dates.length;
+
+  /* ── LAYOUT ── */
+  var pad={l:46,r:16,t:14,b:36};
+  var volH=Math.floor(H*0.18);
+  var pricePanelH=H-pad.t-pad.b-volH-6;
+  var priceTop=pad.t;
+  var volTop=priceTop+pricePanelH+6;
+
+  /* ── PRICE RANGE ── */
+  var pMin=Math.min.apply(null,L.concat([ST[0]-8]))-12;
+  var pMax=Math.max.apply(null,H2.concat([435]))+14;
+  function py(price){return priceTop+pricePanelH*(1-(price-pMin)/(pMax-pMin));}
+  var volMax=Math.max.apply(null,VOL)*1.15;
+  function vy(v){return volTop+volH*(1-v/volMax);}
+
+  /* ── BACKGROUND ── */
+  ctx.fillStyle='#0b1422';
+  ctx.fillRect(0,0,W,H);
+
+  /* ── GRID ── */
+  ctx.strokeStyle='rgba(255,255,255,0.07)';ctx.lineWidth=1;
+  var priceTicks=[270,310,350,380,400,420,432];
+  priceTicks.forEach(function(p){
+    var y=Math.round(py(p))+0.5;
+    ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(W-pad.r,y);ctx.stroke();
+    ctx.fillStyle='rgba(200,210,230,0.45)';
+    ctx.font='10px "Courier New",monospace';ctx.textAlign='right';
+    ctx.fillText('₹'+p,pad.l-4,y+4);
+  });
+
+  /* ── COLUMN WIDTH ── */
+  var cW=(W-pad.l-pad.r)/n;
+  var bodyW=Math.max(cW*0.55,2.5);
+
+  /* ── DARVAS BOX (shaded region) ── */
+  var dboxTop=412,dboxBot=370;
+  ctx.fillStyle='rgba(244,207,109,0.08)';
+  ctx.fillRect(pad.l,py(dboxTop),W-pad.l-pad.r,py(dboxBot)-py(dboxTop));
+  // top dashed line
+  ctx.strokeStyle='rgba(244,207,109,0.55)';ctx.setLineDash([6,5]);ctx.lineWidth=1.5;
+  ctx.beginPath();ctx.moveTo(pad.l,py(dboxTop));ctx.lineTo(W-pad.r,py(dboxTop));ctx.stroke();
+  // label
+  ctx.setLineDash([]);
+  ctx.fillStyle='rgba(244,207,109,0.75)';ctx.font='bold 10px Kalam,sans-serif';ctx.textAlign='right';
+  ctx.fillText('Darvas ₹412',W-pad.r-4,py(dboxTop)-5);
+
+  /* ── SMA 200 (flat line at 256 — off chart but draw at pMin area for visual ref) ── */
+  /* SMA200 at 256 is well below chart range, show as label only */
+
+  /* ── SMA 50 (draw as smooth curve, rough trajectory) ── */
+  var sma50vals=[];
+  for(var i=0;i<n;i++){
+    var t=i/(n-1);
+    // SMA50 rises from ~370 to ~390 over the 40 days
+    sma50vals.push(370+t*17);
+  }
+  ctx.strokeStyle='#5bc4f5';ctx.lineWidth=2;ctx.setLineDash([]);
+  ctx.beginPath();
+  for(var i=0;i<n;i++){
+    var x=pad.l+(i+0.5)*cW;
+    if(i===0)ctx.moveTo(x,py(sma50vals[i]));
+    else ctx.lineTo(x,py(sma50vals[i]));
+  }
+  ctx.stroke();
+  // SMA50 label
+  ctx.fillStyle='#5bc4f5';ctx.font='bold 10px Kalam,sans-serif';ctx.textAlign='left';
+  ctx.fillText('SMA50 ₹387',pad.l+4,py(387)-6);
+
+  /* ── SUPERTREND LINE ── */
+  ctx.strokeStyle='rgba(244,162,97,0.9)';ctx.lineWidth=2;ctx.setLineDash([7,5]);
+  ctx.beginPath();
+  for(var i=0;i<n;i++){
+    var x=pad.l+(i+0.5)*cW,y=py(ST[i]);
+    if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
+  }
+  ctx.stroke();ctx.setLineDash([]);
+  // ST label
+  ctx.fillStyle='rgba(244,162,97,0.9)';ctx.font='bold 10px Kalam,sans-serif';ctx.textAlign='right';
+  ctx.fillText('ST ₹375',W-pad.r-6,py(375)+14);
+
+  /* ── STOP LINE at 375 ── */
+  ctx.strokeStyle='rgba(207,66,88,0.5)';ctx.lineWidth=1;ctx.setLineDash([3,4]);
+  ctx.beginPath();ctx.moveTo(pad.l,py(375));ctx.lineTo(W-pad.r,py(375));ctx.stroke();
+  ctx.setLineDash([]);
+
+  /* ── VOLUME BARS ── */
+  for(var i=0;i<n;i++){
+    var x=pad.l+i*cW;
+    var bw=Math.max(cW*0.7,2);
+    var isGreen=C[i]>=O[i];
+    var isSpike=VOL[i]>=3.0;
+    var isModerate=VOL[i]>=1.5;
+    if(isSpike) ctx.fillStyle='rgba(38,160,105,0.85)';
+    else if(isModerate) ctx.fillStyle=isGreen?'rgba(38,160,105,0.5)':'rgba(239,83,80,0.5)';
+    else ctx.fillStyle=isGreen?'rgba(38,160,105,0.25)':'rgba(239,83,80,0.25)';
+    var vt=vy(VOL[i]),vb=vy(0);
+    ctx.fillRect(x+cW*0.15,vt,bw,vb-vt);
+  }
+  // vol axis label
+  ctx.fillStyle='rgba(200,210,230,0.4)';ctx.font='9px monospace';ctx.textAlign='right';
+  ctx.fillText('5L',pad.l-4,vy(5)+4);
+  ctx.fillText('2L',pad.l-4,vy(2)+4);
+
+  /* ── CANDLESTICKS ── */
+  var bull='#26a069',bear='#ef5350';
+  for(var i=0;i<n;i++){
+    var cx2=pad.l+(i+0.5)*cW;
+    var isGreen=C[i]>=O[i];
+    var col=isGreen?bull:bear;
+    // wick (high-low)
+    ctx.strokeStyle=col;ctx.lineWidth=1.2;
+    ctx.beginPath();ctx.moveTo(cx2,py(H2[i]));ctx.lineTo(cx2,py(L[i]));ctx.stroke();
+    // body (open-close)
+    var bT=py(Math.max(C[i],O[i])),bB=py(Math.min(C[i],O[i]));
+    var bh=Math.max(bB-bT,1.5);
+    ctx.fillStyle=col;
+    ctx.fillRect(cx2-bodyW/2,bT,bodyW,bh);
+  }
+
+  /* ── VOLUME SPIKE ANNOTATION: Aug 18 (5.5L) ── */
+  var aug18x=pad.l+22.5*cW; // index 22
+  ctx.fillStyle='rgba(38,160,105,0.8)';ctx.font='bold 10px Kalam,sans-serif';ctx.textAlign='center';
+  ctx.fillText('5.5L🔥',aug18x,vy(5.5)-5);
+
+  /* ── BREAKOUT ANNOTATION: Sep 9 ── */
+  var sep9x=pad.l+37.5*cW;
+  ctx.fillStyle='rgba(244,207,109,0.9)';ctx.font='bold 11px Kalam,sans-serif';ctx.textAlign='center';
+  ctx.fillText('Darvas ✓',sep9x,py(412)-10);
+
+  /* ── ATH ANNOTATION: Sep 10 ── */
+  var sep10x=pad.l+38.5*cW;
+  ctx.fillStyle='rgba(176,96,32,0.9)';ctx.font='bold 10px Kalam,sans-serif';ctx.textAlign='center';
+  ctx.fillText('ATH ₹432',sep10x,py(432)-10);
+
+  /* ── ENTRY ARROW: Sep 11 ── */
+  var entryX=pad.l+39.5*cW,entryY=py(419);
+  // arrow pointing up from below
+  ctx.fillStyle='#f4cf6d';ctx.strokeStyle='#b06020';ctx.lineWidth=1.5;
+  ctx.beginPath();
+  ctx.moveTo(entryX,entryY+28);
+  ctx.lineTo(entryX-9,entryY+46);
+  ctx.lineTo(entryX+9,entryY+46);
+  ctx.closePath();ctx.fill();ctx.stroke();
+  ctx.fillStyle='#f4cf6d';ctx.font='bold 11px Kalam,sans-serif';ctx.textAlign='center';
+  ctx.fillText('BUY ₹420',entryX,entryY+60);
+
+  /* ── T1 LINE ── */
+  ctx.strokeStyle='rgba(31,143,92,0.6)';ctx.lineWidth=1.5;ctx.setLineDash([8,4]);
+  ctx.beginPath();ctx.moveTo(W-70,py(520));ctx.lineTo(W-pad.r,py(520));ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle='rgba(31,143,92,0.8)';ctx.font='bold 10px Kalam,sans-serif';ctx.textAlign='right';
+  ctx.fillText('T1 ₹520',W-pad.r-4,py(520)+14);
+
+  /* ── DATE LABELS ── */
+  ctx.fillStyle='rgba(200,210,230,0.5)';ctx.font='9px "Courier New",monospace';
+  var labelIdx=[0,5,10,15,20,25,30,35,39];
+  labelIdx.forEach(function(i){
+    var x=pad.l+(i+0.5)*cW;
+    ctx.textAlign='center';
+    ctx.fillText(dates[i],x,H-8);
+  });
+
+  /* ── PANEL SEPARATOR ── */
+  ctx.strokeStyle='rgba(255,255,255,0.1)';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(pad.l,volTop-2);ctx.lineTo(W-pad.r,volTop-2);ctx.stroke();
+}
+
+function redrawAll(){
+  document.querySelectorAll('canvas[data-sketch="rect"]').forEach(drawSketchRect);
+  document.querySelectorAll('canvas[data-sketch="line"]').forEach(function(c){drawSketchLine(c,false);});
+  document.querySelectorAll('canvas[data-sketch="line-double"]').forEach(function(c){drawSketchLine(c,true);});
+  document.querySelectorAll('canvas[data-sketch="lightbulb-icon"]').forEach(drawLightbulbIcon);
+  ['sp1','sp2','sp3','sp4'].forEach(function(id){var s=document.getElementById(id);if(s)drawSpiral(s);});
+  drawMainChart();
+}
+var raf=null;
+function scheduleRedraw(){if(raf)cancelAnimationFrame(raf);raf=requestAnimationFrame(redrawAll);}
+window.addEventListener('load',redrawAll);
+window.addEventListener('resize',scheduleRedraw);
+if(document.fonts&&document.fonts.ready)document.fonts.ready.then(scheduleRedraw);
+redrawAll();
+</script>
+</body>
+</html>
