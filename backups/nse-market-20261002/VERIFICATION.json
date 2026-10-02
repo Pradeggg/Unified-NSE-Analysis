@@ -1,0 +1,12 @@
+{
+  "backup_date": "2026-10-02",
+  "format": "GnuPG symmetric AES-256 encrypted tar, stored in Git LFS",
+  "payload": "Full PostgreSQL custom-format backup and migration companion files",
+  "database_restore_verified": true,
+  "base_tables_verified": 138,
+  "schemas_verified": 19,
+  "encryption_roundtrip_verified": true,
+  "decrypted_dump_sha256": "f83cf96c7445dc31df00e59646e5ef53fc005f8161c51770350bd55516179be8",
+  "decryption_key_in_repository": false,
+  "encrypted_bytes": 265615443
+}
